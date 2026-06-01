@@ -43,10 +43,12 @@ public class PaymentController {
 
     @GetMapping("/vnpay/return")
     @Operation(summary = "VNPAY return URL handler", description = "Called by VNPAY after user completes payment")
-    public ResponseEntity<ApiResponse<String>> vnpayReturn(HttpServletRequest request) {
+    public ResponseEntity<Void> vnpayReturn(HttpServletRequest request) {
         Map<String, String> params = extractParams(request);
-        String result = paymentService.handleVnpayReturn(params);
-        return ResponseEntity.ok(ApiResponse.success(result));
+        paymentService.handleVnpayReturn(params);
+        String queryString = request.getQueryString();
+        String redirectUrl = "http://localhost:3000/payment-callback" + (queryString != null ? "?" + queryString : "");
+        return ResponseEntity.status(302).header("Location", redirectUrl).build();
     }
 
     @GetMapping("/vnpay/ipn")

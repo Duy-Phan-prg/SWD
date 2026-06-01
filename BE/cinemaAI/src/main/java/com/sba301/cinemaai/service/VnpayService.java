@@ -1,94 +1,75 @@
 package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.config.VnpayProperties;
+import com.sba301.cinemaai.config.VNPayConfig;
+import com.sba301.cinemaai.util.VNPayUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-public class VnpayService {
+public class VNPayService {
 
-    private final VnpayProperties vnpayProperties;
+    private final VNPayConfig vnPayConfig;
 
     public String buildPaymentUrl(String txnRef, BigDecimal amount, String orderInfo, String clientIp) {
-        Map<String, String> params = new HashMap<>();
-        params.put("vnp_Version", "2.1.0");
-        params.put("vnp_Command", "pay");
-        params.put("vnp_TmnCode", vnpayProperties.getTmnCode());
-        params.put("vnp_Amount", String.valueOf(amount.multiply(BigDecimal.valueOf(100)).longValue()));
-        params.put("vnp_CurrCode", "VND");
-        params.put("vnp_TxnRef", txnRef);
-        params.put("vnp_OrderInfo", orderInfo);
-        params.put("vnp_OrderType", "other");
-        params.put("vnp_Locale", "vn");
-        params.put("vnp_ReturnUrl", vnpayProperties.getReturnUrl());
-        params.put("vnp_IpAddr", clientIp != null ? clientIp : "127.0.0.1");
-        params.put("vnp_CreateDate", currentDateTime());
+        Map<String, String> vnpParams = new TreeMap<>();
+        vnpParams.put("vnp_Version", "2.1.0");
+        vnpParams.put("vnp_Command", "pay");
+        vnpParams.put("vnp_TmnCode", vnPayConfig.getTmnCode());
+        vnpParams.put("vnp_Amount", String.valueOf(amount.multiply(BigDecimal.valueOf(100)).longValue()));
+        vnpParams.put("vnp_CurrCode", "VND");
+        vnpParams.put("vnp_TxnRef", txnRef);
+        vnpParams.put("vnp_OrderInfo", orderInfo);
+        vnpParams.put("vnp_OrderType", "other");
+        vnpParams.put("vnp_Locale", "vn");
+        vnpParams.put("vnp_ReturnUrl", vnPayConfig.getReturnUrl());
+        vnpParams.put("vnp_IpAddr", resolveIp(clientIp));
 
-        String queryString = buildQueryString(params);
-        String secureHash = hmacSha512(vnpayProperties.getHashSecret(), queryString);
-        return vnpayProperties.getApiUrl() + "?" + queryString + "&vnp_SecureHash=" + secureHash;
+        String now = new SimpleDateFormat("yyyyMMddHHmmss")
+                .format(Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7")).getTime());
+        vnpParams.put("vnp_CreateDate", now);
+
+        String secureHash = VNPayUtil.hashAllFields(vnpParams, vnPayConfig.getHashSecret());
+        String queryString = buildEncodedQueryString(vnpParams);
+
+        log.info("VNPay payment created for txnRef={}", txnRef);
+        return vnPayConfig.getPaymentUrl() + "?" + queryString + "&vnp_SecureHash=" + secureHash;
     }
 
     public boolean verifySignature(Map<String, String> params) {
-        String receivedHash = params.get("vnp_SecureHash");
-        if (receivedHash == null) return false;
+        String received = params.get("vnp_SecureHash");
+        if (received == null) return false;
 
-        Map<String, String> filtered = new HashMap<>(params);
+        Map<String, String> filtered = new TreeMap<>(params);
         filtered.remove("vnp_SecureHash");
         filtered.remove("vnp_SecureHashType");
 
-        String queryString = buildQueryString(filtered);
-        String expectedHash = hmacSha512(vnpayProperties.getHashSecret(), queryString);
-        return expectedHash.equalsIgnoreCase(receivedHash);
+        String expected = VNPayUtil.hashAllFields(filtered, vnPayConfig.getHashSecret());
+        boolean valid = expected.equalsIgnoreCase(received);
+        if (!valid) log.warn("VNPay signature verification failed");
+        return valid;
     }
 
-    private String buildQueryString(Map<String, String> params) {
-        List<String> keys = new ArrayList<>(params.keySet());
-        Collections.sort(keys);
+    private String buildEncodedQueryString(Map<String, String> params) {
         StringBuilder sb = new StringBuilder();
-        for (String key : keys) {
-            String value = params.get(key);
+        params.forEach((key, value) -> {
             if (value != null && !value.isEmpty()) {
-                if (!sb.isEmpty()) sb.append("&");
-                sb.append(URLEncoder.encode(key, StandardCharsets.US_ASCII));
-                sb.append("=");
-                sb.append(URLEncoder.encode(value, StandardCharsets.US_ASCII));
+                if (sb.length() > 0) sb.append("&");
+                sb.append(key).append("=").append(URLEncoder.encode(value, StandardCharsets.UTF_8));
             }
-        }
+        });
         return sb.toString();
     }
 
-    private String hmacSha512(String key, String data) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA512");
-            mac.init(new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA512"));
-            byte[] bytes = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : bytes) {
-                hex.append(String.format("%02x", b));
-            }
-            return hex.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to compute HMAC-SHA512", e);
-        }
-    }
-
-    private String currentDateTime() {
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
-        return new SimpleDateFormat("yyyyMMddHHmmss").format(cal.getTime());
+    private String resolveIp(String clientIp) {
+        return (clientIp == null || clientIp.contains(":")) ? "127.0.0.1" : clientIp;
     }
 }

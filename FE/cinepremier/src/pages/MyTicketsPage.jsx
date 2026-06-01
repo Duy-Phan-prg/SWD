@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical } from 'lucide-react';
 import { authApi, getStoredAuth } from '../services/authApi';
 
 export default function MyTicketsView({
