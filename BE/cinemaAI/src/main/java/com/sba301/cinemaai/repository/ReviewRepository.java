@@ -12,6 +12,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     List<Review> findByMovieAndStatus(Movie movie, ReviewStatus status);
 
+    List<Review> findByUser(User user);
+
     Optional<Review> findByUserAndMovie(User user, Movie movie);
 
     boolean existsByUserAndMovie(User user, Movie movie);
