@@ -2,6 +2,7 @@ package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.booking.BookingResponse;
 import com.sba301.cinemaai.dto.booking.CheckInRequest;
+import com.sba301.cinemaai.dto.booking.RefundRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.service.BookingService;
@@ -48,5 +49,21 @@ public class AdminBookingController {
     ) {
         String qrCode = request == null ? null : request.qrCode();
         return ApiResponse.success(bookingService.checkInAdmin(bookingId, qrCode), "Booking checked in successfully");
+    }
+
+    @PostMapping("/{bookingId}/refund-request")
+    public ApiResponse<BookingResponse> requestRefund(
+            @PathVariable Long bookingId,
+            @Valid @RequestBody RefundRequest request
+    ) {
+        return ApiResponse.success(
+                bookingService.requestRefundAdmin(bookingId, request.reason()),
+                "Refund requested successfully"
+        );
+    }
+
+    @PostMapping("/{bookingId}/mark-refunded")
+    public ApiResponse<BookingResponse> markRefunded(@PathVariable Long bookingId) {
+        return ApiResponse.success(bookingService.markRefunded(bookingId), "Booking marked as refunded successfully");
     }
 }

@@ -16,6 +16,7 @@ import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.UnauthorizedException;
 import com.sba301.cinemaai.repository.PendingRegistrationRepository;
+import com.sba301.cinemaai.repository.UserProfileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import com.sba301.cinemaai.security.JwtProperties;
 import com.sba301.cinemaai.security.JwtService;
@@ -39,6 +40,7 @@ public class AuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final PendingRegistrationRepository pendingRegistrationRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -57,7 +59,7 @@ public class AuthService {
             throw new ConflictException("Email already exists");
         }
         if (request.phone() != null && !request.phone().isBlank()) {
-            if (userRepository.existsByPhone(request.phone())) {
+            if (userProfileRepository.existsByPhone(request.phone())) {
                 throw new ConflictException("Phone already exists");
             }
             pendingRegistrationRepository.findByPhone(request.phone())
@@ -132,7 +134,7 @@ public class AuthService {
             throw new ConflictException("Email already exists");
         }
         if (pendingRegistration.getPhone() != null && !pendingRegistration.getPhone().isBlank()
-                && userRepository.existsByPhone(pendingRegistration.getPhone())) {
+                && userProfileRepository.existsByPhone(pendingRegistration.getPhone())) {
             pendingRegistrationRepository.delete(pendingRegistration);
             throw new ConflictException("Phone already exists");
         }

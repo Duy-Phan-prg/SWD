@@ -22,6 +22,7 @@ public record MovieResponse(
         String mainActors,
         String castList,
         List<GenreResponse> genres,
+        List<ActorResponse> actors,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

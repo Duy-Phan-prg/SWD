@@ -1,12 +1,16 @@
 package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.movie.MovieCreateRequest;
+import com.sba301.cinemaai.dto.movie.ActorResponse;
+import com.sba301.cinemaai.dto.movie.MovieActorAssignmentRequest;
 import com.sba301.cinemaai.dto.movie.MovieResponse;
 import com.sba301.cinemaai.dto.movie.MovieStatusUpdateRequest;
 import com.sba301.cinemaai.dto.movie.MovieUpdateRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
+import com.sba301.cinemaai.entity.Actor;
 import com.sba301.cinemaai.entity.Genre;
 import com.sba301.cinemaai.entity.Movie;
+import com.sba301.cinemaai.entity.MovieActor;
 import com.sba301.cinemaai.entity.MovieGenre;
 import com.sba301.cinemaai.enums.MovieStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
@@ -15,10 +19,14 @@ import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.MovieMapper;
 import com.sba301.cinemaai.repository.MovieGenreRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
+import com.sba301.cinemaai.repository.ActorRepository;
+import com.sba301.cinemaai.repository.MovieActorRepository;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +43,8 @@ public class MovieService {
 
     private final MovieRepository movieRepository;
     private final MovieGenreRepository movieGenreRepository;
+    private final MovieActorRepository movieActorRepository;
+    private final ActorRepository actorRepository;
     private final GenreService genreService;
     private final MovieMapper movieMapper;
 
@@ -92,6 +102,7 @@ public class MovieService {
                 request.director(), request.mainActors(), request.castList(), request.status());
         Movie saved = movieRepository.save(movie);
         replaceGenres(saved, request.genreIds());
+        replaceActors(saved, extractActorNames(request.mainActors(), request.castList()));
         return toResponse(saved);
     }
 
@@ -111,7 +122,46 @@ public class MovieService {
                 request.director(), request.mainActors(), request.castList(), request.status());
         movie.updateDetails(request.title(), request.description(), request.durationMinutes(), request.releaseDate());
         replaceGenres(movie, request.genreIds());
+        replaceActors(movie, extractActorNames(request.mainActors(), request.castList()));
         return toResponse(movie);
+    }
+
+    @Transactional
+    public MovieResponse assignActors(Long id, MovieActorAssignmentRequest request) {
+        Movie movie = findById(id);
+        movieActorRepository.deleteByMovie(movie);
+        request.actorIds().stream()
+                .distinct()
+                .map(this::findActorById)
+                .map(actor -> new MovieActor(movie, actor))
+                .forEach(movieActorRepository::save);
+        return toResponse(movie);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovieResponse> getMoviesByActor(Long actorId) {
+        Actor actor = findActorById(actorId);
+        return movieActorRepository.findByActor(actor)
+                .stream()
+                .map(MovieActor::getMovie)
+                .filter(movie -> movie.getStatus() != MovieStatus.INACTIVE)
+                .sorted((left, right) -> {
+                    LocalDate leftDate = left.getReleaseDate();
+                    LocalDate rightDate = right.getReleaseDate();
+                    if (leftDate == null && rightDate == null) {
+                        return right.getId().compareTo(left.getId());
+                    }
+                    if (leftDate == null) {
+                        return 1;
+                    }
+                    if (rightDate == null) {
+                        return -1;
+                    }
+                    int dateCompare = rightDate.compareTo(leftDate);
+                    return dateCompare != 0 ? dateCompare : right.getId().compareTo(left.getId());
+                })
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -148,6 +198,43 @@ public class MovieService {
         movie.changeStatus(status);
     }
 
+    private void replaceActors(Movie movie, List<String> actorNames) {
+        movieActorRepository.deleteByMovie(movie);
+        actorNames.stream()
+                .map(this::findOrCreateActor)
+                .map(actor -> new MovieActor(movie, actor))
+                .forEach(movieActorRepository::save);
+    }
+
+    private List<String> extractActorNames(String mainActors, String castList) {
+        Set<String> names = new LinkedHashSet<>();
+        collectActorNames(names, mainActors);
+        collectActorNames(names, castList);
+        return names.stream().toList();
+    }
+
+    private void collectActorNames(Set<String> names, String rawValue) {
+        if (!StringUtils.hasText(rawValue)) {
+            return;
+        }
+        for (String token : rawValue.split("[,;\\n\\r]+")) {
+            String name = token.trim();
+            if (StringUtils.hasText(name)) {
+                names.add(name);
+            }
+        }
+    }
+
+    private Actor findOrCreateActor(String name) {
+        return actorRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> actorRepository.save(new Actor(name, null, null)));
+    }
+
+    private Actor findActorById(Long id) {
+        return actorRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Actor not found"));
+    }
+
     private void replaceGenres(Movie movie, List<Long> genreIds) {
         movieGenreRepository.deleteByMovie(movie);
         if (genreIds == null) {
@@ -169,7 +256,12 @@ public class MovieService {
                 .stream()
                 .map(MovieGenre::getGenre)
                 .toList();
-        return movieMapper.toMovieResponse(movie, genres);
+        List<ActorResponse> actors = movieActorRepository.findByMovie(movie)
+                .stream()
+                .map(MovieActor::getActor)
+                .map(actor -> movieMapper.toActorResponse(actor, movieActorRepository.countByActor(actor)))
+                .toList();
+        return movieMapper.toMovieResponse(movie, genres, actors);
     }
 
     private Movie findById(Long id) {

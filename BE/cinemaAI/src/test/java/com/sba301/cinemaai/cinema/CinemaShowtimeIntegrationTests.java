@@ -8,6 +8,10 @@ import com.sba301.cinemaai.dto.cinema.RoomRequest;
 import com.sba301.cinemaai.dto.cinema.SeatGenerationRequest;
 import com.sba301.cinemaai.dto.cinema.SeatUpdateRequest;
 import com.sba301.cinemaai.dto.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.ticket.TicketComboRequest;
+import com.sba301.cinemaai.dto.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.ticket.TicketPricingRuleRequest;
+import com.sba301.cinemaai.dto.ticket.TicketSelectionRequest;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.User;
@@ -20,6 +24,7 @@ import com.sba301.cinemaai.enums.RoomType;
 import com.sba301.cinemaai.enums.SeatStatus;
 import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
+import com.sba301.cinemaai.enums.TicketType;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.RoleRepository;
 import com.sba301.cinemaai.repository.UserRepository;
@@ -74,15 +79,18 @@ class CinemaShowtimeIntegrationTests {
         Movie movie = createMovie();
 
         Long cinemaId = createCinema(token);
-        Long roomId = createRoom(token);
-
-        mockMvc.perform(get("/api/v1/cinema"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(cinemaId));
-
-        mockMvc.perform(get("/api/v1/cinema/rooms"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].cinemaId").value(cinemaId));
+        mockMvc.perform(post("/api/v1/admin/cinemas")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CinemaRequest(
+                                "Second Cinema " + System.nanoTime(),
+                                "2 Phase Street",
+                                "Ho Chi Minh City",
+                                "0900555667",
+                                CinemaStatus.ACTIVE
+                        ))))
+                .andExpect(status().isConflict());
+        Long roomId = createRoom(token, cinemaId);
 
         String seatResponse = mockMvc.perform(post("/api/v1/admin/rooms/{roomId}/seats/generate", roomId)
                         .header("Authorization", "Bearer " + token)
@@ -136,6 +144,33 @@ class CinemaShowtimeIntegrationTests {
                 .getContentAsString();
 
         Long showtimeId = objectMapper.readTree(showtimeResponse).at("/data/id").asLong();
+        Long comboId = createTicketPricing(token);
+
+        mockMvc.perform(post("/api/v1/ticket-pricing/validate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketPriceValidationRequest(
+                                showtimeId,
+                                comboId,
+                                false,
+                                java.util.List.of(new TicketSelectionRequest(TicketType.ADULT, 20, 1))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.eligible").value(true))
+                .andExpect(jsonPath("$.data.finalAmount").value(85000));
+
+        mockMvc.perform(post("/api/v1/ticket-pricing/validate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketPriceValidationRequest(
+                                showtimeId,
+                                null,
+                                false,
+                                java.util.List.of(new TicketSelectionRequest(TicketType.CHILD, 10, 1))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.eligible").value(false))
+                .andExpect(jsonPath("$.data.tickets[0].message").value("Viewer age does not meet movie age rating 13+"));
 
         mockMvc.perform(post("/api/v1/admin/showtimes")
                         .header("Authorization", "Bearer " + token)
@@ -206,6 +241,42 @@ class CinemaShowtimeIntegrationTests {
                 .getResponse()
                 .getContentAsString();
         return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createTicketPricing(String token) throws Exception {
+        mockMvc.perform(post("/api/v1/admin/ticket-pricing/rules")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketPricingRuleRequest(
+                                TicketType.ADULT,
+                                RoomType.TWO_D,
+                                false,
+                                false,
+                                BigDecimal.valueOf(95000),
+                                true
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.ticketType").value("ADULT"));
+
+        String comboResponse = mockMvc.perform(post("/api/v1/admin/ticket-pricing/combos")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketComboRequest(
+                                "Phase 5 Single Adult Combo " + System.nanoTime(),
+                                "One adult ticket combo for validating Phase 5 pricing.",
+                                1,
+                                0,
+                                0,
+                                0,
+                                BigDecimal.valueOf(85000),
+                                true
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.adultCount").value(1))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(comboResponse).at("/data/id").asLong();
     }
 
     private Movie createMovie() {

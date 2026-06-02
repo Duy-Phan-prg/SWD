@@ -72,6 +72,15 @@ public class Booking extends BaseEntity {
     @Column(name = "checked_in_at")
     private LocalDateTime checkedInAt;
 
+    @Column(name = "refund_requested_at")
+    private LocalDateTime refundRequestedAt;
+
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt;
+
+    @Column(name = "refund_reason", length = 500)
+    private String refundReason;
+
     @Column(name = "qr_code", length = 500)
     private String qrCode;
 
@@ -112,8 +121,14 @@ public class Booking extends BaseEntity {
         this.status = BookingStatus.USED;
     }
 
-    public void clearPromotion() {
-        this.discountAmount = BigDecimal.ZERO;
-        this.totalAmount = this.subtotal;
+    public void requestRefund(String reason) {
+        this.refundRequestedAt = LocalDateTime.now();
+        this.refundReason = reason;
+        this.status = BookingStatus.REFUND_REQUESTED;
+    }
+
+    public void markRefunded() {
+        this.refundedAt = LocalDateTime.now();
+        this.status = BookingStatus.REFUNDED;
     }
 }

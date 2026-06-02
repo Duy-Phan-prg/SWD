@@ -46,12 +46,11 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/v1/movies/**",
                                 "/api/v1/genres/**",
-                                "/api/v1/cinema",
-                                "/api/v1/cinema/**",
-                                "/api/v1/cinemas",
+                                "/api/v1/actors/**",
                                 "/api/v1/cinemas/**",
                                 "/api/v1/showtimes/**",
-                                "/api/v1/foods/**"
+                                "/api/v1/foods/**",
+                                "/api/v1/ticket-pricing/combos"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/payments/vnpay/return", "/api/v1/payments/vnpay/ipn").permitAll()

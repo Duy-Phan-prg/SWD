@@ -13,7 +13,7 @@ public class PromptBuilder {
                 movie.getDescription(),
                 movie.getDurationMinutes(),
                 movie.getLanguage(),
-                movie.getAgeRating(),
+                movie.getAgeRating() == null ? null : movie.getAgeRating().getLabel(),
                 movie.getDirector(),
                 movie.getCastList()
         );

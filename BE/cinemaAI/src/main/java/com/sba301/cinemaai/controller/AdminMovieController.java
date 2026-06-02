@@ -1,5 +1,6 @@
 package com.sba301.cinemaai.controller;
 
+import com.sba301.cinemaai.dto.movie.MovieActorAssignmentRequest;
 import com.sba301.cinemaai.dto.movie.MovieCreateRequest;
 import com.sba301.cinemaai.dto.movie.MovieResponse;
 import com.sba301.cinemaai.dto.movie.MovieStatusUpdateRequest;
@@ -98,6 +99,15 @@ public class AdminMovieController {
             @Valid @RequestBody MovieUpdateRequest request
     ) {
         return ApiResponse.success(movieService.update(movieId, request), "Movie updated successfully");
+    }
+
+    @PutMapping("/{movieId}/actors")
+    @Operation(summary = "Assign actors to movie (Admin)", description = "Replace the actor list of a movie (Admin only)")
+    public ApiResponse<MovieResponse> assignActors(
+            @PathVariable Long movieId,
+            @Valid @RequestBody MovieActorAssignmentRequest request
+    ) {
+        return ApiResponse.success(movieService.assignActors(movieId, request), "Movie actors updated successfully");
     }
 
     @PatchMapping("/{movieId}/status")

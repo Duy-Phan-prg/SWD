@@ -1,7 +1,10 @@
 package com.sba301.cinemaai.entity;
 
+import com.sba301.cinemaai.enums.AgeRating;
+import com.sba301.cinemaai.enums.AgeRatingConverter;
 import com.sba301.cinemaai.enums.MovieStatus;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -63,8 +66,9 @@ public class Movie extends BaseEntity {
     @Column(nullable = false, length = 30)
     private MovieStatus status = MovieStatus.UPCOMING;
 
+    @Convert(converter = AgeRatingConverter.class)
     @Column(name = "age_rating", length = 20)
-    private String ageRating;
+    private AgeRating ageRating;
 
     private String director;
 
@@ -98,6 +102,17 @@ public class Movie extends BaseEntity {
             String language,
             String subtitleLanguage,
             String ageRating,
+            String director,
+            String mainActors,
+            String castList
+    ) {
+        updateMetadata(language, subtitleLanguage, AgeRating.from(ageRating), director, mainActors, castList);
+    }
+
+    public void updateMetadata(
+            String language,
+            String subtitleLanguage,
+            AgeRating ageRating,
             String director,
             String mainActors,
             String castList

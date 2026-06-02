@@ -2,12 +2,13 @@ package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.entity.PhoneVerificationToken;
 import com.sba301.cinemaai.entity.User;
+import com.sba301.cinemaai.entity.UserProfile;
 import com.sba301.cinemaai.enums.OtpPurpose;
 import com.sba301.cinemaai.enums.UserStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.UnauthorizedException;
 import com.sba301.cinemaai.repository.PhoneVerificationTokenRepository;
-import com.sba301.cinemaai.repository.UserRepository;
+import com.sba301.cinemaai.repository.UserProfileRepository;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,7 +24,7 @@ public class PhoneVerificationService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final PhoneVerificationTokenRepository phoneVerificationTokenRepository;
-    private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final MailService mailService;
 
     @Transactional
@@ -105,14 +106,14 @@ public class PhoneVerificationService {
     }
 
     private User findSingleUserByPhone(String phone) {
-        List<User> users = userRepository.findByPhone(phone);
-        if (users.isEmpty()) {
+        List<UserProfile> profiles = userProfileRepository.findByPhone(phone);
+        if (profiles.isEmpty()) {
             throw new BadRequestException("Phone is not registered");
         }
-        if (users.size() > 1) {
+        if (profiles.size() > 1) {
             throw new BadRequestException("Phone is used by multiple accounts");
         }
-        return users.get(0);
+        return profiles.get(0).getUser();
     }
 
     private String generateOtp() {

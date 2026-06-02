@@ -2,6 +2,7 @@ package com.sba301.cinemaai.dto.booking;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import com.sba301.cinemaai.dto.ticket.TicketSelectionRequest;
 import java.util.List;
 
 public record CreateBookingRequest(
@@ -9,6 +10,16 @@ public record CreateBookingRequest(
         Long holdBookingId,
 
         @Valid
-        List<BookingFoodRequest> foods
+        List<BookingFoodRequest> foods,
+
+        Long comboId,
+
+        boolean holiday,
+
+        @Valid
+        List<TicketSelectionRequest> tickets
 ) {
+    public CreateBookingRequest(Long holdBookingId, List<BookingFoodRequest> foods) {
+        this(holdBookingId, foods, null, false, null);
+    }
 }
