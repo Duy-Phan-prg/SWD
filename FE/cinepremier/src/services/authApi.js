@@ -310,7 +310,7 @@ export const authApi = {
     token,
     body: { status }
   }),
-  getAdminGenres: (token) => request('/api/v1/admin/genres', { token }),
+  getAdminGenres: () => request('/api/v1/genres'),
   createAdminGenre: (token, payload) => request('/api/v1/admin/genres', {
     method: 'POST',
     token,
