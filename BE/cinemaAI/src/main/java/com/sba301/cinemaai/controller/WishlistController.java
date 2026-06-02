@@ -1,8 +1,8 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.ApiResponse;
-import com.sba301.cinemaai.dto.wishlist.WishlistCreateRequest;
-import com.sba301.cinemaai.dto.wishlist.WishlistResponse;
+import com.sba301.cinemaai.dto.request.wishlist.WishlistCreateRequest;
+import com.sba301.cinemaai.dto.response.wishlist.WishlistResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
 import com.sba301.cinemaai.service.WishlistService;
 import io.swagger.v3.oas.annotations.Operation;

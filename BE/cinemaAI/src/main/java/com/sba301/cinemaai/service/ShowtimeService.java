@@ -1,9 +1,9 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.cinema.ShowtimeRequest;
-import com.sba301.cinemaai.dto.cinema.ShowtimeResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeSeatMapResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeSeatResponse;
+import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
 import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Room;

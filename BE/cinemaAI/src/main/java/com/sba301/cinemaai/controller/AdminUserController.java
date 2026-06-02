@@ -1,8 +1,8 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.ApiResponse;
-import com.sba301.cinemaai.dto.user.AdminUserStatusUpdateRequest;
-import com.sba301.cinemaai.dto.user.UserProfileResponse;
+import com.sba301.cinemaai.dto.request.user.AdminUserStatusUpdateRequest;
+import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import com.sba301.cinemaai.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;

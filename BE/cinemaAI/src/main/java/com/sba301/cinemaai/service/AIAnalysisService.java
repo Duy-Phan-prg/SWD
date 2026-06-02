@@ -1,10 +1,10 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.analysis.AIResultParser;
 import com.sba301.cinemaai.analysis.MovieAnalysisResult;
 import com.sba301.cinemaai.analysis.MovieAnalysisStrategy;
 import com.sba301.cinemaai.analysis.PromptBuilder;
-import com.sba301.cinemaai.dto.analysis.AIAnalysisResponse;
+import com.sba301.cinemaai.dto.response.analysis.AIAnalysisResponse;
 import com.sba301.cinemaai.entity.AIAnalysis;
 import com.sba301.cinemaai.entity.AIEmotionSegment;
 import com.sba301.cinemaai.entity.Movie;

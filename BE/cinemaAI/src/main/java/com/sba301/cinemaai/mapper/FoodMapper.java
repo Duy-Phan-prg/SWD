@@ -1,7 +1,7 @@
-package com.sba301.cinemaai.mapper;
+﻿package com.sba301.cinemaai.mapper;
 
-import com.sba301.cinemaai.dto.food.FoodComboResponse;
-import com.sba301.cinemaai.dto.food.FoodItemResponse;
+import com.sba301.cinemaai.dto.response.food.FoodComboResponse;
+import com.sba301.cinemaai.dto.response.food.FoodItemResponse;
 import com.sba301.cinemaai.entity.FoodCombo;
 import com.sba301.cinemaai.entity.FoodItem;
 import org.springframework.stereotype.Component;

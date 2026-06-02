@@ -1,9 +1,9 @@
-package com.sba301.cinemaai.mapper;
+﻿package com.sba301.cinemaai.mapper;
 
-import com.sba301.cinemaai.dto.booking.BookingFoodResponse;
-import com.sba301.cinemaai.dto.booking.BookingResponse;
-import com.sba301.cinemaai.dto.booking.BookingSeatResponse;
-import com.sba301.cinemaai.dto.booking.BookingTicketResponse;
+import com.sba301.cinemaai.dto.response.booking.BookingFoodResponse;
+import com.sba301.cinemaai.dto.response.booking.BookingResponse;
+import com.sba301.cinemaai.dto.response.booking.BookingSeatResponse;
+import com.sba301.cinemaai.dto.response.booking.BookingTicketResponse;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingFoodItem;
 import com.sba301.cinemaai.entity.BookingSeat;

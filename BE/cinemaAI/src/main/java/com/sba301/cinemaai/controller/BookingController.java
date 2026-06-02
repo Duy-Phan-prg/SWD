@@ -1,9 +1,9 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.booking.BookingResponse;
-import com.sba301.cinemaai.dto.booking.CreateBookingRequest;
-import com.sba301.cinemaai.dto.booking.HoldSeatsRequest;
-import com.sba301.cinemaai.dto.booking.RefundRequest;
+import com.sba301.cinemaai.dto.response.booking.BookingResponse;
+import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
+import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
+import com.sba301.cinemaai.dto.request.booking.RefundRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
 import com.sba301.cinemaai.service.BookingService;

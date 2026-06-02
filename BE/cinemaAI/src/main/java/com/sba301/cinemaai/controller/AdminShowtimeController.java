@@ -1,7 +1,7 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.cinema.ShowtimeRequest;
-import com.sba301.cinemaai.dto.cinema.ShowtimeResponse;
+import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.service.ShowtimeService;

@@ -1,12 +1,12 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.auth.AuthResponse;
-import com.sba301.cinemaai.dto.auth.GoogleLoginRequest;
-import com.sba301.cinemaai.dto.auth.GoogleOtpVerifyRequest;
-import com.sba301.cinemaai.dto.auth.LoginRequest;
-import com.sba301.cinemaai.dto.auth.RegisterRequest;
-import com.sba301.cinemaai.dto.auth.RegisterResponse;
-import com.sba301.cinemaai.dto.user.UserProfileResponse;
+import com.sba301.cinemaai.dto.response.auth.AuthResponse;
+import com.sba301.cinemaai.dto.request.auth.GoogleLoginRequest;
+import com.sba301.cinemaai.dto.request.auth.GoogleOtpVerifyRequest;
+import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.auth.RegisterRequest;
+import com.sba301.cinemaai.dto.response.auth.RegisterResponse;
+import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import com.sba301.cinemaai.entity.PendingRegistration;
 import com.sba301.cinemaai.entity.RefreshToken;
 import com.sba301.cinemaai.entity.User;

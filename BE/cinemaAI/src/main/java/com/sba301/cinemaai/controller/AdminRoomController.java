@@ -1,10 +1,10 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.cinema.RoomRequest;
-import com.sba301.cinemaai.dto.cinema.RoomResponse;
-import com.sba301.cinemaai.dto.cinema.SeatGenerationRequest;
-import com.sba301.cinemaai.dto.cinema.SeatResponse;
-import com.sba301.cinemaai.dto.cinema.SeatUpdateRequest;
+import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
+import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
+import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.response.cinema.SeatResponse;
+import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.enums.RoomStatus;
 import com.sba301.cinemaai.service.RoomService;

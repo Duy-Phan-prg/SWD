@@ -1,7 +1,7 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.notification.NotificationCreateRequest;
-import com.sba301.cinemaai.dto.notification.NotificationResponse;
+import com.sba301.cinemaai.dto.request.notification.NotificationCreateRequest;
+import com.sba301.cinemaai.dto.response.notification.NotificationResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
 import com.sba301.cinemaai.service.NotificationService;

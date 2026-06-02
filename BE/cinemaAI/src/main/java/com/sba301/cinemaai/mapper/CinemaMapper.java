@@ -1,10 +1,10 @@
-package com.sba301.cinemaai.mapper;
+﻿package com.sba301.cinemaai.mapper;
 
-import com.sba301.cinemaai.dto.cinema.CinemaResponse;
-import com.sba301.cinemaai.dto.cinema.RoomResponse;
-import com.sba301.cinemaai.dto.cinema.SeatResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeSeatResponse;
+import com.sba301.cinemaai.dto.response.cinema.CinemaResponse;
+import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
+import com.sba301.cinemaai.dto.response.cinema.SeatResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
 import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Room;

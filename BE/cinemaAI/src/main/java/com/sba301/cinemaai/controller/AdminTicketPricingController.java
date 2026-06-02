@@ -1,10 +1,10 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.ApiResponse;
-import com.sba301.cinemaai.dto.ticket.TicketComboRequest;
-import com.sba301.cinemaai.dto.ticket.TicketComboResponse;
-import com.sba301.cinemaai.dto.ticket.TicketPricingRuleRequest;
-import com.sba301.cinemaai.dto.ticket.TicketPricingRuleResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketComboRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketComboResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketPricingRuleResponse;
 import com.sba301.cinemaai.service.TicketPricingService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;

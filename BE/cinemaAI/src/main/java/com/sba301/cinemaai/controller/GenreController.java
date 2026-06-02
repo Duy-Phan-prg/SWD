@@ -1,6 +1,6 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.movie.GenreResponse;
+import com.sba301.cinemaai.dto.response.movie.GenreResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.GenreService;
 import java.util.List;

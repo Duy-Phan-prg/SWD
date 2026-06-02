@@ -1,7 +1,7 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.movie.GenreRequest;
-import com.sba301.cinemaai.dto.movie.GenreResponse;
+import com.sba301.cinemaai.dto.request.movie.GenreRequest;
+import com.sba301.cinemaai.dto.response.movie.GenreResponse;
 import com.sba301.cinemaai.entity.Genre;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;

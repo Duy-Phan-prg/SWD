@@ -1,6 +1,6 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.recommendation.RecommendationDebugResponse;
+import com.sba301.cinemaai.dto.response.recommendation.RecommendationDebugResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.RecommendationService;
 import io.swagger.v3.oas.annotations.Operation;

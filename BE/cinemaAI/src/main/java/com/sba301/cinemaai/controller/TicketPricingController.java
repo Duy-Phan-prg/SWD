@@ -1,9 +1,9 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.ApiResponse;
-import com.sba301.cinemaai.dto.ticket.TicketComboResponse;
-import com.sba301.cinemaai.dto.ticket.TicketPriceValidationRequest;
-import com.sba301.cinemaai.dto.ticket.TicketPriceValidationResponse;
+import com.sba301.cinemaai.dto.response.ticket.TicketComboResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketPriceValidationResponse;
 import com.sba301.cinemaai.service.TicketPricingService;
 import jakarta.validation.Valid;
 import java.util.List;

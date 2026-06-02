@@ -1,9 +1,9 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.food.FoodComboRequest;
-import com.sba301.cinemaai.dto.food.FoodComboResponse;
-import com.sba301.cinemaai.dto.food.FoodItemRequest;
-import com.sba301.cinemaai.dto.food.FoodItemResponse;
+import com.sba301.cinemaai.dto.request.food.FoodComboRequest;
+import com.sba301.cinemaai.dto.response.food.FoodComboResponse;
+import com.sba301.cinemaai.dto.request.food.FoodItemRequest;
+import com.sba301.cinemaai.dto.response.food.FoodItemResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.FoodService;
 import io.swagger.v3.oas.annotations.Operation;

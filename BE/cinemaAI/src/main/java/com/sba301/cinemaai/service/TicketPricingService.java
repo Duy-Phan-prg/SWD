@@ -1,13 +1,13 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.ticket.TicketComboRequest;
-import com.sba301.cinemaai.dto.ticket.TicketComboResponse;
-import com.sba301.cinemaai.dto.ticket.TicketLinePriceResponse;
-import com.sba301.cinemaai.dto.ticket.TicketPriceValidationRequest;
-import com.sba301.cinemaai.dto.ticket.TicketPriceValidationResponse;
-import com.sba301.cinemaai.dto.ticket.TicketPricingRuleRequest;
-import com.sba301.cinemaai.dto.ticket.TicketPricingRuleResponse;
-import com.sba301.cinemaai.dto.ticket.TicketSelectionRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketComboRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketComboResponse;
+import com.sba301.cinemaai.dto.response.ticket.TicketLinePriceResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketPriceValidationResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketPricingRuleResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.TicketCombo;

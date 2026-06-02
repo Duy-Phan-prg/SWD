@@ -1,12 +1,12 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.booking.BookingFoodRequest;
-import com.sba301.cinemaai.dto.booking.BookingResponse;
-import com.sba301.cinemaai.dto.booking.CreateBookingRequest;
-import com.sba301.cinemaai.dto.booking.HoldSeatsRequest;
-import com.sba301.cinemaai.dto.ticket.TicketLinePriceResponse;
-import com.sba301.cinemaai.dto.ticket.TicketPriceValidationRequest;
-import com.sba301.cinemaai.dto.ticket.TicketPriceValidationResponse;
+import com.sba301.cinemaai.dto.request.booking.BookingFoodRequest;
+import com.sba301.cinemaai.dto.response.booking.BookingResponse;
+import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
+import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketLinePriceResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketPriceValidationResponse;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingFoodItem;
 import com.sba301.cinemaai.entity.BookingSeat;

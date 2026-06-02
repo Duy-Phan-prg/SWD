@@ -1,10 +1,10 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.recommendation.FavoriteActorRecommendationResponse;
-import com.sba301.cinemaai.dto.recommendation.MovieRecommendationResponse;
-import com.sba301.cinemaai.dto.recommendation.TrailerInteractionRequest;
-import com.sba301.cinemaai.dto.recommendation.TrailerInteractionResponse;
-import com.sba301.cinemaai.dto.recommendation.UserPreferenceProfileResponse;
+import com.sba301.cinemaai.dto.response.recommendation.FavoriteActorRecommendationResponse;
+import com.sba301.cinemaai.dto.response.recommendation.MovieRecommendationResponse;
+import com.sba301.cinemaai.dto.request.recommendation.TrailerInteractionRequest;
+import com.sba301.cinemaai.dto.response.recommendation.TrailerInteractionResponse;
+import com.sba301.cinemaai.dto.response.recommendation.UserPreferenceProfileResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
 import com.sba301.cinemaai.service.RecommendationService;

@@ -1,9 +1,9 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.food.FoodComboRequest;
-import com.sba301.cinemaai.dto.food.FoodComboResponse;
-import com.sba301.cinemaai.dto.food.FoodItemRequest;
-import com.sba301.cinemaai.dto.food.FoodItemResponse;
+import com.sba301.cinemaai.dto.request.food.FoodComboRequest;
+import com.sba301.cinemaai.dto.response.food.FoodComboResponse;
+import com.sba301.cinemaai.dto.request.food.FoodItemRequest;
+import com.sba301.cinemaai.dto.response.food.FoodItemResponse;
 import com.sba301.cinemaai.entity.FoodCombo;
 import com.sba301.cinemaai.entity.FoodItem;
 import com.sba301.cinemaai.enums.FoodItemStatus;

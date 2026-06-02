@@ -131,4 +131,9 @@ public class Booking extends BaseEntity {
         this.refundedAt = LocalDateTime.now();
         this.status = BookingStatus.REFUNDED;
     }
+
+    public void clearPromotion() {
+        this.discountAmount = BigDecimal.ZERO;
+        this.totalAmount = this.subtotal;
+    }
 }

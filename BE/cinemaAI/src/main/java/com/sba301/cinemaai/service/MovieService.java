@@ -1,11 +1,11 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.movie.MovieCreateRequest;
-import com.sba301.cinemaai.dto.movie.ActorResponse;
-import com.sba301.cinemaai.dto.movie.MovieActorAssignmentRequest;
-import com.sba301.cinemaai.dto.movie.MovieResponse;
-import com.sba301.cinemaai.dto.movie.MovieStatusUpdateRequest;
-import com.sba301.cinemaai.dto.movie.MovieUpdateRequest;
+import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
+import com.sba301.cinemaai.dto.response.movie.ActorResponse;
+import com.sba301.cinemaai.dto.request.movie.MovieActorAssignmentRequest;
+import com.sba301.cinemaai.dto.response.movie.MovieResponse;
+import com.sba301.cinemaai.dto.request.movie.MovieStatusUpdateRequest;
+import com.sba301.cinemaai.dto.request.movie.MovieUpdateRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.entity.Actor;
 import com.sba301.cinemaai.entity.Genre;

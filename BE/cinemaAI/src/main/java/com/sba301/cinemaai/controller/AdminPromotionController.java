@@ -1,8 +1,8 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.promotion.PromotionCreateRequest;
-import com.sba301.cinemaai.dto.promotion.PromotionResponse;
-import com.sba301.cinemaai.dto.promotion.PromotionUpdateRequest;
+import com.sba301.cinemaai.dto.request.promotion.PromotionCreateRequest;
+import com.sba301.cinemaai.dto.response.promotion.PromotionResponse;
+import com.sba301.cinemaai.dto.request.promotion.PromotionUpdateRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.service.PromotionService;

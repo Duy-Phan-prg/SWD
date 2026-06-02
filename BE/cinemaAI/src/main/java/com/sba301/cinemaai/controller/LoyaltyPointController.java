@@ -1,7 +1,7 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.loyalty.LoyaltyAddRequest;
-import com.sba301.cinemaai.dto.loyalty.LoyaltyResponse;
+import com.sba301.cinemaai.dto.request.loyalty.LoyaltyAddRequest;
+import com.sba301.cinemaai.dto.response.loyalty.LoyaltyResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
 import com.sba301.cinemaai.service.LoyaltyPointService;

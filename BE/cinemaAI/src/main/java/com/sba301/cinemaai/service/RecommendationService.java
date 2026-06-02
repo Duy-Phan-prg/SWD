@@ -1,11 +1,11 @@
-package com.sba301.cinemaai.service;
+﻿package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.recommendation.FavoriteActorRecommendationResponse;
-import com.sba301.cinemaai.dto.recommendation.MovieRecommendationResponse;
-import com.sba301.cinemaai.dto.recommendation.RecommendationDebugResponse;
-import com.sba301.cinemaai.dto.recommendation.TrailerInteractionRequest;
-import com.sba301.cinemaai.dto.recommendation.TrailerInteractionResponse;
-import com.sba301.cinemaai.dto.recommendation.UserPreferenceProfileResponse;
+import com.sba301.cinemaai.dto.response.recommendation.FavoriteActorRecommendationResponse;
+import com.sba301.cinemaai.dto.response.recommendation.MovieRecommendationResponse;
+import com.sba301.cinemaai.dto.response.recommendation.RecommendationDebugResponse;
+import com.sba301.cinemaai.dto.request.recommendation.TrailerInteractionRequest;
+import com.sba301.cinemaai.dto.response.recommendation.TrailerInteractionResponse;
+import com.sba301.cinemaai.dto.response.recommendation.UserPreferenceProfileResponse;
 import com.sba301.cinemaai.entity.Actor;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.Genre;

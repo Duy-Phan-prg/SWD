@@ -1,6 +1,6 @@
-package com.sba301.cinemaai.controller;
+﻿package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.analysis.AIAnalysisResponse;
+import com.sba301.cinemaai.dto.response.analysis.AIAnalysisResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.AIAnalysisService;
 import lombok.RequiredArgsConstructor;
