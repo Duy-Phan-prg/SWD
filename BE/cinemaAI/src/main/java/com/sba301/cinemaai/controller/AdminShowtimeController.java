@@ -50,18 +50,6 @@ public class AdminShowtimeController {
         return ApiResponse.success(showtimeService.searchAdmin(movieId, roomId, date));
     }
 
-    @GetMapping("/{showtimeId}")
-    @Operation(summary = "Get showtime by ID (Admin)", description = "Get a specific showtime by ID (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Showtime retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Showtime not found")
-    })
-    public ApiResponse<ShowtimeResponse> getShowtime(@PathVariable Long showtimeId) {
-        return ApiResponse.success(showtimeService.get(showtimeId));
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create new showtime (Admin)", description = "Create a new showtime (Admin only)")
