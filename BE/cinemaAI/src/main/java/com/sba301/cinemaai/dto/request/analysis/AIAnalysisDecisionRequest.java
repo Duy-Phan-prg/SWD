@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.analysis;
+package com.sba301.cinemaai.dto.request.analysis;
 
 import jakarta.validation.constraints.Size;
 

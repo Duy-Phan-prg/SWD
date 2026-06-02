@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
-export default function PaymentCallbackPage({ onGoHome }) {
+export default function PaymentCallbackPage() {
+  const navigate = useNavigate();
+  const onGoHome = () => navigate('/');
   const [status, setStatus] = useState('loading');
   const [info, setInfo] = useState({});
 

@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.mapper;
+package com.sba301.cinemaai.mapper;
 
 import com.sba301.cinemaai.dto.response.movie.ActorResponse;
 import com.sba301.cinemaai.dto.response.movie.GenreResponse;

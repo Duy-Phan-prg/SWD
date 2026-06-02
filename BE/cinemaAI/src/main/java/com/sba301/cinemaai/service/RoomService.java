@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.service;
+package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
 import com.sba301.cinemaai.dto.response.cinema.RoomResponse;

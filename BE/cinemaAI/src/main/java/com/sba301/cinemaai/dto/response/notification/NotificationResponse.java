@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.notification;
+package com.sba301.cinemaai.dto.response.notification;
 
 import com.sba301.cinemaai.entity.Notification;
 import com.sba301.cinemaai.enums.NotificationType;

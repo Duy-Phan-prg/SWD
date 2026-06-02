@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.recommendation;
+package com.sba301.cinemaai.dto.response.recommendation;
 
 import java.util.List;
 

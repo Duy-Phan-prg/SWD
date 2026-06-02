@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.loyalty;
+package com.sba301.cinemaai.dto.request.loyalty;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

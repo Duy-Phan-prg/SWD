@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.service;
+package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.response.auth.AuthResponse;
 import com.sba301.cinemaai.dto.request.auth.GoogleLoginRequest;
@@ -145,9 +145,6 @@ public class AuthService {
                 pendingRegistration.getFullName(),
                 pendingRegistration.getPhone()
         ));
-        if (pendingRegistration.getBirthYear() != null) {
-            user.updateProfile(user.getFullName(), user.getPhone(), pendingRegistration.getBirthYear());
-        }
         user.activateEmail();
         userRoleService.assignRole(user, RoleName.CUSTOMER);
         pendingRegistrationRepository.delete(pendingRegistration);
@@ -250,7 +247,6 @@ public class AuthService {
                 pendingRegistration.getEmail(),
                 pendingRegistration.getFullName(),
                 pendingRegistration.getPhone(),
-                pendingRegistration.getBirthYear(),
                 UserStatus.PENDING_VERIFICATION,
                 false,
                 false,

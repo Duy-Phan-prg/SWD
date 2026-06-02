@@ -1,11 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
 import { comboItems } from '../services/cinemaData';
 import { authApi, getStoredAuth } from '../services/authApi';
+import { useMovies } from '../contexts/MoviesContext';
+import { useUI } from '../contexts/UIContext';
 
 const CHILD_DISCOUNT = 0.7;
 
-export default function BookingView({ movie, onBack, onConfirmBooking, showToast = () => {}, foodCatalog = [] }) {
+export default function BookingView() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const { moviesList, foodCatalog } = useMovies();
+  const { showToast } = useUI();
+  const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
+  const onBack = () => navigate(-1);
+  const onConfirmBooking = (booking) => {
+    navigate('/tickets');
+    showToast(`Đặt vé thành công! Mã booking: ${booking.bookingCode || ''}`.trim());
+  };
+  if (!movie) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>;
   const seatScrollRef = useRef(null);
   const scrollSeats = (direction) => {
     seatScrollRef.current?.scrollBy({ left: direction === 'left' ? -180 : 180, behavior: 'smooth' });

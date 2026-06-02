@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.service;
+package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.user.AdminUserStatusUpdateRequest;
 import com.sba301.cinemaai.dto.request.user.ChangePasswordRequest;
@@ -40,7 +40,7 @@ public class UserService {
     @Transactional
     public UserProfileResponse updateProfile(String email, UserProfileUpdateRequest request) {
         User user = getByEmail(email);
-        user.updateProfile(request.fullName(), request.phone(), request.birthYear());
+        user.updateProfile(request.fullName(), request.phone());
         return toProfile(user);
     }
 

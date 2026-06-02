@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.ticket;
+package com.sba301.cinemaai.dto.request.ticket;
 
 import com.sba301.cinemaai.enums.TicketType;
 import jakarta.validation.constraints.Min;

@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.loyalty;
+package com.sba301.cinemaai.dto.response.loyalty;
 
 import com.sba301.cinemaai.entity.LoyaltyPoint;
 import com.sba301.cinemaai.enums.LoyaltyStatus;

@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.movie;
+package com.sba301.cinemaai.dto.request.movie;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

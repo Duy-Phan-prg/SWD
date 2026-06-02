@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Camera, CreditCard, Lock, LogOut, Settings, User,
   ChevronRight, Award, Flame, Eye, Film, Sparkles,
@@ -16,18 +17,19 @@ import {
   normalizeNameInput,
   normalizePhoneInput
 } from '../utils/validation';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
+import { useMovies } from '../contexts/MoviesContext';
 
-export default function ProfileView({
-  onSelectMovie,
-  onTabChange,
-  bookedTickets,
-  isLoggedIn,
-  onLogout,
-  onOpenOTP,
-  currentUser,
-  onProfileUpdated = () => { },
-  showToast = () => { }
-}) {
+export default function ProfileView() {
+  const navigate = useNavigate();
+  const { isLoggedIn, currentUser, setCurrentUser, setCurrentRole, handleLogout: onLogout } = useAuth();
+  const { showToast, setShowOTP } = useUI();
+  const { bookedTickets } = useMovies();
+  const onSelectMovie = (id) => navigate(`/movies/${id}`);
+  const onTabChange = (tab) => { const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets' }; navigate(paths[tab] || '/'); };
+  const onOpenOTP = () => setShowOTP(true);
+  const onProfileUpdated = (user) => { setCurrentUser(user); setCurrentRole(user.role || 'user'); };
   const [profileImg, setProfileImg] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop');
   const [name, setName] = useState(currentUser?.name || 'MINH HỒNG (VIP)');
   const [isEditingName, setIsEditingName] = useState(false);

@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.controller;
+package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.auth.AuthResponse;
 import com.sba301.cinemaai.dto.request.auth.EmailOtpRequest;

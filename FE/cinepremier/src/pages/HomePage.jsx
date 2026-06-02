@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Play, Pause, Sparkles, MessageSquare, Check, HelpCircle, Volume2, VolumeX, ChevronLeft, ChevronRight, Film } from 'lucide-react';
 import { movies } from '../services/cinemaData';
 import MovieCard from '../components/movies/MovieCard';
+import { useMovies } from '../contexts/MoviesContext';
 
 const extractYoutubeId = (url = '') => {
   const trimmed = url.trim();
@@ -17,7 +19,12 @@ const extractYoutubeId = (url = '') => {
   return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || 'k8m0SaGQ_1c';
 };
 
-export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = movies, homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c' }) {
+export default function HomeView() {
+  const navigate = useNavigate();
+  const { moviesList = movies, homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c' } = useMovies();
+  const onSelectMovie = (id) => navigate(`/movies/${id}`);
+  const onBookMovie = (movie) => navigate(`/movies/${movie.id}/book`);
+  const onTabChange = (tab) => { if (tab === 'explore') navigate('/movies'); };
   const [selectedMood, setSelectedMood] = useState('#Đỉnh_Cao_Thị_Giác');
   const [userPrompt, setUserPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState(null);

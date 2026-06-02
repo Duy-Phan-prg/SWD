@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.promotion;
+package com.sba301.cinemaai.dto.response.promotion;
 
 import java.math.BigDecimal;
 import lombok.Builder;

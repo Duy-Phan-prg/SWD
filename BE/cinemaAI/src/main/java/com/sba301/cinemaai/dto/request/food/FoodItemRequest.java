@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.food;
+package com.sba301.cinemaai.dto.request.food;
 
 import com.sba301.cinemaai.enums.FoodItemStatus;
 import jakarta.validation.constraints.DecimalMin;

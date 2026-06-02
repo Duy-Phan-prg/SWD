@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.promotion;
+package com.sba301.cinemaai.dto.response.promotion;
 import com.sba301.cinemaai.entity.Promotion;
 import com.sba301.cinemaai.enums.PromotionStatus;
 import com.sba301.cinemaai.enums.PromotionType;

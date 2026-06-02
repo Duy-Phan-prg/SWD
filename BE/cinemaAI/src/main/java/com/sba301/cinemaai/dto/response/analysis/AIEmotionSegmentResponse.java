@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.analysis;
+package com.sba301.cinemaai.dto.response.analysis;
 
 import com.sba301.cinemaai.enums.EmotionType;
 

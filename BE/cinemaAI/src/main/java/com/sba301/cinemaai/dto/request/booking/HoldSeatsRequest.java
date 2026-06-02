@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.booking;
+package com.sba301.cinemaai.dto.request.booking;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;

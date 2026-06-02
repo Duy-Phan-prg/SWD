@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.booking;
+package com.sba301.cinemaai.dto.response.booking;
 
 import java.math.BigDecimal;
 

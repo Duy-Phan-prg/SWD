@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response;
+package com.sba301.cinemaai.dto.response;
 
 public record FieldErrorResponse(
         String field,

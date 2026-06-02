@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.payment;
+package com.sba301.cinemaai.dto.response.payment;
 
 public record VnpayCallbackParams(
         String vnp_TxnRef,

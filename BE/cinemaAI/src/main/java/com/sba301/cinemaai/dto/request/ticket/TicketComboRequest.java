@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.ticket;
+package com.sba301.cinemaai.dto.request.ticket;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;

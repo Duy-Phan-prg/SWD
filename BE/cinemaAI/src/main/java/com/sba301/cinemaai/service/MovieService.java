@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.service;
+package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
 import com.sba301.cinemaai.dto.response.movie.ActorResponse;

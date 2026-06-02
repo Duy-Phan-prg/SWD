@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.recommendation;
+package com.sba301.cinemaai.dto.request.recommendation;
 
 import com.sba301.cinemaai.enums.TrailerInteractionType;
 import jakarta.validation.constraints.NotNull;

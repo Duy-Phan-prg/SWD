@@ -91,8 +91,12 @@ public class CinemaService {
                 .orElseThrow(() -> new NotFoundException("Cinema not found"));
     }
 
-    private Cinema findSingleton() {
+    public Cinema findSingleton() {
         return cinemaRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new NotFoundException("No cinema configured"));
+    }
+
+    public Cinema findSingletonById(Long id) {
+        return findById(id);
     }
 }

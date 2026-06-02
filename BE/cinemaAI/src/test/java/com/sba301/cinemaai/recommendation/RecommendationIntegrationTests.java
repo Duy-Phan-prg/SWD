@@ -2,10 +2,10 @@ package com.sba301.cinemaai.recommendation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sba301.cinemaai.dto.auth.LoginRequest;
-import com.sba301.cinemaai.dto.movie.GenreRequest;
-import com.sba301.cinemaai.dto.movie.MovieCreateRequest;
-import com.sba301.cinemaai.dto.recommendation.TrailerInteractionRequest;
+import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.movie.GenreRequest;
+import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
+import com.sba301.cinemaai.dto.request.recommendation.TrailerInteractionRequest;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;

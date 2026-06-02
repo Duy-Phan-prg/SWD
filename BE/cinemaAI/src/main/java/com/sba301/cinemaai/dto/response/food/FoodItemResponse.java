@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.food;
+package com.sba301.cinemaai.dto.response.food;
 
 import com.sba301.cinemaai.enums.FoodItemStatus;
 import java.math.BigDecimal;

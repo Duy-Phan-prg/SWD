@@ -1,6 +1,6 @@
-﻿package com.sba301.cinemaai.dto.response.auth;
+package com.sba301.cinemaai.dto.response.auth;
 
-import com.sba301.cinemaai.dto.user.UserProfileResponse;
+import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import java.util.List;
 
 public record AuthResponse(

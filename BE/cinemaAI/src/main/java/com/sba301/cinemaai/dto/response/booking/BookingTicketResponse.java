@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.booking;
+package com.sba301.cinemaai.dto.response.booking;
 
 import com.sba301.cinemaai.enums.TicketType;
 import java.math.BigDecimal;

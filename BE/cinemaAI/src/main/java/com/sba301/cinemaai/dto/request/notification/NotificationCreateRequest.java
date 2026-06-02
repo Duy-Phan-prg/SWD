@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.notification;
+package com.sba301.cinemaai.dto.request.notification;
 
 import com.sba301.cinemaai.enums.NotificationType;
 import jakarta.validation.constraints.NotBlank;

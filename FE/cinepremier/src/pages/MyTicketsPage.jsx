@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical } from 'lucide-react';
 import { authApi, getStoredAuth } from '../services/authApi';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
 
-export default function MyTicketsView({
-  onSelectMovie,
-  isLoggedIn,
-  onOpenOTP,
-  showToast = () => {}
-}) {
+export default function MyTicketsView() {
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+  const { showToast, setShowOTP } = useUI();
+  const onSelectMovie = (id) => navigate(`/movies/${id}`);
+  const onOpenOTP = () => setShowOTP(true);
   const [reviewContent, setReviewContent] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [selectedReviewMovie, setSelectedReviewMovie] = useState('');

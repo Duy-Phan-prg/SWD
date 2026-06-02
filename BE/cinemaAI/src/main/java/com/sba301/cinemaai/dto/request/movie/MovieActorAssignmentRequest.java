@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.movie;
+package com.sba301.cinemaai.dto.request.movie;
 
 import jakarta.validation.constraints.NotEmpty;
 import java.util.List;

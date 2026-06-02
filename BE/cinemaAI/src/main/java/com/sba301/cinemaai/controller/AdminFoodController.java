@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.controller;
+package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.request.food.FoodComboRequest;
 import com.sba301.cinemaai.dto.response.food.FoodComboResponse;

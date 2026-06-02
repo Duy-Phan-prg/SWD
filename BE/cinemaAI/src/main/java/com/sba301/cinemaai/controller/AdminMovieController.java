@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.controller;
+package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.request.movie.MovieActorAssignmentRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;

@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.cinema;
+package com.sba301.cinemaai.dto.response.cinema;
 
 import java.util.List;
 

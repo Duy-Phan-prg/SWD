@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.promotion;
+package com.sba301.cinemaai.dto.request.promotion;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

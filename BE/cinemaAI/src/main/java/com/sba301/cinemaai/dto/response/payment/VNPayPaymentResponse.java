@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.payment;
+package com.sba301.cinemaai.dto.response.payment;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

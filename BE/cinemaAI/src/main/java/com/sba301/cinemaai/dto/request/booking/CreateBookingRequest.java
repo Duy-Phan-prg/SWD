@@ -1,8 +1,8 @@
-﻿package com.sba301.cinemaai.dto.request.booking;
+package com.sba301.cinemaai.dto.request.booking;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import com.sba301.cinemaai.dto.ticket.TicketSelectionRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
 import java.util.List;
 
 public record CreateBookingRequest(

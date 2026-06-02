@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.cinema;
+package com.sba301.cinemaai.dto.response.cinema;
 
 import com.sba301.cinemaai.enums.SeatStatus;
 import com.sba301.cinemaai.enums.SeatType;

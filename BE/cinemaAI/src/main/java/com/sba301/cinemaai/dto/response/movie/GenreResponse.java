@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.movie;
+package com.sba301.cinemaai.dto.response.movie;
 
 import java.time.LocalDateTime;
 

@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.movie;
+package com.sba301.cinemaai.dto.response.movie;
 
 import com.sba301.cinemaai.enums.MovieStatus;
 import java.time.LocalDate;

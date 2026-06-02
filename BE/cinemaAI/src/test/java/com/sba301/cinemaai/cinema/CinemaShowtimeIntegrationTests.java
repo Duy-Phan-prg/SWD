@@ -2,16 +2,16 @@ package com.sba301.cinemaai.cinema;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sba301.cinemaai.dto.auth.LoginRequest;
-import com.sba301.cinemaai.dto.cinema.CinemaRequest;
-import com.sba301.cinemaai.dto.cinema.RoomRequest;
-import com.sba301.cinemaai.dto.cinema.SeatGenerationRequest;
-import com.sba301.cinemaai.dto.cinema.SeatUpdateRequest;
-import com.sba301.cinemaai.dto.cinema.ShowtimeRequest;
-import com.sba301.cinemaai.dto.ticket.TicketComboRequest;
-import com.sba301.cinemaai.dto.ticket.TicketPriceValidationRequest;
-import com.sba301.cinemaai.dto.ticket.TicketPricingRuleRequest;
-import com.sba301.cinemaai.dto.ticket.TicketSelectionRequest;
+import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.cinema.CinemaRequest;
+import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
+import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketComboRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.User;
@@ -225,11 +225,15 @@ class CinemaShowtimeIntegrationTests {
     }
 
     private Long createRoom(String token) throws Exception {
+        return createRoom(token, null);
+    }
+
+    private Long createRoom(String token, Long cinemaId) throws Exception {
         String response = mockMvc.perform(post("/api/v1/admin/rooms")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RoomRequest(
-                                null,
+                                cinemaId,
                                 "Room Phase 5",
                                 RoomType.TWO_D,
                                 3,

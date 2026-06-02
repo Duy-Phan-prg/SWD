@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.request.wishlist;
+package com.sba301.cinemaai.dto.request.wishlist;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;

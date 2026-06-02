@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.wishlist;
+package com.sba301.cinemaai.dto.response.wishlist;
 
 import com.sba301.cinemaai.entity.Wishlist;
 import java.time.LocalDateTime;

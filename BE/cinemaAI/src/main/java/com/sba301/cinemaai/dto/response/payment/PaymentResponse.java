@@ -1,4 +1,4 @@
-﻿package com.sba301.cinemaai.dto.response.payment;
+package com.sba301.cinemaai.dto.response.payment;
 
 import com.sba301.cinemaai.enums.PaymentProvider;
 import com.sba301.cinemaai.enums.PaymentStatus;

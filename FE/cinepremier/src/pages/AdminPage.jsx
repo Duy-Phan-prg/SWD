@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
@@ -7,6 +8,7 @@ import {
   BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
 } from 'lucide-react';
 import { authApi, getStoredAuth } from '../services/authApi';
+import { cinemaLocations } from '../services/cinemaData';
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
 import AdminMoviesPanel from './admin/AdminMoviesPanel';
 import AdminGenresPanel from './admin/AdminGenresPanel';
@@ -16,23 +18,19 @@ import AdminShowtimesPanel from './admin/AdminShowtimesPanel';
 import AdminTransactionsPanel from './admin/AdminTransactionsPanel';
 import AdminAiAnalysisPanel from './admin/AdminAiAnalysisPanel';
 import AdminUsersPanel from './admin/AdminUsersPanel';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
+import { useMovies } from '../contexts/MoviesContext';
 
-export default function AdminDashboard({
-  moviesList,
-  setMoviesList,
-  bookedTickets,
-  setBookedTickets,
-  cinemaLocations,
-  onSelectMovie,
-  showToast = () => { },
-  initialSection = 'overview',
-  onSectionChange = () => { },
-  homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c',
-  onHomepageVideoUrlChange = () => { },
-  onFoodCatalogChanged = () => { },
-  isAdmin = false,
-  currentUser = null
-}) {
+export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const { section: initialSection = 'overview' } = useParams();
+  const { currentUser, currentRole } = useAuth();
+  const isAdmin = currentRole === 'admin';
+  const { showToast } = useUI();
+  const { moviesList, setMoviesList, bookedTickets, setBookedTickets, homepageVideoUrl, handleHomepageVideoUrlChange: onHomepageVideoUrlChange, fetchPublicFoodCatalog: onFoodCatalogChanged } = useMovies();
+  const onSelectMovie = (id) => navigate(`/movies/${id}`);
+  const onSectionChange = (section) => navigate(`/admin/${section}`);
   const [activeTab, setActiveTab] = useState(initialSection || 'overview'); // 'overview' | 'movies' | 'genres' | 'foods' | 'homepage' | 'showtimes' | 'transactions' | 'users' | 'ai-analysis'
   const [selectedAnalysisMovieId, setSelectedAnalysisMovieId] = useState(moviesList[0]?.id || 'neon-horizon');
   const [isReanalyzing, setIsReanalyzing] = useState(false);
