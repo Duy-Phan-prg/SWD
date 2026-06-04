@@ -46,8 +46,12 @@ public class CinemaMapper {
         return new SeatResponse(
                 seat.getId(),
                 seat.getRoom().getId(),
+                seat.getSeatRow().getId(),
                 seat.getRowLabel(),
+                seat.getSeatRow().getDisplayOrder(),
                 seat.getSeatNumber(),
+                seat.getDisplayColumn(),
+                seat.getSeatRow().getStartColumn(),
                 seat.getSeatType(),
                 seat.getStatus()
         );
@@ -76,8 +80,12 @@ public class CinemaMapper {
     public ShowtimeSeatResponse toShowtimeSeatResponse(Seat seat, String runtimeStatus, Showtime showtime) {
         return new ShowtimeSeatResponse(
                 seat.getId(),
+                seat.getSeatRow().getId(),
                 seat.getRowLabel(),
+                seat.getSeatRow().getDisplayOrder(),
                 seat.getSeatNumber(),
+                seat.getDisplayColumn(),
+                seat.getSeatRow().getStartColumn(),
                 seat.getSeatType(),
                 seat.getStatus(),
                 runtimeStatus,

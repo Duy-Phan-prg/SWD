@@ -35,11 +35,18 @@ public class Seat extends BaseEntity {
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "seat_row_id", nullable = false)
+    private SeatRow seatRow;
+
     @Column(name = "row_label", nullable = false, length = 10)
     private String rowLabel;
 
     @Column(name = "seat_number", nullable = false)
     private int seatNumber;
+
+    @Column(name = "display_column", nullable = false)
+    private int displayColumn;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "seat_type", nullable = false, length = 30)
@@ -49,10 +56,12 @@ public class Seat extends BaseEntity {
     @Column(nullable = false, length = 30)
     private SeatStatus status = SeatStatus.AVAILABLE;
 
-    public Seat(Room room, String rowLabel, int seatNumber, SeatType seatType) {
+    public Seat(Room room, SeatRow seatRow, int seatNumber, int displayColumn, SeatType seatType) {
         this.room = room;
-        this.rowLabel = rowLabel;
+        this.seatRow = seatRow;
+        this.rowLabel = seatRow.getRowLabel();
         this.seatNumber = seatNumber;
+        this.displayColumn = displayColumn;
         this.seatType = seatType;
     }
 

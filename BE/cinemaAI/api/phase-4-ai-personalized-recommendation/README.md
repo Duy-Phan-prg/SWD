@@ -1,4 +1,4 @@
-# Phase 4 - AI gợi ý phim cá nhân hóa
+﻿# Phase 4 - AI gợi ý phim cá nhân hóa
 
 ## 1. Ghi nhận hành vi xem trailer
 
@@ -8,13 +8,13 @@ Ghi nhận user click, xem, bỏ qua hoặc xem hết trailer. Nếu user xem h�
 ### API
 ```http
 POST /api/v1/recommendations/trailer-interactions
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
 ```json
 {
-  "movieId": 1,
+  "movieId": {{movieId}},
   "interactionType": "COMPLETE",
   "watchedSeconds": 120,
   "totalSeconds": 120
@@ -27,7 +27,7 @@ Authorization: Bearer CUSTOMER_TOKEN
   "success": true,
   "data": {
     "id": 1,
-    "movieId": 1,
+    "movieId": {{movieId}},
     "movieTitle": "Action Movie A",
     "interactionType": "COMPLETE",
     "watchedSeconds": 120,
@@ -45,7 +45,7 @@ Tổng hợp sở thích từ trailer, lịch sử booking và review.
 ### API
 ```http
 POST /api/v1/recommendations/preferences/refresh
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
@@ -76,7 +76,7 @@ Lấy phim gợi ý theo hồ sơ sở thích của user.
 ### API
 ```http
 GET /api/v1/recommendations/movies?limit=10
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
@@ -114,7 +114,7 @@ Gợi ý phim mới của diễn viên user thường xem, mua vé hoặc review
 ### API
 ```http
 GET /api/v1/recommendations/favorite-actors?limit=10
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
@@ -150,8 +150,8 @@ Admin xem điểm profile, số interaction/booking/review và kết quả gợi
 
 ### API
 ```http
-GET /api/v1/admin/recommendations/users/2/debug?limit=10
-Authorization: Bearer ADMIN_TOKEN
+GET /api/v1/admin/recommendations/users/{{userId}}/debug?limit=10
+Authorization: Bearer {{adminToken}}
 ```
 
 ### JSON

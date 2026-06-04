@@ -33,6 +33,17 @@ POST /api/v1/auth/register
   },
   "message": "Registered successfully"
 }
+{
+  "success": true,
+  "data": {
+    "user": {
+      "email": "customer@example.com",
+      "roles": ["CUSTOMER"]
+    },
+    "emailVerificationRequired": true
+  },
+  "message": "Registered successfully"
+}
 ```
 
 ## 2. Xác minh email

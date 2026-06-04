@@ -4,6 +4,7 @@ import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Seat;
+import com.sba301.cinemaai.entity.SeatRow;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.enums.RoomType;
 import com.sba301.cinemaai.enums.SeatType;
@@ -12,6 +13,7 @@ import com.sba301.cinemaai.repository.CinemaRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.RoomRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
+import com.sba301.cinemaai.repository.SeatRowRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,6 +30,7 @@ public class CinemaScheduleSeeder implements Seeder {
     private final CinemaRepository cinemaRepository;
     private final RoomRepository roomRepository;
     private final SeatRepository seatRepository;
+    private final SeatRowRepository seatRowRepository;
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
 
@@ -51,11 +54,20 @@ public class CinemaScheduleSeeder implements Seeder {
 
     private void seedSeats(Room room) {
         for (char row = 'A'; row <= 'E'; row++) {
+            String rowLabel = Character.toString(row);
+            SeatType rowType = row == 'E' ? SeatType.VIP : SeatType.NORMAL;
+            int displayOrder = row - 'A' + 1;
+            SeatRow seatRow = seatRowRepository.findByRoomAndRowLabel(room, rowLabel)
+                    .orElseGet(() -> seatRowRepository.save(new SeatRow(
+                            room,
+                            rowLabel,
+                            displayOrder,
+                            1,
+                            rowType
+                    )));
             for (int number = 1; number <= 8; number++) {
-                String rowLabel = Character.toString(row);
                 if (!seatRepository.existsByRoomAndRowLabelAndSeatNumber(room, rowLabel, number)) {
-                    SeatType seatType = row == 'E' ? SeatType.VIP : SeatType.NORMAL;
-                    seatRepository.save(new Seat(room, rowLabel, number, seatType));
+                    seatRepository.save(new Seat(room, seatRow, number, number, rowType));
                 }
             }
         }

@@ -18,6 +18,7 @@ import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Seat;
+import com.sba301.cinemaai.entity.SeatRow;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;
@@ -37,6 +38,7 @@ import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.RoleRepository;
 import com.sba301.cinemaai.repository.RoomRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
+import com.sba301.cinemaai.repository.SeatRowRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import com.sba301.cinemaai.repository.UserRoleRepository;
@@ -81,6 +83,9 @@ class BookingIntegrationTests {
 
     @Autowired
     private SeatRepository seatRepository;
+
+    @Autowired
+    private SeatRowRepository seatRowRepository;
 
     @Autowired
     private ShowtimeRepository showtimeRepository;
@@ -318,8 +323,9 @@ class BookingIntegrationTests {
 
         Cinema cinema = cinemaRepository.save(new Cinema("Phase 6 Cinema " + suffix, "1 Booking Street", "HCMC", "0900666777"));
         Room room = roomRepository.save(new Room(cinema, "Room 6", RoomType.TWO_D, 1, 2));
-        seatRepository.save(new Seat(room, "A", 1, SeatType.NORMAL));
-        seatRepository.save(new Seat(room, "A", 2, SeatType.NORMAL));
+        SeatRow seatRow = seatRowRepository.save(new SeatRow(room, "A", 1, 1, SeatType.NORMAL));
+        seatRepository.save(new Seat(room, seatRow, 1, 1, SeatType.NORMAL));
+        seatRepository.save(new Seat(room, seatRow, 2, 2, SeatType.NORMAL));
 
         Showtime showtime = new Showtime(
                 savedMovie,

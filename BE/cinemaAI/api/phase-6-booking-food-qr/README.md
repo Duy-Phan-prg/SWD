@@ -1,4 +1,4 @@
-# Phase 6 - Booking, khóa ghế, F&B và QR vé
+﻿# Phase 6 - Booking, khóa ghế, F&B và QR vé
 
 ## 1. Lấy danh sách đồ ăn
 
@@ -38,14 +38,14 @@ Customer giữ ghế tạm thời trong một suất chiếu.
 ### API
 ```http
 POST /api/v1/bookings/hold
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
 ```json
 {
-  "showtimeId": 1,
-  "seatIds": [1, 2]
+  "showtimeId": {{showtimeId}},
+  "seatIds": [{{seatId}}]
 }
 ```
 
@@ -75,16 +75,16 @@ Customer tạo booking từ hold, thêm F&B nếu có, backend tính tổng ti�
 ### API
 ```http
 POST /api/v1/bookings
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
 ```json
 {
-  "holdBookingId": 1,
+  "holdBookingId": {{holdBookingId}},
   "foods": [
     {
-      "foodItemId": 1,
+      "foodItemId": {{foodItemId}},
       "foodComboId": null,
       "quantity": 2
     }
@@ -116,13 +116,13 @@ Customer tạo booking từ hold kèm danh sách vé. Backend kiểm tra số v�
 ### API
 ```http
 POST /api/v1/bookings
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
 ```json
 {
-  "holdBookingId": 1,
+  "holdBookingId": {{holdBookingId}},
   "comboId": null,
   "holiday": false,
   "tickets": [
@@ -169,7 +169,7 @@ Customer xem danh sách booking của mình.
 ### API
 ```http
 GET /api/v1/bookings
-Authorization: Bearer CUSTOMER_TOKEN
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
@@ -199,8 +199,8 @@ Customer hủy booking của mình.
 
 ### API
 ```http
-DELETE /api/v1/bookings/1
-Authorization: Bearer CUSTOMER_TOKEN
+DELETE /api/v1/bookings/{{bookingId}}
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
@@ -223,12 +223,12 @@ Authorization: Bearer CUSTOMER_TOKEN
 ## 7. Yêu cầu hoàn tiền
 
 ### Tên mô tả API
-Customer yêu cầu hoàn tiền cho booking đã thanh toán hoặc đã bị hủy, ví dụ do cúp điện hoặc sự cố vận hành.
+Customer yêu cầu hoàn tiền cho booking đã thanh toán hoặc đã bị hủy, ví dụ do cúp điện hoặc sự cố vận hành. Booking đã check-in có trạng thái `USED` và không được yêu cầu hoàn tiền.
 
 ### API
 ```http
-POST /api/v1/bookings/1/refund-request
-Authorization: Bearer CUSTOMER_TOKEN
+POST /api/v1/bookings/{{bookingId}}/refund-request
+Authorization: Bearer {{accessToken}}
 ```
 
 ### JSON
@@ -259,8 +259,8 @@ Admin xác nhận booking đã được hoàn tiền sau khi xử lý thủ côn
 
 ### API
 ```http
-POST /api/v1/admin/bookings/1/mark-refunded
-Authorization: Bearer ADMIN_TOKEN
+POST /api/v1/admin/bookings/{{bookingId}}/mark-refunded
+Authorization: Bearer {{adminToken}}
 ```
 
 ### JSON

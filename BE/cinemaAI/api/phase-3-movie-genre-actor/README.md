@@ -1,4 +1,4 @@
-# Phase 3 - Phim, thể loại và diễn viên
+﻿# Phase 3 - Phim, thể loại và diễn viên
 
 ## 1. Tạo thể loại
 
@@ -8,7 +8,7 @@ Admin tạo thể loại phim.
 ### API
 ```http
 POST /api/v1/admin/genres
-Authorization: Bearer ADMIN_TOKEN
+Authorization: Bearer {{adminToken}}
 ```
 
 ### JSON
@@ -35,12 +35,13 @@ Authorization: Bearer ADMIN_TOKEN
 ## 2. Tạo phim
 
 ### Tên mô tả API
-Admin tạo phim, gán thể loại và tự đồng bộ diễn viên từ `mainActors/castList` sang bảng `Actor`/`MovieActor`.
+Admin tạo phim, gán thể loại qua `genreIds` và tự đồng bộ diễn viên từ `mainActors/castList` sang bảng `Actor`/`MovieActor`.
+Khi test bằng Postman, lưu id phim vừa tạo vào `phase3MovieId` để các bước sau không dùng nhầm `movieId` cũ.
 
 ### API
 ```http
 POST /api/v1/admin/movies
-Authorization: Bearer ADMIN_TOKEN
+Authorization: Bearer {{adminToken}}
 ```
 
 ### JSON
@@ -55,12 +56,12 @@ Authorization: Bearer ADMIN_TOKEN
   "releaseDate": "2026-07-01",
   "language": "English",
   "subtitleLanguage": "Vietnamese",
-  "status": "NOW_SHOWING",
+  "status": "UPCOMING",
   "ageRating": "13+",
   "director": "Action Director",
   "mainActors": "Favorite Star",
   "castList": "Favorite Star, Supporting Actor",
-  "genreIds": [1]
+  "genreIds": [{{genreId}}]
 }
 ```
 
@@ -71,7 +72,7 @@ Authorization: Bearer ADMIN_TOKEN
   "data": {
     "id": 1,
     "title": "Action Movie A",
-    "status": "NOW_SHOWING",
+    "status": "UPCOMING",
     "ageRating": "13+",
     "genres": [{"id": 1, "name": "Action"}],
     "actors": [{"id": 1, "name": "Favorite Star", "movieCount": 1}]
@@ -87,7 +88,7 @@ Khách tìm phim public. API không trả phim có trạng thái `INACTIVE`.
 
 ### API
 ```http
-GET /api/v1/movies?keyword=Action&genreId=1&page=0&size=20
+GET /api/v1/movies?keyword=Action&genreId={{genreId}}&page=0&size=20
 ```
 
 ### JSON
@@ -120,14 +121,14 @@ Admin thay thế danh sách diễn viên của phim bằng danh sách actor id.
 
 ### API
 ```http
-PUT /api/v1/admin/movies/1/actors
-Authorization: Bearer ADMIN_TOKEN
+PUT /api/v1/admin/movies/{{phase3MovieId}}/actors
+Authorization: Bearer {{adminToken}}
 ```
 
 ### JSON
 ```json
 {
-  "actorIds": [1, 2]
+  "actorIds": [{{actorId}}]
 }
 ```
 
@@ -153,7 +154,7 @@ Lấy danh sách phim có diễn viên đó.
 
 ### API
 ```http
-GET /api/v1/actors/1/movies
+GET /api/v1/actors/{{actorId}}/movies
 ```
 
 ### JSON

@@ -1,4 +1,4 @@
-# Phase 1 - Database migration và schema
+﻿# Phase 1 - Database migration và schema
 
 Phase 1 không có REST API nghiệp vụ riêng. Phase này dùng để chuẩn bị schema, constraint, index và seed data cho các phase sau.
 

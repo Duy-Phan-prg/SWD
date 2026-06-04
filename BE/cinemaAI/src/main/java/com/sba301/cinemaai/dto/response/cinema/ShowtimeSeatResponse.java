@@ -6,8 +6,12 @@ import java.math.BigDecimal;
 
 public record ShowtimeSeatResponse(
         Long seatId,
+        Long seatRowId,
         String rowLabel,
+        int displayOrder,
         int seatNumber,
+        int displayColumn,
+        int startColumn,
         SeatType seatType,
         SeatStatus seatStatus,
         String runtimeStatus,

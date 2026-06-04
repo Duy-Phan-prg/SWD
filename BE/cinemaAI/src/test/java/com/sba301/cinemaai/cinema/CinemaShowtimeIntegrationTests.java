@@ -32,6 +32,8 @@ import com.sba301.cinemaai.repository.UserRoleRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -153,7 +155,7 @@ class CinemaShowtimeIntegrationTests {
                                 showtimeId,
                                 comboId,
                                 false,
-                                java.util.List.of(new TicketSelectionRequest(TicketType.ADULT, 20, 1))
+                                List.of(new TicketSelectionRequest(TicketType.ADULT, 20, 1))
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.eligible").value(true))
@@ -166,7 +168,7 @@ class CinemaShowtimeIntegrationTests {
                                 showtimeId,
                                 null,
                                 false,
-                                java.util.List.of(new TicketSelectionRequest(TicketType.CHILD, 10, 1))
+                                List.of(new TicketSelectionRequest(TicketType.CHILD, 10, 1))
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.eligible").value(false))
@@ -198,6 +200,48 @@ class CinemaShowtimeIntegrationTests {
                 .andExpect(jsonPath("$.data.columnCount").value(4))
                 .andExpect(jsonPath("$.data.seats.length()").value(12))
                 .andExpect(jsonPath("$.data.seats[0].runtimeStatus").value("UNAVAILABLE"));
+
+        Long customRoomId = createCustomRoom(token, cinemaId);
+        mockMvc.perform(post("/api/v1/admin/rooms/{roomId}/seats/generate", customRoomId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "defaultSeatType", "STANDARD",
+                                "overwriteExisting", true,
+                                "rows", List.of(
+                                        Map.of(
+                                                "rowLabel", "A",
+                                                "displayOrder", 1,
+                                                "startColumn", 2,
+                                                "seatType", "STANDARD",
+                                                "seatNumbers", List.of(18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+                                        ),
+                                        Map.of(
+                                                "rowLabel", "D",
+                                                "displayOrder", 4,
+                                                "startColumn", 1,
+                                                "seatType", "STANDARD",
+                                                "seatNumbers", List.of(19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+                                        ),
+                                        Map.of(
+                                                "rowLabel", "O",
+                                                "displayOrder", 14,
+                                                "startColumn", 5,
+                                                "seatType", "COUPLE",
+                                                "seatNumbers", List.of(6, 5, 4, 3, 2, 1)
+                                        )
+                                )
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(43))
+                .andExpect(jsonPath("$.data[0].rowLabel").value("A"))
+                .andExpect(jsonPath("$.data[0].seatNumber").value(18))
+                .andExpect(jsonPath("$.data[0].displayOrder").value(1))
+                .andExpect(jsonPath("$.data[0].displayColumn").value(2))
+                .andExpect(jsonPath("$.data[18].rowLabel").value("D"))
+                .andExpect(jsonPath("$.data[18].startColumn").value(1))
+                .andExpect(jsonPath("$.data[42].rowLabel").value("O"))
+                .andExpect(jsonPath("$.data[42].seatType").value("COUPLE"));
 
         mockMvc.perform(patch("/api/v1/admin/showtimes/{showtimeId}/status", showtimeId)
                         .header("Authorization", "Bearer " + token)
@@ -238,6 +282,25 @@ class CinemaShowtimeIntegrationTests {
                                 RoomType.TWO_D,
                                 3,
                                 4,
+                                RoomStatus.ACTIVE
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createCustomRoom(String token, Long cinemaId) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/admin/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RoomRequest(
+                                cinemaId,
+                                "Room Custom Layout " + System.nanoTime(),
+                                RoomType.TWO_D,
+                                14,
+                                19,
                                 RoomStatus.ACTIVE
                         ))))
                 .andExpect(status().isCreated())

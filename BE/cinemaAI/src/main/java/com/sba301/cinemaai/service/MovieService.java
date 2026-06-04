@@ -200,6 +200,7 @@ public class MovieService {
 
     private void replaceActors(Movie movie, List<String> actorNames) {
         movieActorRepository.deleteByMovie(movie);
+        movieActorRepository.flush();
         actorNames.stream()
                 .map(this::findOrCreateActor)
                 .map(actor -> new MovieActor(movie, actor))
@@ -237,6 +238,7 @@ public class MovieService {
 
     private void replaceGenres(Movie movie, List<Long> genreIds) {
         movieGenreRepository.deleteByMovie(movie);
+        movieGenreRepository.flush();
         if (genreIds == null) {
             return;
         }
