@@ -56,7 +56,7 @@ public class AdminCinemaController {
 
     @PostMapping({"/api/v1/admin/cinema", "/api/v1/admin/cinemas"})
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create or replace configured cinema (Admin)", description = "Create the cinema if missing, otherwise update the configured cinema (Admin only)")
+    @Operation(summary = "Create configured cinema (Admin)", description = "Create the cinema if missing. The system is limited to one cinema (Admin only)")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Cinema created successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body"),

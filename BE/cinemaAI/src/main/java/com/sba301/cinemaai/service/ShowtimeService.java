@@ -143,9 +143,18 @@ public class ShowtimeService {
         if (!endTime.isAfter(startTime)) {
             throw new BadRequestException("Showtime end time must be after start time");
         }
-        if (showtimeRepository.existsOverlapping(room, startTime, endTime, excludeId)) {
+        if (hasOverlappingShowtime(room, startTime, endTime, excludeId)) {
             throw new ConflictException("Room already has an overlapping showtime");
         }
+    }
+
+    private boolean hasOverlappingShowtime(Room room, LocalDateTime startTime, LocalDateTime endTime, Long excludeId) {
+        return showtimeRepository.findByRoom(room)
+                .stream()
+                .filter(showtime -> showtime.getStatus() != ShowtimeStatus.CANCELLED)
+                .filter(showtime -> excludeId == null || !showtime.getId().equals(excludeId))
+                .anyMatch(showtime -> showtime.getStartTime().isBefore(endTime)
+                        && showtime.getEndTime().isAfter(startTime));
     }
 
     private LocalDateTime calculateEndTime(Movie movie, LocalDateTime startTime) {

@@ -3,6 +3,7 @@ package com.sba301.cinemaai.service;
 import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
 import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
 import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatRowGenerationRequest;
 import com.sba301.cinemaai.dto.response.cinema.SeatResponse;
 import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
 import com.sba301.cinemaai.entity.Cinema;

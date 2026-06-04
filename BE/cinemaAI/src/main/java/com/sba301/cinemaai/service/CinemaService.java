@@ -38,6 +38,9 @@ public class CinemaService {
 
     @Transactional
     public CinemaResponse create(CinemaRequest request) {
+        if (cinemaRepository.count() > 0) {
+            throw new ConflictException("System is limited to one cinema");
+        }
         cinemaRepository.findByName(request.name()).ifPresent(cinema -> {
             throw new ConflictException("Cinema name already exists");
         });
