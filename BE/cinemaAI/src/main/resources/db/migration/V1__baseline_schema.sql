@@ -169,6 +169,45 @@ CREATE TABLE dbo.movie_actors (
     CONSTRAINT uk_movie_actors_movie_actor UNIQUE (movie_id, actor_id)
 );
 
+IF OBJECT_ID('dbo.trailer_interactions', 'U') IS NULL
+CREATE TABLE dbo.trailer_interactions (
+    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    movie_id BIGINT NOT NULL,
+    interaction_type NVARCHAR(30) NOT NULL,
+    watched_seconds INT,
+    total_seconds INT,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT fk_trailer_interactions_user FOREIGN KEY (user_id) REFERENCES dbo.users(id),
+    CONSTRAINT fk_trailer_interactions_movie FOREIGN KEY (movie_id) REFERENCES dbo.movies(id)
+);
+
+IF OBJECT_ID('dbo.user_preference_profiles', 'U') IS NULL
+CREATE TABLE dbo.user_preference_profiles (
+    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    genre_scores NVARCHAR(MAX),
+    actor_scores NVARCHAR(MAX),
+    director_scores NVARCHAR(MAX),
+    cohort_key NVARCHAR(100),
+    last_refreshed_at DATETIME2,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT fk_user_preference_profiles_user FOREIGN KEY (user_id) REFERENCES dbo.users(id)
+);
+
+IF OBJECT_ID('dbo.user_cohort_preferences', 'U') IS NULL
+CREATE TABLE dbo.user_cohort_preferences (
+    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    cohort_key NVARCHAR(100) NOT NULL UNIQUE,
+    genre_scores NVARCHAR(MAX),
+    actor_scores NVARCHAR(MAX),
+    sample_size INT NOT NULL DEFAULT 0,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+
 IF OBJECT_ID('dbo.cinemas', 'U') IS NULL
 CREATE TABLE dbo.cinemas (
     id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -195,17 +234,34 @@ CREATE TABLE dbo.rooms (
     CONSTRAINT fk_rooms_cinema FOREIGN KEY (cinema_id) REFERENCES dbo.cinemas(id)
 );
 
+IF OBJECT_ID('dbo.seat_rows', 'U') IS NULL
+CREATE TABLE dbo.seat_rows (
+    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    room_id BIGINT NOT NULL,
+    row_label NVARCHAR(10) NOT NULL,
+    display_order INT NOT NULL,
+    start_column INT NOT NULL,
+    row_type NVARCHAR(30) NOT NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT fk_seat_rows_room FOREIGN KEY (room_id) REFERENCES dbo.rooms(id),
+    CONSTRAINT uk_seat_rows_room_label UNIQUE (room_id, row_label)
+);
+
 IF OBJECT_ID('dbo.seats', 'U') IS NULL
 CREATE TABLE dbo.seats (
     id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     room_id BIGINT NOT NULL,
+    seat_row_id BIGINT NOT NULL,
     row_label NVARCHAR(10) NOT NULL,
     seat_number INT NOT NULL,
+    display_column INT NOT NULL,
     seat_type NVARCHAR(30) NOT NULL,
     status NVARCHAR(30) NOT NULL,
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT fk_seats_room FOREIGN KEY (room_id) REFERENCES dbo.rooms(id),
+    CONSTRAINT fk_seats_seat_row FOREIGN KEY (seat_row_id) REFERENCES dbo.seat_rows(id),
     CONSTRAINT uk_seats_room_position UNIQUE (room_id, row_label, seat_number)
 );
 
@@ -222,6 +278,34 @@ CREATE TABLE dbo.showtimes (
     updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT fk_showtimes_movie FOREIGN KEY (movie_id) REFERENCES dbo.movies(id),
     CONSTRAINT fk_showtimes_room FOREIGN KEY (room_id) REFERENCES dbo.rooms(id)
+);
+
+IF OBJECT_ID('dbo.ticket_pricing_rules', 'U') IS NULL
+CREATE TABLE dbo.ticket_pricing_rules (
+    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    ticket_type NVARCHAR(30) NOT NULL,
+    room_type NVARCHAR(30) NOT NULL,
+    weekend BIT NOT NULL DEFAULT 0,
+    holiday BIT NOT NULL DEFAULT 0,
+    price DECIMAL(12,2) NOT NULL,
+    active BIT NOT NULL DEFAULT 1,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+
+IF OBJECT_ID('dbo.ticket_combos', 'U') IS NULL
+CREATE TABLE dbo.ticket_combos (
+    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    name NVARCHAR(255) NOT NULL UNIQUE,
+    description NVARCHAR(500),
+    adult_count INT NOT NULL DEFAULT 0,
+    child_count INT NOT NULL DEFAULT 0,
+    senior_count INT NOT NULL DEFAULT 0,
+    student_count INT NOT NULL DEFAULT 0,
+    price DECIMAL(12,2) NOT NULL,
+    active BIT NOT NULL DEFAULT 1,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
 IF OBJECT_ID('dbo.ai_analyses', 'U') IS NULL
@@ -274,6 +358,9 @@ CREATE TABLE dbo.bookings (
     paid_at DATETIME2,
     cancelled_at DATETIME2,
     checked_in_at DATETIME2,
+    refund_requested_at DATETIME2,
+    refunded_at DATETIME2,
+    refund_reason NVARCHAR(500),
     qr_code NVARCHAR(500),
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
@@ -294,6 +381,20 @@ CREATE TABLE dbo.booking_seats (
     CONSTRAINT fk_booking_seats_booking FOREIGN KEY (booking_id) REFERENCES dbo.bookings(id),
     CONSTRAINT fk_booking_seats_showtime FOREIGN KEY (showtime_id) REFERENCES dbo.showtimes(id),
     CONSTRAINT fk_booking_seats_seat FOREIGN KEY (seat_id) REFERENCES dbo.seats(id)
+);
+
+IF OBJECT_ID('dbo.booking_tickets', 'U') IS NULL
+CREATE TABLE dbo.booking_tickets (
+    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    booking_id BIGINT NOT NULL,
+    ticket_type NVARCHAR(30) NOT NULL,
+    viewer_age INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(12,2) NOT NULL,
+    line_total DECIMAL(12,2) NOT NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT fk_booking_tickets_booking FOREIGN KEY (booking_id) REFERENCES dbo.bookings(id)
 );
 
 IF OBJECT_ID('dbo.food_items', 'U') IS NULL
@@ -506,12 +607,18 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movie_actors_movie' A
 CREATE INDEX idx_movie_actors_movie ON dbo.movie_actors(movie_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movie_actors_actor' AND object_id = OBJECT_ID('dbo.movie_actors'))
 CREATE INDEX idx_movie_actors_actor ON dbo.movie_actors(actor_id);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_trailer_interactions_user' AND object_id = OBJECT_ID('dbo.trailer_interactions'))
+CREATE INDEX idx_trailer_interactions_user ON dbo.trailer_interactions(user_id);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_trailer_interactions_movie' AND object_id = OBJECT_ID('dbo.trailer_interactions'))
+CREATE INDEX idx_trailer_interactions_movie ON dbo.trailer_interactions(movie_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_showtimes_movie' AND object_id = OBJECT_ID('dbo.showtimes'))
 CREATE INDEX idx_showtimes_movie ON dbo.showtimes(movie_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_showtimes_room' AND object_id = OBJECT_ID('dbo.showtimes'))
 CREATE INDEX idx_showtimes_room ON dbo.showtimes(room_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_showtimes_start_time' AND object_id = OBJECT_ID('dbo.showtimes'))
 CREATE INDEX idx_showtimes_start_time ON dbo.showtimes(start_time);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ticket_pricing_rules_lookup' AND object_id = OBJECT_ID('dbo.ticket_pricing_rules'))
+CREATE INDEX idx_ticket_pricing_rules_lookup ON dbo.ticket_pricing_rules(ticket_type, room_type, weekend, holiday, active);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_analyses_movie' AND object_id = OBJECT_ID('dbo.ai_analyses'))
 CREATE INDEX idx_ai_analyses_movie ON dbo.ai_analyses(movie_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_analyses_status' AND object_id = OBJECT_ID('dbo.ai_analyses'))
@@ -526,6 +633,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_bookings_status' AND 
 CREATE INDEX idx_bookings_status ON dbo.bookings(status);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_booking_seats_booking' AND object_id = OBJECT_ID('dbo.booking_seats'))
 CREATE INDEX idx_booking_seats_booking ON dbo.booking_seats(booking_id);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_booking_tickets_booking' AND object_id = OBJECT_ID('dbo.booking_tickets'))
+CREATE INDEX idx_booking_tickets_booking ON dbo.booking_tickets(booking_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_booking_seats_showtime_seat_status' AND object_id = OBJECT_ID('dbo.booking_seats'))
 CREATE INDEX idx_booking_seats_showtime_seat_status ON dbo.booking_seats(showtime_id, seat_id, status);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_booking_food_items_booking' AND object_id = OBJECT_ID('dbo.booking_food_items'))

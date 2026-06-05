@@ -1,10 +1,10 @@
 package com.sba301.cinemaai.mapper;
 
-import com.sba301.cinemaai.dto.cinema.CinemaResponse;
-import com.sba301.cinemaai.dto.cinema.RoomResponse;
-import com.sba301.cinemaai.dto.cinema.SeatResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeSeatResponse;
+import com.sba301.cinemaai.dto.response.cinema.CinemaResponse;
+import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
+import com.sba301.cinemaai.dto.response.cinema.SeatResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
 import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Room;
@@ -46,8 +46,12 @@ public class CinemaMapper {
         return new SeatResponse(
                 seat.getId(),
                 seat.getRoom().getId(),
+                seat.getSeatRow().getId(),
                 seat.getRowLabel(),
+                seat.getSeatRow().getDisplayOrder(),
                 seat.getSeatNumber(),
+                seat.getDisplayColumn(),
+                seat.getSeatRow().getStartColumn(),
                 seat.getSeatType(),
                 seat.getStatus()
         );
@@ -65,20 +69,27 @@ public class CinemaMapper {
                 showtime.getStartTime(),
                 showtime.getEndTime(),
                 showtime.getBasePrice(),
+                showtime.getVipPrice(),
+                showtime.getCouplePrice(),
                 showtime.getStatus(),
                 showtime.getCreatedAt(),
                 showtime.getUpdatedAt()
         );
     }
 
-    public ShowtimeSeatResponse toShowtimeSeatResponse(Seat seat, String runtimeStatus) {
+    public ShowtimeSeatResponse toShowtimeSeatResponse(Seat seat, String runtimeStatus, Showtime showtime) {
         return new ShowtimeSeatResponse(
                 seat.getId(),
+                seat.getSeatRow().getId(),
                 seat.getRowLabel(),
+                seat.getSeatRow().getDisplayOrder(),
                 seat.getSeatNumber(),
+                seat.getDisplayColumn(),
+                seat.getSeatRow().getStartColumn(),
                 seat.getSeatType(),
                 seat.getStatus(),
-                runtimeStatus
+                runtimeStatus,
+                showtime.getPriceForSeatType(seat.getSeatType())
         );
     }
 }

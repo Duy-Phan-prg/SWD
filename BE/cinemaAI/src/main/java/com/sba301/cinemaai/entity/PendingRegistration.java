@@ -33,6 +33,9 @@ public class PendingRegistration extends BaseEntity {
     @Column(length = 20)
     private String phone;
 
+    @Column(name = "birth_year")
+    private Integer birthYear;
+
     @Column(nullable = false, length = 6)
     private String otp;
 
@@ -44,6 +47,7 @@ public class PendingRegistration extends BaseEntity {
             String passwordHash,
             String fullName,
             String phone,
+            Integer birthYear,
             String otp,
             LocalDateTime expiresAt
     ) {
@@ -51,14 +55,16 @@ public class PendingRegistration extends BaseEntity {
         this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.phone = phone;
+        this.birthYear = birthYear;
         this.otp = otp;
         this.expiresAt = expiresAt;
     }
 
-    public void refresh(String passwordHash, String fullName, String phone, String otp, LocalDateTime expiresAt) {
+    public void refresh(String passwordHash, String fullName, String phone, Integer birthYear, String otp, LocalDateTime expiresAt) {
         this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.phone = phone;
+        this.birthYear = birthYear;
         this.otp = otp;
         this.expiresAt = expiresAt;
     }

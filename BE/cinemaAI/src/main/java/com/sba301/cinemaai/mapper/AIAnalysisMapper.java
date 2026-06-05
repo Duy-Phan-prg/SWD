@@ -1,7 +1,7 @@
 package com.sba301.cinemaai.mapper;
 
-import com.sba301.cinemaai.dto.analysis.AIAnalysisResponse;
-import com.sba301.cinemaai.dto.analysis.AIEmotionSegmentResponse;
+import com.sba301.cinemaai.dto.response.analysis.AIAnalysisResponse;
+import com.sba301.cinemaai.dto.response.analysis.AIEmotionSegmentResponse;
 import com.sba301.cinemaai.entity.AIAnalysis;
 import com.sba301.cinemaai.entity.AIEmotionSegment;
 import java.util.List;

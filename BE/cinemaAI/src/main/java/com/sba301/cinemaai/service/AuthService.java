@@ -1,12 +1,12 @@
 package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.auth.AuthResponse;
-import com.sba301.cinemaai.dto.auth.GoogleLoginRequest;
-import com.sba301.cinemaai.dto.auth.GoogleOtpVerifyRequest;
-import com.sba301.cinemaai.dto.auth.LoginRequest;
-import com.sba301.cinemaai.dto.auth.RegisterRequest;
-import com.sba301.cinemaai.dto.auth.RegisterResponse;
-import com.sba301.cinemaai.dto.user.UserProfileResponse;
+import com.sba301.cinemaai.dto.response.auth.AuthResponse;
+import com.sba301.cinemaai.dto.request.auth.GoogleLoginRequest;
+import com.sba301.cinemaai.dto.request.auth.GoogleOtpVerifyRequest;
+import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.auth.RegisterRequest;
+import com.sba301.cinemaai.dto.response.auth.RegisterResponse;
+import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import com.sba301.cinemaai.entity.PendingRegistration;
 import com.sba301.cinemaai.entity.RefreshToken;
 import com.sba301.cinemaai.entity.User;
@@ -77,6 +77,7 @@ public class AuthService {
                             passwordEncoder.encode(request.password()),
                             request.fullName(),
                             request.phone(),
+                            request.birthYear(),
                             otp,
                             expiresAt
                     );
@@ -87,6 +88,7 @@ public class AuthService {
                         passwordEncoder.encode(request.password()),
                         request.fullName(),
                         request.phone(),
+                        request.birthYear(),
                         otp,
                         expiresAt
                 )));
@@ -110,6 +112,7 @@ public class AuthService {
                 pendingRegistration.getPasswordHash(),
                 pendingRegistration.getFullName(),
                 pendingRegistration.getPhone(),
+                pendingRegistration.getBirthYear(),
                 generateOtp(),
                 LocalDateTime.now().plusSeconds(EMAIL_VERIFICATION_EXPIRES_IN_SECONDS)
         );

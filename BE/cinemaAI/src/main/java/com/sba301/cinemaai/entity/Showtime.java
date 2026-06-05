@@ -1,5 +1,6 @@
 package com.sba301.cinemaai.entity;
 
+import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,6 +54,12 @@ public class Showtime extends BaseEntity {
     @Column(name = "base_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal basePrice;
 
+    @Column(name = "vip_price", precision = 12, scale = 2)
+    private BigDecimal vipPrice;
+
+    @Column(name = "couple_price", precision = 12, scale = 2)
+    private BigDecimal couplePrice;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ShowtimeStatus status = ShowtimeStatus.SCHEDULED;
@@ -72,6 +79,20 @@ public class Showtime extends BaseEntity {
 
     public void changeBasePrice(BigDecimal basePrice) {
         this.basePrice = basePrice;
+    }
+
+    public void changePrices(BigDecimal basePrice, BigDecimal vipPrice, BigDecimal couplePrice) {
+        this.basePrice = basePrice;
+        this.vipPrice = vipPrice;
+        this.couplePrice = couplePrice;
+    }
+
+    public BigDecimal getPriceForSeatType(SeatType seatType) {
+        return switch (seatType) {
+            case VIP    -> vipPrice    != null ? vipPrice    : basePrice.multiply(new BigDecimal("1.5"));
+            case COUPLE -> couplePrice != null ? couplePrice : basePrice.multiply(new BigDecimal("2.0"));
+            default     -> basePrice;
+        };
     }
 
     public void changeStatus(ShowtimeStatus status) {

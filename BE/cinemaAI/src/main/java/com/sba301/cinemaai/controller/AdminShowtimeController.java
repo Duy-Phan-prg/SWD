@@ -1,7 +1,7 @@
 package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.cinema.ShowtimeRequest;
-import com.sba301.cinemaai.dto.cinema.ShowtimeResponse;
+import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.service.ShowtimeService;
@@ -48,18 +48,6 @@ public class AdminShowtimeController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         return ApiResponse.success(showtimeService.searchAdmin(movieId, roomId, date));
-    }
-
-    @GetMapping("/{showtimeId}")
-    @Operation(summary = "Get showtime by ID (Admin)", description = "Get a specific showtime by ID (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Showtime retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Showtime not found")
-    })
-    public ApiResponse<ShowtimeResponse> getShowtime(@PathVariable Long showtimeId) {
-        return ApiResponse.success(showtimeService.get(showtimeId));
     }
 
     @PostMapping

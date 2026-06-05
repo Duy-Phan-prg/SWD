@@ -1,7 +1,7 @@
 package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.cinema.CinemaResponse;
-import com.sba301.cinemaai.dto.cinema.RoomResponse;
+import com.sba301.cinemaai.dto.response.cinema.CinemaResponse;
+import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.CinemaService;
 import com.sba301.cinemaai.service.RoomService;

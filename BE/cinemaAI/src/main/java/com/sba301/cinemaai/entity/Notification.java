@@ -13,7 +13,6 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,7 +21,10 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
         name = "notifications",
-        indexes = @Index(name = "idx_notifications_user_read", columnList = "user_id,read_at")
+        indexes = {
+                @Index(name = "idx_notifications_user_id",          columnList = "user_id"),
+                @Index(name = "idx_notifications_user_id_is_read",  columnList = "user_id, is_read")
+        }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseEntity {
@@ -35,27 +37,28 @@ public class Notification extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private NotificationType type;
-
-    @Column(nullable = false)
+    @Column(nullable = false, length = 200)
     private String title;
 
     @Column(nullable = false, length = 1000)
     private String message;
 
-    @Column(name = "read_at")
-    private LocalDateTime readAt;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private NotificationType type;
 
-    public Notification(User user, NotificationType type, String title, String message) {
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false;
+
+    public Notification(User user, String title, String message, NotificationType type) {
         this.user = user;
-        this.type = type;
         this.title = title;
         this.message = message;
+        this.type = type;
+        this.isRead = false;
     }
 
     public void markRead() {
-        this.readAt = LocalDateTime.now();
+        this.isRead = true;
     }
 }

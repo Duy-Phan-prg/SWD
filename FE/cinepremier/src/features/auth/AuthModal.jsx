@@ -64,6 +64,7 @@ export default function AuthModal({
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regDateOfBirth, setRegDateOfBirth] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regOtp, setRegOtp] = useState('');
   const [registerStep, setRegisterStep] = useState('form'); // 'form' | 'verify'
@@ -346,7 +347,7 @@ export default function AuthModal({
     const cleanName = regName.trim();
     const cleanPhone = regPhone.trim();
 
-    if (!cleanName || !cleanPhone || !regEmail || !regPassword) {
+    if (!cleanName || !cleanPhone || !regEmail || !regPassword || !regDateOfBirth) {
       showToast('error', 'Quý khách vui lòng điền trọn vẹn thông tin đăng ký.');
       return;
     }
@@ -362,11 +363,6 @@ export default function AuthModal({
       showToast('error', 'Mật khẩu cần tối thiểu 8 ký tự để khớp yêu cầu từ BE.');
       return;
     }
-    if (!agreeTerms) {
-      showToast('error', 'Quý khách cần cam kết xác nhận độ tuổi và điều khoản VIP.');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const cleanEmail = regEmail.trim();
@@ -375,7 +371,8 @@ export default function AuthModal({
         email: cleanEmail,
         password: cleanPassword,
         fullName: cleanName,
-        phone: cleanPhone
+        phone: cleanPhone,
+        birthYear: regDateOfBirth ? parseInt(regDateOfBirth) : null
       });
 
       setPendingRegistration({
@@ -1113,6 +1110,24 @@ export default function AuthModal({
 
                     </div>
 
+                    {/* Year of Birth */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                        Năm Sinh
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={1900}
+                        max={new Date().getFullYear() - 5}
+                        placeholder={`VD: 2000`}
+                        value={regDateOfBirth}
+                        onChange={(e) => setRegDateOfBirth(e.target.value)}
+                        className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 px-3 text-xs text-white focus:outline-none transition-all font-mono"
+                      />
+                      <p className="text-[9px] text-neutral-600 font-mono">Dùng để xác minh độ tuổi xem phim</p>
+                    </div>
+
                     {/* Email & Password Registration Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
 
@@ -1185,27 +1200,6 @@ export default function AuthModal({
                     </div>
 
                     {/* Double constraints age + loyalty */}
-                    <div className="space-y-2 pt-1 border-t border-neutral-900">
-                      <div className="flex items-start space-x-2.5 text-[11px] text-neutral-400">
-                        <input
-                          type="checkbox"
-                          required
-                          checked={agreeTerms}
-                          onChange={(e) => { playPing(500, 'sine', 0.05); setAgreeTerms(e.target.checked); }}
-                          className="mt-0.5 accent-amber-500 h-3.5 w-3.5 border-neutral-800 bg-black"
-                        />
-                        <span>
-                          Xác nhận tôi trên <b>18 tuổi</b> cho các phim bom tấn T18 và đồng thuận{' '}
-                          <button
-                            type="button"
-                            onClick={onPolicyClick}
-                            className="font-black text-amber-300 underline underline-offset-4 decoration-amber-500/50 hover:text-white"
-                          >
-                            quy chế Thượng Khách CinePremier VIP
-                          </button>.
-                        </span>
-                      </div>
-                    </div>
 
                     {/* Large Register Button */}
                     <button

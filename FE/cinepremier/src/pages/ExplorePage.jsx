@@ -1,20 +1,27 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, ChevronRight, ChevronLeft, Film, Filter, CalendarDays, X } from 'lucide-react';
 import { movies } from '../services/cinemaData';
 import MovieCard from '../components/movies/MovieCard';
+import { useMovies } from '../contexts/MoviesContext';
 
-export default function ExploreView({
-  searchQuery,
-  onSearchChange,
-  onSelectMovie,
-  onBookMovie,
-  moviesList = movies,
-  isLoading = false,
-  pagination = null,
-  onPageChange = () => { },
-  selectedDate = '',
-  onDateChange = () => { }
-}) {
+export default function ExploreView() {
+  const navigate = useNavigate();
+  const {
+    moviesList = movies,
+    isMoviesLoading: isLoading = false,
+    moviePagination: pagination = null,
+    setMoviePagination,
+    searchQuery = '',
+    setSearchQuery,
+    movieDateFilter: selectedDate = '',
+    setMovieDateFilter,
+  } = useMovies();
+  const onSearchChange = (q) => { setSearchQuery(q); setMoviePagination(prev => ({ ...prev, page: 0 })); };
+  const onDateChange = (d) => { setMovieDateFilter(d); setMoviePagination(prev => ({ ...prev, page: 0 })); };
+  const onPageChange = (page) => setMoviePagination(prev => ({ ...prev, page: page - 1 }));
+  const onSelectMovie = (id) => navigate(`/movies/${id}`);
+  const onBookMovie = (movie) => navigate(`/movies/${movie.id}/book`);
   const [selectedGenre, setSelectedGenre] = useState('Tất cả');
   const [sortBy, setSortBy] = useState('aiOverall'); // aiOverall, newest, duration
   const [localPage, setLocalPage] = useState(1);

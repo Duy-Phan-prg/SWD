@@ -9,8 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AIAnalysisRepository extends JpaRepository<AIAnalysis, Long> {
 
-    List<AIAnalysis> findByMovie(Movie movie);
-
     List<AIAnalysis> findByMovieOrderByCreatedAtDesc(Movie movie);
 
     Optional<AIAnalysis> findFirstByMovieAndStatusOrderByCreatedAtDesc(Movie movie, AIAnalysisStatus status);

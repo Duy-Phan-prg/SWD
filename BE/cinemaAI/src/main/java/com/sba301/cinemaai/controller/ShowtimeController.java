@@ -1,7 +1,7 @@
 package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.cinema.ShowtimeResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeSeatMapResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.ShowtimeService;
 import java.time.LocalDate;

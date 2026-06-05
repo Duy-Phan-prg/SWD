@@ -1,12 +1,16 @@
 package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.booking.BookingFoodRequest;
-import com.sba301.cinemaai.dto.booking.BookingResponse;
-import com.sba301.cinemaai.dto.booking.CreateBookingRequest;
-import com.sba301.cinemaai.dto.booking.HoldSeatsRequest;
+import com.sba301.cinemaai.dto.request.booking.BookingFoodRequest;
+import com.sba301.cinemaai.dto.response.booking.BookingResponse;
+import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
+import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketLinePriceResponse;
+import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.response.ticket.TicketPriceValidationResponse;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingFoodItem;
 import com.sba301.cinemaai.entity.BookingSeat;
+import com.sba301.cinemaai.entity.BookingTicket;
 import com.sba301.cinemaai.entity.FoodCombo;
 import com.sba301.cinemaai.entity.FoodItem;
 import com.sba301.cinemaai.entity.Seat;
@@ -24,8 +28,10 @@ import com.sba301.cinemaai.mapper.BookingMapper;
 import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
+import com.sba301.cinemaai.repository.BookingTicketRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
+import com.sba301.cinemaai.service.LoyaltyPointService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -47,13 +53,16 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final BookingSeatRepository bookingSeatRepository;
+    private final BookingTicketRepository bookingTicketRepository;
     private final BookingFoodItemRepository bookingFoodItemRepository;
     private final ShowtimeRepository showtimeRepository;
     private final SeatRepository seatRepository;
     private final UserService userService;
     private final FoodService foodService;
+    private final TicketPricingService ticketPricingService;
     private final QrTicketService qrTicketService;
     private final BookingMapper bookingMapper;
+    private final LoyaltyPointService loyaltyPointService;
 
     @Transactional
     public BookingResponse holdSeats(String email, HoldSeatsRequest request) {
@@ -71,7 +80,8 @@ public class BookingService {
         for (Long seatId : request.seatIds().stream().distinct().toList()) {
             Seat seat = findSeat(seatId);
             validateSeatForShowtime(showtime, seat);
-            BookingSeat bookingSeat = bookingSeatRepository.save(new BookingSeat(booking, showtime, seat, showtime.getBasePrice()));
+            BigDecimal unitPrice = showtime.getPriceForSeatType(seat.getSeatType());
+            BookingSeat bookingSeat = bookingSeatRepository.save(new BookingSeat(booking, showtime, seat, unitPrice));
             subtotal = subtotal.add(bookingSeat.getUnitPrice());
         }
 
@@ -94,6 +104,34 @@ public class BookingService {
         }
 
         BigDecimal subtotal = booking.getSubtotal();
+        if (request.tickets() != null && !request.tickets().isEmpty()) {
+            int ticketQuantity = request.tickets().stream().mapToInt(ticket -> ticket.quantity()).sum();
+            int seatQuantity = bookingSeatRepository.findByBooking(booking).size();
+            if (ticketQuantity != seatQuantity) {
+                throw new BadRequestException("Ticket quantity must match held seat quantity");
+            }
+            TicketPriceValidationResponse validation = ticketPricingService.validatePrice(new TicketPriceValidationRequest(
+                    booking.getShowtime().getId(),
+                    request.comboId(),
+                    request.holiday(),
+                    request.tickets()
+            ));
+            if (!validation.eligible()) {
+                throw new BadRequestException("Ticket selection is not eligible for this movie/showtime");
+            }
+            bookingTicketRepository.findByBooking(booking).forEach(bookingTicketRepository::delete);
+            for (TicketLinePriceResponse ticket : validation.tickets()) {
+                bookingTicketRepository.save(new BookingTicket(
+                        booking,
+                        ticket.ticketType(),
+                        ticket.viewerAge(),
+                        ticket.quantity(),
+                        ticket.unitPrice(),
+                        ticket.lineTotal()
+                ));
+            }
+            subtotal = validation.finalAmount();
+        }
         if (request.foods() != null) {
             for (BookingFoodRequest foodRequest : request.foods()) {
                 BookingFoodItem item = createFoodItem(booking, foodRequest);
@@ -104,8 +142,10 @@ public class BookingService {
 
         bookingSeatRepository.findByBooking(booking)
                 .forEach(seat -> seat.changeStatus(SeatRuntimeStatus.BOOKED));
-        booking.updateAmounts(subtotal, BigDecimal.ZERO, subtotal);
+        BigDecimal discount = booking.getDiscountAmount();
+        booking.updateAmounts(subtotal, discount, subtotal.subtract(discount));
         booking.markPaid(qrTicketService.generate(booking));
+        loyaltyPointService.addPointsFromBooking(user, booking);
         return toResponse(booking);
     }
 
@@ -140,6 +180,36 @@ public class BookingService {
         Booking booking = findBooking(bookingId);
         validateOwner(booking, user);
         return cancelBooking(booking);
+    }
+
+    @Transactional
+    public BookingResponse requestRefund(String email, Long bookingId, String reason) {
+        User user = userService.getByEmail(email);
+        Booking booking = findBooking(bookingId);
+        validateOwner(booking, user);
+        validateRefundable(booking);
+        booking.requestRefund(reason);
+        releaseSeats(booking);
+        return toResponse(booking);
+    }
+
+    @Transactional
+    public BookingResponse requestRefundAdmin(Long bookingId, String reason) {
+        Booking booking = findBooking(bookingId);
+        validateRefundable(booking);
+        booking.requestRefund(reason);
+        releaseSeats(booking);
+        return toResponse(booking);
+    }
+
+    @Transactional
+    public BookingResponse markRefunded(Long bookingId) {
+        Booking booking = findBooking(bookingId);
+        if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
+            throw new BadRequestException("Only refund requested booking can be marked as refunded");
+        }
+        booking.markRefunded();
+        return toResponse(booking);
     }
 
     @Transactional
@@ -265,10 +335,17 @@ public class BookingService {
                 .forEach(seat -> seat.changeStatus(SeatRuntimeStatus.RELEASED));
     }
 
+    private void validateRefundable(Booking booking) {
+        if (booking.getStatus() != BookingStatus.PAID && booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new BadRequestException("Only paid or cancelled booking can request refund");
+        }
+    }
+
     private BookingResponse toResponse(Booking booking) {
         return bookingMapper.toResponse(
                 booking,
                 bookingSeatRepository.findByBooking(booking),
+                bookingTicketRepository.findByBooking(booking),
                 bookingFoodItemRepository.findByBooking(booking)
         );
     }

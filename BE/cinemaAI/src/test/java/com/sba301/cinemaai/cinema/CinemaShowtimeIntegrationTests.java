@@ -2,12 +2,16 @@ package com.sba301.cinemaai.cinema;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sba301.cinemaai.dto.auth.LoginRequest;
-import com.sba301.cinemaai.dto.cinema.CinemaRequest;
-import com.sba301.cinemaai.dto.cinema.RoomRequest;
-import com.sba301.cinemaai.dto.cinema.SeatGenerationRequest;
-import com.sba301.cinemaai.dto.cinema.SeatUpdateRequest;
-import com.sba301.cinemaai.dto.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.cinema.CinemaRequest;
+import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
+import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketComboRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.User;
@@ -20,6 +24,7 @@ import com.sba301.cinemaai.enums.RoomType;
 import com.sba301.cinemaai.enums.SeatStatus;
 import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
+import com.sba301.cinemaai.enums.TicketType;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.RoleRepository;
 import com.sba301.cinemaai.repository.UserRepository;
@@ -27,10 +32,13 @@ import com.sba301.cinemaai.repository.UserRoleRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,6 +53,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 class CinemaShowtimeIntegrationTests {
 
     @Autowired
@@ -121,6 +130,8 @@ class CinemaShowtimeIntegrationTests {
                 roomId,
                 startTime,
                 BigDecimal.valueOf(95000),
+                null,
+                null,
                 ShowtimeStatus.OPEN
         ));
 
@@ -137,6 +148,33 @@ class CinemaShowtimeIntegrationTests {
                 .getContentAsString();
 
         Long showtimeId = objectMapper.readTree(showtimeResponse).at("/data/id").asLong();
+        Long comboId = createTicketPricing(token);
+
+        mockMvc.perform(post("/api/v1/ticket-pricing/validate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketPriceValidationRequest(
+                                showtimeId,
+                                comboId,
+                                false,
+                                List.of(new TicketSelectionRequest(TicketType.ADULT, 20, 1))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.eligible").value(true))
+                .andExpect(jsonPath("$.data.finalAmount").value(85000));
+
+        mockMvc.perform(post("/api/v1/ticket-pricing/validate")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketPriceValidationRequest(
+                                showtimeId,
+                                null,
+                                false,
+                                List.of(new TicketSelectionRequest(TicketType.CHILD, 10, 1))
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.eligible").value(false))
+                .andExpect(jsonPath("$.data.tickets[0].message").value("Viewer age does not meet movie age rating 13+"));
 
         mockMvc.perform(post("/api/v1/admin/showtimes")
                         .header("Authorization", "Bearer " + token)
@@ -146,6 +184,8 @@ class CinemaShowtimeIntegrationTests {
                                 roomId,
                                 startTime.plusMinutes(30),
                                 BigDecimal.valueOf(95000),
+                                null,
+                                null,
                                 ShowtimeStatus.OPEN
                         ))))
                 .andExpect(status().isConflict());
@@ -163,6 +203,48 @@ class CinemaShowtimeIntegrationTests {
                 .andExpect(jsonPath("$.data.seats.length()").value(12))
                 .andExpect(jsonPath("$.data.seats[0].runtimeStatus").value("UNAVAILABLE"));
 
+        Long customRoomId = createCustomRoom(token, cinemaId);
+        mockMvc.perform(post("/api/v1/admin/rooms/{roomId}/seats/generate", customRoomId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "defaultSeatType", "STANDARD",
+                                "overwriteExisting", true,
+                                "rows", List.of(
+                                        Map.of(
+                                                "rowLabel", "A",
+                                                "displayOrder", 1,
+                                                "startColumn", 2,
+                                                "seatType", "STANDARD",
+                                                "seatNumbers", List.of(18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+                                        ),
+                                        Map.of(
+                                                "rowLabel", "D",
+                                                "displayOrder", 4,
+                                                "startColumn", 1,
+                                                "seatType", "STANDARD",
+                                                "seatNumbers", List.of(19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+                                        ),
+                                        Map.of(
+                                                "rowLabel", "O",
+                                                "displayOrder", 14,
+                                                "startColumn", 5,
+                                                "seatType", "COUPLE",
+                                                "seatNumbers", List.of(6, 5, 4, 3, 2, 1)
+                                        )
+                                )
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(43))
+                .andExpect(jsonPath("$.data[0].rowLabel").value("A"))
+                .andExpect(jsonPath("$.data[0].seatNumber").value(18))
+                .andExpect(jsonPath("$.data[0].displayOrder").value(1))
+                .andExpect(jsonPath("$.data[0].displayColumn").value(2))
+                .andExpect(jsonPath("$.data[18].rowLabel").value("D"))
+                .andExpect(jsonPath("$.data[18].startColumn").value(1))
+                .andExpect(jsonPath("$.data[42].rowLabel").value("O"))
+                .andExpect(jsonPath("$.data[42].seatType").value("COUPLE"));
+
         mockMvc.perform(patch("/api/v1/admin/showtimes/{showtimeId}/status", showtimeId)
                         .header("Authorization", "Bearer " + token)
                         .param("status", "CANCELLED"))
@@ -171,7 +253,7 @@ class CinemaShowtimeIntegrationTests {
     }
 
     private Long createCinema(String token) throws Exception {
-        String response = mockMvc.perform(post("/api/v1/admin/cinemas")
+        String response = mockMvc.perform(post("/api/v1/admin/cinema")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CinemaRequest(
@@ -186,6 +268,10 @@ class CinemaShowtimeIntegrationTests {
                 .getResponse()
                 .getContentAsString();
         return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createRoom(String token) throws Exception {
+        return createRoom(token, null);
     }
 
     private Long createRoom(String token, Long cinemaId) throws Exception {
@@ -205,6 +291,61 @@ class CinemaShowtimeIntegrationTests {
                 .getResponse()
                 .getContentAsString();
         return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createCustomRoom(String token, Long cinemaId) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/admin/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RoomRequest(
+                                cinemaId,
+                                "Room Custom Layout " + System.nanoTime(),
+                                RoomType.TWO_D,
+                                14,
+                                19,
+                                RoomStatus.ACTIVE
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createTicketPricing(String token) throws Exception {
+        mockMvc.perform(post("/api/v1/admin/ticket-pricing/rules")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketPricingRuleRequest(
+                                TicketType.ADULT,
+                                RoomType.TWO_D,
+                                false,
+                                false,
+                                BigDecimal.valueOf(95000),
+                                true
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.ticketType").value("ADULT"));
+
+        String comboResponse = mockMvc.perform(post("/api/v1/admin/ticket-pricing/combos")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new TicketComboRequest(
+                                "Phase 5 Single Adult Combo " + System.nanoTime(),
+                                "One adult ticket combo for validating Phase 5 pricing.",
+                                1,
+                                0,
+                                0,
+                                0,
+                                BigDecimal.valueOf(85000),
+                                true
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.adultCount").value(1))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(comboResponse).at("/data/id").asLong();
     }
 
     private Movie createMovie() {

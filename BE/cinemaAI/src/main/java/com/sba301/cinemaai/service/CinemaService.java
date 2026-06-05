@@ -1,14 +1,13 @@
 package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.cinema.CinemaRequest;
-import com.sba301.cinemaai.dto.cinema.CinemaResponse;
+import com.sba301.cinemaai.dto.request.cinema.CinemaRequest;
+import com.sba301.cinemaai.dto.response.cinema.CinemaResponse;
 import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.enums.CinemaStatus;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.CinemaMapper;
 import com.sba301.cinemaai.repository.CinemaRepository;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,19 +20,15 @@ public class CinemaService {
     private final CinemaMapper cinemaMapper;
 
     @Transactional(readOnly = true)
-    public List<CinemaResponse> getPublicCinemas() {
-        return cinemaRepository.findByStatus(CinemaStatus.ACTIVE)
-                .stream()
+    public CinemaResponse getPublicCinema() {
+        return cinemaRepository.findFirstByStatus(CinemaStatus.ACTIVE)
                 .map(cinemaMapper::toCinemaResponse)
-                .toList();
+                .orElseThrow(() -> new NotFoundException("No active cinema found"));
     }
 
     @Transactional(readOnly = true)
-    public List<CinemaResponse> getAdminCinemas() {
-        return cinemaRepository.findAll()
-                .stream()
-                .map(cinemaMapper::toCinemaResponse)
-                .toList();
+    public CinemaResponse getAdminCinema() {
+        return cinemaMapper.toCinemaResponse(findSingleton());
     }
 
     @Transactional(readOnly = true)
@@ -55,6 +50,11 @@ public class CinemaService {
     }
 
     @Transactional
+    public CinemaResponse update(CinemaRequest request) {
+        return update(findSingleton().getId(), request);
+    }
+
+    @Transactional
     public CinemaResponse update(Long id, CinemaRequest request) {
         Cinema cinema = findById(id);
         cinemaRepository.findByName(request.name())
@@ -68,10 +68,20 @@ public class CinemaService {
     }
 
     @Transactional
+    public CinemaResponse updateStatus(CinemaStatus status) {
+        return updateStatus(findSingleton().getId(), status);
+    }
+
+    @Transactional
     public CinemaResponse updateStatus(Long id, CinemaStatus status) {
         Cinema cinema = findById(id);
         cinema.changeStatus(status);
         return cinemaMapper.toCinemaResponse(cinema);
+    }
+
+    @Transactional
+    public void delete() {
+        delete(findSingleton().getId());
     }
 
     @Transactional
@@ -82,5 +92,14 @@ public class CinemaService {
     public Cinema findById(Long id) {
         return cinemaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Cinema not found"));
+    }
+
+    public Cinema findSingleton() {
+        return cinemaRepository.findFirstByOrderByIdAsc()
+                .orElseThrow(() -> new NotFoundException("No cinema configured"));
+    }
+
+    public Cinema findSingletonById(Long id) {
+        return findById(id);
     }
 }

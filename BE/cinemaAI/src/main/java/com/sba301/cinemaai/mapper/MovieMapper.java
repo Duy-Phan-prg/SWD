@@ -1,8 +1,8 @@
 package com.sba301.cinemaai.mapper;
 
-import com.sba301.cinemaai.dto.movie.ActorResponse;
-import com.sba301.cinemaai.dto.movie.GenreResponse;
-import com.sba301.cinemaai.dto.movie.MovieResponse;
+import com.sba301.cinemaai.dto.response.movie.ActorResponse;
+import com.sba301.cinemaai.dto.response.movie.GenreResponse;
+import com.sba301.cinemaai.dto.response.movie.MovieResponse;
 import com.sba301.cinemaai.entity.Actor;
 import com.sba301.cinemaai.entity.Genre;
 import com.sba301.cinemaai.entity.Movie;

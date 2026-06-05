@@ -1,7 +1,6 @@
 package com.sba301.cinemaai.entity;
 
-import com.sba301.cinemaai.enums.LoyaltyPointType;
-import com.sba301.cinemaai.enums.LoyaltyTier;
+import com.sba301.cinemaai.enums.LoyaltyStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,19 +9,24 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * One row per user — stores the user's current loyalty balance.
+ * points      : currently usable points (can be redeemed)
+ * totalPoints : cumulative points earned, never decreases (audit trail)
+ */
 @Getter
 @Entity
 @Table(
         name = "loyalty_points",
-        indexes = @Index(name = "idx_loyalty_points_user", columnList = "user_id")
+        uniqueConstraints = @UniqueConstraint(name = "uq_loyalty_points_user", columnNames = "user_id")
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LoyaltyPoint extends BaseEntity {
@@ -35,30 +39,33 @@ public class LoyaltyPoint extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
-    private Booking booking;
-
     @Column(nullable = false)
-    private int points;
+    private int points = 0;
+
+    @Column(name = "total_points", nullable = false)
+    private int totalPoints = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private LoyaltyPointType type;
+    private LoyaltyStatus status = LoyaltyStatus.ACTIVE;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private LoyaltyTier tier = LoyaltyTier.BRONZE;
-
-    @Column(nullable = false, length = 500)
-    private String reason;
-
-    public LoyaltyPoint(User user, Booking booking, int points, LoyaltyPointType type, LoyaltyTier tier, String reason) {
+    public LoyaltyPoint(User user) {
         this.user = user;
-        this.booking = booking;
-        this.points = points;
-        this.type = type;
-        this.tier = tier;
-        this.reason = reason;
+        this.points = 0;
+        this.totalPoints = 0;
+        this.status = LoyaltyStatus.ACTIVE;
+    }
+
+    public void addPoints(int pts) {
+        this.points += pts;
+        this.totalPoints += pts;
+    }
+
+    public void redeemPoints(int pts) {
+        this.points -= pts;
+    }
+
+    public void changeStatus(LoyaltyStatus status) {
+        this.status = status;
     }
 }

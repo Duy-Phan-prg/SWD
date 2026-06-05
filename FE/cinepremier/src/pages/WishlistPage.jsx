@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, SlidersHorizontal, Bell, Ticket, Mail, Check, Trash2 } from 'lucide-react';
 import { movies } from '../services/cinemaData';
+import { useMovies } from '../contexts/MoviesContext';
+import { useUI } from '../contexts/UIContext';
 
-export default function WishlistView({
-  watchlist,
-  onToggleWatchlist,
-  onBookMovie,
-  onSelectMovie,
-  showToast = () => {}
-}) {
+export default function WishlistView() {
+  const navigate = useNavigate();
+  const { watchlist, handleToggleWatchlist: onToggleWatchlist } = useMovies();
+  const { showToast } = useUI();
+  const onBookMovie = (movie) => navigate(`/movies/${movie.id}/book`);
+  const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const [filter, setFilter] = useState('ALL');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [emailInput, setEmailInput] = useState('');

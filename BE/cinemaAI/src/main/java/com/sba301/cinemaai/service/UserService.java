@@ -1,9 +1,9 @@
 package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.user.AdminUserStatusUpdateRequest;
-import com.sba301.cinemaai.dto.user.ChangePasswordRequest;
-import com.sba301.cinemaai.dto.user.UserProfileResponse;
-import com.sba301.cinemaai.dto.user.UserProfileUpdateRequest;
+import com.sba301.cinemaai.dto.request.user.AdminUserStatusUpdateRequest;
+import com.sba301.cinemaai.dto.request.user.ChangePasswordRequest;
+import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
+import com.sba301.cinemaai.dto.request.user.UserProfileUpdateRequest;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.UserStatus;
 import com.sba301.cinemaai.exception.BadRequestException;

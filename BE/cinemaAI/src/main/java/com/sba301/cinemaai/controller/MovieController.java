@@ -1,6 +1,6 @@
 package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.movie.MovieResponse;
+import com.sba301.cinemaai.dto.response.movie.MovieResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.enums.MovieStatus;

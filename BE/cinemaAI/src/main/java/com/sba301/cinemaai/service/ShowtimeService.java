@@ -1,9 +1,9 @@
 package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.cinema.ShowtimeRequest;
-import com.sba301.cinemaai.dto.cinema.ShowtimeResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeSeatMapResponse;
-import com.sba301.cinemaai.dto.cinema.ShowtimeSeatResponse;
+import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
+import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
 import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Room;
@@ -76,6 +76,7 @@ public class ShowtimeService {
         validateShowtime(movie, request.startTime(), room, endTime, null);
 
         Showtime showtime = new Showtime(movie, room, request.startTime(), endTime, request.basePrice());
+        showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
         showtime.changeStatus(request.status() == null ? ShowtimeStatus.SCHEDULED : request.status());
         return cinemaMapper.toShowtimeResponse(showtimeRepository.save(showtime));
     }
@@ -89,7 +90,7 @@ public class ShowtimeService {
         validateShowtime(movie, request.startTime(), room, endTime, id);
 
         showtime.reschedule(request.startTime(), endTime);
-        showtime.changeBasePrice(request.basePrice());
+        showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
         showtime.changeStatus(request.status() == null ? showtime.getStatus() : request.status());
         return cinemaMapper.toShowtimeResponse(showtime);
     }
@@ -114,7 +115,7 @@ public class ShowtimeService {
                 .collect(Collectors.toMap(bookingSeat -> bookingSeat.getSeat().getId(), Function.identity(), (left, right) -> left));
 
         List<ShowtimeSeatResponse> seatResponses = seats.stream()
-                .map(seat -> cinemaMapper.toShowtimeSeatResponse(seat, resolveRuntimeStatus(seat, runtimeSeats)))
+                .map(seat -> cinemaMapper.toShowtimeSeatResponse(seat, resolveRuntimeStatus(seat, runtimeSeats), showtime))
                 .toList();
         return new ShowtimeSeatMapResponse(
                 cinemaMapper.toShowtimeResponse(showtime),
@@ -142,9 +143,18 @@ public class ShowtimeService {
         if (!endTime.isAfter(startTime)) {
             throw new BadRequestException("Showtime end time must be after start time");
         }
-        if (showtimeRepository.existsOverlapping(room, startTime, endTime, excludeId)) {
+        if (hasOverlappingShowtime(room, startTime, endTime, excludeId)) {
             throw new ConflictException("Room already has an overlapping showtime");
         }
+    }
+
+    private boolean hasOverlappingShowtime(Room room, LocalDateTime startTime, LocalDateTime endTime, Long excludeId) {
+        return showtimeRepository.findByRoom(room)
+                .stream()
+                .filter(showtime -> showtime.getStatus() != ShowtimeStatus.CANCELLED)
+                .filter(showtime -> excludeId == null || !showtime.getId().equals(excludeId))
+                .anyMatch(showtime -> showtime.getStartTime().isBefore(endTime)
+                        && showtime.getEndTime().isAfter(startTime));
     }
 
     private LocalDateTime calculateEndTime(Movie movie, LocalDateTime startTime) {

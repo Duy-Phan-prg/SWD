@@ -1,6 +1,6 @@
 package com.sba301.cinemaai.mapper;
 
-import com.sba301.cinemaai.dto.user.UserProfileResponse;
+import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserProfile;
 import java.util.List;

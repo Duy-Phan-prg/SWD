@@ -1,23 +1,29 @@
 package com.sba301.cinemaai.service;
 
-import com.sba301.cinemaai.dto.cinema.RoomRequest;
-import com.sba301.cinemaai.dto.cinema.RoomResponse;
-import com.sba301.cinemaai.dto.cinema.SeatGenerationRequest;
-import com.sba301.cinemaai.dto.cinema.SeatResponse;
-import com.sba301.cinemaai.dto.cinema.SeatUpdateRequest;
+import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
+import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
+import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatRowGenerationRequest;
+import com.sba301.cinemaai.dto.response.cinema.SeatResponse;
+import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
 import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Seat;
+import com.sba301.cinemaai.entity.SeatRow;
 import com.sba301.cinemaai.enums.RoomStatus;
 import com.sba301.cinemaai.enums.SeatStatus;
+import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.CinemaMapper;
 import com.sba301.cinemaai.repository.RoomRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
+import com.sba301.cinemaai.repository.SeatRowRepository;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +34,7 @@ public class RoomService {
 
     private final RoomRepository roomRepository;
     private final SeatRepository seatRepository;
+    private final SeatRowRepository seatRowRepository;
     private final CinemaService cinemaService;
     private final CinemaMapper cinemaMapper;
 
@@ -89,13 +96,13 @@ public class RoomService {
         }
         if (!existingSeats.isEmpty()) {
             seatRepository.deleteByRoom(room);
+            seatRowRepository.deleteByRoom(room);
         }
 
-        for (int row = 0; row < room.getRowCount(); row++) {
-            String rowLabel = rowLabel(row);
-            for (int column = 1; column <= room.getColumnCount(); column++) {
-                seatRepository.save(new Seat(room, rowLabel, column, request.defaultSeatType()));
-            }
+        if (request.rows() == null || request.rows().isEmpty()) {
+            generateDefaultSeats(room, request.defaultSeatType());
+        } else {
+            generateCustomSeats(room, request);
         }
         return getSeats(roomId);
     }
@@ -105,7 +112,8 @@ public class RoomService {
         Room room = findById(roomId);
         return seatRepository.findByRoom(room)
                 .stream()
-                .sorted(Comparator.comparing(Seat::getRowLabel).thenComparingInt(Seat::getSeatNumber))
+                .sorted(Comparator.comparing((Seat seat) -> seat.getSeatRow().getDisplayOrder())
+                        .thenComparingInt(Seat::getDisplayColumn))
                 .map(cinemaMapper::toSeatResponse)
                 .toList();
     }
@@ -138,6 +146,54 @@ public class RoomService {
     private Seat findSeatById(Long id) {
         return seatRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Seat not found"));
+    }
+
+    private void generateDefaultSeats(Room room, SeatType defaultSeatType) {
+        for (int row = 0; row < room.getRowCount(); row++) {
+            String rowLabel = rowLabel(row);
+            SeatRow seatRow = seatRowRepository.save(new SeatRow(room, rowLabel, row + 1, 1, defaultSeatType));
+            for (int column = 1; column <= room.getColumnCount(); column++) {
+                seatRepository.save(new Seat(room, seatRow, column, column, defaultSeatType));
+            }
+        }
+    }
+
+    private void generateCustomSeats(Room room, SeatGenerationRequest request) {
+        Set<String> rowLabels = new HashSet<>();
+        for (SeatRowGenerationRequest rowRequest : request.rows()) {
+            String rowLabel = normalizeRowLabel(rowRequest.rowLabel());
+            if (!rowLabels.add(rowLabel)) {
+                throw new BadRequestException("Duplicate row label: " + rowLabel);
+            }
+            if (rowRequest.seatNumbers().isEmpty()) {
+                throw new BadRequestException("Seat numbers are required for row " + rowLabel);
+            }
+
+            SeatType rowSeatType = rowRequest.seatType() == null ? request.defaultSeatType() : rowRequest.seatType();
+            SeatRow seatRow = seatRowRepository.save(new SeatRow(
+                    room,
+                    rowLabel,
+                    rowRequest.displayOrder(),
+                    rowRequest.startColumn(),
+                    rowSeatType
+            ));
+            Set<Integer> seatNumbers = new HashSet<>();
+            for (int index = 0; index < rowRequest.seatNumbers().size(); index++) {
+                int seatNumber = rowRequest.seatNumbers().get(index);
+                if (!seatNumbers.add(seatNumber)) {
+                    throw new BadRequestException("Duplicate seat number " + seatNumber + " in row " + rowLabel);
+                }
+                int displayColumn = rowRequest.startColumn() + index;
+                if (displayColumn > room.getColumnCount()) {
+                    throw new BadRequestException("Seat layout exceeds room column count in row " + rowLabel);
+                }
+                seatRepository.save(new Seat(room, seatRow, seatNumber, displayColumn, rowSeatType));
+            }
+        }
+    }
+
+    private String normalizeRowLabel(String rowLabel) {
+        return rowLabel == null ? null : rowLabel.trim().toUpperCase();
     }
 
     private String rowLabel(int index) {

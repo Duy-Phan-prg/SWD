@@ -71,6 +71,26 @@ const parseResponse = async (response) => {
   return payload?.data ?? payload;
 };
 
+const tryRefreshToken = async () => {
+  const { refreshToken } = getStoredAuth();
+  if (!refreshToken) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+    if (!res.ok) return null;
+    const payload = await res.json();
+    const data = payload?.data ?? payload;
+    if (data?.accessToken) {
+      localStorage.setItem(STORAGE_KEYS.accessToken, data.accessToken);
+      return data.accessToken;
+    }
+  } catch { /* ignore */ }
+  return null;
+};
+
 const request = async (path, { method = 'GET', body, token } = {}) => {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -80,6 +100,26 @@ const request = async (path, { method = 'GET', body, token } = {}) => {
     headers,
     body: body ? JSON.stringify(body) : undefined
   });
+
+  // Token hết hạn → tự refresh và thử lại 1 lần
+  if ((response.status === 401 || response.status === 403) && token) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      const retryHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}` };
+      const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
+        method,
+        headers: retryHeaders,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      return parseResponse(retryResponse);
+    }
+    // Refresh cũng fail → session hết hạn hoàn toàn, báo app logout
+    clearAuthSession();
+    window.dispatchEvent(new CustomEvent('auth:session-expired'));
+    const error = new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    error.status = 401;
+    throw error;
+  }
 
   return parseResponse(response);
 };
@@ -296,7 +336,7 @@ export const authApi = {
     token,
     body: { status }
   }),
-  getAdminGenres: (token) => request('/api/v1/admin/genres', { token }),
+  getAdminGenres: () => request('/api/v1/genres'),
   createAdminGenre: (token, payload) => request('/api/v1/admin/genres', {
     method: 'POST',
     token,
@@ -313,6 +353,26 @@ export const authApi = {
   }),
   getFoodItems: () => request('/api/v1/foods/items'),
   getFoodCombos: () => request('/api/v1/foods/combos'),
+  // Showtimes
+  getShowtimes: (params = {}) => request(`/api/v1/showtimes${buildQueryString(params)}`),
+  getSeatMap: (showtimeId) => request(`/api/v1/showtimes/${showtimeId}/seat-map`),
+
+  // Bookings
+  holdSeats: (token, body) => request('/api/v1/bookings/hold', { method: 'POST', token, body }),
+  createBooking: (token, body) => request('/api/v1/bookings', { method: 'POST', token, body }),
+  getMyBookings: (token) => request('/api/v1/bookings', { token }),
+  cancelBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { method: 'DELETE', token }),
+
+  // Promotions
+  validatePromotion: (body) => request('/api/v1/promotions/validate', { method: 'POST', body }),
+  applyPromotion: (token, bookingId, code) => request(`/api/v1/promotions/apply?bookingId=${bookingId}&code=${encodeURIComponent(code)}`, { method: 'POST', token }),
+  removePromotion: (token, bookingId) => request(`/api/v1/promotions/remove?bookingId=${bookingId}`, { method: 'DELETE', token }),
+
+  // Payment
+  createVnpayPayment: (token, bookingId) => request(`/api/v1/payments/vnpay/create?bookingId=${bookingId}`, { method: 'POST', token }),
+  mockPayment: (token, bookingId) => request(`/api/v1/payments/mock?bookingId=${bookingId}`, { method: 'POST', token }),
+  getPaymentByBooking: (token, bookingId) => request(`/api/v1/payments/booking/${bookingId}`, { token }),
+
   getAdminFoodItems: (token) => request('/api/v1/admin/foods/items', { token }),
   getAdminFoodCombos: (token) => request('/api/v1/admin/foods/combos', { token }),
   createAdminFoodItem: (token, payload) => request('/api/v1/admin/foods/items', {

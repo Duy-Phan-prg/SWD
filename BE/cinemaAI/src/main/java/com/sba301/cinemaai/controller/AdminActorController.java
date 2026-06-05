@@ -1,18 +1,16 @@
 package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.movie.ActorRequest;
-import com.sba301.cinemaai.dto.movie.ActorResponse;
+import com.sba301.cinemaai.dto.request.movie.ActorRequest;
+import com.sba301.cinemaai.dto.response.movie.ActorResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.ActorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,18 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminActorController {
 
     private final ActorService actorService;
-
-    @GetMapping
-    @Operation(summary = "List actors (Admin)", description = "List actors with movie count")
-    public ApiResponse<List<ActorResponse>> getActors() {
-        return ApiResponse.success(actorService.getActors());
-    }
-
-    @GetMapping("/{actorId}")
-    @Operation(summary = "Get actor details (Admin)", description = "Get actor details with movie count")
-    public ApiResponse<ActorResponse> getActor(@PathVariable Long actorId) {
-        return ApiResponse.success(actorService.getActor(actorId));
-    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

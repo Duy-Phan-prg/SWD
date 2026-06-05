@@ -1,18 +1,58 @@
-import React, { useState } from 'react';
-import { Ticket, Calendar, MapPin, MoreVertical, Star, CheckCircle, Clock } from 'lucide-react';
-import { movies } from '../services/cinemaData';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical } from 'lucide-react';
+import { authApi, getStoredAuth } from '../services/authApi';
+import { useAuth } from '../contexts/AuthContext';
+import { useUI } from '../contexts/UIContext';
 
-export default function MyTicketsView({
-  bookedTickets,
-  onSelectMovie,
-  isLoggedIn,
-  onOpenOTP,
-  showToast = () => {}
-}) {
+export default function MyTicketsView() {
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+  const { showToast, setShowOTP } = useUI();
+  const onSelectMovie = (id) => navigate(`/movies/${id}`);
+  const onOpenOTP = () => setShowOTP(true);
   const [reviewContent, setReviewContent] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
-  const [selectedReviewMovie, setSelectedReviewMovie] = useState('Oppenheimer');
+  const [selectedReviewMovie, setSelectedReviewMovie] = useState('');
   const [reviewsList, setReviewsList] = useState([]);
+  const [realBookings, setRealBookings] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) return;
+    setIsLoading(true);
+    authApi.getMyBookings(accessToken)
+      .then(data => setRealBookings(Array.isArray(data) ? data : []))
+      .catch(() => setRealBookings([]))
+      .finally(() => setIsLoading(false));
+  }, [isLoggedIn]);
+
+  // Map BE booking sang display format
+  const activeTickets = realBookings
+    .filter(b => b.status === 'PAID' || b.status === 'USED' || b.status === 'HOLDING')
+    .map(b => ({
+      id: b.bookingCode || String(b.id),
+      title: b.movieTitle || b.showtime?.movieTitle || 'Phim',
+      englishTitle: b.bookingCode || '',
+      time: b.showtimeStart ? new Date(b.showtimeStart).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—',
+      date: b.showtimeStart ? new Date(b.showtimeStart).toLocaleDateString('vi-VN') : '—',
+      room: b.roomName || b.showtime?.roomName || '—',
+      location: b.cinemaName || 'CinePremier',
+      seats: b.seats?.map(s => `${s.rowLabel}${s.seatNumber}`).join(', ') || '—',
+      code: b.bookingCode || String(b.id),
+      badge: b.status === 'PAID' ? 'ĐÃ THANH TOÁN' : b.status === 'USED' ? 'ĐÃ SỬ DỤNG' : 'ĐANG GIỮ',
+      badgeColor: b.status === 'PAID' ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20'
+        : b.status === 'USED' ? 'bg-neutral-900 text-neutral-400 border-neutral-700'
+        : 'bg-amber-950/20 text-amber-400 border-amber-500/20',
+      helperText: b.status === 'PAID' ? 'Sẵn sàng quét / Đưa mã cho nhân viên soát vé'
+        : b.status === 'HOLDING' ? `Ghế giữ đến ${b.holdExpiresAt ? new Date(b.holdExpiresAt).toLocaleTimeString('vi-VN') : ''}`
+        : 'Đã sử dụng',
+      totalAmount: b.totalAmount,
+      poster: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop',
+      isReal: true
+    }));
 
   // Mock Preset "Vé hiện tại" shown in screen representation
   const defaultTickets = [
@@ -47,23 +87,8 @@ export default function MyTicketsView({
   ];
 
   // Combined real booked tickets + mock tickets
-  const activeTickets = [
-    ...bookedTickets.map((bk, i) => ({
-      id: bk.ticketId,
-      title: bk.movie.title,
-      englishTitle: bk.movie.englishTitle,
-      time: bk.showtime,
-      date: bk.date.split(',')[1] || 'HÔM NAY',
-      room: bk.hall.split('(')[0].replace('Phong chiếu', 'PHÒNG').replace('Màn hình lớn', 'SÂN'),
-      location: 'CinePremier VIP Saigon',
-      seats: bk.selectedSeats.map(s => s.id).join(', '),
-      code: bk.ticketId,
-      badge: bk.movie.ageRating,
-      helperText: 'Sẵn sàng quét / Đưa mã này cho nhân viên soát vé',
-      poster: bk.movie.posterUrl
-    })),
-    ...defaultTickets
-  ];
+  // Dùng real bookings nếu có, nếu chưa login thì dùng mock
+  const displayTickets = isLoggedIn ? activeTickets : defaultTickets;
 
   // Mock Preset "Lịch sử đặt vé"
   const bookingHistory = [
@@ -144,16 +169,19 @@ export default function MyTicketsView({
 
       {/* SECTION: VÉ HIỆN TẠI */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-          <Ticket className="h-4 w-4 text-white" />
-          <span className="text-[10px] uppercase font-sans font-black tracking-widest text-neutral-400">
-            🎫 Vé hiện tại
-          </span>
+        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <div className="flex items-center gap-2">
+            <Ticket className="h-4 w-4 text-white" />
+            <span className="text-[10px] uppercase font-sans font-black tracking-widest text-neutral-400">
+              🎫 Vé của tôi {isLoggedIn && !isLoading && `(${activeTickets.length})`}
+            </span>
+          </div>
+          {isLoading && <Loader2 className="h-4 w-4 text-amber-500 animate-spin" />}
         </div>
 
         {/* Dynamic / Styled tickets flex grid matching secondary screenshot */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8" id="tickets-current-grid">
-          {activeTickets.map((t) => (
+          {displayTickets.map((t) => (
             <div 
               key={t.id}
               className="group border border-neutral-800 bg-gradient-to-br from-[#0e0e11] via-[#07070a] to-[#020203] hover:border-neutral-700/80 transition-all duration-300 flex flex-col md:flex-row relative overflow-hidden shadow-2xl rounded-sm md:h-[200px]"

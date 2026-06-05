@@ -6,6 +6,8 @@ import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,6 +21,7 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     List<Showtime> findByStatus(ShowtimeStatus status);
 
     List<Showtime> findByStartTimeBetween(LocalDateTime from, LocalDateTime to);
+    Optional<Showtime> findByRoomAndMovieAndStartTime(Room room, Movie movie, LocalDateTime startTime);
 
     boolean existsByRoomAndMovieAndStartTime(Room room, Movie movie, LocalDateTime startTime);
 

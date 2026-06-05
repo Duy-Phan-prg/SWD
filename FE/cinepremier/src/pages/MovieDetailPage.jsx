@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Sparkles, Star, Clock, Heart, Brain, Award, ShieldCheck, Activity, Eye, Zap, ChevronRight, RefreshCw, BarChart2 } from 'lucide-react';
 import { castData, moviesReviews } from '../services/cinemaData';
+import { useMovies } from '../contexts/MoviesContext';
+import { useUI } from '../contexts/UIContext';
+import { useAuth } from '../contexts/AuthContext';
+import { authApi, getStoredAuth } from '../services/authApi';
 
 // Specialized preset reports for each major movie
 const movieAiReports = {
@@ -56,7 +61,38 @@ const movieAiReports = {
   }
 };
 
-export default function DetailView({ movie, onBack, onBook, showToast = () => {} }) {
+export default function DetailView() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const { moviesList, setMoviesList } = useMovies();
+  const { showToast } = useUI();
+  const { currentRole } = useAuth();
+  const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
+  const onBack = () => navigate(-1);
+  const onBook = (mv) => navigate(`/movies/${mv.id}/book`);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    const fetchDetail = async () => {
+      try {
+        const { accessToken } = getStoredAuth();
+        const detail = currentRole === 'admin' && accessToken
+          ? await authApi.getAdminMovieDetail(accessToken, id)
+          : await authApi.getMovieDetail(id);
+        if (cancelled || !detail?.id) return;
+        setMoviesList(prev => {
+          const exists = prev.some(m => String(m.id) === String(id) || String(m.id) === String(detail.id));
+          if (!exists) return [{ ...detail }, ...prev];
+          return prev.map(m => (String(m.id) === String(id) || String(m.id) === String(detail.id)) ? { ...m, ...detail } : m);
+        });
+      } catch { /* use fallback from list */ }
+    };
+    fetchDetail();
+    return () => { cancelled = true; };
+  }, [id, currentRole]);
+
+  if (!movie) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>;
   const [showTrailer, setShowTrailer] = useState(false);
   const [showAiAnalysis, setShowAiAnalysis] = useState(false);
   const [reviews, setReviews] = useState([]);

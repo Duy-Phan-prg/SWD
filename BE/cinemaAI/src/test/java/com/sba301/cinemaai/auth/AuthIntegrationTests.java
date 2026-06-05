@@ -2,14 +2,14 @@ package com.sba301.cinemaai.auth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sba301.cinemaai.dto.auth.EmailVerificationRequest;
-import com.sba301.cinemaai.dto.auth.LoginRequest;
-import com.sba301.cinemaai.dto.auth.LogoutRequest;
-import com.sba301.cinemaai.dto.auth.PasswordResetConfirmRequest;
-import com.sba301.cinemaai.dto.auth.PasswordResetRequest;
-import com.sba301.cinemaai.dto.auth.RefreshTokenRequest;
-import com.sba301.cinemaai.dto.auth.RegisterRequest;
-import com.sba301.cinemaai.dto.user.ChangePasswordRequest;
+import com.sba301.cinemaai.dto.request.auth.EmailVerificationRequest;
+import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.auth.LogoutRequest;
+import com.sba301.cinemaai.dto.request.auth.PasswordResetConfirmRequest;
+import com.sba301.cinemaai.dto.request.auth.PasswordResetRequest;
+import com.sba301.cinemaai.dto.request.auth.RefreshTokenRequest;
+import com.sba301.cinemaai.dto.request.auth.RegisterRequest;
+import com.sba301.cinemaai.dto.request.user.ChangePasswordRequest;
 import com.sba301.cinemaai.repository.PasswordResetTokenRepository;
 import com.sba301.cinemaai.repository.PendingRegistrationRepository;
 import com.sba301.cinemaai.repository.UserRepository;
@@ -52,7 +52,8 @@ class AuthIntegrationTests {
                 email,
                 "Password123",
                 "Phase Two Customer",
-                "0900111222"
+                "0900111222",
+                2000
         ));
 
         mockMvc.perform(post("/api/v1/auth/register")

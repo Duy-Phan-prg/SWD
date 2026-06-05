@@ -42,6 +42,9 @@ public class User extends BaseEntity {
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private UserProfile profile;
 
+    @Column(name = "birth_year")
+    private Integer birthYear;
+
     public User(String email, String passwordHash, String fullName, String phone) {
         this.email = email;
         this.passwordHash = passwordHash;

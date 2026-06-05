@@ -1,7 +1,7 @@
 package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.movie.GenreRequest;
-import com.sba301.cinemaai.dto.movie.GenreResponse;
+import com.sba301.cinemaai.dto.request.movie.GenreRequest;
+import com.sba301.cinemaai.dto.response.movie.GenreResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.GenreService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,11 +9,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -30,29 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminGenreController {
 
     private final GenreService genreService;
-
-    @GetMapping
-    @Operation(summary = "Get all genres (Admin)", description = "Get all genres (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Genres retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role")
-    })
-    public ApiResponse<List<GenreResponse>> getGenres() {
-        return ApiResponse.success(genreService.getGenres());
-    }
-
-    @GetMapping("/{genreId}")
-    @Operation(summary = "Get genre by ID (Admin)", description = "Get a specific genre by ID (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Genre retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Genre not found")
-    })
-    public ApiResponse<GenreResponse> getGenre(@PathVariable Long genreId) {
-        return ApiResponse.success(genreService.getGenre(genreId));
-    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
