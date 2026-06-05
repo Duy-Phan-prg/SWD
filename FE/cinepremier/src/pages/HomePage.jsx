@@ -24,7 +24,8 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const [loadingAI, setLoadingAI] = useState(false);
 
   // Filter movies for "Now Playing" and "Upcoming"
-  const publicMovies = moviesList.filter((m) => m.status !== 'INACTIVE' && !m.isInactive);
+  const sourceMovies = moviesList?.length ? moviesList : movies;
+  const publicMovies = sourceMovies.filter((m) => m.status !== 'INACTIVE' && !m.isInactive);
   const nowPlaying = publicMovies.filter((m) => m.status === 'NOW_SHOWING' || (!m.status && !m.isUpcoming));
   const upcoming = publicMovies.filter((m) => m.status === 'UPCOMING' || m.isUpcoming);
 
@@ -33,16 +34,19 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
 
-  const heroMovie = nowPlaying[currentHeroIndex] || nowPlaying[0] || publicMovies[0];
+  const heroMovies = nowPlaying.length ? nowPlaying : publicMovies.length ? publicMovies : movies;
+  const heroMovie = heroMovies[currentHeroIndex] || heroMovies[0];
   const heroYoutubeId = extractYoutubeId(homepageVideoUrl);
   const heroYoutubeSrc = `https://www.youtube.com/embed/${heroYoutubeId}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${heroYoutubeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1`;
 
   const handlePrevHero = () => {
-    setCurrentHeroIndex((prev) => (prev === 0 ? nowPlaying.length - 1 : prev - 1));
+    if (!heroMovies.length) return;
+    setCurrentHeroIndex((prev) => (prev === 0 ? heroMovies.length - 1 : prev - 1));
   };
 
   const handleNextHero = () => {
-    setCurrentHeroIndex((prev) => (prev === nowPlaying.length - 1 ? 0 : prev + 1));
+    if (!heroMovies.length) return;
+    setCurrentHeroIndex((prev) => (prev === heroMovies.length - 1 ? 0 : prev + 1));
   };
 
   // AI Mood analysis tags
@@ -226,7 +230,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <span className="text-[9px] font-mono text-neutral-400 px-1 font-bold">
-                    {currentHeroIndex + 1}/{nowPlaying.length}
+                    {currentHeroIndex + 1}/{heroMovies.length}
                   </span>
                   <button
                     onClick={handleNextHero}

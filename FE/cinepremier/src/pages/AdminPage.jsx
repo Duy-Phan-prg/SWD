@@ -6,7 +6,7 @@ import {
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
   BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
 } from 'lucide-react';
-import { authApi, getStoredAuth } from '../services/authApi';
+import { authApi, getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
 import AdminMoviesPanel from './admin/AdminMoviesPanel';
 import AdminGenresPanel from './admin/AdminGenresPanel';
@@ -129,8 +129,15 @@ export default function AdminDashboard({
   React.useEffect(() => {
     if (!isAdmin || activeTab !== 'movies') return undefined;
 
-    const { accessToken } = getStoredAuth();
-    if (!accessToken) return undefined;
+    const token = getAdminToken(false);
+    if (!token) {
+      setAdminMoviePagination((prev) => ({
+        ...prev,
+        totalElements: moviesList.length,
+        totalPages: Math.max(1, Math.ceil(moviesList.length / Math.max(prev.size, 1)))
+      }));
+      return undefined;
+    }
 
     let cancelled = false;
     const status = filmFilter === 'ACTIVE'
@@ -141,7 +148,7 @@ export default function AdminDashboard({
 
     const timeoutId = setTimeout(async () => {
       try {
-        const pageData = await authApi.searchAdminMoviesPage(accessToken, {
+        const pageData = await authApi.searchAdminMoviesPage(token, {
           keyword: searchQuery.trim(),
           status,
           page: adminMoviePagination.page,
@@ -168,7 +175,7 @@ export default function AdminDashboard({
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [isAdmin, activeTab, searchQuery, filmFilter, adminMoviePagination.page, adminMoviePagination.size, setMoviesList]);
+  }, [isAdmin, activeTab, searchQuery, filmFilter, adminMoviePagination.page, adminMoviePagination.size, moviesList.length, setMoviesList]);
 
   const visibleFoods = [
     ...foodCombos.map((item) => ({ ...item, kind: 'combo' })),
@@ -399,34 +406,33 @@ export default function AdminDashboard({
     }
   };
 
-  const getAdminToken = () => {
+  const getAdminToken = (notify = true) => {
     const { accessToken, user } = getStoredAuth();
-    const storedRoles = (user?.roles || []).map((role) => String(role).toUpperCase());
-    const hasStoredAdminRole = storedRoles.includes('ADMIN') || storedRoles.includes('ROLE_ADMIN') || user?.role === 'admin';
+    if (!accessToken) {
+      if (notify) showToast('Phiên quản trị đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.');
+      return null;
+    }
+
     const tokenPayload = (() => {
       try {
-        if (!accessToken || !accessToken.includes('.')) return null;
+        if (!accessToken.includes('.')) return null;
         return JSON.parse(atob(accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
       } catch (error) {
         return null;
       }
     })();
-    const tokenRoles = [
-      ...(Array.isArray(tokenPayload?.roles) ? tokenPayload.roles : []),
-      ...(Array.isArray(tokenPayload?.authorities) ? tokenPayload.authorities : []),
-      ...(Array.isArray(tokenPayload?.scope) ? tokenPayload.scope : String(tokenPayload?.scope || '').split(' '))
-    ].map((role) => String(role).toUpperCase()).filter(Boolean);
-    const hasTokenAdminRole = tokenRoles.includes('ADMIN') || tokenRoles.includes('ROLE_ADMIN');
     const isTokenExpired = tokenPayload?.exp ? tokenPayload.exp * 1000 <= Date.now() : false;
 
-    if (!isAdmin || !hasStoredAdminRole || !hasTokenAdminRole || isTokenExpired) {
-      showToast('Tài khoản hiện tại chưa có quyền ADMIN để gọi API quản trị.');
+    if (isTokenExpired) {
+      if (notify) showToast('Phiên quản trị đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.');
       return null;
     }
-    if (!accessToken) {
-      showToast('Phiên quản trị đã hết hạn. Vui lòng đăng nhập lại bằng tài khoản ADMIN.');
+
+    if (!hasBackendAdminAccess(accessToken, user)) {
+      if (notify) showToast('FE da mo trang quan tri, nhung BE van chan API admin neu token khong co role ADMIN.');
       return null;
     }
+
     return accessToken;
   };
 

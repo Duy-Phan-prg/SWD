@@ -13,7 +13,7 @@ import AdminDashboard from './pages/AdminPage';
 import PoliciesPage from './pages/PoliciesPage';
 import AuthModal from './features/auth/AuthModal';
 import { movies, cinemaLocations } from './services/cinemaData';
-import { authApi, clearAuthSession, getStoredAuth, normalizeUser, saveAuthSession } from './services/authApi';
+import { authApi, clearAuthSession, getStoredAuth, hasBackendAdminAccess, normalizeUser, saveAuthSession } from './services/authApi';
 import { X, Ticket } from 'lucide-react';
 
 export default function App() {
@@ -350,8 +350,8 @@ export default function App() {
 
     const fetchMovieDetail = async () => {
       try {
-        const { accessToken } = getStoredAuth();
-        const detail = currentRole === 'admin' && accessToken
+        const { accessToken, user } = getStoredAuth();
+        const detail = currentRole === 'admin' && hasBackendAdminAccess(accessToken, user)
           ? await authApi.getAdminMovieDetail(accessToken, selectedMovieId)
           : await authApi.getMovieDetail(selectedMovieId);
 

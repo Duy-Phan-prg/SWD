@@ -84,7 +84,14 @@ export default function AuthModal({
   const googleScriptPromiseRef = useRef(null);
   const googleClientInitializedRef = useRef(false);
   const googleButtonRef = useRef(null);
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+  const googleAllowedOrigins = String(import.meta.env.VITE_GOOGLE_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const isCurrentOriginConfigured = !googleAllowedOrigins.length || googleAllowedOrigins.includes(currentOrigin);
+  const googleSetupHelp = `Origin hien tai: ${currentOrigin}. Hay them dung origin nay vao Google Cloud Console > OAuth Client > Authorized JavaScript origins.`;
 
   // Password Login States
   const [loginEmail, setLoginEmail] = useState('');
@@ -171,8 +178,11 @@ export default function AuthModal({
   };
 
   const renderGoogleSignInButton = async () => {
-    if (!googleClientId) {
+    if (!googleClientId || googleClientId.includes('YOUR_GOOGLE_WEB_CLIENT_ID')) {
       throw new Error('Thiếu VITE_GOOGLE_CLIENT_ID trong file .env của FE.');
+    }
+    if (!isCurrentOriginConfigured) {
+      throw new Error(`Google Sign-In chua duoc cau hinh cho origin nay. ${googleSetupHelp}`);
     }
 
     await loadGoogleIdentityScript();
@@ -219,9 +229,13 @@ export default function AuthModal({
     setGoogleButtonError('');
     setGoogleButtonReady(false);
 
-    if (!googleClientId) {
+    if (!googleClientId || googleClientId.includes('YOUR_GOOGLE_WEB_CLIENT_ID')) {
       setGoogleButtonError('Thiếu VITE_GOOGLE_CLIENT_ID trong file .env của FE.');
       return;
+    }
+    if (!isCurrentOriginConfigured) {
+      setGoogleButtonError(`Google Sign-In chua duoc cau hinh cho origin nay. ${googleSetupHelp}`);
+      return undefined;
     }
     if (!googleButtonHostReady) return undefined;
 
@@ -244,7 +258,7 @@ export default function AuthModal({
       cancelled = true;
       if (frameId) window.cancelAnimationFrame(frameId);
     };
-  }, [isOpen, activeTab, googleClientId, googleButtonHostReady]);
+  }, [isOpen, activeTab, googleClientId, googleButtonHostReady, isCurrentOriginConfigured, googleSetupHelp]);
 
   useEffect(() => {
     if (!isOpen || activeTab !== 'register' || registerStep !== 'verify' || !emailOtpExpiresAt) {
@@ -456,8 +470,12 @@ export default function AuthModal({
   };
 
   const handleGoogleSignIn = async () => {
-    if (!googleClientId) {
+    if (!googleClientId || googleClientId.includes('YOUR_GOOGLE_WEB_CLIENT_ID')) {
       showToast('error', 'Thiếu VITE_GOOGLE_CLIENT_ID. Vui lòng cấu hình Google Client ID cho FE.');
+      return;
+    }
+    if (!isCurrentOriginConfigured) {
+      showToast('error', `Google Sign-In chua duoc cau hinh cho origin nay. ${googleSetupHelp}`);
       return;
     }
 
