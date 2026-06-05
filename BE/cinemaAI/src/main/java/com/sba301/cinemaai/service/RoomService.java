@@ -39,8 +39,17 @@ public class RoomService {
     private final CinemaMapper cinemaMapper;
 
     @Transactional(readOnly = true)
+    public List<RoomResponse> getRooms() {
+        Cinema cinema = cinemaService.findSingleton();
+        return roomRepository.findByCinema(cinema)
+                .stream()
+                .map(cinemaMapper::toRoomResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<RoomResponse> getRoomsByCinema(Long cinemaId) {
-        Cinema cinema = cinemaService.findById(cinemaId);
+        Cinema cinema = cinemaService.findSingletonById(cinemaId);
         return roomRepository.findByCinema(cinema)
                 .stream()
                 .map(cinemaMapper::toRoomResponse)
@@ -54,7 +63,7 @@ public class RoomService {
 
     @Transactional
     public RoomResponse create(RoomRequest request) {
-        Cinema cinema = cinemaService.findById(request.cinemaId());
+        Cinema cinema = resolveCinema(request.cinemaId());
         roomRepository.findByCinemaAndName(cinema, request.name()).ifPresent(room -> {
             throw new ConflictException("Room name already exists in this cinema");
         });
@@ -66,7 +75,7 @@ public class RoomService {
     @Transactional
     public RoomResponse update(Long id, RoomRequest request) {
         Room room = findById(id);
-        Cinema cinema = cinemaService.findById(request.cinemaId());
+        Cinema cinema = resolveCinema(request.cinemaId());
         if (!room.getCinema().getId().equals(cinema.getId())) {
             throw new BadRequestException("Cannot move room to another cinema");
         }
@@ -204,5 +213,9 @@ public class RoomService {
             value = value / 26 - 1;
         } while (value >= 0);
         return label.toString();
+    }
+
+    private Cinema resolveCinema(Long cinemaId) {
+        return cinemaId == null ? cinemaService.findSingleton() : cinemaService.findSingletonById(cinemaId);
     }
 }

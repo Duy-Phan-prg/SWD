@@ -37,6 +37,18 @@ public class AdminRoomController {
 
     private final RoomService roomService;
 
+    @GetMapping
+    @Operation(summary = "Get configured cinema rooms (Admin)", description = "Get all rooms in the single configured cinema (Admin only)")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Rooms retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cinema not found")
+    })
+    public ApiResponse<List<RoomResponse>> getRooms() {
+        return ApiResponse.success(roomService.getRooms());
+    }
+
     @GetMapping("/{roomId}")
     @Operation(summary = "Get room by ID (Admin)", description = "Get a specific room by ID (Admin only)")
     @ApiResponses(value = {

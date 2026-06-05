@@ -15,7 +15,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VNPayService {
+public class VnpayService {
 
     private final VNPayConfig vnPayConfig;
 

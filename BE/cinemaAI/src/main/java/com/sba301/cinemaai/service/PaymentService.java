@@ -29,7 +29,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final BookingSeatRepository bookingSeatRepository;
-    private final VNPayService vnpayService;
+    private final VnpayService vnpayService;
     private final QrTicketService qrTicketService;
     private final LoyaltyPointService loyaltyPointService;
     private final ObjectMapper objectMapper;
