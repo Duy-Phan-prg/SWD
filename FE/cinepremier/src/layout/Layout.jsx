@@ -14,7 +14,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const { toast, setToast, showOTP, setShowOTP, showWatchlist, setShowWatchlist } = useUI();
   const { isLoggedIn, currentUser, currentRole, setCurrentRole, handleLoginSuccess } = useAuth();
-  const { searchQuery, setSearchQuery, setMoviePagination, selectedCity, setSelectedCity, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
+  const { searchQuery, setSearchQuery, setMoviePagination, selectedCity, setSelectedCity, cinemaLocations, publicCinema, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
 
   const activeTab = (() => {
     const p = location.pathname;
@@ -89,7 +89,10 @@ export default function Layout({ children }) {
             searchQuery={searchQuery}
             onSearchChange={(q) => { setSearchQuery(q); setMoviePagination(prev => ({ ...prev, page: 0 })); if (location.pathname !== '/movies') navigate('/movies'); }}
             selectedCity={selectedCity}
+            cinemaLocations={cinemaLocations}
+            cinema={publicCinema}
             onCityChange={setSelectedCity}
+            onManageCinema={() => navigate('/admin/cinema')}
             onOpenWatchlist={() => setShowWatchlist(true)}
             onOpenOTP={() => setShowOTP(true)}
             isLoggedIn={isLoggedIn}
@@ -97,9 +100,9 @@ export default function Layout({ children }) {
             currentRole={currentRole}
             onRoleChange={setCurrentRole}
           />
-          <main className="overflow-hidden">{children}</main>
+          <main className="relative z-0 overflow-x-hidden">{children}</main>
         </div>
-        <Footer onTabChange={handleTabChange} />
+        <Footer onTabChange={handleTabChange} cinema={publicCinema} />
       </div>
 
       {/* Watchlist Drawer */}

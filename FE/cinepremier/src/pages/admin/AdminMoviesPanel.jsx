@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
@@ -6,6 +6,7 @@ import {
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
   BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
 } from 'lucide-react';
+import { authApi } from '../../services/authApi';
 
 export default function AdminMoviesPanel({ ctx }) {
   const {
@@ -23,6 +24,8 @@ export default function AdminMoviesPanel({ ctx }) {
     setSearchQuery,
     filmFilter,
     setFilmFilter,
+    adminGenreFilter,
+    setAdminGenreFilter,
     adminMoviePagination,
     setAdminMoviePagination,
     editingMovie,
@@ -103,6 +106,7 @@ export default function AdminMoviesPanel({ ctx }) {
     averageFillRate,
     handleEditMovie,
     handleCreateMovieSubmit,
+    handleUpdateMovieStatus,
     handleDeleteMovie,
     handleAddShowtimeSubmit,
     handleRefundTicket,
@@ -123,6 +127,10 @@ export default function AdminMoviesPanel({ ctx }) {
     isAdmin
   } = ctx;
 
+  const [actorForm, setActorForm] = useState({ name: '', biography: '', avatarUrl: '' });
+  const [isActorSaving, setIsActorSaving] = useState(false);
+  const [createdActors, setCreatedActors] = useState([]);
+
   const toggleMovieGenre = (genreId) => {
     const normalizedId = Number(genreId);
     const currentIds = formData.genreIds || [];
@@ -139,6 +147,50 @@ export default function AdminMoviesPanel({ ctx }) {
       genreIds: nextGenreIds,
       genre: nextGenreNames
     });
+  };
+
+  const updateMovieActorIds = (value) => {
+    const actorIds = value
+      .split(',')
+      .map((id) => Number(id.trim()))
+      .filter(Number.isFinite);
+    setFormData({
+      ...formData,
+      actorIds
+    });
+  };
+
+  const handleQuickCreateActor = async (event) => {
+    event.preventDefault();
+    const token = getAdminToken();
+    if (!token) return;
+    if (!actorForm.name.trim()) {
+      showToast('Vui lòng nhập tên actor.');
+      return;
+    }
+
+    setIsActorSaving(true);
+    try {
+      const actor = await authApi.createAdminActor(token, {
+        name: actorForm.name.trim(),
+        biography: actorForm.biography.trim(),
+        avatarUrl: actorForm.avatarUrl.trim()
+      });
+      const actorId = Number(actor.id);
+      if (Number.isFinite(actorId)) {
+        setFormData((prev) => ({
+          ...prev,
+          actorIds: Array.from(new Set([...(prev.actorIds || []), actorId]))
+        }));
+      }
+      setCreatedActors((prev) => [actor, ...prev]);
+      setActorForm({ name: '', biography: '', avatarUrl: '' });
+      showToast(`Đã tạo actor: ${actor.name}`);
+    } catch (error) {
+      showToast(error.message || 'Không thể tạo actor.');
+    } finally {
+      setIsActorSaving(false);
+    }
   };
 
   const getMovieStatusMeta = (movie) => {
@@ -205,6 +257,20 @@ export default function AdminMoviesPanel({ ctx }) {
 
             {/* Grid categories for status filter */}
             <div className="flex gap-2 w-full md:w-auto" id="film-filter-container">
+              <select
+                value={adminGenreFilter}
+                onChange={(event) => {
+                  setAdminGenreFilter(event.target.value);
+                  setAdminMoviePagination((prev) => ({ ...prev, page: 0 }));
+                }}
+                className="border border-neutral-800 bg-black px-3 py-2 text-[9.5px] font-bold uppercase text-neutral-300 focus:border-amber-400 focus:outline-none"
+                aria-label="Lọc phim theo thể loại"
+              >
+                <option value="">TẤT CẢ THỂ LOẠI</option>
+                {genres.map((genre) => (
+                  <option key={genre.id} value={genre.id}>{genre.name}</option>
+                ))}
+              </select>
               {[
                 { id: 'ALL', name: 'TẤT CẢ PHIM' },
                 { id: 'ACTIVE', name: 'ĐANG PHÁT HÀNH' },
@@ -430,6 +496,56 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
+                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Actor IDs API</label>
+                      <input
+                        type="text"
+                        placeholder="VD: 1, 2, 3"
+                        value={(formData.actorIds || []).join(', ')}
+                        onChange={(e) => updateMovieActorIds(e.target.value)}
+                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-2 border border-neutral-800 bg-black p-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Tên actor"
+                          value={actorForm.name}
+                          onChange={(e) => setActorForm({ ...actorForm, name: e.target.value })}
+                          className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Tiểu sử"
+                          value={actorForm.biography}
+                          onChange={(e) => setActorForm({ ...actorForm, biography: e.target.value })}
+                          className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Avatar URL"
+                          value={actorForm.avatarUrl}
+                          onChange={(e) => setActorForm({ ...actorForm, avatarUrl: e.target.value })}
+                          className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleQuickCreateActor}
+                        disabled={isActorSaving}
+                        className="w-full border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 hover:bg-amber-500 hover:text-black disabled:opacity-50"
+                      >
+                        {isActorSaving ? 'Đang tạo actor...' : 'Tạo actor và gán ID vào phim'}
+                      </button>
+                      {createdActors.length > 0 && (
+                        <div className="text-[9px] text-neutral-400 font-mono">
+                          Actor vừa tạo: {createdActors.slice(0, 3).map((actor) => `${actor.name}#${actor.id}`).join(', ')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
                       <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trailer URL</label>
                       <input
                         type="text"
@@ -549,7 +665,19 @@ export default function AdminMoviesPanel({ ctx }) {
                       {mv.director}
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-start gap-2">
+                        <select
+                          value={mv.status || 'NOW_SHOWING'}
+                          onChange={(event) => handleUpdateMovieStatus(mv, event.target.value)}
+                          className="h-7 min-w-32 border border-neutral-800 bg-black px-2 text-[9px] font-bold uppercase tracking-wider text-zinc-300 focus:border-amber-400 focus:outline-none"
+                          aria-label={`Đổi trạng thái ${mv.title}`}
+                        >
+                          <option value="NOW_SHOWING">NOW_SHOWING</option>
+                          <option value="UPCOMING">UPCOMING</option>
+                          <option value="ENDED">ENDED</option>
+                          <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                        <div className="flex items-center gap-2">
                         {mv.status === 'INACTIVE' ? (
                           <span className="inline-flex items-center px-2 py-1 bg-rose-950/30 text-rose-300 border border-rose-500/30 text-[9px] uppercase font-bold tracking-wider rounded-sm select-none shrink-0 h-6">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
@@ -576,6 +704,7 @@ export default function AdminMoviesPanel({ ctx }) {
                             HOT
                           </span>
                         )}
+                        </div>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-right">

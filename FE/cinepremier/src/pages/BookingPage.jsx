@@ -19,7 +19,6 @@ export default function BookingView() {
     navigate('/tickets');
     showToast(`Đặt vé thành công! Mã booking: ${booking.bookingCode || ''}`.trim());
   };
-  if (!movie) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>;
   const seatScrollRef = useRef(null);
   const scrollSeats = (direction) => {
     seatScrollRef.current?.scrollBy({ left: direction === 'left' ? -180 : 180, behavior: 'smooth' });
@@ -276,6 +275,8 @@ export default function BookingView() {
   const handleFinalSuccessSubmit = () => {
     onConfirmBooking({ bookingCode: holdBookingId ? `#${holdBookingId}` : '' });
   };
+
+  if (!movie) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>;
 
   // If we are in any simulated payment state (payment_method, processing, success, failed),
   // we render a beautiful, responsive, fully dedicated billing gateway UI

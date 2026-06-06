@@ -92,7 +92,6 @@ export default function DetailView() {
     return () => { cancelled = true; };
   }, [id, currentRole]);
 
-  if (!movie) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>;
   const [showTrailer, setShowTrailer] = useState(false);
   const [showAiAnalysis, setShowAiAnalysis] = useState(false);
   const [reviews, setReviews] = useState([]);
@@ -105,7 +104,7 @@ export default function DetailView() {
   
   const canvasRef = useRef(null);
   const modalCanvasRef = useRef(null);
-  const isBookable = movie.status === 'NOW_SHOWING' || (!movie.status && !movie.isUpcoming);
+  const isBookable = movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
 
   const playPing = (freq = 440, type = 'sine', duration = 0.1) => {
     try {
@@ -137,12 +136,14 @@ export default function DetailView() {
 
   // Load reviews on movie load
   useEffect(() => {
+    if (!movie) return;
     const list = moviesReviews[movie.id] || [];
     setReviews(list);
   }, [movie]);
 
   // Emotional Waveform animation canvas drawing logic
   useEffect(() => {
+    if (!movie) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -245,7 +246,7 @@ export default function DetailView() {
 
   // Emotional Waveform animation for the AI Analysis Modal Canvas
   useEffect(() => {
-    if (!showAiAnalysis) return;
+    if (!showAiAnalysis || !movie) return;
     const canvas = modalCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -367,6 +368,8 @@ export default function DetailView() {
       return { ...prev, [id]: !isAlreadyLiked };
     });
   };
+
+  if (!movie) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>;
 
   const currentCasts = castData[movie.id] || castData['neon-horizon'];
 

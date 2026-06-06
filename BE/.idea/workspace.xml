@@ -4,15 +4,77 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="234e65fd-19fb-47a2-8f15-f004cd8a665d" name="Changes" comment="" />
+    <list default="true" id="234e65fd-19fb-47a2-8f15-f004cd8a665d" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/conceptual-model/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/conceptual-model/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/POST_RESPONSE_SCRIPTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/POST_RESPONSE_SCRIPTS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/POST_RESPONSE_SCRIPTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/POST_RESPONSE_SCRIPTS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/post-response-scripts/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/post-response-scripts/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/ActorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/ActorController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminActorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminActorController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminCinemaController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminCinemaController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminRoomController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminRoomController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/RoomRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/RoomRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/SeatGenerationRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieUpdateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Movie.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Movie.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Payment.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Payment.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/ActorRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/ActorRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/RoomRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/RoomRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/security/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/seeder/CinemaScheduleSeeder.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/seeder/CinemaScheduleSeeder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/ActorService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/ActorService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/MovieService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/MovieService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/RoomService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/RoomService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeIntegrationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/movie/MovieIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/movie/MovieIntegrationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/recommendation/RecommendationIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/recommendation/RecommendationIntegrationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/components/AdminRoute.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/components/AdminRoute.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/contexts/MoviesContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/contexts/MoviesContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Footer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Footer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Header.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Layout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Layout.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/AdminPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/AdminPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/BookingPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/BookingPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/MovieDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/MovieDetailPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/WishlistPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/WishlistPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminGenresPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminGenresPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminMoviesPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminMoviesPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/services/authApi.js" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/services/authApi.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_C:/Users/hieu.tuanz/Desktop/KY-8/SBA301/cinemaSBA301/CinemaMS/BE" value="3EVKVame3JndOjdYh6DataxSetD" />
+    </persistenceIdMap>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;HieuTuan&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/HieuTuan/CinemaMS.git&quot;,
+    &quot;accountId&quot;: &quot;b55af7af-9ab6-4084-9c44-a7780efed14a&quot;
+  }
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
@@ -29,16 +91,21 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
     &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;Spring Boot.CinemaAiApplication.executor&quot;: &quot;Run&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;be-vinh/feature/ph7-promotion&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;#1 on FE-Tuan&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/CinemaMS/BE&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/hieu.tuanz/Desktop/KY-8/SBA301/cinemaSBA301/CinemaMS/BE&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -60,12 +127,24 @@
       <option name="filePath" />
       <method v="2" />
     </configuration>
+    <configuration name="CinemaAiApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <envs>
+        <env name="GOOGLE_CLIENT_ID" value="316168245134-0oda35k7fpifvgq2fgv0k66ifuq0omko.apps.googleusercontent.com" />
+        <env name="GOOGLE_OAUTH_CLIENT_ID" value="316168245134-0oda35k7fpifvgq2fgv0k66ifuq0omko.apps.googleusercontent.com" />
+      </envs>
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+      <module name="cinemaAI" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.sba301.cinemaai.CinemaAiApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.32098.37" />
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.32098.37" />
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.28539.13" />
+        <option value="bundled-js-predefined-d6986cc7102b-a71380e98a7c-JavaScript-IU-252.28539.13" />
       </set>
     </attachedChunks>
   </component>
@@ -78,6 +157,7 @@
       <updated>1780258320264</updated>
       <workItem from="1780258321375" duration="490000" />
       <workItem from="1780258867840" duration="28000" />
+      <workItem from="1780735256194" duration="9435000" />
     </task>
     <servers />
   </component>

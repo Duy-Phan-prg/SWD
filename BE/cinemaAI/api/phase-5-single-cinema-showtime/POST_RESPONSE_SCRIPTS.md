@@ -9,7 +9,7 @@ Admin tạo rạp chính của hệ thống và lưu `cinemaId`.
 
 ### API
 ```http
-POST /api/v1/admin/cinemas
+POST /api/v1/admin/cinema
 Authorization: Bearer {{adminToken}}
 ```
 
@@ -43,7 +43,7 @@ Lấy rạp đã có trong hệ thống và lưu `cinemaId`. Dùng bước này 
 
 ### API
 ```http
-GET /api/v1/admin/cinemas
+GET /api/v1/admin/cinema
 Authorization: Bearer {{adminToken}}
 ```
 
@@ -59,10 +59,10 @@ const body = pm.response.json();
 pm.test("Lấy rạp hiện tại thành công", function () {
   pm.expect(pm.response.code).to.eql(200);
   pm.expect(body.success).to.eql(true);
-  pm.expect(body.data.length).to.be.greaterThan(0);
+  pm.expect(body.data.id).to.exist;
 });
 
-const cinema = body.data[0];
+const cinema = body.data;
 
 pm.collectionVariables.set("cinemaId", cinema.id);
 pm.collectionVariables.set("cinemaName", cinema.name);
@@ -71,7 +71,7 @@ pm.collectionVariables.set("cinemaName", cinema.name);
 ## 2. Tạo phòng
 
 ### Tên mô tả API
-Admin tạo phòng chiếu thuộc rạp và lưu `roomId`.
+Admin tạo phòng chiếu thuộc rạp hiện tại và lưu `roomId`. Không cần nhập `cinemaId`; backend tự lấy rạp đã cấu hình và database tự sinh ID phòng.
 
 ### API
 ```http
@@ -82,7 +82,6 @@ Authorization: Bearer {{adminToken}}
 ### JSON
 ```json
 {
-  "cinemaId": {{cinemaId}},
   "name": "Phòng 2D số 1",
   "roomType": "TWO_D",
   "rowCount": 3,
@@ -108,7 +107,7 @@ pm.collectionVariables.set("columnCount", body.data.columnCount);
 ## 3. Sinh ghế
 
 ### Tên mô tả API
-Sinh ghế đều hoặc layout ghế lệch, sau đó lưu `seatId` đầu tiên để test booking.
+Tạo sơ đồ ghế lần đầu, sau đó lưu `seatId` đầu tiên để test booking. Nếu cần thay toàn bộ sơ đồ đã có, dùng `PUT /api/v1/admin/rooms/{{roomId}}/seats`.
 
 ### API
 ```http
@@ -119,8 +118,7 @@ Authorization: Bearer {{adminToken}}
 ### JSON
 ```json
 {
-  "defaultSeatType": "NORMAL",
-  "overwriteExisting": false
+  "defaultSeatType": "NORMAL"
 }
 ```
 
@@ -129,7 +127,7 @@ Authorization: Bearer {{adminToken}}
 const body = pm.response.json();
 
 pm.test("Sinh ghế thành công", function () {
-  pm.expect(pm.response.code).to.eql(200);
+  pm.expect(pm.response.code).to.eql(201);
   pm.expect(body.success).to.eql(true);
   pm.expect(body.data.length).to.be.greaterThan(0);
 });

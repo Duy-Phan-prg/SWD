@@ -11,8 +11,10 @@ import com.sba301.cinemaai.repository.MovieActorRepository;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,26 @@ public class ActorService {
         return actorRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(Actor::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActorResponse> searchActors(String keyword, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+        if (!StringUtils.hasText(keyword)) {
+            return actorRepository.findAll()
+                    .stream()
+                    .sorted(Comparator.comparing(Actor::getName, String.CASE_INSENSITIVE_ORDER))
+                    .limit(safeLimit)
+                    .map(this::toResponse)
+                    .toList();
+        }
+        return actorRepository.findByNameContainingIgnoreCaseOrderByNameAsc(
+                        keyword.trim(),
+                        PageRequest.of(0, safeLimit)
+                )
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }

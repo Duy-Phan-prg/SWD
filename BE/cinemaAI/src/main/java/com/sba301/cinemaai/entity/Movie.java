@@ -75,8 +75,7 @@ public class Movie extends BaseEntity {
     @Column(name = "main_actors", length = 1000)
     private String mainActors;
 
-    @Lob
-    @Column(name = "cast_list")
+    @Column(name = "cast_list", columnDefinition = "TEXT")
     private String castList;
 
     public Movie(String title, int durationMinutes, MovieStatus status) {

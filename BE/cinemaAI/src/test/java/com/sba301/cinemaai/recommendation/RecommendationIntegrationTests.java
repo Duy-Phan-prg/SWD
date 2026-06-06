@@ -3,6 +3,7 @@ package com.sba301.cinemaai.recommendation;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.movie.ActorRequest;
 import com.sba301.cinemaai.dto.request.movie.GenreRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
 import com.sba301.cinemaai.dto.request.recommendation.TrailerInteractionRequest;
@@ -58,8 +59,9 @@ class RecommendationIntegrationTests {
         String customerToken = loginWithRole(RoleName.CUSTOMER, "phase4.customer.");
 
         Long actionGenreId = createGenre(adminToken, "Phase 4 Action");
-        Long sourceMovieId = createMovie(adminToken, "Phase 4 Action Source", actionGenreId, "Action Director", "Favorite Star");
-        Long recommendedMovieId = createMovie(adminToken, "Phase 4 Action New Release", actionGenreId, "Action Director", "Favorite Star");
+        Long favoriteActorId = createActor(adminToken, "Favorite Star");
+        Long sourceMovieId = createMovie(adminToken, "Phase 4 Action Source", actionGenreId, "Action Director", "Favorite Star", favoriteActorId);
+        Long recommendedMovieId = createMovie(adminToken, "Phase 4 Action New Release", actionGenreId, "Action Director", "Favorite Star", favoriteActorId);
 
         mockMvc.perform(post("/api/v1/recommendations/trailer-interactions")
                         .header("Authorization", "Bearer " + customerToken)
@@ -109,7 +111,7 @@ class RecommendationIntegrationTests {
         return objectMapper.readTree(response).at("/data/id").asLong();
     }
 
-    private Long createMovie(String token, String title, Long genreId, String director, String actors) throws Exception {
+    private Long createMovie(String token, String title, Long genreId, String director, String actors, Long actorId) throws Exception {
         String response = mockMvc.perform(post("/api/v1/admin/movies")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -128,7 +130,24 @@ class RecommendationIntegrationTests {
                                 director,
                                 actors,
                                 actors,
-                                List.of(genreId)
+                                List.of(genreId),
+                                List.of(actorId)
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createActor(String token, String name) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/admin/actors")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ActorRequest(
+                                name,
+                                "Created by recommendation integration test.",
+                                "https://example.com/" + name.replace(" ", "-").toLowerCase() + ".jpg"
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn()

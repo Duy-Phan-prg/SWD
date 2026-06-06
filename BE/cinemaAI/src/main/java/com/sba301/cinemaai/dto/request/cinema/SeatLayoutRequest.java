@@ -5,15 +5,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.Valid;
 import java.util.List;
 
-public record SeatGenerationRequest(
+public record SeatLayoutRequest(
         @NotNull(message = "Default seat type is required")
         SeatType defaultSeatType,
 
-        boolean overwriteExisting,
-
         List<@Valid SeatRowGenerationRequest> rows
 ) {
-    public SeatGenerationRequest(SeatType defaultSeatType, boolean overwriteExisting) {
-        this(defaultSeatType, overwriteExisting, null);
+    public SeatLayoutRequest(SeatType defaultSeatType) {
+        this(defaultSeatType, null);
     }
 }

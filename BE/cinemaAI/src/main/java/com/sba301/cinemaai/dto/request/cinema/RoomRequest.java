@@ -8,8 +8,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record RoomRequest(
-        Long cinemaId,
-
         @NotBlank(message = "Room name is required")
         String name,
 

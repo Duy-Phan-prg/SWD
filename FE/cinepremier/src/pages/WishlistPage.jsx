@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, SlidersHorizontal, Bell, Ticket, Mail, Check, Trash2 } from 'lucide-react';
-import { movies } from '../services/cinemaData';
 import { useMovies } from '../contexts/MoviesContext';
 import { useUI } from '../contexts/UIContext';
 
@@ -79,18 +78,20 @@ export default function WishlistView() {
   // Merge real watchlist items from core state with preset visual items
   const dynamicRealItems = watchlist.map((m) => ({
     id: m.id,
+    backendId: m.backendId || m.movieId || m.id,
     title: m.title,
-    genreSubtitle: `${m.genre.join(' • ')} • ${(m.duration)} PHÚT`,
+    genreSubtitle: `${(m.genre || []).join(' • ')} • ${(m.duration || 0)} PHÚT`,
     status: m.isUpcoming ? 'UPCOMING' : 'SHOWING',
     badge: m.isUpcoming ? 'SẮP RA MẮT' : 'SÁNG CHIẾU',
     badgeColor: m.isUpcoming ? 'bg-red-650 text-white border-red-500' : 'bg-green-950 text-emerald-400 border-emerald-500/20',
     actionLabel: m.isUpcoming ? 'Nhận thông báo' : 'Đặt vé ngay',
     actionIcon: m.isUpcoming ? 'bell' : 'ticket',
     posterUrl: m.posterUrl,
-    isReal: true
+    isReal: true,
+    movie: m
   }));
 
-  const combinedItems = [...dynamicRealItems, ...presetWishlistItems];
+  const combinedItems = dynamicRealItems;
 
   // Apply visual filtering
   const filteredItems = combinedItems.filter((item) => {
@@ -101,15 +102,13 @@ export default function WishlistView() {
   const handleActionClick = (item) => {
     if (item.isReal) {
       if (item.status === 'SHOWING') {
-        const mv = movies.find(m => m.id === item.id);
-        if (mv) onBookMovie(mv);
+        onBookMovie(item.movie || { id: item.id });
       } else {
         showToast(`Đã bật theo dõi cho phim: ${item.title}. Bạn sẽ nhận thông báo khi có lịch chiếu sớm.`);
       }
     } else {
       if (item.id === 'ban-giao-huong') {
-        const mv = movies.find(m => m.id === 'the-last-shadow') || movies[0];
-        onBookMovie(mv);
+        onBookMovie(item.movie || { id: item.id });
       } else if (item.status === 'UPCOMING') {
         showToast(`Đặt nhắc hẹn khởi chiếu phim "${item.title}" thành công!`);
       } else {
@@ -236,8 +235,7 @@ export default function WishlistView() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const mv = movies.find(m => m.id === item.id);
-                    if (mv) onToggleWatchlist(mv);
+                    onToggleWatchlist(item.movie || { id: item.id, backendId: item.backendId });
                   }}
                   className="absolute right-2 bottom-2 bg-black/60 border border-white/5 hover:border-white hover:bg-neutral-950 p-1.5 text-neutral-500 hover:text-white transition rounded-none z-10"
                   title="Xóa khỏi Watchlist"

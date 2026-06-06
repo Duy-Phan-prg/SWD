@@ -3,6 +3,7 @@ package com.sba301.cinemaai.movie;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.request.auth.LoginRequest;
+import com.sba301.cinemaai.dto.request.movie.ActorRequest;
 import com.sba301.cinemaai.dto.request.movie.GenreRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieStatusUpdateRequest;
@@ -60,6 +61,17 @@ class MovieIntegrationTests {
         String token = loginAsAdmin();
 
         Long genreId = createGenre(token, "Phase 3 Adventure");
+        Long actorOneId = createActor(token, "Actor One");
+        Long actorTwoId = createActor(token, "Actor Two");
+        Long actorThreeId = createActor(token, "Actor Three");
+
+        mockMvc.perform(get("/api/v1/admin/actors")
+                        .header("Authorization", "Bearer " + token)
+                        .param("keyword", "Actor T")
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].name").value("Actor Three"))
+                .andExpect(jsonPath("$.data[1].name").value("Actor Two"));
 
         String createMovieResponse = mockMvc.perform(post("/api/v1/admin/movies")
                         .header("Authorization", "Bearer " + token)
@@ -79,7 +91,8 @@ class MovieIntegrationTests {
                                 "Test Director",
                                 "Actor One",
                                 "Actor One, Actor Two",
-                                List.of(genreId)
+                                List.of(genreId),
+                                List.of(actorOneId, actorTwoId)
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
@@ -120,7 +133,8 @@ class MovieIntegrationTests {
                                 "Updated Director",
                                 "Actor Three",
                                 "Actor Three",
-                                List.of(genreId)
+                                List.of(genreId),
+                                List.of(actorThreeId)
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("Phase 3 Orbit Updated"))
@@ -153,7 +167,8 @@ class MovieIntegrationTests {
                                 "Blocked Director",
                                 "Blocked Actor",
                                 "Blocked Actor",
-                                List.of(genreId)
+                                List.of(genreId),
+                                List.of(actorThreeId)
                         ))))
                 .andExpect(status().isBadRequest());
 
@@ -182,6 +197,25 @@ class MovieIntegrationTests {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new GenreRequest(name, description))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.name").value(name))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createActor(String token, String name) throws Exception {
+        String response = mockMvc.perform(post("/api/v1/admin/actors")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ActorRequest(
+                                name,
+                                "Created by integration test.",
+                                "https://example.com/" + name.replace(" ", "-").toLowerCase() + ".jpg"
+                        ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.name").value(name))

@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RoomRepository extends JpaRepository<Room, Long> {
 
-    Optional<Room> findByCinemaAndName(Cinema cinema, String name);
+    Optional<Room> findByCinemaAndNameIgnoreCase(Cinema cinema, String name);
 
     List<Room> findByCinema(Cinema cinema);
 

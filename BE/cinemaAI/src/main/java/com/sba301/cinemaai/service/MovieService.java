@@ -25,8 +25,6 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -97,12 +95,14 @@ public class MovieService {
         }
 
         Movie movie = new Movie(request.title(), request.durationMinutes(), request.status());
+        List<Actor> actors = resolveActors(request.actorIds());
         applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
-                request.director(), request.mainActors(), request.castList(), request.status());
+                request.director(), mainActorsText(request.mainActors(), actors), castListText(request.castList(), actors),
+                request.status());
         Movie saved = movieRepository.save(movie);
         replaceGenres(saved, request.genreIds());
-        replaceActors(saved, extractActorNames(request.mainActors(), request.castList()));
+        replaceActors(saved, actors);
         return toResponse(saved);
     }
 
@@ -117,12 +117,14 @@ public class MovieService {
                 .ifPresent(existing -> {
                     throw new ConflictException("Movie title already exists");
                 });
+        List<Actor> actors = resolveActors(request.actorIds());
         applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
-                request.director(), request.mainActors(), request.castList(), request.status());
+                request.director(), mainActorsText(request.mainActors(), actors), castListText(request.castList(), actors),
+                request.status());
         movie.updateDetails(request.title(), request.description(), request.durationMinutes(), request.releaseDate());
         replaceGenres(movie, request.genreIds());
-        replaceActors(movie, extractActorNames(request.mainActors(), request.castList()));
+        replaceActors(movie, actors);
         return toResponse(movie);
     }
 
@@ -198,37 +200,36 @@ public class MovieService {
         movie.changeStatus(status);
     }
 
-    private void replaceActors(Movie movie, List<String> actorNames) {
+    private void replaceActors(Movie movie, List<Actor> actors) {
         movieActorRepository.deleteByMovie(movie);
         movieActorRepository.flush();
-        actorNames.stream()
-                .map(this::findOrCreateActor)
+        actors.stream()
+                .distinct()
                 .map(actor -> new MovieActor(movie, actor))
                 .forEach(movieActorRepository::save);
     }
 
-    private List<String> extractActorNames(String mainActors, String castList) {
-        Set<String> names = new LinkedHashSet<>();
-        collectActorNames(names, mainActors);
-        collectActorNames(names, castList);
-        return names.stream().toList();
+    private List<Actor> resolveActors(List<Long> actorIds) {
+        return actorIds.stream()
+                .distinct()
+                .map(this::findActorById)
+                .toList();
     }
 
-    private void collectActorNames(Set<String> names, String rawValue) {
-        if (!StringUtils.hasText(rawValue)) {
-            return;
-        }
-        for (String token : rawValue.split("[,;\\n\\r]+")) {
-            String name = token.trim();
-            if (StringUtils.hasText(name)) {
-                names.add(name);
-            }
-        }
+    private String mainActorsText(String requestedMainActors, List<Actor> actors) {
+        return requestedMainActors != null && !requestedMainActors.isBlank()
+                ? requestedMainActors.trim()
+                : actorNamesText(actors);
     }
 
-    private Actor findOrCreateActor(String name) {
-        return actorRepository.findByNameIgnoreCase(name)
-                .orElseGet(() -> actorRepository.save(new Actor(name, null, null)));
+    private String castListText(String requestedCastList, List<Actor> actors) {
+        return requestedCastList != null && !requestedCastList.isBlank()
+                ? requestedCastList.trim()
+                : actorNamesText(actors);
+    }
+
+    private String actorNamesText(List<Actor> actors) {
+        return String.join(", ", actors.stream().map(Actor::getName).toList());
     }
 
     private Actor findActorById(Long id) {

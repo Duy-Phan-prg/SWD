@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,36 +24,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Cinema", description = "Admin single-cinema management endpoints - requires ADMIN role")
+@Tag(name = "Admin Cinema", description = "GET is public for displaying cinema information; write operations require ADMIN role")
 public class AdminCinemaController {
 
     private final CinemaService cinemaService;
 
-    @GetMapping({"/api/v1/admin/cinema", "/api/v1/admin/cinemas"})
-    @Operation(summary = "Get configured cinema (Admin)", description = "Get the single configured cinema (Admin only)")
+    @GetMapping("/api/v1/admin/cinema")
+    @Operation(summary = "Get configured cinema", description = "Public endpoint available to every role for displaying cinema name and address")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cinema not configured")
     })
     public ApiResponse<CinemaResponse> getCinema() {
         return ApiResponse.success(cinemaService.getAdminCinema());
     }
 
-    @GetMapping("/api/v1/admin/cinemas/{cinemaId}")
-    @Operation(summary = "Get configured cinema by ID (Admin)", description = "Legacy endpoint for the single configured cinema (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cinema not found")
-    })
-    public ApiResponse<CinemaResponse> getCinemaById(@PathVariable Long cinemaId) {
-        return ApiResponse.success(cinemaService.getCinema(cinemaId));
-    }
-
-    @PostMapping({"/api/v1/admin/cinema", "/api/v1/admin/cinemas"})
+    @PostMapping("/api/v1/admin/cinema")
+    @SecurityRequirement(name = "Bearer Authentication")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create configured cinema (Admin)", description = "Create the cinema if missing. The system is limited to one cinema (Admin only)")
     @ApiResponses(value = {
@@ -68,6 +54,7 @@ public class AdminCinemaController {
     }
 
     @PutMapping("/api/v1/admin/cinema")
+    @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Update configured cinema (Admin)", description = "Update the single configured cinema (Admin only)")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema updated successfully"),
@@ -80,23 +67,8 @@ public class AdminCinemaController {
         return ApiResponse.success(cinemaService.update(request), "Cinema updated successfully");
     }
 
-    @PutMapping("/api/v1/admin/cinemas/{cinemaId}")
-    @Operation(summary = "Update configured cinema by ID (Admin)", description = "Legacy endpoint for updating the single configured cinema (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema updated successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cinema not found")
-    })
-    public ApiResponse<CinemaResponse> updateCinemaById(
-            @PathVariable Long cinemaId,
-            @Valid @RequestBody CinemaRequest request
-    ) {
-        return ApiResponse.success(cinemaService.update(cinemaId, request), "Cinema updated successfully");
-    }
-
     @PatchMapping("/api/v1/admin/cinema/status")
+    @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Update configured cinema status (Admin)", description = "Update the status of the single configured cinema (Admin only)")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema status updated successfully"),
@@ -108,22 +80,8 @@ public class AdminCinemaController {
         return ApiResponse.success(cinemaService.updateStatus(status), "Cinema status updated successfully");
     }
 
-    @PatchMapping("/api/v1/admin/cinemas/{cinemaId}/status")
-    @Operation(summary = "Update configured cinema status by ID (Admin)", description = "Legacy endpoint for updating the single configured cinema status (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema status updated successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cinema not found")
-    })
-    public ApiResponse<CinemaResponse> updateStatusById(
-            @PathVariable Long cinemaId,
-            @RequestParam CinemaStatus status
-    ) {
-        return ApiResponse.success(cinemaService.updateStatus(cinemaId, status), "Cinema status updated successfully");
-    }
-
     @DeleteMapping("/api/v1/admin/cinema")
+    @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Deactivate configured cinema (Admin)", description = "Deactivate the single configured cinema (Admin only)")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema deactivated successfully"),
@@ -136,16 +94,4 @@ public class AdminCinemaController {
         return ApiResponse.success(null, "Cinema deactivated successfully");
     }
 
-    @DeleteMapping("/api/v1/admin/cinemas/{cinemaId}")
-    @Operation(summary = "Deactivate configured cinema by ID (Admin)", description = "Legacy endpoint for deactivating the single configured cinema (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema deactivated successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cinema not found")
-    })
-    public ApiResponse<Void> deleteCinemaById(@PathVariable Long cinemaId) {
-        cinemaService.delete(cinemaId);
-        return ApiResponse.success(null, "Cinema deactivated successfully");
-    }
 }

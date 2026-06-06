@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.request.auth.LoginRequest;
 import com.sba301.cinemaai.dto.request.cinema.CinemaRequest;
 import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
-import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatLayoutRequest;
 import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
 import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
 import com.sba301.cinemaai.dto.request.ticket.TicketComboRequest;
@@ -83,7 +83,21 @@ class CinemaShowtimeIntegrationTests {
         Movie movie = createMovie();
 
         Long cinemaId = createCinema(token);
-        mockMvc.perform(post("/api/v1/admin/cinemas")
+        mockMvc.perform(get("/api/v1/admin/cinema"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(cinemaId))
+                .andExpect(jsonPath("$.data.address").isNotEmpty());
+        mockMvc.perform(put("/api/v1/admin/cinema")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CinemaRequest(
+                                "Unauthorized Cinema Update",
+                                "Unauthorized Address",
+                                "Ho Chi Minh City",
+                                "0900555668",
+                                CinemaStatus.ACTIVE
+                        ))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/cinema")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CinemaRequest(
@@ -94,20 +108,84 @@ class CinemaShowtimeIntegrationTests {
                                 CinemaStatus.ACTIVE
                         ))))
                 .andExpect(status().isConflict());
-        Long roomId = createRoom(token, cinemaId);
+        Long roomId = createRoom(token);
+        mockMvc.perform(post("/api/v1/admin/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RoomRequest(
+                                "  room phase 5  ",
+                                RoomType.TWO_D,
+                                3,
+                                4,
+                                RoomStatus.ACTIVE
+                        ))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Room name already exists in this cinema"));
 
         String seatResponse = mockMvc.perform(post("/api/v1/admin/rooms/{roomId}/seats/generate", roomId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new SeatGenerationRequest(SeatType.NORMAL, false))))
-                .andExpect(status().isOk())
+                        .content(objectMapper.writeValueAsString(new SeatLayoutRequest(SeatType.NORMAL))))
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.length()").value(12))
                 .andExpect(jsonPath("$.data[0].rowLabel").value("A"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
+        mockMvc.perform(post("/api/v1/admin/rooms/{roomId}/seats/generate", roomId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new SeatLayoutRequest(SeatType.NORMAL))))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(put("/api/v1/admin/rooms/{roomId}/seats", roomId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "defaultSeatType", "STANDARD",
+                                "rows", List.of(
+                                        customSeatRow("A", 1),
+                                        customSeatRow("B", 2),
+                                        customSeatRow("C", 3),
+                                        customSeatRow("D", 4)
+                                )
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Seat layout has 4 rows, but room allows at most 3 rows"));
+
         Long seatId = objectMapper.readTree(seatResponse).at("/data/0/id").asLong();
+        mockMvc.perform(put("/api/v1/admin/rooms/{roomId}/seats", roomId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "defaultSeatType", "NORMAL",
+                                "rows", List.of(Map.of(
+                                        "rowLabel", "A",
+                                        "displayOrder", 1,
+                                        "startColumn", 1,
+                                        "seatType", "COUPLE",
+                                        "seatNumbers", List.of(1, 2, 3)
+                                ))
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Couple seat row A must have an even number of seats"));
+
+        mockMvc.perform(put("/api/v1/admin/rooms/seats/{seatId}", seatId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new SeatUpdateRequest(
+                                SeatType.COUPLE,
+                                SeatStatus.AVAILABLE
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.seatType").value("COUPLE"));
+        mockMvc.perform(get("/api/v1/admin/rooms/{roomId}/seats", roomId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].seatType").value("COUPLE"))
+                .andExpect(jsonPath("$.data[1].seatType").value("COUPLE"));
+
         mockMvc.perform(put("/api/v1/admin/rooms/seats/{seatId}", seatId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -203,13 +281,18 @@ class CinemaShowtimeIntegrationTests {
                 .andExpect(jsonPath("$.data.seats.length()").value(12))
                 .andExpect(jsonPath("$.data.seats[0].runtimeStatus").value("UNAVAILABLE"));
 
-        Long customRoomId = createCustomRoom(token, cinemaId);
+        Long customRoomId = createCustomRoom(token);
         mockMvc.perform(post("/api/v1/admin/rooms/{roomId}/seats/generate", customRoomId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new SeatLayoutRequest(SeatType.STANDARD))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(put("/api/v1/admin/rooms/{roomId}/seats", customRoomId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "defaultSeatType", "STANDARD",
-                                "overwriteExisting", true,
                                 "rows", List.of(
                                         Map.of(
                                                 "rowLabel", "A",
@@ -264,41 +347,49 @@ class CinemaShowtimeIntegrationTests {
                                 CinemaStatus.ACTIVE
                         ))))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").isNumber())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         return objectMapper.readTree(response).at("/data/id").asLong();
     }
 
-    private Long createRoom(String token) throws Exception {
-        return createRoom(token, null);
+    private Map<String, Object> customSeatRow(String rowLabel, int displayOrder) {
+        return Map.of(
+                "rowLabel", rowLabel,
+                "displayOrder", displayOrder,
+                "startColumn", 1,
+                "seatType", "STANDARD",
+                "seatNumbers", List.of(1)
+        );
     }
 
-    private Long createRoom(String token, Long cinemaId) throws Exception {
+    private Long createRoom(String token) throws Exception {
         String response = mockMvc.perform(post("/api/v1/admin/rooms")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RoomRequest(
-                                cinemaId,
-                                "Room Phase 5",
+                                "  Room Phase 5  ",
                                 RoomType.TWO_D,
                                 3,
                                 4,
                                 RoomStatus.ACTIVE
                         ))))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").isNumber())
+                .andExpect(jsonPath("$.data.cinemaId").isNumber())
+                .andExpect(jsonPath("$.data.name").value("Room Phase 5"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         return objectMapper.readTree(response).at("/data/id").asLong();
     }
 
-    private Long createCustomRoom(String token, Long cinemaId) throws Exception {
+    private Long createCustomRoom(String token) throws Exception {
         String response = mockMvc.perform(post("/api/v1/admin/rooms")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RoomRequest(
-                                cinemaId,
                                 "Room Custom Layout " + System.nanoTime(),
                                 RoomType.TWO_D,
                                 14,
@@ -306,6 +397,8 @@ class CinemaShowtimeIntegrationTests {
                                 RoomStatus.ACTIVE
                         ))))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").isNumber())
+                .andExpect(jsonPath("$.data.cinemaId").isNumber())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

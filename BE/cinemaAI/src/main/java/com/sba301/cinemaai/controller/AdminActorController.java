@@ -8,14 +8,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,6 +30,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminActorController {
 
     private final ActorService actorService;
+
+    @GetMapping
+    @Operation(summary = "List or search actors (Admin)", description = "Search existing actors by name for movie dropdowns")
+    public ApiResponse<List<ActorResponse>> getActors(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        return ApiResponse.success(actorService.searchActors(keyword, limit));
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

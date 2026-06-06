@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, MapPin, Phone } from 'lucide-react';
 
-export default function Footer({ onTabChange = () => { } }) {
+export default function Footer({ onTabChange = () => { }, cinema = null }) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -31,6 +31,21 @@ export default function Footer({ onTabChange = () => { } }) {
             <p className="max-w-sm text-sm leading-7 text-neutral-300 font-sans font-normal">
               Trải nghiệm chiếu bóng chuẩn mực, tích hợp tối tân bộ đánh giá xung động cảm tính AI Rating cùng hệ thống phòng chiếu IMAX tinh thuần bộc phát từng sát-na giác cảm.
             </p>
+            {cinema && (
+              <div className="space-y-2 border-l border-amber-400/40 pl-3 text-xs text-neutral-300">
+                <div className="font-black uppercase tracking-wider text-white">{cinema.name}</div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
+                  <span>{[cinema.address, cinema.city].filter(Boolean).join(', ')}</span>
+                </div>
+                {cinema.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 text-amber-300" />
+                    <span>{cinema.phone}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Column 2: Quick navigation */}

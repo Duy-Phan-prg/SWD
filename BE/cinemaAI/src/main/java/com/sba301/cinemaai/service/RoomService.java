@@ -2,7 +2,7 @@ package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
 import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
-import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatLayoutRequest;
 import com.sba301.cinemaai.dto.request.cinema.SeatRowGenerationRequest;
 import com.sba301.cinemaai.dto.response.cinema.SeatResponse;
 import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
@@ -63,11 +63,12 @@ public class RoomService {
 
     @Transactional
     public RoomResponse create(RoomRequest request) {
-        Cinema cinema = resolveCinema(request.cinemaId());
-        roomRepository.findByCinemaAndName(cinema, request.name()).ifPresent(room -> {
+        Cinema cinema = cinemaService.findSingleton();
+        String roomName = normalizeRoomName(request.name());
+        roomRepository.findByCinemaAndNameIgnoreCase(cinema, roomName).ifPresent(room -> {
             throw new ConflictException("Room name already exists in this cinema");
         });
-        Room room = new Room(cinema, request.name(), request.roomType(), request.rowCount(), request.columnCount());
+        Room room = new Room(cinema, roomName, request.roomType(), request.rowCount(), request.columnCount());
         room.changeStatus(request.status() == null ? RoomStatus.ACTIVE : request.status());
         return cinemaMapper.toRoomResponse(roomRepository.save(room));
     }
@@ -75,16 +76,14 @@ public class RoomService {
     @Transactional
     public RoomResponse update(Long id, RoomRequest request) {
         Room room = findById(id);
-        Cinema cinema = resolveCinema(request.cinemaId());
-        if (!room.getCinema().getId().equals(cinema.getId())) {
-            throw new BadRequestException("Cannot move room to another cinema");
-        }
-        roomRepository.findByCinemaAndName(cinema, request.name())
+        Cinema cinema = room.getCinema();
+        String roomName = normalizeRoomName(request.name());
+        roomRepository.findByCinemaAndNameIgnoreCase(cinema, roomName)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
                     throw new ConflictException("Room name already exists in this cinema");
                 });
-        room.updateLayout(request.name(), request.roomType(), request.rowCount(), request.columnCount());
+        room.updateLayout(roomName, request.roomType(), request.rowCount(), request.columnCount());
         room.changeStatus(request.status() == null ? room.getStatus() : request.status());
         return cinemaMapper.toRoomResponse(room);
     }
@@ -97,23 +96,69 @@ public class RoomService {
     }
 
     @Transactional
-    public List<SeatResponse> generateSeats(Long roomId, SeatGenerationRequest request) {
+    public List<SeatResponse> createSeats(Long roomId, SeatLayoutRequest request) {
         Room room = findById(roomId);
         List<Seat> existingSeats = seatRepository.findByRoom(room);
-        if (!existingSeats.isEmpty() && !request.overwriteExisting()) {
+        if (!existingSeats.isEmpty()) {
             throw new ConflictException("Room already has seats");
         }
-        if (!existingSeats.isEmpty()) {
-            seatRepository.deleteByRoom(room);
-            seatRowRepository.deleteByRoom(room);
-        }
+        validateSeatLayout(room, request);
+        applySeatLayout(room, request);
+        return getSeats(roomId);
+    }
 
+    @Transactional
+    public List<SeatResponse> replaceSeats(Long roomId, SeatLayoutRequest request) {
+        Room room = findById(roomId);
+        List<Seat> existingSeats = seatRepository.findByRoom(room);
+        if (existingSeats.isEmpty()) {
+            throw new ConflictException("Room has no seats to replace; create seats first");
+        }
+        validateSeatLayout(room, request);
+        seatRepository.deleteByRoom(room);
+        seatRowRepository.deleteByRoom(room);
+        applySeatLayout(room, request);
+        return getSeats(roomId);
+    }
+
+    private void applySeatLayout(Room room, SeatLayoutRequest request) {
         if (request.rows() == null || request.rows().isEmpty()) {
             generateDefaultSeats(room, request.defaultSeatType());
         } else {
             generateCustomSeats(room, request);
         }
-        return getSeats(roomId);
+    }
+
+    private void validateSeatLayout(Room room, SeatLayoutRequest request) {
+        if (request.rows() == null || request.rows().isEmpty()) {
+            if (request.defaultSeatType() == SeatType.COUPLE && room.getColumnCount() % 2 != 0) {
+                throw new BadRequestException("Couple seats require an even number of seats in each row");
+            }
+            return;
+        }
+        if (request.rows().size() > room.getRowCount()) {
+            throw new BadRequestException(
+                    "Seat layout has " + request.rows().size()
+                            + " rows, but room allows at most " + room.getRowCount() + " rows"
+            );
+        }
+
+        Set<Integer> displayOrders = new HashSet<>();
+        for (SeatRowGenerationRequest row : request.rows()) {
+            SeatType rowSeatType = row.seatType() == null ? request.defaultSeatType() : row.seatType();
+            if (rowSeatType == SeatType.COUPLE && row.seatNumbers().size() % 2 != 0) {
+                throw new BadRequestException("Couple seat row " + normalizeRowLabel(row.rowLabel()) + " must have an even number of seats");
+            }
+            if (row.displayOrder() > room.getRowCount()) {
+                throw new BadRequestException(
+                        "Display order " + row.displayOrder()
+                                + " exceeds room row count " + room.getRowCount()
+                );
+            }
+            if (!displayOrders.add(row.displayOrder())) {
+                throw new BadRequestException("Duplicate display order: " + row.displayOrder());
+            }
+        }
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +180,11 @@ public class RoomService {
     @Transactional
     public SeatResponse updateSeat(Long seatId, SeatUpdateRequest request) {
         Seat seat = findSeatById(seatId);
+        if (request.seatType() == SeatType.COUPLE || seat.getSeatType() == SeatType.COUPLE) {
+            Seat partner = findCouplePartner(seat);
+            partner.changeType(request.seatType());
+            partner.changeStatus(request.status());
+        }
         seat.changeType(request.seatType());
         seat.changeStatus(request.status());
         return cinemaMapper.toSeatResponse(seat);
@@ -143,6 +193,9 @@ public class RoomService {
     @Transactional
     public SeatResponse deleteSeat(Long seatId) {
         Seat seat = findSeatById(seatId);
+        if (seat.getSeatType() == SeatType.COUPLE) {
+            findCouplePartner(seat).changeStatus(SeatStatus.UNAVAILABLE);
+        }
         seat.changeStatus(SeatStatus.UNAVAILABLE);
         return cinemaMapper.toSeatResponse(seat);
     }
@@ -157,6 +210,22 @@ public class RoomService {
                 .orElseThrow(() -> new NotFoundException("Seat not found"));
     }
 
+    private Seat findCouplePartner(Seat seat) {
+        List<Seat> rowSeats = seatRepository.findByRoom(seat.getRoom())
+                .stream()
+                .filter(candidate -> candidate.getSeatRow().getId().equals(seat.getSeatRow().getId()))
+                .sorted(Comparator.comparingInt(Seat::getDisplayColumn))
+                .toList();
+        if (rowSeats.size() % 2 != 0) {
+            throw new BadRequestException("Couple seats require an even number of seats in row " + seat.getRowLabel());
+        }
+        int seatIndex = rowSeats.indexOf(seat);
+        if (seatIndex < 0) {
+            throw new NotFoundException("Seat not found in its row");
+        }
+        return rowSeats.get(seatIndex % 2 == 0 ? seatIndex + 1 : seatIndex - 1);
+    }
+
     private void generateDefaultSeats(Room room, SeatType defaultSeatType) {
         for (int row = 0; row < room.getRowCount(); row++) {
             String rowLabel = rowLabel(row);
@@ -167,7 +236,7 @@ public class RoomService {
         }
     }
 
-    private void generateCustomSeats(Room room, SeatGenerationRequest request) {
+    private void generateCustomSeats(Room room, SeatLayoutRequest request) {
         Set<String> rowLabels = new HashSet<>();
         for (SeatRowGenerationRequest rowRequest : request.rows()) {
             String rowLabel = normalizeRowLabel(rowRequest.rowLabel());
@@ -205,6 +274,10 @@ public class RoomService {
         return rowLabel == null ? null : rowLabel.trim().toUpperCase();
     }
 
+    private String normalizeRoomName(String roomName) {
+        return roomName.trim();
+    }
+
     private String rowLabel(int index) {
         StringBuilder label = new StringBuilder();
         int value = index;
@@ -215,7 +288,4 @@ public class RoomService {
         return label.toString();
     }
 
-    private Cinema resolveCinema(Long cinemaId) {
-        return cinemaId == null ? cinemaService.findSingleton() : cinemaService.findSingletonById(cinemaId);
-    }
 }

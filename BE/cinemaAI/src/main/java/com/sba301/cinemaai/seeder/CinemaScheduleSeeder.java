@@ -45,7 +45,7 @@ public class CinemaScheduleSeeder implements Seeder {
                         "0900000000"
                 )));
 
-        Room room = roomRepository.findByCinemaAndName(cinema, "Room A")
+        Room room = roomRepository.findByCinemaAndNameIgnoreCase(cinema, "Room A")
                 .orElseGet(() -> roomRepository.save(new Room(cinema, "Room A", RoomType.TWO_D, 5, 8)));
 
         seedSeats(room);

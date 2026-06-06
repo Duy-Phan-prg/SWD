@@ -387,7 +387,6 @@ Request generate custom:
 ```json
 {
   "defaultSeatType": "STANDARD",
-  "overwriteExisting": true,
   "rows": [
     {
       "rowLabel": "A",

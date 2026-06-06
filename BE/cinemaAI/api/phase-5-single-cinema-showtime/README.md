@@ -7,7 +7,7 @@ Admin tạo rạp chính của hệ thống. Scope hiện tại là một rạp,
 
 ### API
 ```http
-POST /api/v1/admin/cinemas
+POST /api/v1/admin/cinema
 Authorization: Bearer {{adminToken}}
 ```
 
@@ -72,11 +72,11 @@ GET /api/v1/cinemas
 ## 2.1. Lấy rạp hiện tại cho admin
 
 ### Tên mô tả API
-Admin lấy rạp đã có trong hệ thống để lưu `cinemaId`. Dùng API này khi `POST /api/v1/admin/cinemas` trả `409 System is limited to one cinema`.
+Admin lấy rạp đã có trong hệ thống để lưu `cinemaId`. Dùng API này khi `POST /api/v1/admin/cinema` trả `409 System is limited to one cinema`.
 
 ### API
 ```http
-GET /api/v1/admin/cinemas
+GET /api/v1/admin/cinema
 Authorization: Bearer {{adminToken}}
 ```
 
@@ -92,10 +92,10 @@ const body = pm.response.json();
 pm.test("Lấy rạp hiện tại thành công", function () {
   pm.expect(pm.response.code).to.eql(200);
   pm.expect(body.success).to.eql(true);
-  pm.expect(body.data.length).to.be.greaterThan(0);
+  pm.expect(body.data.id).to.exist;
 });
 
-const cinema = body.data[0];
+const cinema = body.data;
 
 pm.collectionVariables.set("cinemaId", cinema.id);
 pm.collectionVariables.set("cinemaName", cinema.name);
@@ -104,7 +104,7 @@ pm.collectionVariables.set("cinemaName", cinema.name);
 ## 3. Tạo phòng chiếu
 
 ### Tên mô tả API
-Admin tạo phòng chiếu thuộc rạp hiện tại.
+Admin tạo phòng chiếu thuộc rạp hiện tại. Backend tự lấy rạp đã cấu hình và database tự sinh ID phòng.
 
 ### API
 ```http
@@ -115,7 +115,6 @@ Authorization: Bearer {{adminToken}}
 ### JSON
 ```json
 {
-  "cinemaId": {{cinemaId}},
   "name": "Phòng 2D số 1",
   "roomType": "TWO_D",
   "rowCount": 3,
@@ -144,7 +143,7 @@ Authorization: Bearer {{adminToken}}
 ## 4. Sinh sơ đồ ghế
 
 ### Tên mô tả API
-Admin sinh ghế theo số hàng/cột của phòng. Nếu `overwriteExisting=false`, hệ thống không ghi đè sơ đồ ghế đã có. Nếu truyền `rows`, backend sẽ tạo layout ghế lệch theo từng hàng ghế.
+Admin tạo sơ đồ ghế lần đầu theo số hàng/cột của phòng. Nếu phòng đã có ghế, API trả `409`; dùng API PUT bên dưới để thay toàn bộ sơ đồ. Nếu truyền `rows`, backend sẽ tạo layout ghế lệch theo từng hàng ghế.
 
 ### API
 ```http
@@ -155,16 +154,20 @@ Authorization: Bearer {{adminToken}}
 ### JSON
 ```json
 {
-  "defaultSeatType": "NORMAL",
-  "overwriteExisting": false
+  "defaultSeatType": "NORMAL"
 }
 ```
 
-### JSON - layout ghế lệch
+### API thay toàn bộ sơ đồ ghế
+```http
+PUT /api/v1/admin/rooms/{{roomId}}/seats
+Authorization: Bearer {{adminToken}}
+```
+
+### JSON - layout ghế lệch dùng cho POST hoặc PUT
 ```json
 {
   "defaultSeatType": "STANDARD",
-  "overwriteExisting": true,
   "rows": [
     {
       "rowLabel": "A",

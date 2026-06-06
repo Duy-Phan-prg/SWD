@@ -2,7 +2,7 @@ package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.request.cinema.RoomRequest;
 import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
-import com.sba301.cinemaai.dto.request.cinema.SeatGenerationRequest;
+import com.sba301.cinemaai.dto.request.cinema.SeatLayoutRequest;
 import com.sba301.cinemaai.dto.response.cinema.SeatResponse;
 import com.sba301.cinemaai.dto.request.cinema.SeatUpdateRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
@@ -80,7 +80,10 @@ public class AdminRoomController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create new room (Admin)", description = "Create a new room (Admin only)")
+    @Operation(
+            summary = "Create new room (Admin)",
+            description = "Create a room in the configured cinema."
+    )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Room created successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body"),
@@ -93,7 +96,10 @@ public class AdminRoomController {
     }
 
     @PutMapping("/{roomId}")
-    @Operation(summary = "Update room (Admin)", description = "Update an existing room (Admin only)")
+    @Operation(
+            summary = "Update room (Admin)",
+            description = "Update room information. The room remains in its current cinema and no cinema ID is required."
+    )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Room updated successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body"),
@@ -125,19 +131,38 @@ public class AdminRoomController {
     }
 
     @PostMapping("/{roomId}/seats/generate")
-    @Operation(summary = "Generate room seats (Admin)", description = "Generate seats for a room (Admin only)")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create room seat layout (Admin)", description = "Create the initial seat layout. Returns 409 if the room already has seats.")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Seats generated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Seats created successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Room not found")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Room not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Room already has seats")
     })
-    public ApiResponse<List<SeatResponse>> generateSeats(
+    public ApiResponse<List<SeatResponse>> createSeats(
             @PathVariable Long roomId,
-            @Valid @RequestBody SeatGenerationRequest request
+            @Valid @RequestBody SeatLayoutRequest request
     ) {
-        return ApiResponse.success(roomService.generateSeats(roomId, request), "Seats generated successfully");
+        return ApiResponse.success(roomService.createSeats(roomId, request), "Seats created successfully");
+    }
+
+    @PutMapping("/{roomId}/seats")
+    @Operation(summary = "Replace room seat layout (Admin)", description = "Replace the complete seat layout of a room that already has seats.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Seat layout replaced successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Room not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Room has no seats to replace")
+    })
+    public ApiResponse<List<SeatResponse>> replaceSeats(
+            @PathVariable Long roomId,
+            @Valid @RequestBody SeatLayoutRequest request
+    ) {
+        return ApiResponse.success(roomService.replaceSeats(roomId, request), "Seat layout replaced successfully");
     }
 
     @PutMapping("/seats/{seatId}")

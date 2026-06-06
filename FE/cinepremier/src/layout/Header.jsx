@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Ticket, User, Heart, Compass, Home, ShieldAlert } from 'lucide-react';
+import {
+  Search, MapPin, Ticket, User, Heart, Compass, Home, ShieldAlert,
+  Building2, ChevronDown, Phone, Settings2
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cinemaLocations } from '../services/cinemaData';
 
 export default function Header({
   activeTab,
@@ -9,6 +11,10 @@ export default function Header({
   searchQuery,
   onSearchChange,
   selectedCity,
+  cinemaLocations = [],
+  cinema = null,
+  onCityChange = () => { },
+  onManageCinema = () => { },
   onOpenWatchlist,
   onOpenOTP,
   isLoggedIn,
@@ -20,7 +26,7 @@ export default function Header({
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/95 backdrop-blur-md">
+    <header className="sticky top-0 z-[100] w-full overflow-visible border-b border-white/10 bg-black/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 sm:px-6 lg:px-10">
 
         {/* Logo CINEPREMIER */}
@@ -169,33 +175,97 @@ export default function Header({
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex h-9 items-center justify-center space-x-1.5 border border-white/10 bg-black/40 px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] text-neutral-400 hover:text-white hover:border-white/30 hover:bg-neutral-900/25 transition-all duration-300 whitespace-nowrap"
+              className="group flex h-10 items-center justify-center gap-2 whitespace-nowrap border border-white/10 bg-black/40 px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] text-neutral-300 transition-all duration-300 hover:border-white/30 hover:bg-neutral-900/50 hover:text-white"
               id="location-button"
             >
-              <MapPin className="h-3.5 w-3.5 text-neutral-400" />
-              <span className="max-w-[85px] truncate">
-                {selectedCity.split('(')[0].trim()}
+              <span className="flex h-6 w-6 items-center justify-center border border-white/10 text-neutral-400">
+                <MapPin className="h-3.5 w-3.5" />
               </span>
+              <span className="hidden max-w-[120px] text-left sm:block">
+                <span className="block truncate font-black text-white">
+                  {cinema?.name || (selectedCity ? selectedCity.split('(')[0].trim() : 'Chưa có rạp')}
+                </span>
+                <span className="mt-0.5 block truncate text-[7px] tracking-[0.18em] text-neutral-500">
+                  {cinema?.city || 'ĐỊA ĐIỂM CHIẾU'}
+                </span>
+              </span>
+              <ChevronDown className={`h-3 w-3 text-neutral-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {dropdownOpen && (
               <div
-                className="absolute right-0 mt-2 w-56 border border-white/15 bg-black p-1 shadow-2xl z-50 text-left animate-slide-in"
+                className="absolute right-0 z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden border border-white/15 bg-[#070707]/98 shadow-[0_22px_70px_rgba(0,0,0,0.75)] backdrop-blur-xl animate-slide-in"
                 id="location-dropdown"
               >
+                <div className="relative overflow-hidden border-b border-white/10 bg-gradient-to-br from-amber-500/15 via-neutral-950 to-black p-4">
+                  <div className="absolute -right-8 -top-12 h-28 w-28 rounded-full bg-amber-400/10 blur-2xl" />
+                  <div className="relative flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center border border-amber-500/35 bg-amber-500/10 text-amber-400">
+                      <Building2 className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[8px] font-black uppercase tracking-[0.25em] text-amber-400">
+                        Rạp chiếu hiện tại
+                      </div>
+                      <div className="mt-1 truncate text-sm font-black uppercase tracking-wide text-white">
+                        {cinema?.name || 'Chưa cấu hình rạp'}
+                      </div>
+                      <div className="mt-1.5 flex items-start gap-1.5 text-[10px] leading-relaxed text-neutral-400">
+                        <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />
+                        <span>{[cinema?.address, cinema?.city].filter(Boolean).join(', ') || 'Chưa có địa chỉ rạp'}</span>
+                      </div>
+                      {cinema?.phone && (
+                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-neutral-500">
+                          <Phone className="h-3 w-3 text-amber-400" />
+                          <span>{cinema.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {cinemaLocations.length > 0 && (
+                  <div className="px-3 pb-1 pt-2 text-[8px] font-black uppercase tracking-[0.22em] text-neutral-600">Danh sách địa điểm</div>
+                )}
                 {cinemaLocations.map((loc) => (
                   <button
                     key={loc}
                     onClick={() => {
+                      onCityChange(loc);
                       onSearchChange(''); // Reset search
                       onTabChange('home'); // Reset to home
                       showToast(`Đã đổi rạp chiếu hoạt động sang: ${loc}`);
                       setDropdownOpen(false);
                     }}
-                    className="flex w-full items-center px-3 py-2 text-left text-[10px] tracking-wider uppercase font-sans text-neutral-400 hover:bg-neutral-900 hover:text-white transition"
+                    className="mx-1 flex w-[calc(100%-0.5rem)] items-center gap-2 border-l-2 border-transparent px-3 py-2.5 text-left text-[9px] font-bold uppercase tracking-wider text-neutral-400 transition hover:border-amber-400 hover:bg-neutral-900 hover:text-white"
                   >
+                    <MapPin className="h-3 w-3 shrink-0 text-neutral-600" />
                     {loc}
                   </button>
                 ))}
+                {cinemaLocations.length === 0 && (
+                  <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-500">Chưa có rạp đang hoạt động</div>
+                )}
+                {currentRole === 'admin' && (
+                  <div className="mt-1 border-t border-white/10 p-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        onManageCinema();
+                      }}
+                      className="group flex w-full items-center justify-between border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-left transition hover:border-amber-400 hover:bg-amber-500/20"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Settings2 className="h-4 w-4 text-amber-400 transition-transform group-hover:rotate-45" />
+                        <span>
+                          <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-amber-100">Quản lý rạp chiếu</span>
+                          <span className="mt-1 block text-[8px] uppercase tracking-wider text-neutral-500">Chỉnh sửa thông tin và trạng thái rạp</span>
+                        </span>
+                      </span>
+                      <span className="text-sm text-amber-400">→</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

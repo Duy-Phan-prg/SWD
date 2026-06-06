@@ -144,7 +144,7 @@ if (body.data.refreshToken) {
 API:
 
 ```http
-POST /api/v1/admin/cinemas
+POST /api/v1/admin/cinema
 ```
 
 Post-response script:

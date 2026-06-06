@@ -192,7 +192,7 @@ export default function AdminGenresPanel({ ctx }) {
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
                             <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Mô tả</label>
-                            <span className={`text-[9px] font-mono ${genreForm.description.length < 200 || genreForm.description.length > 1000 ? 'text-rose-400' : 'text-neutral-600'}`}>
+                            <span className={`text-[9px] font-mono ${genreForm.description.length < 50 || genreForm.description.length > 1000 ? 'text-rose-400' : 'text-neutral-600'}`}>
                               {genreForm.description.length}/1000
                             </span>
                           </div>
@@ -249,10 +249,10 @@ export default function AdminGenresPanel({ ctx }) {
                         </div>
                       </div>
 
-                      <div>
+                      <div className="max-h-[540px] overflow-y-auto custom-scrollbar">
                         <table className="w-full table-fixed text-left border-collapse">
-                          <thead>
-                            <tr className="bg-black/60 border-b border-neutral-850 text-[9px] uppercase tracking-widest text-neutral-500 font-sans">
+                          <thead className="sticky top-0 z-10 bg-black">
+                            <tr className="border-b border-neutral-850 text-[9px] uppercase tracking-widest text-neutral-500 font-sans">
                               <th className="py-2.5 px-3 w-[54px]">ID</th>
                               <th className="py-2.5 px-3 w-[170px]">Tên thể loại</th>
                               <th className="py-2.5 px-3">Mô tả</th>
