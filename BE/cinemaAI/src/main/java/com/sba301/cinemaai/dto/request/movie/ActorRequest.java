@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 
 public record ActorRequest(
         @NotBlank(message = "Actor name is required")
+        @Size(max = 50, message = "Actor name must be at most 50 characters")
         String name,
 
         @Size(max = 1000, message = "Biography must be at most 1000 characters")

@@ -1,5 +1,6 @@
 package com.sba301.cinemaai.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -34,8 +35,12 @@ public class MovieActor extends BaseEntity {
     @JoinColumn(name = "actor_id", nullable = false)
     private Actor actor;
 
-    public MovieActor(Movie movie, Actor actor) {
+    @Column(name = "is_main_actor", nullable = false)
+    private boolean mainActor;
+
+    public MovieActor(Movie movie, Actor actor, boolean mainActor) {
         this.movie = movie;
         this.actor = actor;
+        this.mainActor = mainActor;
     }
 }

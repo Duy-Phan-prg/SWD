@@ -23,6 +23,7 @@ public record MovieResponse(
         String castList,
         List<GenreResponse> genres,
         List<ActorResponse> actors,
+        List<Long> mainActorIds,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

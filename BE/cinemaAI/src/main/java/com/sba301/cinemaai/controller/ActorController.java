@@ -30,13 +30,13 @@ public class ActorController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "20") int limit
     ) {
-        return ApiResponse.success(actorService.searchActors(keyword, limit));
+        return ApiResponse.success(actorService.searchPublicActors(keyword, limit));
     }
 
     @GetMapping("/{actorId}")
     @Operation(summary = "Get actor details", description = "Get actor details with movie count")
     public ApiResponse<ActorResponse> getActor(@PathVariable Long actorId) {
-        return ApiResponse.success(actorService.getActor(actorId));
+        return ApiResponse.success(actorService.getPublicActor(actorId));
     }
 
     @GetMapping("/{actorId}/movies")

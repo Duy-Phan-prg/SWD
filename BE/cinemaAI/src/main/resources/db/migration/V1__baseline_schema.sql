@@ -162,6 +162,7 @@ CREATE TABLE dbo.movie_actors (
     id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     movie_id BIGINT NOT NULL,
     actor_id BIGINT NOT NULL,
+    is_main_actor BIT NOT NULL DEFAULT 1,
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT fk_movie_actors_movie FOREIGN KEY (movie_id) REFERENCES dbo.movies(id),

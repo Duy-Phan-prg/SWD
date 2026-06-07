@@ -114,7 +114,8 @@ Authorization: Bearer {{adminToken}}
 Admin tạo phim, gán thể loại qua `genreIds` và gán diễn viên đã tồn tại qua `actorIds`.
 Backend không tự tạo diễn viên từ `mainActors/castList` nữa. Nếu `actorIds` không tồn tại, API trả lỗi `Actor not found`.
 `actorIds` chính là danh sách id lấy từ actor mà admin click trong dropdown.
-`mainActors` và `castList` chỉ là text metadata để hiển thị. Nếu FE gửi rỗng, backend sẽ tự fill tên từ actor trong `actorIds`.
+`actorIds` là toàn bộ diễn viên của phim. `mainActorIds` là các diễn viên chính và phải là tập con của `actorIds`.
+Backend tự sinh `mainActors` từ `mainActorIds` và `castList` từ `actorIds`.
 Khi test bằng Postman, lưu id phim vừa tạo vào `phase3MovieId`.
 
 ### API
@@ -138,10 +139,9 @@ Authorization: Bearer {{adminToken}}
   "status": "UPCOMING",
   "ageRating": "13+",
   "director": "Action Director",
-  "mainActors": "",
-  "castList": "",
   "genreIds": [{{genreId}}],
-  "actorIds": [{{actorId}}]
+  "actorIds": [{{actorId}}, {{supportingActorId}}],
+  "mainActorIds": [{{actorId}}]
 }
 ```
 
@@ -194,39 +194,7 @@ GET /api/v1/movies?keyword=Action&genreId={{genreId}}&page=0&size=20
 }
 ```
 
-## 6. Gán lại diễn viên vào phim
-
-### Tên mô tả API
-Admin thay thế danh sách diễn viên của phim bằng danh sách actor id. Bước này dùng khi muốn sửa danh sách diễn viên sau khi phim đã tạo.
-
-### API
-```http
-PUT /api/v1/admin/movies/{{phase3MovieId}}/actors
-Authorization: Bearer {{adminToken}}
-```
-
-### JSON
-```json
-{
-  "actorIds": [{{actorId}}]
-}
-```
-
-### Post-response
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "actors": [
-      {"id": 1, "name": "Bao Khanh"}
-    ]
-  },
-  "message": "Movie actors updated successfully"
-}
-```
-
-## 7. Lấy phim theo diễn viên
+## 6. Lấy phim theo diễn viên
 
 ### Tên mô tả API
 Lấy danh sách phim có diễn viên đó.

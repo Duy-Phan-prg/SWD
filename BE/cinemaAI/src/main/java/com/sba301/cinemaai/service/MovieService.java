@@ -2,7 +2,6 @@ package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
 import com.sba301.cinemaai.dto.response.movie.ActorResponse;
-import com.sba301.cinemaai.dto.request.movie.MovieActorAssignmentRequest;
 import com.sba301.cinemaai.dto.response.movie.MovieResponse;
 import com.sba301.cinemaai.dto.request.movie.MovieStatusUpdateRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieUpdateRequest;
@@ -24,7 +23,11 @@ import com.sba301.cinemaai.repository.MovieActorRepository;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -96,13 +99,17 @@ public class MovieService {
 
         Movie movie = new Movie(request.title(), request.durationMinutes(), request.status());
         List<Actor> actors = resolveActors(request.actorIds());
+        Set<Long> mainActorIds = validateMainActorIds(actors, request.mainActorIds());
+        String actorNames = actorNamesText(actors);
+        String mainActorNames = actorNamesText(actors.stream()
+                .filter(actor -> mainActorIds.contains(actor.getId()))
+                .toList());
         applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
-                request.director(), mainActorsText(request.mainActors(), actors), castListText(request.castList(), actors),
-                request.status());
+                request.director(), mainActorNames, actorNames, request.status());
         Movie saved = movieRepository.save(movie);
         replaceGenres(saved, request.genreIds());
-        replaceActors(saved, actors);
+        replaceActors(saved, actors, mainActorIds);
         return toResponse(saved);
     }
 
@@ -118,25 +125,17 @@ public class MovieService {
                     throw new ConflictException("Movie title already exists");
                 });
         List<Actor> actors = resolveActors(request.actorIds());
+        Set<Long> mainActorIds = validateMainActorIds(actors, request.mainActorIds());
+        String actorNames = actorNamesText(actors);
+        String mainActorNames = actorNamesText(actors.stream()
+                .filter(actor -> mainActorIds.contains(actor.getId()))
+                .toList());
         applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
-                request.director(), mainActorsText(request.mainActors(), actors), castListText(request.castList(), actors),
-                request.status());
+                request.director(), mainActorNames, actorNames, request.status());
         movie.updateDetails(request.title(), request.description(), request.durationMinutes(), request.releaseDate());
         replaceGenres(movie, request.genreIds());
-        replaceActors(movie, actors);
-        return toResponse(movie);
-    }
-
-    @Transactional
-    public MovieResponse assignActors(Long id, MovieActorAssignmentRequest request) {
-        Movie movie = findById(id);
-        movieActorRepository.deleteByMovie(movie);
-        request.actorIds().stream()
-                .distinct()
-                .map(this::findActorById)
-                .map(actor -> new MovieActor(movie, actor))
-                .forEach(movieActorRepository::save);
+        replaceActors(movie, actors, mainActorIds);
         return toResponse(movie);
     }
 
@@ -200,12 +199,12 @@ public class MovieService {
         movie.changeStatus(status);
     }
 
-    private void replaceActors(Movie movie, List<Actor> actors) {
+    private void replaceActors(Movie movie, List<Actor> actors, Set<Long> mainActorIds) {
         movieActorRepository.deleteByMovie(movie);
         movieActorRepository.flush();
         actors.stream()
                 .distinct()
-                .map(actor -> new MovieActor(movie, actor))
+                .map(actor -> new MovieActor(movie, actor, mainActorIds.contains(actor.getId())))
                 .forEach(movieActorRepository::save);
     }
 
@@ -216,16 +215,13 @@ public class MovieService {
                 .toList();
     }
 
-    private String mainActorsText(String requestedMainActors, List<Actor> actors) {
-        return requestedMainActors != null && !requestedMainActors.isBlank()
-                ? requestedMainActors.trim()
-                : actorNamesText(actors);
-    }
-
-    private String castListText(String requestedCastList, List<Actor> actors) {
-        return requestedCastList != null && !requestedCastList.isBlank()
-                ? requestedCastList.trim()
-                : actorNamesText(actors);
+    private Set<Long> validateMainActorIds(List<Actor> actors, List<Long> requestedMainActorIds) {
+        Set<Long> actorIds = actors.stream().map(Actor::getId).collect(Collectors.toSet());
+        Set<Long> mainActorIds = new HashSet<>(requestedMainActorIds);
+        if (!actorIds.containsAll(mainActorIds)) {
+            throw new BadRequestException("Main actor ids must be included in actor ids");
+        }
+        return mainActorIds;
     }
 
     private String actorNamesText(List<Actor> actors) {
@@ -259,12 +255,28 @@ public class MovieService {
                 .stream()
                 .map(MovieGenre::getGenre)
                 .toList();
-        List<ActorResponse> actors = movieActorRepository.findByMovie(movie)
+        List<MovieActor> movieActorLinks = movieActorRepository.findByMovie(movie);
+        List<Actor> movieActors = movieActorLinks
                 .stream()
                 .map(MovieActor::getActor)
-                .map(actor -> movieMapper.toActorResponse(actor, movieActorRepository.countByActor(actor)))
                 .toList();
-        return movieMapper.toMovieResponse(movie, genres, actors);
+        List<Long> mainActorIds = movieActorLinks.stream()
+                .filter(MovieActor::isMainActor)
+                .map(movieActor -> movieActor.getActor().getId())
+                .toList();
+        Map<Long, Long> movieCounts = movieActors.isEmpty()
+                ? Map.of()
+                : actorRepository.findWithMovieCountByIdIn(movieActors.stream().map(Actor::getId).toList())
+                        .stream()
+                        .collect(Collectors.toMap(
+                                result -> result.getActor().getId(),
+                                result -> result.getMovieCount(),
+                                (left, right) -> left
+                        ));
+        List<ActorResponse> actors = movieActors.stream()
+                .map(actor -> movieMapper.toActorResponse(actor, movieCounts.getOrDefault(actor.getId(), 0L)))
+                .toList();
+        return movieMapper.toMovieResponse(movie, genres, actors, mainActorIds);
     }
 
     private Movie findById(Long id) {

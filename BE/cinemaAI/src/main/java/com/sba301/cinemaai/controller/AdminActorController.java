@@ -37,7 +37,7 @@ public class AdminActorController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "20") int limit
     ) {
-        return ApiResponse.success(actorService.searchActors(keyword, limit));
+        return ApiResponse.success(actorService.searchAdminActors(keyword, limit));
     }
 
     @PostMapping

@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
+  BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ImageUp
 } from 'lucide-react';
 import { authApi } from '../../services/authApi';
 
@@ -43,6 +43,8 @@ export default function AdminMoviesPanel({ ctx }) {
     setShowtimeSuccessMessage,
     genres,
     setGenres,
+    actors,
+    setActors,
     genreSearch,
     setGenreSearch,
     genreForm,
@@ -129,6 +131,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
   const [actorForm, setActorForm] = useState({ name: '', biography: '', avatarUrl: '' });
   const [isActorSaving, setIsActorSaving] = useState(false);
+  const [isActorImageUploading, setIsActorImageUploading] = useState(false);
   const [createdActors, setCreatedActors] = useState([]);
 
   const toggleMovieGenre = (genreId) => {
@@ -149,14 +152,29 @@ export default function AdminMoviesPanel({ ctx }) {
     });
   };
 
-  const updateMovieActorIds = (value) => {
-    const actorIds = value
-      .split(',')
-      .map((id) => Number(id.trim()))
-      .filter(Number.isFinite);
+  const toggleMovieActor = (actorId) => {
+    const id = Number(actorId);
+    const actorIds = (formData.actorIds || []).map(Number);
+    const selected = actorIds.includes(id);
     setFormData({
       ...formData,
-      actorIds
+      actorIds: selected ? actorIds.filter((item) => item !== id) : [...actorIds, id],
+      mainActorIds: selected
+        ? (formData.mainActorIds || []).map(Number).filter((item) => item !== id)
+        : formData.mainActorIds || []
+    });
+  };
+
+  const toggleMovieMainActor = (actorId) => {
+    const id = Number(actorId);
+    const actorIds = (formData.actorIds || []).map(Number);
+    if (!actorIds.includes(id)) return;
+    const mainActorIds = (formData.mainActorIds || []).map(Number);
+    setFormData({
+      ...formData,
+      mainActorIds: mainActorIds.includes(id)
+        ? mainActorIds.filter((item) => item !== id)
+        : [...mainActorIds, id]
     });
   };
 
@@ -184,12 +202,32 @@ export default function AdminMoviesPanel({ ctx }) {
         }));
       }
       setCreatedActors((prev) => [actor, ...prev]);
+      setActors((prev) => [actor, ...prev.filter((item) => String(item.id) !== String(actor.id))]);
       setActorForm({ name: '', biography: '', avatarUrl: '' });
       showToast(`Đã tạo actor: ${actor.name}`);
     } catch (error) {
       showToast(error.message || 'Không thể tạo actor.');
     } finally {
       setIsActorSaving(false);
+    }
+  };
+
+  const handleQuickActorImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const token = getAdminToken();
+    if (!token) return;
+
+    setIsActorImageUploading(true);
+    try {
+      const uploaded = await authApi.uploadAdminImage(token, file, 'actors');
+      setActorForm((prev) => ({ ...prev, avatarUrl: uploaded.url }));
+      showToast('Đã tải ảnh diễn viên lên Cloudinary.');
+    } catch (error) {
+      showToast(error.message || 'Không thể tải ảnh lên Cloudinary.');
+    } finally {
+      setIsActorImageUploading(false);
     }
   };
 
@@ -484,26 +522,36 @@ export default function AdminMoviesPanel({ ctx }) {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Diễn viên</label>
-                      <input
-                        type="text"
-                        placeholder="Nguyễn A, Trần B, Lê C"
-                        value={formData.castList}
-                        onChange={(e) => setFormData({ ...formData, castList: e.target.value })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Actor IDs API</label>
-                      <input
-                        type="text"
-                        placeholder="VD: 1, 2, 3"
-                        value={(formData.actorIds || []).join(', ')}
-                        onChange={(e) => updateMovieActorIds(e.target.value)}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
-                      />
+                    <div className="md:col-span-2 space-y-2 border border-neutral-800 bg-black p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Chọn diễn viên và vai chính</label>
+                        <span className="text-[9px] text-neutral-500">
+                          {(formData.actorIds || []).length} diễn viên, {(formData.mainActorIds || []).length} vai chính
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                        {actors?.length ? actors.map((actor) => {
+                          const actorId = Number(actor.id);
+                          const isSelected = (formData.actorIds || []).map(Number).includes(actorId);
+                          const isMain = (formData.mainActorIds || []).map(Number).includes(actorId);
+                          return (
+                            <div key={actor.id} className={`border p-2 flex items-center gap-2 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-neutral-850 bg-neutral-950'}`}>
+                              <button type="button" onClick={() => toggleMovieActor(actorId)} className="min-w-0 flex-1 text-left">
+                                <span className="block text-xs font-bold text-white truncate">{actor.name}</span>
+                                <span className="block text-[9px] text-neutral-500">#{actor.id} · {actor.movieCount || 0} phim</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!isSelected}
+                                onClick={() => toggleMovieMainActor(actorId)}
+                                className={`px-2 py-1 text-[9px] font-black uppercase border disabled:opacity-25 ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-neutral-400'}`}
+                              >
+                                Main
+                              </button>
+                            </div>
+                          );
+                        }) : <p className="text-[10px] text-neutral-500">Chưa có actor. Tạo actor bên dưới hoặc tại mục Diễn viên.</p>}
+                      </div>
                     </div>
 
                     <div className="space-y-2 border border-neutral-800 bg-black p-3">
@@ -522,13 +570,19 @@ export default function AdminMoviesPanel({ ctx }) {
                           onChange={(e) => setActorForm({ ...actorForm, biography: e.target.value })}
                           className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
                         />
-                        <input
-                          type="text"
-                          placeholder="Avatar URL"
-                          value={actorForm.avatarUrl}
-                          onChange={(e) => setActorForm({ ...actorForm, avatarUrl: e.target.value })}
-                          className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                        />
+                        <div className="flex gap-1">
+                          <input
+                            type="text"
+                            placeholder="Avatar URL"
+                            value={actorForm.avatarUrl}
+                            onChange={(e) => setActorForm({ ...actorForm, avatarUrl: e.target.value })}
+                            className="min-w-0 flex-1 bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                          />
+                          <label className={`grid place-items-center border border-amber-500/40 bg-amber-500/10 px-2 text-amber-300 cursor-pointer ${isActorImageUploading ? 'opacity-50 pointer-events-none' : ''}`} title="Chọn ảnh từ máy">
+                            <ImageUp className="h-4 w-4" />
+                            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleQuickActorImageUpload} className="hidden" />
+                          </label>
+                        </div>
                       </div>
                       <button
                         type="button"

@@ -89,15 +89,17 @@ class MovieIntegrationTests {
                                 MovieStatus.UPCOMING,
                                 "13+",
                                 "Test Director",
-                                "Actor One",
-                                "Actor One, Actor Two",
                                 List.of(genreId),
-                                List.of(actorOneId, actorTwoId)
+                                List.of(actorOneId, actorTwoId),
+                                List.of(actorOneId)
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.title").value("Phase 3 Orbit"))
                 .andExpect(jsonPath("$.data.genres[0].id").value(genreId))
+                .andExpect(jsonPath("$.data.mainActors").value("Actor One"))
+                .andExpect(jsonPath("$.data.castList").value("Actor One, Actor Two"))
+                .andExpect(jsonPath("$.data.mainActorIds[0]").value(actorOneId))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -131,9 +133,8 @@ class MovieIntegrationTests {
                                 MovieStatus.UPCOMING,
                                 "16+",
                                 "Updated Director",
-                                "Actor Three",
-                                "Actor Three",
                                 List.of(genreId),
+                                List.of(actorThreeId),
                                 List.of(actorThreeId)
                         ))))
                 .andExpect(status().isOk())
@@ -165,9 +166,8 @@ class MovieIntegrationTests {
                                 MovieStatus.UPCOMING,
                                 "16+",
                                 "Blocked Director",
-                                "Blocked Actor",
-                                "Blocked Actor",
                                 List.of(genreId),
+                                List.of(actorThreeId),
                                 List.of(actorThreeId)
                         ))))
                 .andExpect(status().isBadRequest());
