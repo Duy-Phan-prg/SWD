@@ -128,9 +128,8 @@ class RecommendationIntegrationTests {
                                 MovieStatus.NOW_SHOWING,
                                 "13+",
                                 director,
-                                actors,
-                                actors,
                                 List.of(genreId),
+                                List.of(actorId),
                                 List.of(actorId)
                         ))))
                 .andExpect(status().isCreated())

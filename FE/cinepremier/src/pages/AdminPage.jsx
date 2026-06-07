@@ -10,6 +10,7 @@ import { authApi, getStoredAuth, hasBackendAdminAccess } from '../services/authA
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
 import AdminMoviesPanel from './admin/AdminMoviesPanel';
 import AdminGenresPanel from './admin/AdminGenresPanel';
+import AdminActorsPanel from './admin/AdminActorsPanel';
 import AdminFoodsPanel from './admin/AdminFoodsPanel';
 import AdminHomepagePanel from './admin/AdminHomepagePanel';
 import AdminShowtimesPanel from './admin/AdminShowtimesPanel';
@@ -20,7 +21,7 @@ import AdminCinemaPanel from './admin/AdminCinemaPanel';
 import AdminRoomsPanel from './admin/AdminRoomsPanel';
 
 const getNavGroup = (section) => {
-  if (['genres', 'movies', 'foods'].includes(section)) return 'movies';
+  if (['genres', 'actors', 'movies', 'foods'].includes(section)) return 'movies';
   if (['rooms', 'showtimes', 'transactions'].includes(section)) return 'cinema';
   if (['homepage', 'users', 'ai-analysis'].includes(section)) return 'system';
   return null;
@@ -84,6 +85,7 @@ export default function AdminDashboard({
     status: 'NOW_SHOWING',
     castList: '',
     actorIds: [],
+    mainActorIds: [],
     posterUrl: DEFAULT_POSTER_URL,
     bannerUrl: DEFAULT_BANNER_URL,
     releaseDate: '2026-06-01',
@@ -115,6 +117,13 @@ export default function AdminDashboard({
   const [editingGenreId, setEditingGenreId] = useState(null);
   const [isGenreLoading, setIsGenreLoading] = useState(false);
   const [isGenreSaving, setIsGenreSaving] = useState(false);
+  const [actors, setActors] = useState([]);
+  const [actorSearch, setActorSearch] = useState('');
+  const [actorForm, setActorForm] = useState({ name: '', biography: '', avatarUrl: '' });
+  const [actorErrors, setActorErrors] = useState({});
+  const [editingActorId, setEditingActorId] = useState(null);
+  const [isActorLoading, setIsActorLoading] = useState(false);
+  const [isActorSaving, setIsActorSaving] = useState(false);
   const [homepageForm, setHomepageForm] = useState({ videoUrl: homepageVideoUrl });
   const [homepageVideoError, setHomepageVideoError] = useState('');
   const [foodItems, setFoodItems] = useState([]);
@@ -504,6 +513,21 @@ export default function AdminDashboard({
     }
   };
 
+  const fetchActors = async (keyword = '') => {
+    const token = getAdminToken();
+    if (!token) return;
+
+    setIsActorLoading(true);
+    try {
+      const data = await authApi.getAdminActors(token, { keyword: keyword.trim(), limit: 50 });
+      setActors(Array.isArray(data) ? data : []);
+    } catch (error) {
+      showToast(error.message || 'Không thể tải danh sách diễn viên.');
+    } finally {
+      setIsActorLoading(false);
+    }
+  };
+
   const fetchAdminUsers = async () => {
     const token = getAdminToken();
     if (!token) return;
@@ -577,6 +601,9 @@ export default function AdminDashboard({
     if (activeTab === 'genres' || activeTab === 'movies') {
       fetchGenres();
     }
+    if (activeTab === 'movies') {
+      fetchActors('');
+    }
     if (activeTab === 'foods') {
       fetchFoods();
     }
@@ -586,6 +613,12 @@ export default function AdminDashboard({
   }, [activeTab]);
 
   React.useEffect(() => {
+    if (activeTab !== 'actors') return undefined;
+    const timeoutId = setTimeout(() => fetchActors(actorSearch), 300);
+    return () => clearTimeout(timeoutId);
+  }, [activeTab, actorSearch]);
+
+  React.useEffect(() => {
     setHomepageForm({ videoUrl: homepageVideoUrl });
   }, [homepageVideoUrl]);
 
@@ -593,6 +626,89 @@ export default function AdminDashboard({
     setGenreForm({ name: '', description: '' });
     setGenreErrors({});
     setEditingGenreId(null);
+  };
+
+  const resetActorForm = () => {
+    setActorForm({ name: '', biography: '', avatarUrl: '' });
+    setActorErrors({});
+    setEditingActorId(null);
+  };
+
+  const validateActorForm = () => {
+    const errors = {};
+    const name = actorForm.name.trim();
+    if (!name) errors.name = 'Tên diễn viên là bắt buộc.';
+    else if (name.length > 50) errors.name = 'Tên diễn viên tối đa 50 ký tự.';
+    if (actorForm.biography.length > 1000) errors.biography = 'Tiểu sử tối đa 1000 ký tự.';
+    if (actorForm.avatarUrl.length > 500) errors.avatarUrl = 'Avatar URL tối đa 500 ký tự.';
+    if (actors.some((actor) => (
+      actor.name?.trim().toLowerCase() === name.toLowerCase() &&
+      String(actor.id) !== String(editingActorId)
+    ))) {
+      errors.name = 'Tên diễn viên đã tồn tại.';
+    }
+    setActorErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleActorSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateActorForm()) return;
+    const token = getAdminToken();
+    if (!token) return;
+
+    setIsActorSaving(true);
+    const payload = {
+      name: actorForm.name.trim(),
+      biography: actorForm.biography.trim(),
+      avatarUrl: actorForm.avatarUrl.trim()
+    };
+    try {
+      const savedActor = editingActorId
+        ? await authApi.updateAdminActor(token, editingActorId, payload)
+        : await authApi.createAdminActor(token, payload);
+      setActors((prev) => editingActorId
+        ? prev.map((actor) => String(actor.id) === String(editingActorId) ? savedActor : actor)
+        : [savedActor, ...prev]);
+      addAuditLog(editingActorId ? 'Cập nhật diễn viên' : 'Tạo diễn viên', savedActor.name);
+      showToast(editingActorId ? `Đã cập nhật diễn viên: ${savedActor.name}` : `Đã tạo diễn viên: ${savedActor.name}`);
+      resetActorForm();
+    } catch (error) {
+      showToast(error.message || 'Không thể lưu diễn viên.');
+    } finally {
+      setIsActorSaving(false);
+    }
+  };
+
+  const handleEditActor = (actor) => {
+    setEditingActorId(actor.id);
+    setActorForm({
+      name: actor.name || '',
+      biography: actor.biography || '',
+      avatarUrl: actor.avatarUrl || ''
+    });
+    setActorErrors({});
+  };
+
+  const performDeleteActor = async (actor) => {
+    const token = getAdminToken();
+    if (!token) return;
+    try {
+      await authApi.deleteAdminActor(token, actor.id);
+      setActors((prev) => prev.filter((item) => String(item.id) !== String(actor.id)));
+      addAuditLog('Xóa diễn viên', actor.name);
+      showToast(`Đã xóa diễn viên: ${actor.name}`);
+      if (String(editingActorId) === String(actor.id)) resetActorForm();
+    } catch (error) {
+      showToast(error.message || 'Không thể xóa diễn viên đang được sử dụng trong phim.');
+    }
+  };
+
+  const handleDeleteActor = (actor) => {
+    showToast(`Bạn có chắc muốn xóa diễn viên "${actor.name}"?`, 9000, {
+      label: 'Xóa',
+      onClick: () => performDeleteActor(actor)
+    });
   };
 
   const handleGenreSubmit = async (e) => {
@@ -787,6 +903,11 @@ export default function AdminDashboard({
           : Array.isArray(movie?.raw?.actors)
             ? movie.raw.actors.map((actor) => Number(actor.id ?? actor.actorId)).filter(Number.isFinite)
             : defaultForm.actorIds,
+      mainActorIds: Array.isArray(movie?.mainActorIds)
+        ? movie.mainActorIds.map(Number).filter(Number.isFinite)
+        : Array.isArray(movie?.raw?.mainActorIds)
+          ? movie.raw.mainActorIds.map(Number).filter(Number.isFinite)
+          : defaultForm.mainActorIds,
       posterUrl: movie?.posterUrl || defaultForm.posterUrl,
       bannerUrl: movie?.bannerUrl || defaultForm.bannerUrl,
       releaseDate: normalizeDateInput(movie?.releaseDate) || defaultForm.releaseDate,
@@ -816,8 +937,8 @@ export default function AdminDashboard({
     e.preventDefault();
     playPulseSound(587.33, 'sine', 0.2); // D5 success note
 
-    if (!formData.title || !formData.genreIds?.length) {
-      showToast("Vui lòng điền tiêu đề và thể loại phim.");
+    if (!formData.title || !formData.genreIds?.length || !formData.actorIds?.length || !formData.mainActorIds?.length) {
+      showToast("Vui lòng điền tiêu đề, thể loại, diễn viên và diễn viên chính.");
       return;
     }
 
@@ -847,21 +968,16 @@ export default function AdminDashboard({
       status: formData.status,
       ageRating: formData.ageRating,
       director: formData.director.trim(),
-      mainActors: formData.castList.trim() || 'Đang cập nhật',
-      castList: formData.castList.trim(),
-      genreIds: formData.genreIds.map((id) => Number(id))
+      genreIds: formData.genreIds.map((id) => Number(id)),
+      actorIds: (formData.actorIds || []).map(Number).filter(Number.isFinite),
+      mainActorIds: (formData.mainActorIds || []).map(Number).filter(Number.isFinite)
     };
 
     setIsMovieSaving(true);
     try {
-      let savedMovie = editingMovie
+      const savedMovie = editingMovie
         ? await authApi.updateAdminMovie(token, targetMovieId, payload)
         : await authApi.createAdminMovie(token, payload);
-      const savedMovieId = resolveMovieId(savedMovie);
-      const actorIds = (formData.actorIds || []).map(Number).filter(Number.isFinite);
-      if (savedMovieId && actorIds.length > 0) {
-        savedMovie = await authApi.assignAdminMovieActors(token, savedMovieId, actorIds);
-      }
       setMoviesList((prev) => editingMovie
         ? prev.map((item) => {
           const itemId = resolveMovieId(item);
@@ -1040,6 +1156,11 @@ export default function AdminDashboard({
     );
   });
 
+  const filteredActors = actors.filter((actor) => {
+    const query = actorSearch.trim().toLowerCase();
+    return !query || actor.name?.toLowerCase().includes(query) || actor.biography?.toLowerCase().includes(query);
+  });
+
   const adminCtx = {
     activeTab,
     setActiveTab,
@@ -1086,6 +1207,18 @@ export default function AdminDashboard({
     setIsGenreLoading,
     isGenreSaving,
     setIsGenreSaving,
+    actors,
+    setActors,
+    actorSearch,
+    setActorSearch,
+    actorForm,
+    setActorForm,
+    actorErrors,
+    setActorErrors,
+    editingActorId,
+    setEditingActorId,
+    isActorLoading,
+    isActorSaving,
     homepageForm,
     setHomepageForm,
     homepageVideoError,
@@ -1144,6 +1277,11 @@ export default function AdminDashboard({
     handleEditGenre,
     performDeleteGenre,
     handleDeleteGenre,
+    fetchActors,
+    resetActorForm,
+    handleActorSubmit,
+    handleEditActor,
+    handleDeleteActor,
     fetchAdminUsers,
     handleSelectAdminUser,
     handleUpdateAdminUserStatus,
@@ -1159,6 +1297,7 @@ export default function AdminDashboard({
     handleRefundTicket,
     filteredMovies,
     filteredGenres,
+    filteredActors,
     moviesList,
     setMoviesList,
     bookedTickets,
@@ -1180,6 +1319,7 @@ export default function AdminDashboard({
     overview: AdminOverviewPanel,
     movies: AdminMoviesPanel,
     genres: AdminGenresPanel,
+    actors: AdminActorsPanel,
     foods: AdminFoodsPanel,
     homepage: AdminHomepagePanel,
     showtimes: AdminShowtimesPanel,
@@ -1300,6 +1440,20 @@ export default function AdminDashboard({
                 <span>THỂ LOẠI PHIM</span>
               </span>
               {activeTab === 'genres' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+            </button>
+
+            <button
+              onClick={() => { playPulseSound(465, 'sine', 0.05); changeAdminSection('actors'); }}
+              className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'actors'
+                ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                }`}
+            >
+              <span className="flex items-center space-x-2.5">
+                <Users className="h-4 w-4 shrink-0 text-amber-500" />
+                <span>DIỄN VIÊN</span>
+              </span>
+              {activeTab === 'actors' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
             </button>
 
             <button

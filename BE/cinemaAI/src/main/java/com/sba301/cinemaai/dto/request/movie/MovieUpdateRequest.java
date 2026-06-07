@@ -36,13 +36,12 @@ public record MovieUpdateRequest(
 
         String ageRating,
         String director,
-
-        String mainActors,
-
-        String castList,
         List<Long> genreIds,
 
         @NotEmpty(message = "Actor ids are required")
-        List<Long> actorIds
+        List<Long> actorIds,
+
+        @NotEmpty(message = "Main actor ids are required")
+        List<Long> mainActorIds
 ) {
 }

@@ -111,7 +111,8 @@ if (matchedActor?.id) {
 
 ### Tên mô tả API
 Tạo phim với metadata đủ cho booking và recommendation. Genre được gán qua `genreIds`, actor đã tạo được gán qua `actorIds`. `actorIds` là id của diễn viên admin đã click chọn trong dropdown.
-`mainActors` và `castList` chỉ là text metadata để hiển thị. Nếu FE không muốn tự ghép tên, có thể gửi rỗng; backend sẽ tự fill từ các actor trong `actorIds`.
+`actorIds` chứa toàn bộ diễn viên. `mainActorIds` chứa các diễn viên chính và phải là tập con của `actorIds`.
+Backend tự sinh `mainActors` và `castList` từ các ID này.
 
 ### API
 ```http
@@ -128,10 +129,9 @@ Authorization: Bearer {{adminToken}}
   "status": "UPCOMING",
   "ageRating": "13+",
   "director": "Director A",
-  "mainActors": "",
-  "castList": "",
   "genreIds": [{{genreId}}],
-  "actorIds": [{{actorId}}]
+  "actorIds": [{{actorId}}],
+  "mainActorIds": [{{actorId}}]
 }
 ```
 
@@ -181,40 +181,7 @@ if (items[0]?.id) {
 }
 ```
 
-## 6. Gán lại actor cho movie
-
-### Tên mô tả API
-Thay thế danh sách diễn viên của phim. Bước này dùng để test endpoint update actor sau khi movie đã tạo.
-
-### API
-```http
-PUT /api/v1/admin/movies/{{phase3MovieId}}/actors
-Authorization: Bearer {{adminToken}}
-```
-
-### JSON
-```json
-{
-  "actorIds": [{{actorId}}]
-}
-```
-
-### Post-response
-```javascript
-const body = pm.response.json();
-
-pm.test("Gán actor cho movie thành công", function () {
-  pm.expect(pm.response.code).to.be.within(200, 299);
-  pm.expect(body.success).to.eql(true);
-});
-
-if (body.data?.id) {
-  pm.collectionVariables.set("movieId", body.data.id);
-  pm.collectionVariables.set("phase3MovieId", body.data.id);
-}
-```
-
-## 7. Lấy phim theo actor
+## 6. Lấy phim theo actor
 
 ### Tên mô tả API
 Kiểm tra actor đã được gán vào movie và lấy danh sách phim theo diễn viên.

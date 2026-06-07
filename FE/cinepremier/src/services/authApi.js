@@ -92,24 +92,27 @@ const tryRefreshToken = async () => {
 };
 
 const request = async (path, { method = 'GET', body, token } = {}) => {
-  const headers = { 'Content-Type': 'application/json' };
+  const isFormData = body instanceof FormData;
+  const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined
   });
 
   // Token hết hạn → tự refresh và thử lại 1 lần
   if ((response.status === 401 || response.status === 403) && token) {
     const newToken = await tryRefreshToken();
     if (newToken) {
-      const retryHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}` };
+      const retryHeaders = isFormData
+        ? { Authorization: `Bearer ${newToken}` }
+        : { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}` };
       const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
         method,
         headers: retryHeaders,
-        body: body ? JSON.stringify(body) : undefined
+        body: body ? (isFormData ? body : JSON.stringify(body)) : undefined
       });
       return parseResponse(retryResponse);
     }
@@ -197,6 +200,7 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     actorIds: Array.isArray(movie.actors)
       ? movie.actors.map((actor) => actor.id ?? actor.actorId).filter((id) => id !== undefined && id !== null)
       : (movie.actorIds || fallback.actorIds || []),
+    mainActorIds: movie.mainActorIds || fallback.mainActorIds || [],
     actors: movie.actors || fallback.actors || [],
     language: movie.language || fallback.language || 'Đang cập nhật',
     status: effectiveStatus,
@@ -349,11 +353,6 @@ export const authApi = {
     token,
     body: { status }
   }).then((movie) => normalizeMovie(movie)),
-  assignAdminMovieActors: (token, movieId, actorIds) => request(`/api/v1/admin/movies/${encodeURIComponent(movieId)}/actors`, {
-    method: 'PUT',
-    token,
-    body: { actorIds: actorIds.map((id) => Number(id)) }
-  }).then((movie) => normalizeMovie(movie)),
   deleteAdminMovie: (token, movieId) => request(`/api/v1/admin/movies/${encodeURIComponent(movieId)}`, {
     method: 'DELETE',
     token
@@ -362,6 +361,17 @@ export const authApi = {
   getActorDetail: (actorId) => request(`/api/v1/actors/${encodeURIComponent(actorId)}`),
   getMoviesByActor: (actorId) => request(`/api/v1/actors/${encodeURIComponent(actorId)}/movies`)
     .then(normalizeMovieListResponse),
+  getAdminActors: (token, params = {}) => request(`/api/v1/admin/actors${buildQueryString(params)}`, { token }),
+  uploadAdminImage: (token, file, folder = 'images') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    return request('/api/v1/admin/uploads/images', {
+      method: 'POST',
+      token,
+      body: formData
+    });
+  },
   createAdminActor: (token, payload) => request('/api/v1/admin/actors', {
     method: 'POST',
     token,
