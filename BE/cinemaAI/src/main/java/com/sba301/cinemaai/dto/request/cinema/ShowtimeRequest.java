@@ -2,6 +2,7 @@ package com.sba301.cinemaai.dto.request.cinema;
 
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ public record ShowtimeRequest(
         Long roomId,
 
         @NotNull(message = "Start time is required")
+        @Future(message = "Start time must be in the future")
         LocalDateTime startTime,
 
         @NotNull(message = "Base price is required")

@@ -5,45 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="234e65fd-19fb-47a2-8f15-f004cd8a665d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../.vscode/settings.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/config/CloudinaryConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminUploadController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/upload/UploadedFileResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/projection/ActorMovieCountProjection.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/CloudinaryUploadService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/main/resources/db/migration/V3__actor_name_length.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/main/resources/db/migration/V4__movie_actor_main_role.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/movie/ActorIntegrationTests.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminActorsPanel.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/POST_RESPONSE_SCRIPTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/POST_RESPONSE_SCRIPTS.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-3-movie-genre-actor/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/config/OpenApiConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/config/OpenApiConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/ActorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/ActorController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminActorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminActorController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminBookingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminBookingController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminLoyaltyController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminLoyaltyController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminMovieController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminMovieController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminPromotionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminPromotionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/ActorRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/ActorRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieActorAssignmentRequest.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/movie/MovieUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/movie/MovieResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/movie/MovieResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Actor.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Actor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/MovieActor.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/MovieActor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/exception/GlobalExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/mapper/MovieMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/mapper/MovieMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/ActorRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/ActorRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/ActorService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/ActorService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/MovieService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/MovieService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/config/CloudinaryConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/config/CloudinaryConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminShowtimeController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminShowtimeController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/ShowtimeRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/ShowtimeRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/BookingRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/BookingRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/ShowtimeRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/ShowtimeRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/BookingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/BookingService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/CloudinaryUploadService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/CloudinaryUploadService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/ShowtimeService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/ShowtimeService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/resources/db/migration/V1__baseline_schema.sql" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/resources/db/migration/V1__baseline_schema.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/movie/MovieIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/movie/MovieIntegrationTests.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/recommendation/RecommendationIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/recommendation/RecommendationIntegrationTests.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/AdminPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/AdminPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminMoviesPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminMoviesPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeIntegrationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminShowtimesPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminShowtimesPanel.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/services/authApi.js" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/services/authApi.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -112,17 +85,6 @@
   }
 }</component>
   <component name="RunManager">
-    <configuration default="true" type="JetRunConfigurationType">
-      <module name="BE" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
-      <module name="BE" />
-      <option name="filePath" />
-      <method v="2" />
-    </configuration>
     <configuration name="CinemaAiApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <envs>
         <env name="GOOGLE_CLIENT_ID" value="316168245134-0oda35k7fpifvgq2fgv0k66ifuq0omko.apps.googleusercontent.com" />
@@ -153,7 +115,7 @@
       <updated>1780258320264</updated>
       <workItem from="1780258321375" duration="490000" />
       <workItem from="1780258867840" duration="28000" />
-      <workItem from="1780735256194" duration="21555000" />
+      <workItem from="1780735256194" duration="32020000" />
     </task>
     <servers />
   </component>

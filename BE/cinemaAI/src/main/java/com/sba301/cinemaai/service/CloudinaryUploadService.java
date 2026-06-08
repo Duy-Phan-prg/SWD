@@ -2,6 +2,7 @@ package com.sba301.cinemaai.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.sba301.cinemaai.config.CloudinaryCredentials;
 import com.sba301.cinemaai.dto.response.upload.UploadedFileResponse;
 import com.sba301.cinemaai.entity.UploadedFile;
 import com.sba301.cinemaai.entity.User;
@@ -13,10 +14,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -31,17 +30,9 @@ public class CloudinaryUploadService {
     );
 
     private final Cloudinary cloudinary;
+    private final CloudinaryCredentials cloudinaryCredentials;
     private final UploadedFileRepository uploadedFileRepository;
     private final UserRepository userRepository;
-
-    @Value("${cloudinary.cloud-name:}")
-    private String cloudName;
-
-    @Value("${cloudinary.api-key:}")
-    private String apiKey;
-
-    @Value("${cloudinary.api-secret:}")
-    private String apiSecret;
 
     @Transactional
     public UploadedFileResponse uploadImage(MultipartFile file, String requestedFolder, Long userId) {
@@ -51,34 +42,19 @@ public class CloudinaryUploadService {
         User uploadedBy = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        try {
-            Map<?, ?> result = cloudinary.uploader().upload(
-                    file.getBytes(),
-                    ObjectUtils.asMap(
-                            "folder", "cinema-ai/" + folder,
-                            "resource_type", "image",
-                            "unique_filename", true
-                    )
-            );
-            String url = String.valueOf(result.get("secure_url"));
-            String publicId = String.valueOf(result.get("public_id"));
-            UploadedFile savedFile = uploadedFileRepository.save(new UploadedFile(
-                    file.getOriginalFilename(),
-                    publicId,
-                    "CLOUDINARY",
-                    url,
-                    file.getContentType(),
-                    file.getSize(),
-                    uploadedBy
-            ));
-            return toResponse(savedFile);
-        } catch (IOException exception) {
-            String message = exception.getMessage();
-            if (message == null || message.isBlank()) {
-                message = "Unknown Cloudinary error";
-            }
-            throw new BadRequestException("Cloudinary upload failed: " + message);
-        }
+        Map<?, ?> result = uploadToCloudinary(file, folder);
+        String url = String.valueOf(result.get("secure_url"));
+        String publicId = String.valueOf(result.get("public_id"));
+        UploadedFile savedFile = uploadedFileRepository.save(new UploadedFile(
+                file.getOriginalFilename(),
+                publicId,
+                "CLOUDINARY",
+                url,
+                file.getContentType(),
+                file.getSize(),
+                uploadedBy
+        ));
+        return toResponse(savedFile);
     }
 
     private void validateImage(MultipartFile file) {
@@ -94,9 +70,32 @@ public class CloudinaryUploadService {
     }
 
     private void validateCloudinaryConfiguration() {
-        if (!StringUtils.hasText(cloudName) || !StringUtils.hasText(apiKey) || !StringUtils.hasText(apiSecret)) {
+        if (!cloudinaryCredentials.isConfigured()) {
             throw new BadRequestException("Cloudinary is not configured");
         }
+    }
+
+    private Map<?, ?> uploadToCloudinary(MultipartFile file, String folder) {
+        try {
+            return cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "cinema-ai/" + folder,
+                            "resource_type", "image",
+                            "unique_filename", true
+                    )
+            );
+        } catch (IOException | RuntimeException exception) {
+            throw new BadRequestException("Cloudinary upload failed: " + cloudinaryErrorMessage(exception));
+        }
+    }
+
+    private String cloudinaryErrorMessage(Exception exception) {
+        String message = exception.getMessage();
+        if (message == null || message.isBlank()) {
+            return "Unknown Cloudinary error";
+        }
+        return message;
     }
 
     private String normalizeFolder(String folder) {
