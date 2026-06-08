@@ -69,7 +69,7 @@ public class BookingService {
         releaseExpiredHolds();
         User user = userService.getByEmail(email);
         Showtime showtime = findShowtime(request.showtimeId());
-        if (showtime.getStatus() != ShowtimeStatus.OPEN && showtime.getStatus() != ShowtimeStatus.SCHEDULED) {
+        if (showtime.getStatus() != ShowtimeStatus.OPEN) {
             throw new BadRequestException("Showtime is not open for booking");
         }
 

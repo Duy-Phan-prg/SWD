@@ -466,9 +466,20 @@ export const authApi = {
     method: 'DELETE',
     token
   }),
-  // Showtimes
+  // Showtimes (public)
   getShowtimes: (params = {}) => request(`/api/v1/showtimes${buildQueryString(params)}`),
   getSeatMap: (showtimeId) => request(`/api/v1/showtimes/${showtimeId}/seat-map`),
+  getShowtimeDetail: (showtimeId) => request(`/api/v1/showtimes/${showtimeId}`),
+
+  // Showtimes (admin)
+  getAdminShowtimes: (token, params = {}) => request(`/api/v1/admin/showtimes${buildQueryString(params)}`, { token }),
+  getAdminShowtime: (token, showtimeId) => request(`/api/v1/admin/showtimes/${showtimeId}`, { token }),
+  getAdminShowtimeSeatMap: (token, showtimeId) => request(`/api/v1/admin/showtimes/${showtimeId}/seat-map`, { token }),
+  createAdminShowtime: (token, payload) => request('/api/v1/admin/showtimes', { method: 'POST', token, body: payload }),
+  createAdminShowtimesBulk: (token, payload) => request('/api/v1/admin/showtimes/bulk', { method: 'POST', token, body: payload }),
+  updateAdminShowtime: (token, showtimeId, payload) => request(`/api/v1/admin/showtimes/${showtimeId}`, { method: 'PUT', token, body: payload }),
+  updateAdminShowtimeStatus: (token, showtimeId, status) => request(`/api/v1/admin/showtimes/${showtimeId}/status?status=${encodeURIComponent(status)}`, { method: 'PATCH', token }),
+  deleteAdminShowtime: (token, showtimeId) => request(`/api/v1/admin/showtimes/${showtimeId}`, { method: 'DELETE', token }),
 
   // Bookings
   holdSeats: (token, body) => request('/api/v1/bookings/hold', { method: 'POST', token, body }),

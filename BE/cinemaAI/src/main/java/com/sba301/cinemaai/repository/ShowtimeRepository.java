@@ -8,9 +8,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
@@ -21,9 +23,33 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     List<Showtime> findByStatus(ShowtimeStatus status);
 
     List<Showtime> findByStartTimeBetween(LocalDateTime from, LocalDateTime to);
+
     Optional<Showtime> findByRoomAndMovieAndStartTime(Room room, Movie movie, LocalDateTime startTime);
 
     boolean existsByRoomAndMovieAndStartTime(Room room, Movie movie, LocalDateTime startTime);
+
+    /**
+     * Admin paged search – every filter is optional.
+     * When a parameter is null the corresponding WHERE clause is skipped.
+     */
+    @Query("""
+            select s from Showtime s
+            where (:movieId   is null or s.movie.id             = :movieId)
+              and (:roomId    is null or s.room.id              = :roomId)
+              and (:cinemaId  is null or s.room.cinema.id       = :cinemaId)
+              and (:status    is null or s.status               = :status)
+              and s.startTime >= :from
+              and s.startTime <  :to
+            """)
+    Page<Showtime> searchAdmin(
+            @Param("movieId")  Long movieId,
+            @Param("roomId")   Long roomId,
+            @Param("cinemaId") Long cinemaId,
+            @Param("status")   ShowtimeStatus status,
+            @Param("from")     LocalDateTime from,
+            @Param("to")       LocalDateTime to,
+            Pageable pageable
+    );
 
     @Query("""
             select count(showtime) > 0

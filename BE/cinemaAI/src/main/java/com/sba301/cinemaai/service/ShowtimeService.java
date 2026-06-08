@@ -1,6 +1,8 @@
 package com.sba301.cinemaai.service;
 
+import com.sba301.cinemaai.dto.request.cinema.BulkShowtimeRequest;
 import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
@@ -9,7 +11,9 @@ import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Showtime;
+import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.MovieStatus;
+import com.sba301.cinemaai.enums.RoomStatus;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.enums.SeatStatus;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
@@ -17,6 +21,7 @@ import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.CinemaMapper;
+import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
@@ -29,6 +34,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,31 +45,71 @@ import org.springframework.transaction.annotation.Transactional;
 public class ShowtimeService {
 
     private static final int CLEANUP_MINUTES = 15;
+    private static final List<BookingStatus> ACTIVE_BOOKING_STATUSES = List.of(
+            BookingStatus.HOLDING,
+            BookingStatus.PENDING_PAYMENT,
+            BookingStatus.PAID,
+            BookingStatus.REFUND_REQUESTED
+    );
 
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
     private final SeatRepository seatRepository;
+    private final BookingRepository bookingRepository;
     private final BookingSeatRepository bookingSeatRepository;
     private final RoomService roomService;
     private final CinemaMapper cinemaMapper;
 
+    // -------------------------------------------------------------------------
+    // PUBLIC (customer-facing)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Public showtime search: only returns OPEN showtimes.
+     * SCHEDULED is an internal admin state — customers cannot book it.
+     */
     @Transactional(readOnly = true)
     public List<ShowtimeResponse> searchPublic(Long movieId, Long roomId, LocalDate date) {
         return search(movieId, roomId, date)
                 .stream()
-                .filter(showtime -> showtime.getStatus() == ShowtimeStatus.OPEN
-                        || showtime.getStatus() == ShowtimeStatus.SCHEDULED)
+                .filter(showtime -> showtime.getStatus() == ShowtimeStatus.OPEN)
                 .map(cinemaMapper::toShowtimeResponse)
                 .toList();
     }
 
+    // -------------------------------------------------------------------------
+    // ADMIN
+    // -------------------------------------------------------------------------
+
+    /**
+     * Admin paged search — all statuses visible, full filter support.
+     */
     @Transactional(readOnly = true)
-    public List<ShowtimeResponse> searchAdmin(Long movieId, Long roomId, LocalDate date) {
-        return search(movieId, roomId, date)
-                .stream()
-                .map(cinemaMapper::toShowtimeResponse)
-                .toList();
+    public PageResponse<ShowtimeResponse> searchAdmin(
+            Long movieId, Long roomId, Long cinemaId,
+            ShowtimeStatus status,
+            LocalDate date,
+            int page, int size) {
+
+        LocalDateTime from = date == null ? LocalDate.now().atStartOfDay()              : date.atStartOfDay();
+        LocalDateTime to   = date == null ? LocalDate.now().plusYears(1).atStartOfDay() : date.plusDays(1).atStartOfDay();
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("startTime").ascending());
+        return PageResponse.from(
+                showtimeRepository.searchAdmin(movieId, roomId, cinemaId, status, from, to, pageable)
+                        .map(cinemaMapper::toShowtimeResponse)
+        );
     }
+
+    /** Admin-only detail view (all statuses visible). */
+    @Transactional(readOnly = true)
+    public ShowtimeResponse getAdmin(Long id) {
+        return cinemaMapper.toShowtimeResponse(findById(id));
+    }
+
+    // -------------------------------------------------------------------------
+    // SHARED (used by both public and admin controllers)
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public ShowtimeResponse get(Long id) {
@@ -74,6 +122,7 @@ public class ShowtimeService {
         Room room = roomService.findById(request.roomId());
         LocalDateTime endTime = calculateEndTime(movie, request.startTime());
         validateShowtime(movie, request.startTime(), room, endTime, null);
+        validateInitialStatus(request.status());
 
         Showtime showtime = new Showtime(movie, room, request.startTime(), endTime, request.basePrice());
         showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
@@ -81,25 +130,98 @@ public class ShowtimeService {
         return cinemaMapper.toShowtimeResponse(showtimeRepository.save(showtime));
     }
 
+    /**
+     * Bulk showtime creation — all slots run inside one transaction.
+     * If any slot fails validation the whole batch is rolled back.
+     * Movie-level validation (INACTIVE check) is done once up front.
+     * Each slot independently validates room status, time in future, and overlap.
+     */
+    @Transactional
+    public List<ShowtimeResponse> createBulk(BulkShowtimeRequest request) {
+        Movie movie = findMovie(request.movieId());
+        if (movie.getStatus() == MovieStatus.INACTIVE) {
+            throw new BadRequestException("Cannot schedule inactive movie");
+        }
+        validateInitialStatus(request.defaultStatus());
+
+        ShowtimeStatus fallbackStatus = request.defaultStatus() == null
+                ? ShowtimeStatus.SCHEDULED
+                : request.defaultStatus();
+
+        List<ShowtimeResponse> results = new java.util.ArrayList<>();
+
+        for (int i = 0; i < request.slots().size(); i++) {
+            BulkShowtimeRequest.Slot slot = request.slots().get(i);
+            String slotLabel = "Slot " + (i + 1);
+            Room room = roomService.findById(slot.roomId());
+
+            if (room.getStatus() != RoomStatus.ACTIVE) {
+                throw new BadRequestException(slotLabel + ": room id=" + slot.roomId() + " is not active");
+            }
+            if (!slot.startTime().isAfter(LocalDateTime.now())) {
+                throw new BadRequestException(slotLabel + ": start time must be in the future");
+            }
+            LocalDateTime endTime = calculateEndTime(movie, slot.startTime());
+            if (hasOverlappingShowtime(room, slot.startTime(), endTime, null)) {
+                throw new ConflictException(slotLabel + ": room id=" + slot.roomId()
+                        + " already has an overlapping showtime at " + slot.startTime());
+            }
+
+            ShowtimeStatus slotStatus = slot.status() != null ? slot.status() : fallbackStatus;
+            validateInitialStatus(slotStatus);
+
+            Showtime showtime = new Showtime(movie, room, slot.startTime(), endTime, request.basePrice());
+            showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
+            showtime.changeStatus(slotStatus);
+            results.add(cinemaMapper.toShowtimeResponse(showtimeRepository.save(showtime)));
+        }
+
+        return results;
+    }
+
     @Transactional
     public ShowtimeResponse update(Long id, ShowtimeRequest request) {
         Showtime showtime = findById(id);
+        validateShowtimeCanBeUpdated(showtime);
         Movie movie = findMovie(request.movieId());
         Room room = roomService.findById(request.roomId());
         LocalDateTime endTime = calculateEndTime(movie, request.startTime());
         validateShowtime(movie, request.startTime(), room, endTime, id);
+        ShowtimeStatus requestedStatus = request.status() == null ? showtime.getStatus() : request.status();
+        validateStatusTransition(showtime, requestedStatus);
 
         showtime.reschedule(request.startTime(), endTime);
         showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
-        showtime.changeStatus(request.status() == null ? showtime.getStatus() : request.status());
+        showtime.changeStatus(requestedStatus);
         return cinemaMapper.toShowtimeResponse(showtime);
     }
 
     @Transactional
     public ShowtimeResponse updateStatus(Long id, ShowtimeStatus status) {
         Showtime showtime = findById(id);
+        validateStatusTransition(showtime, status);
+        if (status == ShowtimeStatus.CANCELLED) {
+            // Auto-handle all bookings when admin cancels a showtime
+            cancelShowtimeBookings(showtime);
+        }
         showtime.changeStatus(status);
         return cinemaMapper.toShowtimeResponse(showtime);
+    }
+
+    /**
+     * Admin hard-delete: permanently removes the showtime from DB.
+     * Rejected with 409 if any active bookings still exist.
+     * Recommended flow: PATCH status=CANCELLED first (which auto-handles bookings),
+     * then DELETE if a full purge is needed.
+     */
+    @Transactional
+    public void delete(Long id) {
+        Showtime showtime = findById(id);
+        if (hasActiveBookings(showtime)) {
+            throw new ConflictException(
+                    "Cannot delete showtime because it has active bookings. Cancel the showtime first.");
+        }
+        showtimeRepository.delete(showtime);
     }
 
     @Transactional(readOnly = true)
@@ -112,7 +234,11 @@ public class ShowtimeService {
         Map<Long, BookingSeat> runtimeSeats = bookingSeatRepository.findByShowtime(showtime)
                 .stream()
                 .filter(bookingSeat -> bookingSeat.getStatus() != SeatRuntimeStatus.RELEASED)
-                .collect(Collectors.toMap(bookingSeat -> bookingSeat.getSeat().getId(), Function.identity(), (left, right) -> left));
+                .collect(Collectors.toMap(
+                        bookingSeat -> bookingSeat.getSeat().getId(),
+                        Function.identity(),
+                        (left, right) -> left
+                ));
 
         List<ShowtimeSeatResponse> seatResponses = seats.stream()
                 .map(seat -> cinemaMapper.toShowtimeSeatResponse(seat, resolveRuntimeStatus(seat, runtimeSeats), showtime))
@@ -125,20 +251,31 @@ public class ShowtimeService {
         );
     }
 
+    // -------------------------------------------------------------------------
+    // PRIVATE HELPERS
+    // -------------------------------------------------------------------------
+
     private List<Showtime> search(Long movieId, Long roomId, LocalDate date) {
-        LocalDateTime from = date == null ? LocalDate.now().atStartOfDay() : date.atStartOfDay();
-        LocalDateTime to = date == null ? LocalDate.now().plusYears(1).atStartOfDay() : date.plusDays(1).atStartOfDay();
+        LocalDateTime from = date == null ? LocalDate.now().atStartOfDay()              : date.atStartOfDay();
+        LocalDateTime to   = date == null ? LocalDate.now().plusYears(1).atStartOfDay() : date.plusDays(1).atStartOfDay();
         return showtimeRepository.findByStartTimeBetween(from, to)
                 .stream()
                 .filter(showtime -> movieId == null || showtime.getMovie().getId().equals(movieId))
-                .filter(showtime -> roomId == null || showtime.getRoom().getId().equals(roomId))
+                .filter(showtime -> roomId  == null || showtime.getRoom().getId().equals(roomId))
                 .sorted(Comparator.comparing(Showtime::getStartTime))
                 .toList();
     }
 
-    private void validateShowtime(Movie movie, LocalDateTime startTime, Room room, LocalDateTime endTime, Long excludeId) {
+    private void validateShowtime(Movie movie, LocalDateTime startTime, Room room,
+                                  LocalDateTime endTime, Long excludeId) {
         if (movie.getStatus() == MovieStatus.INACTIVE) {
             throw new BadRequestException("Cannot schedule inactive movie");
+        }
+        if (room.getStatus() != RoomStatus.ACTIVE) {
+            throw new BadRequestException("Cannot schedule showtime in a room that is not active");
+        }
+        if (!startTime.isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("Showtime start time must be in the future");
         }
         if (!endTime.isAfter(startTime)) {
             throw new BadRequestException("Showtime end time must be after start time");
@@ -148,13 +285,86 @@ public class ShowtimeService {
         }
     }
 
-    private boolean hasOverlappingShowtime(Room room, LocalDateTime startTime, LocalDateTime endTime, Long excludeId) {
-        return showtimeRepository.findByRoom(room)
-                .stream()
-                .filter(showtime -> showtime.getStatus() != ShowtimeStatus.CANCELLED)
-                .filter(showtime -> excludeId == null || !showtime.getId().equals(excludeId))
-                .anyMatch(showtime -> showtime.getStartTime().isBefore(endTime)
-                        && showtime.getEndTime().isAfter(startTime));
+    private boolean hasOverlappingShowtime(Room room, LocalDateTime startTime,
+                                           LocalDateTime endTime, Long excludeId) {
+        return showtimeRepository.existsOverlapping(room, startTime, endTime, excludeId);
+    }
+
+    private void validateInitialStatus(ShowtimeStatus status) {
+        if (status == ShowtimeStatus.CANCELLED || status == ShowtimeStatus.COMPLETED) {
+            throw new BadRequestException("New showtime status must be SCHEDULED or OPEN");
+        }
+    }
+
+    private void validateShowtimeCanBeUpdated(Showtime showtime) {
+        if (showtime.getStatus() == ShowtimeStatus.CANCELLED) {
+            throw new BadRequestException("Cannot update a cancelled showtime");
+        }
+        if (showtime.getStatus() == ShowtimeStatus.COMPLETED) {
+            throw new BadRequestException("Cannot update a completed showtime");
+        }
+        if (hasActiveBookings(showtime)) {
+            throw new ConflictException("Cannot update showtime because it has active bookings");
+        }
+    }
+
+    private void validateStatusTransition(Showtime showtime, ShowtimeStatus requestedStatus) {
+        if (requestedStatus == null) {
+            throw new BadRequestException("Showtime status is required");
+        }
+        ShowtimeStatus currentStatus = showtime.getStatus();
+        if (currentStatus == requestedStatus) {
+            return; // no-op
+        }
+        // Terminal states — nothing can leave them
+        if (currentStatus == ShowtimeStatus.CANCELLED) {
+            throw new BadRequestException("Cannot change status of a cancelled showtime");
+        }
+        if (currentStatus == ShowtimeStatus.COMPLETED) {
+            throw new BadRequestException("Cannot change status of a completed showtime");
+        }
+        // Guard: cannot mark completed before the show ends
+        if (requestedStatus == ShowtimeStatus.COMPLETED
+                && LocalDateTime.now().isBefore(showtime.getEndTime())) {
+            throw new BadRequestException("Cannot complete a showtime before it has ended");
+        }
+        // Guard: SCHEDULED can only go to OPEN or CANCELLED
+        if (currentStatus == ShowtimeStatus.SCHEDULED
+                && requestedStatus != ShowtimeStatus.OPEN
+                && requestedStatus != ShowtimeStatus.CANCELLED) {
+            throw new BadRequestException(
+                    "SCHEDULED showtime can only transition to OPEN or CANCELLED");
+        }
+        // Guard: OPEN can only go to COMPLETED or CANCELLED
+        if (currentStatus == ShowtimeStatus.OPEN
+                && requestedStatus != ShowtimeStatus.COMPLETED
+                && requestedStatus != ShowtimeStatus.CANCELLED) {
+            throw new BadRequestException(
+                    "OPEN showtime can only transition to COMPLETED or CANCELLED");
+        }
+    }
+
+    private boolean hasActiveBookings(Showtime showtime) {
+        return bookingRepository.existsByShowtimeAndStatusIn(showtime, ACTIVE_BOOKING_STATUSES);
+    }
+
+    /**
+     * Cascade-cancels all non-terminal bookings when a showtime is cancelled by admin.
+     * <ul>
+     *   <li>HOLDING / PENDING_PAYMENT  → CANCELLED  (no money collected)</li>
+     *   <li>PAID                       → REFUND_REQUESTED (money must be returned)</li>
+     *   <li>REFUND_REQUESTED           → unchanged  (already in refund queue)</li>
+     *   <li>USED / CANCELLED / REFUNDED / EXPIRED → skipped (terminal)</li>
+     * </ul>
+     */
+    private void cancelShowtimeBookings(Showtime showtime) {
+        bookingRepository.findByShowtime(showtime).forEach(booking -> {
+            switch (booking.getStatus()) {
+                case HOLDING, PENDING_PAYMENT -> booking.cancel();
+                case PAID -> booking.requestRefund("Showtime cancelled by admin");
+                default -> { /* already terminal — no action */ }
+            }
+        });
     }
 
     private LocalDateTime calculateEndTime(Movie movie, LocalDateTime startTime) {
