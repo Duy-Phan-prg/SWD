@@ -2,11 +2,79 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
 import { comboItems } from '../services/cinemaData';
-import { authApi, getStoredAuth } from '../services/authApi';
+import { authApi, expireAuthSession, getStoredAuth } from '../services/authApi';
 import { useMovies } from '../contexts/MoviesContext';
 import { useUI } from '../contexts/UIContext';
 
-const CHILD_DISCOUNT = 0.7;
+const TICKET_TYPE_META = {
+  adult: { apiType: 'ADULT', age: 22, label: 'Người lớn', short: 'NL' },
+  child: { apiType: 'CHILD', age: 10, label: 'Trẻ em', short: 'TE' },
+  student: { apiType: 'STUDENT', age: 18, label: 'Học sinh/SV', short: 'SV' }
+};
+
+const normalizeSeatTypeForPricing = (seatType) => {
+  const normalized = String(seatType || 'STANDARD').toUpperCase();
+  if (normalized === 'NORMAL') return 'STANDARD';
+  if (normalized === 'COUPLE') return 'COUPLE';
+  if (normalized === 'VIP') return 'VIP';
+  return 'STANDARD';
+};
+
+const getAgeRatingMinimum = (ageRating) => {
+  if (!ageRating) return 0;
+  const match = String(ageRating).match(/\d+/);
+  return match ? Number(match[0]) : 0;
+};
+
+const moneyValue = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+};
+
+const formatVnd = (value) => `${Number(value || 0).toLocaleString()}đ`;
+
+const normalizeSeatTypeKey = (seatType) => {
+  const normalized = String(seatType || 'STANDARD').toUpperCase();
+  if (normalized === 'VIP') return 'vip';
+  if (normalized === 'COUPLE') return 'couple';
+  return 'standard';
+};
+
+const ticketPriceField = (ticketType, seatType) => {
+  const ticketPrefix = ticketType === 'child' ? 'child' : ticketType === 'student' ? 'student' : 'adult';
+  const seatKey = normalizeSeatTypeKey(seatType);
+  const seatSuffix = seatKey === 'vip' ? 'Vip' : seatKey === 'couple' ? 'Couple' : 'Standard';
+  return `${ticketPrefix}${seatSuffix}Price`;
+};
+
+const getShowtimeTicketPrice = (showtime, ticketType, seatType) => {
+  if (!showtime) return null;
+  const surcharge = moneyValue(showtime.surchargeAmount) || 0;
+  const configured = moneyValue(showtime[ticketPriceField(ticketType, seatType)]);
+  if (configured !== null) return configured + surcharge;
+
+  if (ticketType !== 'adult') return null;
+  const seatKey = normalizeSeatTypeKey(seatType);
+  const fallback = seatKey === 'vip'
+    ? moneyValue(showtime.vipPrice)
+    : seatKey === 'couple'
+      ? moneyValue(showtime.couplePrice)
+      : moneyValue(showtime.basePrice);
+  return fallback === null ? null : fallback + surcharge;
+};
+
+const getShowtimeRoomKey = (showtime) => {
+  const roomId = showtime?.roomId ?? showtime?.room?.id;
+  if (roomId !== undefined && roomId !== null && roomId !== '') return `room-${roomId}`;
+  return `name-${showtime?.roomName || 'unknown'}`;
+};
+
+const sortShowtimes = (showtimes) => [...showtimes].sort((a, b) => {
+  const timeDiff = new Date(a.startTime || 0) - new Date(b.startTime || 0);
+  if (timeDiff !== 0) return timeDiff;
+  return String(a.roomName || '').localeCompare(String(b.roomName || ''), 'vi');
+});
 
 export default function BookingView() {
   const navigate = useNavigate();
@@ -14,6 +82,7 @@ export default function BookingView() {
   const { moviesList, foodCatalog } = useMovies();
   const { showToast } = useUI();
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
+  const childTicketsAllowed = getAgeRatingMinimum(movie?.ageRating) < 16;
   const onBack = () => navigate(-1);
   const onConfirmBooking = (booking) => {
     navigate('/tickets');
@@ -33,15 +102,24 @@ export default function BookingView() {
   const [seatMapData, setSeatMapData] = useState(null);
   const [isLoadingSeatMap, setIsLoadingSeatMap] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
+  const [selectedRoomKey, setSelectedRoomKey] = useState('');
 
   // Ticket type counts
   const [adultCount, setAdultCount] = useState(1);
   const [childCount, setChildCount] = useState(0);
-  const [coupleCount, setCoupleCount] = useState(0); // mỗi unit = 2 ghế đôi
-  const totalTickets = adultCount + childCount + coupleCount * 2;
+  const [studentCount, setStudentCount] = useState(0);
+  const totalTickets = adultCount + childCount + studentCount;
 
-  // Seats — each seat tracks ticketType: 'adult' | 'child'
+  // Seats track ticketType: adult | child | student. Seat type is priced by BE.
   const [selectedSeats, setSelectedSeats] = useState([]);
+
+  useEffect(() => {
+    if (childTicketsAllowed) return;
+    if (childCount > 0) setChildCount(0);
+    setSelectedSeats(prev => prev.some(seat => seat.ticketType === 'child')
+      ? prev.filter(seat => seat.ticketType !== 'child')
+      : prev);
+  }, [childTicketsAllowed, childCount]);
 
   // Food
   const [selectedCombos, setSelectedCombos] = useState({});
@@ -56,6 +134,7 @@ export default function BookingView() {
   const [holdBookingId, setHoldBookingId] = useState(null);
   const [isHolding, setIsHolding] = useState(false);
   const [paymentState, setPaymentState] = useState('booking');
+  const [ticketPriceValidation, setTicketPriceValidation] = useState(null);
 
   // Load showtimes for this movie
   useEffect(() => {
@@ -66,16 +145,26 @@ export default function BookingView() {
     setIsLoadingShowtimes(true);
     authApi.getShowtimes({ movieId: Number(movieId) })
       .then(data => {
-        const list = Array.isArray(data) ? data : [];
+        const list = sortShowtimes(Array.isArray(data) ? data : []);
         setShowtimesList(list);
         if (list.length > 0) {
           const first = list[0];
           const date = first.startTime?.split('T')[0] || '';
           setSelectedDate(date);
+          setSelectedRoomKey(getShowtimeRoomKey(first));
           setSelectedShowtime(first);
+        } else {
+          setSelectedDate('');
+          setSelectedRoomKey('');
+          setSelectedShowtime(null);
         }
       })
-      .catch(() => setShowtimesList([]))
+      .catch(() => {
+        setShowtimesList([]);
+        setSelectedDate('');
+        setSelectedRoomKey('');
+        setSelectedShowtime(null);
+      })
       .finally(() => setIsLoadingShowtimes(false));
   }, [movie?.backendId, movie?.id]);
 
@@ -93,15 +182,42 @@ export default function BookingView() {
   // Derived: group showtimes by date
   const dateOptions = [...new Set(showtimesList.map(st => st.startTime?.split('T')[0]))].filter(Boolean);
   const showtimesForDate = showtimesList.filter(st => st.startTime?.split('T')[0] === selectedDate);
+  const roomOptionsForDate = showtimesForDate.reduce((rooms, st) => {
+    const key = getShowtimeRoomKey(st);
+    if (!rooms.some(room => room.key === key)) {
+      rooms.push({
+        key,
+        name: st.roomName || st.room?.name || 'Chưa rõ phòng',
+        roomType: st.roomType || st.room?.roomType || ''
+      });
+    }
+    return rooms;
+  }, []);
+  const showtimesForSelectedRoom = selectedRoomKey
+    ? showtimesForDate.filter(st => getShowtimeRoomKey(st) === selectedRoomKey)
+    : showtimesForDate;
 
   const handleSelectDate = (date) => {
     setSelectedDate(date);
     const first = showtimesList.find(st => st.startTime?.split('T')[0] === date);
+    if (first) {
+      setSelectedRoomKey(getShowtimeRoomKey(first));
+      setSelectedShowtime(first);
+    }
+    setSelectedSeats([]);
+    setAppliedPromo(null);
+  };
+
+  const handleSelectRoom = (roomKey) => {
+    setSelectedRoomKey(roomKey);
+    const first = showtimesForDate.find(st => getShowtimeRoomKey(st) === roomKey);
     if (first) setSelectedShowtime(first);
     setSelectedSeats([]);
+    setAppliedPromo(null);
   };
 
   const handleSelectShowtime = (st) => {
+    setSelectedRoomKey(getShowtimeRoomKey(st));
     setSelectedShowtime(st);
     setSelectedSeats([]);
     setAppliedPromo(null);
@@ -118,21 +234,15 @@ export default function BookingView() {
         showToast(`Bạn đã chọn đủ ${totalTickets} vé. Tăng số lượng vé để chọn thêm ghế.`);
         return;
       }
-      // Couple seats luôn gán 'couple', không discount
-      if (seat.type === 'couple') {
-        const currentCouple = selectedSeats.filter(s => s.ticketType === 'couple').length;
-        if (currentCouple >= coupleCount * 2) {
-          showToast('Tăng số lượng vé đôi để chọn thêm ghế đôi.');
-          return;
-        }
-        setSelectedSeats(prev => [...prev, { ...seat, ticketType: 'couple', actualPrice: seat.price }]);
-        return;
-      }
-      // Adult / child seats
+      // Ticket type is selected independently from the seat type.
       const currentAdults = selectedSeats.filter(s => s.ticketType === 'adult').length;
-      const ticketType = currentAdults < adultCount ? 'adult' : 'child';
-      const actualPrice = ticketType === 'child' ? Math.round(seat.price * CHILD_DISCOUNT) : seat.price;
-      setSelectedSeats(prev => [...prev, { ...seat, ticketType, actualPrice }]);
+      const currentChildren = selectedSeats.filter(s => s.ticketType === 'child').length;
+      const ticketType = currentAdults < adultCount
+        ? 'adult'
+        : currentChildren < childCount
+          ? 'child'
+          : 'student';
+      setSelectedSeats(prev => [...prev, { ...seat, ticketType }]);
     }
   };
 
@@ -143,11 +253,87 @@ export default function BookingView() {
         seatId: s.seatId,
         row: s.rowLabel,
         col: s.seatNumber,
+        displayOrder: s.displayOrder ?? 0,
+        displayColumn: s.displayColumn ?? s.seatNumber,
+        startColumn: s.startColumn ?? 1,
         type: s.seatType?.toLowerCase(),
-        price: s.unitPrice ?? 0,         // từ BE, đã tính đúng theo SeatType
+        price: moneyValue(s.unitPrice) ?? 0,
         isBooked: s.runtimeStatus === 'HOLDING' || s.runtimeStatus === 'BOOKED' || s.runtimeStatus === 'CHECKED_IN' || s.seatStatus !== 'AVAILABLE'
-      }))
+      })).sort((a, b) => (a.displayOrder - b.displayOrder) || (a.displayColumn - b.displayColumn) || (a.col - b.col))
     : [];
+
+  const buildTicketSelections = () => {
+    return selectedSeats.map((seat) => {
+      const meta = TICKET_TYPE_META[seat.ticketType] || TICKET_TYPE_META.adult;
+      return {
+        seatId: seat.seatId,
+        ticketType: meta.apiType,
+        seatType: normalizeSeatTypeForPricing(seat.type),
+        viewerAge: meta.age,
+        quantity: 1
+      };
+    });
+  };
+
+  const buildFoodRequests = () => Object.entries(selectedCombos)
+    .map(([id, quantity]) => {
+      const item = concessions.find(i => i.id === id);
+      if (!item) return null;
+      return {
+        foodItemId: item.foodItemId ?? null,
+        foodComboId: item.foodComboId ?? null,
+        quantity
+      };
+    })
+    .filter(Boolean);
+
+  useEffect(() => {
+    if (!selectedShowtime?.id || selectedSeats.length === 0) {
+      setTicketPriceValidation(null);
+      return;
+    }
+    const tickets = buildTicketSelections();
+    let cancelled = false;
+    authApi.validateTicketPrice({
+      showtimeId: selectedShowtime.id,
+      holiday: false,
+      tickets
+    })
+      .then((result) => {
+        if (!cancelled) setTicketPriceValidation(result);
+      })
+      .catch(() => {
+        if (!cancelled) setTicketPriceValidation(null);
+      });
+    return () => { cancelled = true; };
+  }, [selectedShowtime?.id, selectedSeats]);
+
+  const validationLines = Array.isArray(ticketPriceValidation?.tickets) ? ticketPriceValidation.tickets : [];
+  const getSeatValidationLine = (seat) => {
+    const index = selectedSeats.findIndex(item => item.id === seat.id);
+    return index >= 0 ? validationLines[index] : null;
+  };
+  const getSeatUnitPrice = (seat) => {
+    const line = getSeatValidationLine(seat);
+    return moneyValue(line?.unitPrice)
+      ?? getShowtimeTicketPrice(selectedShowtime, seat.ticketType || 'adult', seat.type)
+      ?? moneyValue(seat.price)
+      ?? 0;
+  };
+  const getSeatLineTotal = (seat) => {
+    const line = getSeatValidationLine(seat);
+    return moneyValue(line?.lineTotal) ?? getSeatUnitPrice(seat);
+  };
+  const getSelectedSeatTotal = (ticketType) => selectedSeats
+    .filter(seat => seat.ticketType === ticketType)
+    .reduce((total, seat) => total + getSeatLineTotal(seat), 0);
+  const getTicketStartingPrice = (ticketType) => {
+    const prices = [...new Set(seats.map(seat => seat.type))]
+      .map(seatType => getShowtimeTicketPrice(selectedShowtime, ticketType, seatType))
+      .filter(value => value !== null && Number.isFinite(value));
+    return prices.length ? Math.min(...prices) : null;
+  };
+  const firstTicketError = validationLines.find(line => line && line.eligible === false)?.message;
 
   // Food combos
   const handleModifyCombo = (id, operator) => {
@@ -182,7 +368,8 @@ export default function BookingView() {
   const handleRemovePromo = () => setAppliedPromo(null);
 
   // Financial calculations
-  const priceTickets = selectedSeats.reduce((total, s) => total + (s.actualPrice ?? s.price), 0);
+  const fallbackTicketPrice = selectedSeats.reduce((total, s) => total + getSeatLineTotal(s), 0);
+  const priceTickets = Number(ticketPriceValidation?.finalAmount ?? ticketPriceValidation?.ticketSubtotal ?? fallbackTicketPrice);
   const priceCombos = Object.entries(selectedCombos).reduce((total, [id, qty]) => {
     const item = concessions.find(i => i.id === id);
     return total + (item ? item.price * qty : 0);
@@ -195,15 +382,39 @@ export default function BookingView() {
   const handleProceedToPayment = async () => {
     if (selectedSeats.length === 0) { showToast("Vui lòng chọn ít nhất một ghế."); return; }
     if (!selectedShowtime) { showToast("Vui lòng chọn suất chiếu."); return; }
+    if (selectedSeats.length !== totalTickets) {
+      showToast(`Vui lòng chọn đủ ${totalTickets} ghế theo số lượng vé.`);
+      return;
+    }
 
     const { accessToken } = getStoredAuth();
-    if (!accessToken) { showToast("Vui lòng đăng nhập để đặt vé."); return; }
+    if (!accessToken) {
+      showToast("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+      expireAuthSession();
+      return;
+    }
 
     setIsHolding(true);
     try {
+      const validation = await authApi.validateTicketPrice({
+        showtimeId: selectedShowtime.id,
+        holiday: false,
+        tickets: buildTicketSelections()
+      });
+      setTicketPriceValidation(validation);
+      if (validation?.eligible === false) {
+        const message = validation.tickets?.find(line => line.eligible === false)?.message;
+        showToast(message || 'Lựa chọn vé không hợp lệ với suất chiếu này.');
+        setIsHolding(false);
+        return;
+      }
+
       const holdResult = await authApi.holdSeats(accessToken, {
         showtimeId: selectedShowtime.id,
-        seatIds: selectedSeats.map(s => s.seatId)
+        seatIds: selectedSeats.map(s => s.seatId),
+        holiday: false,
+        tickets: buildTicketSelections(),
+        foods: buildFoodRequests()
       });
       console.log('[holdSeats] result:', holdResult);
       console.log('[holdSeats] result:', holdResult);
@@ -230,6 +441,11 @@ export default function BookingView() {
   const handleMockPayment = async () => {
     if (!holdBookingId) { showToast('Không tìm thấy booking.'); return; }
     const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      showToast('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+      expireAuthSession();
+      return;
+    }
     setPaymentState('payment_processing');
     try {
       await authApi.mockPayment(accessToken, holdBookingId);
@@ -250,6 +466,7 @@ export default function BookingView() {
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
       showToast('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+      expireAuthSession();
       return;
     }
     setPaymentState('payment_processing');
@@ -283,7 +500,7 @@ export default function BookingView() {
   if (paymentState !== 'booking') {
     return (
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 space-y-8 pb-24">
-        
+
         {/* Gateway Security Header banner */}
         <div className="flex items-center justify-between border-b border-white/10 pb-5">
           <div className="flex items-center space-x-3">
@@ -295,7 +512,7 @@ export default function BookingView() {
               <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Hệ thống mã hoá bảo mật SSL 256-bit được chứng thực</p>
             </div>
           </div>
-          
+
           {paymentState === 'payment_method' && (
             <button
               onClick={() => setPaymentState('booking')}
@@ -434,19 +651,19 @@ export default function BookingView() {
                 {selectedSeats.filter(s => s.ticketType === 'adult').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-zinc-400">
                     <span>Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}</span>
-                    <span className="text-white">{selectedSeats.filter(s => s.ticketType === 'adult').reduce((t,s) => t + (s.actualPrice ?? s.price), 0).toLocaleString()}đ</span>
+                    <span className="text-white">{formatVnd(getSelectedSeatTotal('adult'))}</span>
                   </div>
                 )}
                 {selectedSeats.filter(s => s.ticketType === 'child').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-amber-400">
                     <span>Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}</span>
-                    <span>{selectedSeats.filter(s => s.ticketType === 'child').reduce((t,s) => t + (s.actualPrice ?? s.price), 0).toLocaleString()}đ</span>
+                    <span>{formatVnd(getSelectedSeatTotal('child'))}</span>
                   </div>
                 )}
-                {selectedSeats.filter(s => s.ticketType === 'couple').length > 0 && (
-                  <div className="flex justify-between text-[11px] font-mono text-rose-400">
-                    <span>Ghế đôi ×{selectedSeats.filter(s => s.ticketType === 'couple').length}</span>
-                    <span>{selectedSeats.filter(s => s.ticketType === 'couple').reduce((t,s) => t + (s.actualPrice ?? s.price), 0).toLocaleString()}đ</span>
+                {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
+                  <div className="flex justify-between text-[11px] font-mono text-sky-400">
+                    <span>Học sinh/SV ×{selectedSeats.filter(s => s.ticketType === 'student').length}</span>
+                    <span>{formatVnd(getSelectedSeatTotal('student'))}</span>
                   </div>
                 )}
                 {Object.entries(selectedCombos).map(([id, q]) => {
@@ -508,15 +725,15 @@ export default function BookingView() {
         {/* 💳 SUB-VIEW: SELECT PAYMENT METHOD VIEW */}
         {paymentState === 'payment_method' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-            
+
             {/* Left Block: Receipt Summary */}
             <div className="lg:col-span-5 border border-white/10 bg-black p-6 space-y-5 shadow-xl">
               <span className="text-[10px] font-sans tracking-[0.2em] font-black text-amber-500 block uppercase">THÔNG TIN HOÁ ĐƠN THANH TOÁN</span>
-              
+
               <div className="flex items-start gap-3.5 border-b border-white/5 pb-4">
-                <img 
-                  src={movie.posterUrl} 
-                  alt={movie.title} 
+                <img
+                  src={movie.posterUrl}
+                  alt={movie.title}
                   className="h-16 w-11 object-cover border border-white/15 flex-shrink-0"
                   referrerPolicy="no-referrer"
                 />
@@ -648,7 +865,7 @@ export default function BookingView() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-10 pb-24">
-      
+
       {/* Upper header controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
         <div className="flex items-center space-x-3 mt-1">
@@ -667,14 +884,14 @@ export default function BookingView() {
 
         {/* Process progress indicators */}
         <div className="flex items-center space-x-2 text-[10px] font-sans uppercase tracking-[0.2em]">
-          <button 
+          <button
             onClick={() => setBookingStep('seats')}
             className={`px-3 py-1.5 transition ${bookingStep === 'seats' ? 'text-white border-b border-white font-bold' : 'text-neutral-500 hover:text-white'}`}
           >
             1. CHỖ NGỒI
           </button>
           <ChevronRight className="h-3 w-3 text-neutral-700" />
-          <button 
+          <button
             disabled={selectedSeats.length === 0}
             onClick={() => setBookingStep('combos')}
             className={`px-3 py-1.5 transition ${bookingStep === 'combos' ? 'text-white border-b border-white font-bold' : 'text-neutral-500 hover:text-white disabled:opacity-30'}`}
@@ -686,10 +903,10 @@ export default function BookingView() {
 
       {/* Primary columns split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        
+
         {/* Left Block: Seat Map or F&B selection */}
         <div className="lg:col-span-8 space-y-8">
-          
+
           {/* Schedule options layout */}
           <div className="border border-white/10 bg-black p-5 space-y-5">
             <span className="text-[9px] font-sans tracking-[0.2em] font-bold text-neutral-400 block uppercase">CHỌN NGÀY & GIỜ CHIẾU</span>
@@ -701,7 +918,7 @@ export default function BookingView() {
             ) : showtimesList.length === 0 ? (
               <p className="text-xs text-neutral-500 py-2">Không có suất chiếu nào cho phim này.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-1">
 
                 {/* Dates Row */}
                 <div className="space-y-3">
@@ -721,11 +938,30 @@ export default function BookingView() {
                   </div>
                 </div>
 
+                {/* Rooms Row */}
+                <div className="space-y-3">
+                  <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-sans">Chọn phòng:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {roomOptionsForDate.map(room => (
+                      <button
+                        key={room.key}
+                        onClick={() => handleSelectRoom(room.key)}
+                        className={`px-3 py-2 text-[10px] font-sans font-bold tracking-wider uppercase border transition-all ${
+                          selectedRoomKey === room.key ? 'bg-white text-black border-white' : 'bg-black text-neutral-400 border-white/10 hover:text-white hover:border-white/30'
+                        }`}
+                      >
+                        <span className="block">{room.name}</span>
+                        {room.roomType && <span className="block mt-0.5 text-[8px] opacity-60">{room.roomType}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Showtimes Row */}
                 <div className="space-y-3">
-                  <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-sans">Chọn giờ — {selectedShowtime?.roomName}:</span>
+                  <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-sans">Chọn giờ:</span>
                   <div className="flex flex-wrap gap-2">
-                    {showtimesForDate.map(st => (
+                    {showtimesForSelectedRoom.map(st => (
                       <button
                         key={st.id}
                         onClick={() => handleSelectShowtime(st)}
@@ -769,45 +1005,45 @@ export default function BookingView() {
                     <div className="flex items-center gap-3">
                       <div>
                         <p className="text-[10px] font-bold text-white uppercase tracking-wider">Người lớn</p>
-                        <p className="text-[9px] text-neutral-500 font-mono">Từ {seats.length ? Math.min(...seats.map(s => s.price)).toLocaleString() : '—'}đ/vé</p>
+                        <p className="text-[9px] text-neutral-500 font-mono">Từ {getTicketStartingPrice('adult') !== null ? formatVnd(getTicketStartingPrice('adult')) : '—'}/vé</p>
                       </div>
                       <div className="flex items-center gap-2 border border-white/10 px-2 py-1 bg-black">
                         <button onClick={() => { setAdultCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
                         <span className="text-white font-mono font-bold w-5 text-center text-sm">{adultCount}</span>
-                        <button onClick={() => { setAdultCount(c => Math.min(8 - childCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">+</button>
+                        <button onClick={() => { setAdultCount(c => Math.min(8 - childCount - studentCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">+</button>
                       </div>
                     </div>
                     {/* Child */}
-                    <div className="flex items-center gap-3">
+                    <div className={`flex items-center gap-3 ${childTicketsAllowed ? '' : 'opacity-45'}`}>
                       <div>
                         <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Trẻ em</p>
-                        <p className="text-[9px] text-neutral-500 font-mono">Từ {seats.length ? Math.round(Math.min(...seats.filter(s=>s.type!=='couple').map(s => s.price)) * CHILD_DISCOUNT).toLocaleString() : '—'}đ/vé</p>
+                        <p className="text-[9px] text-neutral-500 font-mono">
+                          {childTicketsAllowed
+                            ? `Từ ${getTicketStartingPrice('child') !== null ? formatVnd(getTicketStartingPrice('child')) : '—'}/vé`
+                            : `Không bán cho phim ${movie?.ageRating || '16+'}`}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 border border-amber-500/20 px-2 py-1 bg-black">
-                        <button onClick={() => { setChildCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
+                        <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">−</button>
                         <span className="text-amber-400 font-mono font-bold w-5 text-center text-sm">{childCount}</span>
-                        <button onClick={() => { setChildCount(c => Math.min(8 - adultCount - coupleCount * 2, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-amber-400 w-5 text-center font-bold">+</button>
+                        <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.min(8 - adultCount - studentCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-amber-400 w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">+</button>
+                      </div>
+                    </div>
+
+                    {/* Student */}
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">Học sinh/SV</p>
+                        <p className="text-[9px] text-neutral-500 font-mono">Từ {getTicketStartingPrice('student') !== null ? formatVnd(getTicketStartingPrice('student')) : '—'}/vé</p>
+                      </div>
+                      <div className="flex items-center gap-2 border border-sky-500/20 px-2 py-1 bg-black">
+                        <button onClick={() => { setStudentCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
+                        <span className="text-sky-400 font-mono font-bold w-5 text-center text-sm">{studentCount}</span>
+                        <button onClick={() => { setStudentCount(c => Math.min(8 - adultCount - childCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-sky-400 w-5 text-center font-bold">+</button>
                       </div>
                     </div>
 
                     {/* Couple — chỉ hiển thị nếu có ghế đôi trong phòng */}
-                    {seats.some(s => s.type === 'couple') && (
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Ghế đôi</p>
-                          <p className="text-[9px] text-neutral-500 font-mono">
-                            {seats.find(s => s.type === 'couple')
-                              ? `${seats.find(s => s.type === 'couple').price.toLocaleString()}đ × 2 ghế`
-                              : '—'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 border border-rose-500/30 px-2 py-1 bg-black">
-                          <button onClick={() => { setCoupleCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
-                          <span className="text-rose-400 font-mono font-bold w-5 text-center text-sm">{coupleCount}</span>
-                          <button onClick={() => { setCoupleCount(c => Math.min(Math.floor((8 - adultCount - childCount) / 2), c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-rose-400 w-5 text-center font-bold">+</button>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Total indicator */}
                     <div className="flex items-center">
@@ -822,13 +1058,18 @@ export default function BookingView() {
                       {selectedSeats.map(s => (
                         <span key={s.id} className={`text-[9px] font-mono font-bold px-2 py-0.5 border ${
                           s.ticketType === 'adult'  ? 'border-white/30 text-white' :
-                          s.ticketType === 'couple' ? 'border-rose-500/40 text-rose-400' :
-                                                      'border-amber-500/40 text-amber-400'
+                          s.ticketType === 'student' ? 'border-sky-500/40 text-sky-400' :
+                                                        'border-amber-500/40 text-amber-400'
                         }`}>
-                          {s.id} · {s.ticketType === 'adult' ? 'NL' : s.ticketType === 'couple' ? 'ĐÔI' : 'TE'} · {(s.actualPrice ?? s.price).toLocaleString()}đ
+                          {s.id} · {TICKET_TYPE_META[s.ticketType]?.short || 'NL'} · {formatVnd(getSeatLineTotal(s))}
                         </span>
                       ))}
                     </div>
+                  )}
+                  {ticketPriceValidation?.eligible === false && (
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                      {firstTicketError || 'Lựa chọn vé không hợp lệ với suất chiếu này.'}
+                    </p>
                   )}
                 </div>
               )}
@@ -841,7 +1082,7 @@ export default function BookingView() {
               <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[110%] h-[100%] bg-[conic-gradient(from_150deg_at_50%_0%,transparent_0deg,rgba(255,255,255,0.15)_20deg,rgba(255,255,255,0.2)_30deg,rgba(255,255,255,0.15)_40deg,transparent_60deg)] opacity-60 pointer-events-none z-0 mix-blend-screen blur-xl animate-pulse" style={{ animationDuration: '6s' }}></div>
               {/* Radial ambient glow focused directly on the rows of seat map */}
               <div className="absolute top-[100px] left-1/2 -translate-x-1/2 w-[90%] h-[80%] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.03)_50%,transparent_90%)] pointer-events-none z-0"></div>
-              
+
               {/* Curved Glowing screen representer */}
               <div className="relative text-center mx-auto max-w-xl mb-6 pt-4 z-10" id="cinema-screen">
                 {/* Simulated curved ambient cinema screen with realistic glow directed downwards toward seats */}
@@ -861,7 +1102,7 @@ export default function BookingView() {
 
               {/* Seats Matrix Layout with Scroll Buttons Container */}
               <div className="relative z-10 group/seats select-none">
-                
+
                 {/* Floating Left Navigation Button */}
                 <button
                   type="button"
@@ -873,16 +1114,21 @@ export default function BookingView() {
                 </button>
 
                 {/* Main Overflow Scroll Container */}
-                <div 
+                <div
                   ref={seatScrollRef}
                   className="overflow-x-auto pb-4 max-w-full scrollbar-thin scroll-smooth"
                   style={{ WebkitOverflowScrolling: 'touch' }}
                 >
                   <div className="w-max mx-auto flex flex-col items-center space-y-3.5 px-10 md:px-14 pb-2" id="seats-map-grid">
-                    
+
                     {/* Rows Mapping — dynamic from BE data */}
-                    {[...new Set(seats.map(s => s.row))].sort().map((rowLetter) => {
-                      const rowSeats = seats.filter(s => s.row === rowLetter);
+                    {[...new Map(seats.map(s => [s.row, s])).values()]
+                      .sort((a, b) => (a.displayOrder - b.displayOrder) || String(a.row).localeCompare(String(b.row)))
+                      .map((rowSeed) => {
+                      const rowLetter = rowSeed.row;
+                      const rowSeats = seats
+                        .filter(s => s.row === rowLetter)
+                        .sort((a, b) => (a.displayColumn - b.displayColumn) || (a.col - b.col));
                       const isCoupleRow = rowSeats.every(s => s.type === 'couple');
                       const isVipRow = !isCoupleRow && rowSeats.every(s => s.type === 'vip');
                       const rowTypeLabel = isCoupleRow ? 'ĐÔI' : isVipRow ? 'VIP' : null;
@@ -908,20 +1154,20 @@ export default function BookingView() {
                           {isCoupleRow ? (
                             // Couple row sweetbox representation
                             <div className="flex items-center space-x-5">
-                              {Array.from({ length: 7 }).map((_, pairIdx) => {
+                              {Array.from({ length: Math.ceil(rowSeats.length / 2) }).map((_, pairIdx) => {
                                 const seat1 = rowSeats[pairIdx * 2];
                                 const seat2 = rowSeats[pairIdx * 2 + 1]; if (!seat1 || !seat2) return null;
-                                
+
                                 const s1Selected = !!selectedSeats.find(s => s.id === seat1.id);
                                 const s2Selected = !!selectedSeats.find(s => s.id === seat2.id);
                                 const isAnySelected = s1Selected || s2Selected;
 
                                 return (
-                                  <div 
+                                  <div
                                     key={pairIdx}
                                     className={`flex p-1 border transition-all rounded-sm ${
-                                      isAnySelected 
-                                        ? 'border-rose-500 bg-rose-950/30 shadow-[0_0_12px_rgba(244,63,94,0.4)] scale-105' 
+                                      isAnySelected
+                                        ? 'border-rose-500 bg-rose-950/30 shadow-[0_0_12px_rgba(244,63,94,0.4)] scale-105'
                                         : 'border-rose-950 bg-[#0c0506]'
                                     }`}
                                   >
@@ -964,15 +1210,17 @@ export default function BookingView() {
                               {rowSeats.map((seat) => {
                                 const selectedSeat = selectedSeats.find(s => s.id === seat.id);
                                 const isSelected = !!selectedSeat;
-                                const isChild = selectedSeat?.ticketType === 'child';
+                                const ticketMeta = selectedSeat ? TICKET_TYPE_META[selectedSeat.ticketType] : null;
                                 const isVip = seat.type === 'vip';
+                                const isChild = selectedSeat?.ticketType === 'child';
+                                const displayPrice = isSelected ? getSeatLineTotal(selectedSeat) : (getShowtimeTicketPrice(selectedShowtime, 'adult', seat.type) ?? seat.price);
 
                                 return (
                                   <button
                                     key={seat.id}
                                     disabled={seat.isBooked}
                                     onClick={() => handleSelectSeat(seat)}
-                                    title={isSelected ? `${isChild ? 'Trẻ em' : 'Người lớn'} · ${(selectedSeat.actualPrice ?? seat.price).toLocaleString()}đ` : `${seat.price.toLocaleString()}đ`}
+                                    title={isSelected ? `${ticketMeta?.label || 'Người lớn'} · ${formatVnd(displayPrice)}` : `${formatVnd(displayPrice)}`}
                                     className={`h-9 w-9 sm:h-10.5 sm:w-10.5 text-[11.5px] sm:text-[14.5px] font-black font-mono transition-all duration-150 rounded-none border ${
                                       seat.isBooked
                                         ? 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
@@ -1023,28 +1271,31 @@ export default function BookingView() {
 
               </div>
 
-              {/* Legends — giá lấy trực tiếp từ unitPrice BE trả về */}
+              {/* Legends — giá lấy theo bảng giá thật của suất chiếu */}
               {(() => {
-                const fmt = (n) => Number(n).toLocaleString() + 'đ';
-                const priceByType = {};
-                seats.forEach(s => { if (!priceByType[s.type]) priceByType[s.type] = s.price; });
+                const seatTypes = new Set(seats.map(s => normalizeSeatTypeKey(s.type)));
                 const typeConfig = [
                   { key: 'standard', label: 'STANDARD', color: 'border-white/20',        bg: 'bg-black',          textClass: 'text-white'    },
-                  { key: 'normal',   label: 'NORMAL',   color: 'border-white/20',        bg: 'bg-black',          textClass: 'text-white'    },
                   { key: 'vip',      label: 'VIP',      color: 'border-yellow-500/40',   bg: 'bg-yellow-950/20',  textClass: 'text-yellow-400' },
                   { key: 'couple',   label: 'ĐÔI',      color: 'border-rose-500/40',     bg: 'bg-rose-950/10',    textClass: 'text-rose-400'  },
-                ].filter(t => priceByType[t.key] !== undefined);
+                ].filter(t => seatTypes.has(t.key));
                 return (
                   <div className="border border-white/5 p-4 space-y-3">
                     <span className="text-[9px] font-sans tracking-[0.2em] font-bold text-neutral-500 block uppercase">Bảng giá vé</span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px] text-neutral-400">
-                      {typeConfig.map(({ key, label, color, bg, textClass }) => (
-                        <div key={key} className={`border ${color} ${bg} p-2.5 space-y-1`}>
-                          <p className={`font-black text-[9px] uppercase tracking-widest ${textClass}`}>{label}</p>
-                          <p className="text-neutral-300 font-mono font-bold">{fmt(priceByType[key])}</p>
-                          <p className="text-amber-400 font-mono text-[9px]">Trẻ em: {fmt(Math.round(priceByType[key] * CHILD_DISCOUNT))}</p>
-                        </div>
-                      ))}
+                      {typeConfig.map(({ key, label, color, bg, textClass }) => {
+                        const adultPrice = getShowtimeTicketPrice(selectedShowtime, 'adult', key);
+                        const childPrice = getShowtimeTicketPrice(selectedShowtime, 'child', key);
+                        const studentPrice = getShowtimeTicketPrice(selectedShowtime, 'student', key);
+                        return (
+                          <div key={key} className={`border ${color} ${bg} p-2.5 space-y-1`}>
+                            <p className={`font-black text-[9px] uppercase tracking-widest ${textClass}`}>{label}</p>
+                            <p className="text-neutral-300 font-mono font-bold">Người lớn: {adultPrice !== null ? formatVnd(adultPrice) : '—'}</p>
+                            {childTicketsAllowed && <p className="text-amber-400 font-mono text-[9px]">Trẻ em: {childPrice !== null ? formatVnd(childPrice) : '—'}</p>}
+                            <p className="text-sky-400 font-mono text-[9px]">SV: {studentPrice !== null ? formatVnd(studentPrice) : '—'}</p>
+                          </div>
+                        );
+                      })}
                       <div className="border border-neutral-800 bg-neutral-900 p-2.5 space-y-1">
                         <p className="text-neutral-500 font-black text-[9px] uppercase tracking-widest">ĐÃ ĐẶT</p>
                         <div className="h-4 w-4 bg-neutral-950 border border-neutral-800 text-neutral-800 line-through text-[9px] flex items-center justify-center font-mono">×</div>
@@ -1058,7 +1309,7 @@ export default function BookingView() {
               </> /* end seat map */}
 
               <div className="border border-white/10 bg-neutral-950 p-6 space-y-6" id="inline-concessions-section">
-                
+
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
                   <div className="space-y-1.5">
                     <h3 className="text-sm font-serif italic text-white uppercase tracking-widest flex items-center gap-2">
@@ -1080,21 +1331,21 @@ export default function BookingView() {
                     const qty = selectedCombos[item.id] || 0;
 
                     return (
-                      <div 
+                      <div
                         key={item.id}
                         className={`group flex flex-col justify-between border p-3.5 bg-black transition-all duration-300 ${
-                          qty > 0 
-                            ? 'border-amber-400/40 bg-[#0e0a05] shadow-[0_0_15px_rgba(245,158,11,0.06)]' 
+                          qty > 0
+                            ? 'border-amber-400/40 bg-[#0e0a05] shadow-[0_0_15px_rgba(245,158,11,0.06)]'
                             : 'border-white/5 hover:border-white/15'
                         }`}
                       >
                         <div className="space-y-3">
-                          
+
                           {/* Rich graphic display container */}
                           <div className="h-28 w-full overflow-hidden bg-neutral-950 border border-white/5 relative">
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.name} 
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
                               className="h-full w-full object-cover group-hover:scale-105 transition duration-500 pointer-events-none"
                               referrerPolicy="no-referrer"
                             />
@@ -1135,9 +1386,9 @@ export default function BookingView() {
                             >
                               <Minus className="h-2.5 w-2.5" />
                             </button>
-                            
+
                             <span className="w-3 text-center text-[10.5px] font-mono font-bold text-white">{qty}</span>
-                            
+
                             <button
                               onClick={() => handleModifyCombo(item.id, '+')}
                               className="text-zinc-500 hover:text-amber-400 transition-colors"
@@ -1156,10 +1407,10 @@ export default function BookingView() {
 
             </div>
           ) : (
-            
+
             // Render Step 2: DYNAMIC COMBO ITEMS F&B LIST SCREEN
             <div className="space-y-6">
-              
+
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div>
                   <h3 className="text-sm font-serif text-white uppercase flex items-center gap-2 italic">
@@ -1181,14 +1432,14 @@ export default function BookingView() {
                   const qty = selectedCombos[item.id] || 0;
 
                   return (
-                    <div 
+                    <div
                       key={item.id}
                       className="group flex gap-4 border border-white/5 bg-[#0a0a0a] p-4 hover:border-white/10 transition"
                     >
                       <div className="h-20 w-20 overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
-                        <img 
-                          src={item.imageUrl} 
-                          alt={item.name} 
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
                           className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
                           referrerPolicy="no-referrer"
                         />
@@ -1214,9 +1465,9 @@ export default function BookingView() {
                             >
                               <Minus className="h-3 w-3" />
                             </button>
-                            
+
                             <span className="w-4 text-center text-[11px] font-mono font-bold text-white">{qty}</span>
-                            
+
                             <button
                               onClick={() => handleModifyCombo(item.id, '+')}
                               className="text-neutral-500 hover:text-white transition"
@@ -1239,11 +1490,11 @@ export default function BookingView() {
 
         {/* Right Block: Receipt Sticky Booking summary card */}
         <div className="lg:col-span-4 border border-white/10 bg-black p-6 space-y-6 shadow-2xl relative" id="booking-receipt-sidebar">
-          
+
           <div className="flex items-start gap-4 border-b border-white/5 pb-4">
-            <img 
-              src={movie.posterUrl} 
-              alt={movie.title} 
+            <img
+              src={movie.posterUrl}
+              alt={movie.title}
               className="h-20 w-14 object-cover flex-shrink-0 border border-white/5"
               referrerPolicy="no-referrer"
             />
@@ -1256,7 +1507,7 @@ export default function BookingView() {
 
           {/* Ticket Information specs list */}
           <div className="space-y-3 text-[11px] uppercase tracking-wider font-sans text-neutral-400 border-b border-white/5 pb-4">
-            
+
             <div className="flex justify-between">
               <span>Phòng chiếu:</span>
               <span className="text-white font-bold truncate max-w-[140px] text-right">{(selectedShowtime?.roomName || 'Chưa chọn') || 'IMAX VIP 03'}</span>
@@ -1270,13 +1521,13 @@ export default function BookingView() {
             <div className="flex justify-between items-start">
               <span>Vị trí ghế:</span>
               <span className="text-white font-mono font-bold max-w-[140px] break-words text-right text-xs">
-                {selectedSeats.length > 0 
-                  ? selectedSeats.map(s => s.id).join(', ') 
+                {selectedSeats.length > 0
+                  ? selectedSeats.map(s => s.id).join(', ')
                   : 'Chưa chọn'
                 }
               </span>
             </div>
-            
+
             {/* Show selected combos details */}
             {Object.entries(selectedCombos).length > 0 && (
               <div className="space-y-2 pt-2 border-t border-white/5 text-[9px] lowercase tracking-wide text-neutral-400">
@@ -1299,7 +1550,7 @@ export default function BookingView() {
           {/* Voucher system promo code form */}
           <div className="space-y-3">
             <span className="text-[9px] font-sans tracking-[0.2em] font-bold text-neutral-400 block uppercase">MÃ KHUYẾN MÃI CINEPREMIER</span>
-            
+
             {appliedPromo ? (
               <div className="flex items-center justify-between border border-emerald-500/20 bg-emerald-950/20 px-3 py-2 text-[10px] text-emerald-400 tracking-wider">
                 <div className="flex items-center space-x-1.5 uppercase">
@@ -1342,19 +1593,19 @@ export default function BookingView() {
             {selectedSeats.filter(s => s.ticketType === 'adult').length > 0 && (
               <div className="flex justify-between">
                 <span>Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}:</span>
-                <span className="font-mono text-zinc-300">{selectedSeats.filter(s => s.ticketType === 'adult').reduce((t, s) => t + (s.actualPrice ?? s.price), 0).toLocaleString()}đ</span>
+                <span className="font-mono text-zinc-300">{formatVnd(getSelectedSeatTotal('adult'))}</span>
               </div>
             )}
             {selectedSeats.filter(s => s.ticketType === 'child').length > 0 && (
               <div className="flex justify-between">
                 <span className="text-amber-400">Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}:</span>
-                <span className="font-mono text-amber-400">{selectedSeats.filter(s => s.ticketType === 'child').reduce((t, s) => t + (s.actualPrice ?? s.price), 0).toLocaleString()}đ</span>
+                <span className="font-mono text-amber-400">{formatVnd(getSelectedSeatTotal('child'))}</span>
               </div>
             )}
-            {selectedSeats.filter(s => s.ticketType === 'couple').length > 0 && (
+            {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
               <div className="flex justify-between">
-                <span className="text-rose-400">Ghế đôi ×{selectedSeats.filter(s => s.ticketType === 'couple').length}:</span>
-                <span className="font-mono text-rose-400">{selectedSeats.filter(s => s.ticketType === 'couple').reduce((t, s) => t + (s.actualPrice ?? s.price), 0).toLocaleString()}đ</span>
+                <span className="text-sky-400">Học sinh/SV ×{selectedSeats.filter(s => s.ticketType === 'student').length}:</span>
+                <span className="font-mono text-sky-400">{formatVnd(getSelectedSeatTotal('student'))}</span>
               </div>
             )}
 

@@ -1,14 +1,18 @@
 package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.request.ticket.TicketComboRequest;
 import com.sba301.cinemaai.dto.response.ticket.TicketComboResponse;
 import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
 import com.sba301.cinemaai.dto.response.ticket.TicketPricingRuleResponse;
+import com.sba301.cinemaai.enums.RoomType;
+import com.sba301.cinemaai.enums.SeatType;
+import com.sba301.cinemaai.enums.TicketType;
 import com.sba301.cinemaai.service.TicketPricingService;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,13 +30,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/ticket-pricing")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
+@Hidden
 public class AdminTicketPricingController {
 
     private final TicketPricingService ticketPricingService;
 
     @GetMapping("/rules")
-    public ApiResponse<List<TicketPricingRuleResponse>> getRules() {
-        return ApiResponse.success(ticketPricingService.getRules());
+    public ApiResponse<PageResponse<TicketPricingRuleResponse>> getRules(
+            @RequestParam(required = false) TicketType ticketType,
+            @RequestParam(required = false) RoomType roomType,
+            @RequestParam(required = false) SeatType seatType,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(ticketPricingService.searchRules(ticketType, roomType, seatType, active, page, size));
     }
 
     @PostMapping("/rules")
@@ -55,8 +68,13 @@ public class AdminTicketPricingController {
     }
 
     @GetMapping("/combos")
-    public ApiResponse<List<TicketComboResponse>> getCombos() {
-        return ApiResponse.success(ticketPricingService.getCombos(false));
+    public ApiResponse<PageResponse<TicketComboResponse>> getCombos(
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(ticketPricingService.searchCombos(active, keyword, page, size));
     }
 
     @PostMapping("/combos")

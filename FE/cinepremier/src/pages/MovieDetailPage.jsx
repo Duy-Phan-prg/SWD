@@ -1,65 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Sparkles, Star, Clock, Heart, Brain, Award, ShieldCheck, Activity, Eye, Zap, ChevronRight, RefreshCw, BarChart2 } from 'lucide-react';
-import { castData, moviesReviews } from '../services/cinemaData';
 import { useMovies } from '../contexts/MoviesContext';
 import { useUI } from '../contexts/UIContext';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi, getStoredAuth } from '../services/authApi';
 
-// Specialized preset reports for each major movie
-const movieAiReports = {
-  'neon-horizon': {
-    plotAnalyze: 'Bản phân tích mạng lưới Neural của AI xác thực cấu trúc nhịp truyện được nén chặt và đẩy dần lên cao trào kịch liệt ở phút thứ 92. Tác phẩm thuộc niên đại tương lai viễn tưởng, nơi phong cách Cyberpunk giao thoa chặt chẽ với những giá trị triết học chiều sâu về linh hồn và thực tại nhân tính.',
-    sensoryFocus: 'Mỹ thuật thị giác (9.9) là tiêu điểm tối thượng. Sử dụng bảng màu nghịch sắc bổ trợ độc đáo giữa màu lam lạnh ẩm ướt và màu hồng/đỏ neon rực cháy tỏa ra luồng khí chất u tối nhưng cuốn hút vô tận.',
-    highlights: [
-      'Bối cảnh siêu đô thị cực kỳ hoành tráng nhưng trống rỗng cô độc bên trong',
-      'Màn đuổi bắt hành động tốc độ cực đại dưới cơn mưa axit tầm tã',
-      'Cảnh đối thoại tư tưởng giằng xé cuối cùng giữa nhân vật và Siêu Intellect CyberCore'
-    ],
-    audienceProfile: 'Hội viên VIP yêu thích khoa học viễn tưởng sâu sắc, nhịp điệu dồn dập căng dực, và những bối cảnh tương lai đầy tính nghệ thuật sáng tạo.'
-  },
-  'quantum-pulse': {
-    plotAnalyze: 'AI phát hiện kịch bản xây dựng dựa trên thuyết cơ học lượng tử chuẩn xác. Càng về cuối, mức độ thắt nút kịch tính tăng dần theo đồ thị hàm mũ khi áp lực thời gian co rút tạo nên những phút kịch tính nghẹt thở.',
-    sensoryFocus: 'Cốt truyện lượng tử (9.7) dẫn dắt hoàn hảo qua nhiều chiều không gian song song đầy mê hoặc. Phối âm giao hưởng vũ trụ trầm đục bổ trợ mạnh mẽ cảm giác vô tận bí ẩn.',
-    highlights: [
-      'Phát hiện khe nứt lượng tử huyền ảo tại sa mạc Trung Á',
-      'Cảnh rượt đuổi phi tuyến tính qua các thực tại phản chiếu song hành',
-      'Màn giải cứu vũ trụ giằng xé đầy trí tuệ dưới áp suất lực nén'
-    ],
-    audienceProfile: 'Đặc biệt phù hợp khán giả ham thích giải đố trí tuệ, mảng khoa học vật lý lượng tử và những cú bẻ cua cực gắt đầy thông thái.'
-  },
-  'the-last-shadow': {
-    plotAnalyze: 'Cấu trúc kịch bản Neo-Noir cổ điển sắc sảo kết hợp mảng hành động cận chiến căng đét. Sự tương phản cốt chuyện diễn ra dồn dập bộc lộ chiều sâu bùng nổ của nhân vật chính.',
-    sensoryFocus: 'Mỹ thuật bóng tối sâu hoắm được dàn dựng tài ba. Xung âm phối khí Jazz cô độc hòa chung tiếng mưa rào nhẹ tạo cảm xúc gai góc, trần trụi nhưng thấm đẫm chất điện ảnh.',
-    highlights: [
-      'Màn đơn đấu kịch liệt cận chiến dưới màn mưa tối lạnh',
-      'Sự giằng xé tột cùng của một người cha đi tìm ánh sáng lẽ sống',
-      'Khoảng khắc đối đầu căng thăng ở xưởng đóng tàu cũ bỏ hoang'
-    ],
-    audienceProfile: 'Người hâm mộ thể loại ly kì, hành động dứt khoát duy cảm và những tác phẩm tâm lý tội phạm nặng nề gai góc.'
-  },
-  'echoes-of-silence': {
-    plotAnalyze: 'Vẽ nên bức tranh điện ảnh tinh tế, lấy đi nước mắt và sự thấu cảm cao độ từ mẫu thử. Cốt truyện tuyến tính phát triển mượt mà tựa một dòng suối âm nhạc thanh khiết vô ngần.',
-    sensoryFocus: 'Xung âm phối khúc tuyệt mĩ đạt 9.7 điểm. Sự tương quan giữa các khoảng không im lặng thâm sâu và tiếng độc tấu vĩ cầm tạo cú hích màng nhĩ đỉnh cao.',
-    highlights: [
-      'Điệu nhảy ballet thầm lặng mê hoặc giữa nhà hát hoang phế',
-      'Hòa nhạc vĩ cầm da diết dưới bầu trời tuyết rơi tràn đầy ký ức u buồn',
-      'Phút giây giao cảm tuyệt đối khi hai tâm hồn dung hợp vượt ranh giới giác quan'
-    ],
-    audienceProfile: 'Những khán giả lãng mạn, nhạy cảm sở hữu cảm quan nghệ thuật duy mỹ cao, yêu thích âm nhạc cổ điển tinh túy.'
-  },
-  'zenith-of-dreams': {
-    plotAnalyze: 'Hành trình phiêu lưu thắp sáng hy vọng được thiết kế kỳ công. Các tình tiết cao trào được đan cài khéo léo bên dưới nét vẽ hoạt họa mộng mị đầy màu sắc rạng ngời.',
-    sensoryFocus: 'Mỹ thuật thị giác hoàn mỹ đạt 9.8 điểm. Các tông màu rực rỡ hoàng hôn đượm buồn xen lẫn sóng mây ngũ sắc tạo cảm giác ấm áp dễ chịu, vô cùng thanh lọc tâm hồn.',
-    highlights: [
-      'Màn lượn bay qua những lâu đài mây lửng lơ thần tiên',
-      'Khoảnh khắc thắp lại ngọn Hải Đăng Hy Vọng đánh thức vạn vật',
-      'Cuộc chạm trán đầy ngộ nghĩnh và đầy ẩn ý triết lý với Quái Thú Quên Lãng'
-    ],
-    audienceProfile: 'Bộ phim gia đình hoàn hảo dành cho mọi lứa tuổi, mở rộng thế giới quan và khơi dậy sức mạnh ước mơ thuần khiết.'
-  }
-};
+const movieAiReports = {};
 
 export default function DetailView() {
   const navigate = useNavigate();
@@ -134,11 +81,10 @@ export default function DetailView() {
     }
   };
 
-  // Load reviews on movie load
+  // Reviews are user-generated; do not seed frontend mock reviews.
   useEffect(() => {
     if (!movie) return;
-    const list = moviesReviews[movie.id] || [];
-    setReviews(list);
+    setReviews([]);
   }, [movie]);
 
   // Emotional Waveform animation canvas drawing logic
@@ -371,7 +317,13 @@ export default function DetailView() {
 
   if (!movie) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Đang tải...</div>;
 
-  const currentCasts = castData[movie.id] || castData['neon-horizon'];
+  const currentCasts = Array.isArray(movie.actors)
+    ? movie.actors.map((actor) => ({
+        name: actor.name || actor.fullName || actor.actorName || 'Diễn viên',
+        role: actor.role || actor.characterName || actor.description || 'Diễn viên',
+        avatarUrl: actor.avatarUrl || actor.imageUrl || actor.photoUrl || ''
+      }))
+    : [];
 
   return (
     <div className="pb-24 space-y-12">
@@ -503,15 +455,26 @@ export default function DetailView() {
             <div className="space-y-4">
               <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-neutral-400 border-b border-white/10 pb-2">DIỄN VIÊN CHÍNH</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" id="cast-list">
+                {currentCasts.length === 0 && (
+                  <p className="col-span-full border border-dashed border-white/10 bg-black p-4 text-xs text-neutral-500">
+                    Chưa có dữ liệu diễn viên từ hệ thống.
+                  </p>
+                )}
                 {currentCasts.map((cast) => (
                   <div key={cast.name} className="flex items-center space-x-3 bg-[#0A0A0A] p-3 border border-white/5">
                     <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-neutral-950 flex-shrink-0">
-                      <img 
-                        src={cast.avatarUrl} 
-                        alt={cast.name}
-                        className="h-full w-full object-cover grayscale"
-                        referrerPolicy="no-referrer"
-                      />
+                      {cast.avatarUrl ? (
+                        <img
+                          src={cast.avatarUrl}
+                          alt={cast.name}
+                          className="h-full w-full object-cover grayscale"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs font-black text-neutral-500">
+                          {cast.name.slice(0, 1)}
+                        </div>
+                      )}
                     </div>
                     <div className="min-w-0">
                       <h4 className="text-xs font-sans text-white truncate font-bold">{cast.name}</h4>

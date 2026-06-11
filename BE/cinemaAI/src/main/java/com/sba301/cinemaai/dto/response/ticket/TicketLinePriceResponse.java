@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.dto.response.ticket;
 
 import com.sba301.cinemaai.enums.TicketType;
+import com.sba301.cinemaai.util.MessageTranslator;
 import java.math.BigDecimal;
 
 public record TicketLinePriceResponse(
@@ -12,4 +13,7 @@ public record TicketLinePriceResponse(
         boolean eligible,
         String message
 ) {
+    public TicketLinePriceResponse {
+        message = MessageTranslator.translate(message);
+    }
 }

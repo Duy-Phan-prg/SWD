@@ -135,7 +135,7 @@ class CinemaShowtimeIntegrationTests {
                                 RoomStatus.ACTIVE
                         ))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Room name already exists in this cinema"));
+                .andExpect(jsonPath("$.message").value("Tên phòng chiếu đã tồn tại trong rạp này"));
 
         String seatResponse = mockMvc.perform(post("/api/v1/admin/rooms/{roomId}/seats/generate", roomId)
                         .header("Authorization", "Bearer " + token)
@@ -167,7 +167,7 @@ class CinemaShowtimeIntegrationTests {
                                 )
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Seat layout has 4 rows, but room allows at most 3 rows"));
+                .andExpect(jsonPath("$.message").value("Sơ đồ ghế có 4 hàng, nhưng phòng chỉ cho phép tối đa 3 hàng"));
 
         Long seatId = objectMapper.readTree(seatResponse).at("/data/0/id").asLong();
         mockMvc.perform(put("/api/v1/admin/rooms/{roomId}/seats", roomId)
@@ -184,7 +184,7 @@ class CinemaShowtimeIntegrationTests {
                                 ))
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Couple seat row A must have an even number of seats"));
+                .andExpect(jsonPath("$.message").value("Hàng ghế đôi A phải có số ghế chẵn"));
 
         mockMvc.perform(put("/api/v1/admin/rooms/seats/{seatId}", seatId)
                         .header("Authorization", "Bearer " + token)
@@ -255,7 +255,7 @@ class CinemaShowtimeIntegrationTests {
                                 ShowtimeStatus.OPEN
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Showtime start time must be in the future"));
+                .andExpect(jsonPath("$.message").value("Dữ liệu không hợp lệ"));
 
         mockMvc.perform(post("/api/v1/admin/showtimes")
                         .header("Authorization", "Bearer " + token)
@@ -270,7 +270,7 @@ class CinemaShowtimeIntegrationTests {
                                 ShowtimeStatus.COMPLETED
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("New showtime status must be SCHEDULED or OPEN"));
+                .andExpect(jsonPath("$.message").value("Trạng thái suất chiếu mới phải là SCHEDULED hoặc OPEN"));
 
         Long inactiveRoomId = createCustomRoom(token);
         Room inactiveRoom = roomRepository.findById(inactiveRoomId).orElseThrow();
@@ -290,13 +290,13 @@ class CinemaShowtimeIntegrationTests {
                                 ShowtimeStatus.OPEN
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Cannot schedule showtime in a room that is not active"));
+                .andExpect(jsonPath("$.message").value("Không thể lên lịch suất chiếu trong phòng không hoạt động"));
 
         mockMvc.perform(patch("/api/v1/admin/showtimes/{showtimeId}/status", showtimeId)
                         .header("Authorization", "Bearer " + token)
                         .param("status", "COMPLETED"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Cannot complete a showtime before it has ended"));
+                .andExpect(jsonPath("$.message").value("Không thể hoàn tất suất chiếu trước khi kết thúc"));
 
         Long comboId = createTicketPricing(token);
 
@@ -324,7 +324,7 @@ class CinemaShowtimeIntegrationTests {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.eligible").value(false))
-                .andExpect(jsonPath("$.data.tickets[0].message").value("Viewer age does not meet movie age rating 13+"));
+                .andExpect(jsonPath("$.data.tickets[0].message").value("Tuổi người xem chưa đáp ứng giới hạn độ tuổi của phim 13+"));
 
         mockMvc.perform(post("/api/v1/admin/showtimes")
                         .header("Authorization", "Bearer " + token)
@@ -367,7 +367,7 @@ class CinemaShowtimeIntegrationTests {
                                 ShowtimeStatus.OPEN
                         ))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Cannot update showtime because it has active bookings"));
+                .andExpect(jsonPath("$.message").value("Không thể cập nhật suất chiếu vì đang có đặt vé hoạt động"));
 
         mockMvc.perform(patch("/api/v1/admin/showtimes/{showtimeId}/status", showtimeId)
                         .header("Authorization", "Bearer " + token)
@@ -435,7 +435,7 @@ class CinemaShowtimeIntegrationTests {
                         .header("Authorization", "Bearer " + token)
                         .param("status", "OPEN"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Cannot change status of a cancelled showtime"));
+                .andExpect(jsonPath("$.message").value("Không thể đổi trạng thái suất chiếu đã hủy"));
     }
 
     private Long createCinema(String token) throws Exception {
@@ -515,6 +515,7 @@ class CinemaShowtimeIntegrationTests {
                         .content(objectMapper.writeValueAsString(new TicketPricingRuleRequest(
                                 TicketType.ADULT,
                                 RoomType.TWO_D,
+                                SeatType.STANDARD,
                                 false,
                                 false,
                                 BigDecimal.valueOf(95000),
@@ -530,7 +531,6 @@ class CinemaShowtimeIntegrationTests {
                                 "Phase 5 Single Adult Combo " + System.nanoTime(),
                                 "One adult ticket combo for validating Phase 5 pricing.",
                                 1,
-                                0,
                                 0,
                                 0,
                                 BigDecimal.valueOf(85000),

@@ -201,7 +201,7 @@ export default function AdminTransactionsPanel({ ctx }) {
                             </tr>
                           ))}
 
-                          {/* Mocked historical seed transactions for premium simulation screen matching screenshot */}
+                          {/* Historical seed rows for the empty transaction state */}
                           <tr className="hover:bg-neutral-900/35 transition-all opacity-85">
                             <td className="py-3.5 px-4 whitespace-nowrap">
                               <div className="font-bold text-zinc-400 font-sans flex items-center gap-1.5">
@@ -210,8 +210,8 @@ export default function AdminTransactionsPanel({ ctx }) {
                               <span className="text-[10px] font-mono text-zinc-500 tracking-wider">CP-748293</span>
                             </td>
                             <td className="py-3.5 px-4">
-                              <div className="font-serif italic font-black text-xs text-zinc-400">NEON HORIZON</div>
-                              <span className="text-[9px] text-[#556268] font-mono block uppercase">Neon Horizon: Future Retrogression</span>
+                              <div className="font-serif italic font-black text-xs text-zinc-400">PHIM TỪ HỆ THỐNG</div>
+                              <span className="text-[9px] text-[#556268] font-mono block uppercase">Dữ liệu giao dịch mẫu</span>
                             </td>
                             <td className="py-3.5 px-4 font-sans text-zinc-400 whitespace-nowrap">
                               <div className="font-semibold">CinePremier Landmark 81</div>
@@ -244,8 +244,8 @@ export default function AdminTransactionsPanel({ ctx }) {
                               <span className="text-[10px] font-mono text-zinc-500 tracking-wider">CP-491028</span>
                             </td>
                             <td className="py-3.5 px-4">
-                              <div className="font-serif italic font-black text-xs text-zinc-400">ZENITH OF DREAMS</div>
-                              <span className="text-[9px] text-[#556268] font-mono block uppercase">Zenith of Dreams</span>
+                              <div className="font-serif italic font-black text-xs text-zinc-400">PHIM TỪ HỆ THỐNG</div>
+                              <span className="text-[9px] text-[#556268] font-mono block uppercase">Dữ liệu giao dịch mẫu</span>
                             </td>
                             <td className="py-3.5 px-4 font-sans text-zinc-400 whitespace-nowrap">
                               <div className="font-semibold">CinePremier West Lake</div>

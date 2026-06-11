@@ -9,7 +9,30 @@ export function UIProvider({ children }) {
   const toastTimerRef = useRef(null);
 
   const showToast = (text, durationMs = 4500, action = null, tone = 'success') => {
-    setToast({ id: Date.now(), text, durationMs, remainingMs: durationMs, action, tone });
+    let nextDuration = durationMs;
+    let nextAction = action;
+    let nextTone = tone;
+
+    if (typeof durationMs === 'string') {
+      nextTone = durationMs;
+      nextDuration = 4500;
+      nextAction = null;
+    }
+
+    if (nextTone === 'error') nextTone = 'sad';
+
+    if (!Number.isFinite(Number(nextDuration)) || Number(nextDuration) <= 0) {
+      nextDuration = 4500;
+    }
+
+    setToast({
+      id: Date.now(),
+      text,
+      durationMs: Number(nextDuration),
+      remainingMs: Number(nextDuration),
+      action: nextAction,
+      tone: nextTone
+    });
   };
 
   useEffect(() => {

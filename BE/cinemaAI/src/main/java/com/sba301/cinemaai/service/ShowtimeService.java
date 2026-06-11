@@ -29,8 +29,10 @@ import com.sba301.cinemaai.repository.ShowtimeRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -122,10 +124,11 @@ public class ShowtimeService {
         Room room = roomService.findById(request.roomId());
         LocalDateTime endTime = calculateEndTime(movie, request.startTime());
         validateShowtime(movie, request.startTime(), room, endTime, null);
+        validateChildTicketPricingAllowed(movie, request.childStandardPrice(), request.childVipPrice(), request.childCouplePrice());
         validateInitialStatus(request.status());
 
         Showtime showtime = new Showtime(movie, room, request.startTime(), endTime, request.basePrice());
-        showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
+        applyPricing(showtime, request);
         showtime.changeStatus(request.status() == null ? ShowtimeStatus.SCHEDULED : request.status());
         return cinemaMapper.toShowtimeResponse(showtimeRepository.save(showtime));
     }
@@ -142,6 +145,7 @@ public class ShowtimeService {
         if (movie.getStatus() == MovieStatus.INACTIVE) {
             throw new BadRequestException("Cannot schedule inactive movie");
         }
+        validateChildTicketPricingAllowed(movie, request.childStandardPrice(), request.childVipPrice(), request.childCouplePrice());
         validateInitialStatus(request.defaultStatus());
 
         ShowtimeStatus fallbackStatus = request.defaultStatus() == null
@@ -150,20 +154,25 @@ public class ShowtimeService {
 
         List<ShowtimeResponse> results = new java.util.ArrayList<>();
 
+        Set<String> roomStartTimesInRequest = new HashSet<>();
         for (int i = 0; i < request.slots().size(); i++) {
             BulkShowtimeRequest.Slot slot = request.slots().get(i);
             String slotLabel = "Slot " + (i + 1);
             Room room = roomService.findById(slot.roomId());
 
             if (room.getStatus() != RoomStatus.ACTIVE) {
-                throw new BadRequestException(slotLabel + ": room id=" + slot.roomId() + " is not active");
+                throw new BadRequestException(slotLabel + ": room " + room.getName() + " is not active");
             }
             if (!slot.startTime().isAfter(LocalDateTime.now())) {
                 throw new BadRequestException(slotLabel + ": start time must be in the future");
             }
+            if (!roomStartTimesInRequest.add(slot.roomId() + "|" + slot.startTime())) {
+                throw new ConflictException(slotLabel + ": room " + room.getName()
+                        + " already has another selected slot at " + slot.startTime());
+            }
             LocalDateTime endTime = calculateEndTime(movie, slot.startTime());
             if (hasOverlappingShowtime(room, slot.startTime(), endTime, null)) {
-                throw new ConflictException(slotLabel + ": room id=" + slot.roomId()
+                throw new ConflictException(slotLabel + ": room " + room.getName()
                         + " already has an overlapping showtime at " + slot.startTime());
             }
 
@@ -171,7 +180,7 @@ public class ShowtimeService {
             validateInitialStatus(slotStatus);
 
             Showtime showtime = new Showtime(movie, room, slot.startTime(), endTime, request.basePrice());
-            showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
+            applyPricing(showtime, request);
             showtime.changeStatus(slotStatus);
             results.add(cinemaMapper.toShowtimeResponse(showtimeRepository.save(showtime)));
         }
@@ -187,11 +196,12 @@ public class ShowtimeService {
         Room room = roomService.findById(request.roomId());
         LocalDateTime endTime = calculateEndTime(movie, request.startTime());
         validateShowtime(movie, request.startTime(), room, endTime, id);
+        validateChildTicketPricingAllowed(movie, request.childStandardPrice(), request.childVipPrice(), request.childCouplePrice());
         ShowtimeStatus requestedStatus = request.status() == null ? showtime.getStatus() : request.status();
         validateStatusTransition(showtime, requestedStatus);
 
         showtime.reschedule(request.startTime(), endTime);
-        showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
+        applyPricing(showtime, request);
         showtime.changeStatus(requestedStatus);
         return cinemaMapper.toShowtimeResponse(showtime);
     }
@@ -272,7 +282,7 @@ public class ShowtimeService {
             throw new BadRequestException("Cannot schedule inactive movie");
         }
         if (room.getStatus() != RoomStatus.ACTIVE) {
-            throw new BadRequestException("Cannot schedule showtime in a room that is not active");
+            throw new BadRequestException("Cannot schedule showtime in room " + room.getName() + " because it is not active");
         }
         if (!startTime.isAfter(LocalDateTime.now())) {
             throw new BadRequestException("Showtime start time must be in the future");
@@ -281,13 +291,27 @@ public class ShowtimeService {
             throw new BadRequestException("Showtime end time must be after start time");
         }
         if (hasOverlappingShowtime(room, startTime, endTime, excludeId)) {
-            throw new ConflictException("Room already has an overlapping showtime");
+            throw new ConflictException("Room " + room.getName() + " already has an overlapping showtime");
         }
     }
 
     private boolean hasOverlappingShowtime(Room room, LocalDateTime startTime,
                                            LocalDateTime endTime, Long excludeId) {
         return showtimeRepository.existsOverlapping(room, startTime, endTime, excludeId);
+    }
+
+    private void validateChildTicketPricingAllowed(
+            Movie movie,
+            java.math.BigDecimal childStandardPrice,
+            java.math.BigDecimal childVipPrice,
+            java.math.BigDecimal childCouplePrice
+    ) {
+        if (movie.getAgeRating() == null || movie.getAgeRating().getMinimumAge() < 16) {
+            return;
+        }
+        if (childStandardPrice != null || childVipPrice != null || childCouplePrice != null) {
+            throw new BadRequestException("Child tickets are not allowed for movies rated 16+ or higher");
+        }
     }
 
     private void validateInitialStatus(ShowtimeStatus status) {
@@ -369,6 +393,40 @@ public class ShowtimeService {
 
     private LocalDateTime calculateEndTime(Movie movie, LocalDateTime startTime) {
         return startTime.plusMinutes(movie.getDurationMinutes()).plusMinutes(CLEANUP_MINUTES);
+    }
+
+    private void applyPricing(Showtime showtime, ShowtimeRequest request) {
+        showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
+        showtime.changeTicketPrices(
+                request.adultStandardPrice(),
+                request.childStandardPrice(),
+                request.studentStandardPrice(),
+                request.adultVipPrice(),
+                request.childVipPrice(),
+                request.studentVipPrice(),
+                request.adultCouplePrice(),
+                request.childCouplePrice(),
+                request.studentCouplePrice(),
+                Boolean.TRUE.equals(request.weekendSurcharge()),
+                Boolean.TRUE.equals(request.holidaySurcharge())
+        );
+    }
+
+    private void applyPricing(Showtime showtime, BulkShowtimeRequest request) {
+        showtime.changePrices(request.basePrice(), request.vipPrice(), request.couplePrice());
+        showtime.changeTicketPrices(
+                request.adultStandardPrice(),
+                request.childStandardPrice(),
+                request.studentStandardPrice(),
+                request.adultVipPrice(),
+                request.childVipPrice(),
+                request.studentVipPrice(),
+                request.adultCouplePrice(),
+                request.childCouplePrice(),
+                request.studentCouplePrice(),
+                Boolean.TRUE.equals(request.weekendSurcharge()),
+                Boolean.TRUE.equals(request.holidaySurcharge())
+        );
     }
 
     private String resolveRuntimeStatus(Seat seat, Map<Long, BookingSeat> runtimeSeats) {

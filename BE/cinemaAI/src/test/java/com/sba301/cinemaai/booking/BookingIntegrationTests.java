@@ -305,6 +305,7 @@ class BookingIntegrationTests {
                         .content(objectMapper.writeValueAsString(new TicketPricingRuleRequest(
                                 TicketType.ADULT,
                                 RoomType.TWO_D,
+                                SeatType.STANDARD,
                                 false,
                                 false,
                                 BigDecimal.valueOf(95000),

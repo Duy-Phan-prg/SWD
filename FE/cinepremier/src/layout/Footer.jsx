@@ -14,7 +14,9 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
   };
 
   return (
-    <footer className="border-t border-white/10 bg-black text-neutral-400 py-16 px-4 sm:px-6 lg:px-8">
+    <footer className="mythic-footer border-t border-white/10 bg-black text-neutral-400 py-16 px-4 sm:px-6 lg:px-8">
+      <span className="mythic-footer-symbol mythic-footer-dragon" aria-hidden="true">龍</span>
+      <span className="mythic-footer-symbol mythic-footer-phoenix" aria-hidden="true">鳳</span>
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
 

@@ -92,7 +92,7 @@ export default function AuthModal({
     .filter(Boolean);
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const isCurrentOriginConfigured = !googleAllowedOrigins.length || googleAllowedOrigins.includes(currentOrigin);
-  const googleSetupHelp = `Origin hien tai: ${currentOrigin}. Hay them dung origin nay vao Google Cloud Console > OAuth Client > Authorized JavaScript origins.`;
+  const googleSetupHelp = `Origin hiện tại: ${currentOrigin}. Hãy thêm đúng origin này vào Google Cloud Console > OAuth Client > Authorized JavaScript origins.`;
 
   // Password Login States
   const [loginEmail, setLoginEmail] = useState('');
@@ -145,6 +145,13 @@ export default function AuthModal({
     googleButtonRef.current = node;
     setGoogleButtonHostReady(Boolean(node));
   }, []);
+
+  const resetGoogleButton = () => {
+    if (googleButtonRef.current) {
+      googleButtonRef.current.innerHTML = '';
+    }
+    setGoogleButtonReady(false);
+  };
 
   const loadGoogleIdentityScript = () => {
     if (typeof window === 'undefined') {
@@ -235,7 +242,7 @@ export default function AuthModal({
       return;
     }
     if (!isCurrentOriginConfigured) {
-      setGoogleButtonError(`Google Sign-In chua duoc cau hinh cho origin nay. ${googleSetupHelp}`);
+      setGoogleButtonError(`Google Sign-In chưa được cấu hình cho origin này. ${googleSetupHelp}`);
       return undefined;
     }
     if (!googleButtonHostReady) return undefined;
@@ -245,11 +252,9 @@ export default function AuthModal({
 
     frameId = window.requestAnimationFrame(() => {
       renderGoogleSignInButton()
-        .then(() => {
-          if (cancelled) return;
-        })
         .catch((error) => {
           if (!cancelled) {
+            resetGoogleButton();
             setGoogleButtonError(error.message || 'Không thể hiển thị nút Google.');
           }
         });
@@ -472,7 +477,7 @@ export default function AuthModal({
       return;
     }
     if (!isCurrentOriginConfigured) {
-      showToast('error', `Google Sign-In chua duoc cau hinh cho origin nay. ${googleSetupHelp}`);
+      showToast('error', `Google Sign-In chưa được cấu hình cho origin này. ${googleSetupHelp}`);
       return;
     }
 
@@ -480,14 +485,14 @@ export default function AuthModal({
     setGoogleButtonError('');
     try {
       const rendered = await renderGoogleSignInButton();
-      if (window.google?.accounts?.id?.prompt) {
-        window.google.accounts.id.prompt();
-      }
       if (!rendered) {
-        showToast('error', 'Google Sign-In chua san sang. Vui long thu lai.');
+        showToast('error', 'Google Sign-In chưa sẵn sàng. Vui lòng thử lại.');
+        return;
       }
+      showToast('success', 'Nút Google đã sẵn sàng. Vui lòng bấm lại nút Google để tiếp tục.');
     } catch (error) {
-      showToast('error', error.message || 'Khong the khoi tao Google Sign-In.');
+      resetGoogleButton();
+      showToast('error', error.message || 'Không thể khởi tạo Google Sign-In.');
     }
   };
 
@@ -826,7 +831,7 @@ export default function AuthModal({
                         <input
                           type="text"
                           required
-                          placeholder="Enter your email..."
+                          placeholder="Nhập email của bạn..."
                           value={loginEmail}
                           onChange={(e) => setLoginEmail(e.target.value)}
                           className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-4 text-xs font-sans text-white focus:outline-none transition-all placeholder-neutral-500"
@@ -897,7 +902,7 @@ export default function AuthModal({
                         className="google-signin-fallback absolute inset-0 flex h-[52px] w-full items-center justify-center gap-3 bg-white px-4 text-xs font-black uppercase tracking-[0.15em] text-neutral-800"
                       >
                         <span className="flex h-5 w-5 items-center justify-center text-base font-black text-blue-600">G</span>
-                        Dang nhap bang Google
+                        Đăng nhập bằng Google
                       </button>
                     )}
                     {googleButtonError && (

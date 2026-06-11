@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { movies } from '../services/cinemaData';
 import { authApi, getStoredAuth } from '../services/authApi';
 import { useUI } from './UIContext';
 import { useAuth } from './AuthContext';
@@ -8,11 +7,11 @@ import { useAuth } from './AuthContext';
 const MoviesContext = createContext(null);
 
 export function MoviesProvider({ children }) {
-  const [moviesList, setMoviesList] = useState(movies);
+  const [moviesList, setMoviesList] = useState([]);
   const [moviePagination, setMoviePagination] = useState({
     page: 0, size: 8,
-    totalPages: Math.max(1, Math.ceil(movies.length / 8)),
-    totalElements: movies.length,
+    totalPages: 1,
+    totalElements: 0,
   });
   const [isMoviesLoading, setIsMoviesLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

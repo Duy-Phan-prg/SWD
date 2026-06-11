@@ -6,7 +6,7 @@ import {
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
   BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
 } from 'lucide-react';
-import { authApi, getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
+import { authApi, expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
 import AdminMoviesPanel from './admin/AdminMoviesPanel';
 import AdminGenresPanel from './admin/AdminGenresPanel';
@@ -46,7 +46,7 @@ export default function AdminDashboard({
 }) {
   const [activeTab, setActiveTab] = useState(initialSection || 'overview'); // 'overview' | 'movies' | 'genres' | 'foods' | 'homepage' | 'showtimes' | 'transactions' | 'users' | 'ai-analysis'
   const [openNavGroup, setOpenNavGroup] = useState(getNavGroup(initialSection));
-  const [selectedAnalysisMovieId, setSelectedAnalysisMovieId] = useState(moviesList[0]?.id || 'neon-horizon');
+  const [selectedAnalysisMovieId, setSelectedAnalysisMovieId] = useState(moviesList[0]?.id || '');
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [analysisScrambleOffset, setAnalysisScrambleOffset] = useState({
     overall: 0,
@@ -430,9 +430,11 @@ export default function AdminDashboard({
   };
 
   const getAdminToken = (notify = true) => {
+    const sessionExpiredMessage = 'Phiên quản trị đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.';
     const { accessToken, user } = getStoredAuth();
     if (!accessToken) {
-      if (notify) showToast('Phiên quản trị đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.');
+      if (notify) showToast(sessionExpiredMessage);
+      expireAuthSession();
       return null;
     }
 
@@ -447,7 +449,8 @@ export default function AdminDashboard({
     const isTokenExpired = tokenPayload?.exp ? tokenPayload.exp * 1000 <= Date.now() : false;
 
     if (isTokenExpired) {
-      if (notify) showToast('Phiên quản trị đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.');
+      if (notify) showToast(sessionExpiredMessage);
+      expireAuthSession();
       return null;
     }
 
@@ -1531,7 +1534,6 @@ export default function AdminDashboard({
               </span>
               {activeTab === 'showtimes' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
             </button>
-
             <button
               onClick={() => { playPulseSound(500, 'sine', 0.05); changeAdminSection('transactions'); }}
               className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'transactions'

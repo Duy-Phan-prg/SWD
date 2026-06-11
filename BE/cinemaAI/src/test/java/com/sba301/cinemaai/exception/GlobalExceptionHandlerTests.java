@@ -45,7 +45,7 @@ class GlobalExceptionHandlerTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(header().exists("X-Correlation-Id"))
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.message").value("Dữ liệu không hợp lệ"))
                 .andExpect(jsonPath("$.errors[0].field").value("name"));
     }
 

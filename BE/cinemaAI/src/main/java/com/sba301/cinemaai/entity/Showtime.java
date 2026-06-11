@@ -2,6 +2,7 @@ package com.sba301.cinemaai.entity;
 
 import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
+import com.sba301.cinemaai.enums.TicketType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -60,6 +61,39 @@ public class Showtime extends BaseEntity {
     @Column(name = "couple_price", precision = 12, scale = 2)
     private BigDecimal couplePrice;
 
+    @Column(name = "adult_standard_price", precision = 12, scale = 2)
+    private BigDecimal adultStandardPrice;
+
+    @Column(name = "child_standard_price", precision = 12, scale = 2)
+    private BigDecimal childStandardPrice;
+
+    @Column(name = "student_standard_price", precision = 12, scale = 2)
+    private BigDecimal studentStandardPrice;
+
+    @Column(name = "adult_vip_price", precision = 12, scale = 2)
+    private BigDecimal adultVipPrice;
+
+    @Column(name = "child_vip_price", precision = 12, scale = 2)
+    private BigDecimal childVipPrice;
+
+    @Column(name = "student_vip_price", precision = 12, scale = 2)
+    private BigDecimal studentVipPrice;
+
+    @Column(name = "adult_couple_price", precision = 12, scale = 2)
+    private BigDecimal adultCouplePrice;
+
+    @Column(name = "child_couple_price", precision = 12, scale = 2)
+    private BigDecimal childCouplePrice;
+
+    @Column(name = "student_couple_price", precision = 12, scale = 2)
+    private BigDecimal studentCouplePrice;
+
+    @Column(name = "weekend_surcharge", nullable = false)
+    private boolean weekendSurcharge;
+
+    @Column(name = "holiday_surcharge", nullable = false)
+    private boolean holidaySurcharge;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ShowtimeStatus status = ShowtimeStatus.SCHEDULED;
@@ -85,14 +119,95 @@ public class Showtime extends BaseEntity {
         this.basePrice = basePrice;
         this.vipPrice = vipPrice;
         this.couplePrice = couplePrice;
+        this.adultStandardPrice = basePrice;
+        this.adultVipPrice = vipPrice != null ? vipPrice : basePrice.add(BigDecimal.valueOf(20_000));
+        this.adultCouplePrice = couplePrice != null ? couplePrice : basePrice.add(BigDecimal.valueOf(30_000));
     }
 
     public BigDecimal getPriceForSeatType(SeatType seatType) {
-        return switch (seatType) {
+        return getPriceForTicketAndSeatType(TicketType.ADULT, seatType);
+    }
+
+    public void changeTicketPrices(
+            BigDecimal adultStandardPrice,
+            BigDecimal childStandardPrice,
+            BigDecimal studentStandardPrice,
+            BigDecimal adultVipPrice,
+            BigDecimal childVipPrice,
+            BigDecimal studentVipPrice,
+            BigDecimal adultCouplePrice,
+            BigDecimal childCouplePrice,
+            BigDecimal studentCouplePrice,
+            boolean weekendSurcharge,
+            boolean holidaySurcharge
+    ) {
+        this.adultStandardPrice = defaultMoney(adultStandardPrice, basePrice);
+        this.childStandardPrice = defaultMoney(childStandardPrice, this.adultStandardPrice);
+        this.studentStandardPrice = defaultMoney(studentStandardPrice, this.adultStandardPrice);
+        this.adultVipPrice = defaultMoney(adultVipPrice, this.adultStandardPrice.add(BigDecimal.valueOf(20_000)));
+        this.childVipPrice = defaultMoney(childVipPrice, this.childStandardPrice.add(BigDecimal.valueOf(20_000)));
+        this.studentVipPrice = defaultMoney(studentVipPrice, this.studentStandardPrice.add(BigDecimal.valueOf(20_000)));
+        this.adultCouplePrice = defaultMoney(adultCouplePrice, this.adultStandardPrice.add(BigDecimal.valueOf(30_000)));
+        this.childCouplePrice = defaultMoney(childCouplePrice, this.childStandardPrice.add(BigDecimal.valueOf(30_000)));
+        this.studentCouplePrice = defaultMoney(studentCouplePrice, this.studentStandardPrice.add(BigDecimal.valueOf(30_000)));
+        this.weekendSurcharge = weekendSurcharge;
+        this.holidaySurcharge = holidaySurcharge;
+        this.basePrice = this.adultStandardPrice;
+        this.vipPrice = this.adultVipPrice;
+        this.couplePrice = this.adultCouplePrice;
+    }
+
+    public BigDecimal getPriceForTicketAndSeatType(TicketType ticketType, SeatType seatType) {
+        BigDecimal configured = switch (ticketType) {
+            case CHILD -> switch (normalizeSeatType(seatType)) {
+                case VIP -> childVipPrice;
+                case COUPLE -> childCouplePrice;
+                default -> childStandardPrice;
+            };
+            case STUDENT -> switch (normalizeSeatType(seatType)) {
+                case VIP -> studentVipPrice;
+                case COUPLE -> studentCouplePrice;
+                default -> studentStandardPrice;
+            };
+            default -> switch (normalizeSeatType(seatType)) {
+                case VIP -> adultVipPrice;
+                case COUPLE -> adultCouplePrice;
+                default -> adultStandardPrice;
+            };
+        };
+        BigDecimal fallback = switch (normalizeSeatType(seatType)) {
             case VIP    -> vipPrice    != null ? vipPrice    : basePrice.multiply(new BigDecimal("1.5"));
             case COUPLE -> couplePrice != null ? couplePrice : basePrice.multiply(new BigDecimal("2.0"));
             default     -> basePrice;
         };
+        return defaultMoney(configured, fallback).add(getSurchargeAmount());
+    }
+
+    public BigDecimal getSurchargeAmount() {
+        BigDecimal surcharge = BigDecimal.ZERO;
+        if (weekendSurcharge) {
+            surcharge = surcharge.add(BigDecimal.valueOf(10_000));
+        }
+        if (holidaySurcharge) {
+            surcharge = surcharge.add(BigDecimal.valueOf(10_000));
+        }
+        if (isLateNight()) {
+            surcharge = surcharge.add(BigDecimal.valueOf(20_000));
+        }
+        return surcharge;
+    }
+
+    private boolean isLateNight() {
+        int hour = startTime.getHour();
+        return hour >= 23 || hour < 5;
+    }
+
+    private SeatType normalizeSeatType(SeatType seatType) {
+        return seatType == SeatType.NORMAL ? SeatType.STANDARD : seatType;
+    }
+
+    private BigDecimal defaultMoney(BigDecimal value, BigDecimal fallback) {
+        return value != null ? value : fallback;
     }
 
     public void changeStatus(ShowtimeStatus status) {

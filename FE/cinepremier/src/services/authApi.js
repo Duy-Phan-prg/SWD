@@ -24,6 +24,7 @@ export const hasBackendAdminAccess = (accessToken, user = null) => {
   if (!accessToken || isTokenExpired) return false;
 
   const roleValues = [
+    user?.role,
     ...(Array.isArray(user?.roles) ? user.roles : []),
     ...(Array.isArray(tokenPayload?.roles) ? tokenPayload.roles : []),
     ...(Array.isArray(tokenPayload?.authorities) ? tokenPayload.authorities : []),
@@ -117,8 +118,7 @@ const request = async (path, { method = 'GET', body, token } = {}) => {
       return parseResponse(retryResponse);
     }
     // Refresh cũng fail → session hết hạn hoàn toàn, báo app logout
-    clearAuthSession();
-    window.dispatchEvent(new CustomEvent('auth:session-expired'));
+    expireAuthSession();
     const error = new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
     error.status = 401;
     throw error;
@@ -277,6 +277,11 @@ export const saveAuthSession = (authData) => {
 
 export const clearAuthSession = () => {
   Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+};
+
+export const expireAuthSession = () => {
+  clearAuthSession();
+  window.dispatchEvent(new CustomEvent('auth:session-expired'));
 };
 
 export const getStoredAuth = () => {
@@ -481,7 +486,18 @@ export const authApi = {
   updateAdminShowtimeStatus: (token, showtimeId, status) => request(`/api/v1/admin/showtimes/${showtimeId}/status?status=${encodeURIComponent(status)}`, { method: 'PATCH', token }),
   deleteAdminShowtime: (token, showtimeId) => request(`/api/v1/admin/showtimes/${showtimeId}`, { method: 'DELETE', token }),
 
+  // Ticket pricing (admin)
+  getAdminTicketPricingRules: (token, params = {}) => request(`/api/v1/admin/ticket-pricing/rules${buildQueryString(params)}`, { token }),
+  createAdminTicketPricingRule: (token, payload) => request('/api/v1/admin/ticket-pricing/rules', { method: 'POST', token, body: payload }),
+  updateAdminTicketPricingRule: (token, ruleId, payload) => request(`/api/v1/admin/ticket-pricing/rules/${encodeURIComponent(ruleId)}`, { method: 'PUT', token, body: payload }),
+  deleteAdminTicketPricingRule: (token, ruleId) => request(`/api/v1/admin/ticket-pricing/rules/${encodeURIComponent(ruleId)}`, { method: 'DELETE', token }),
+  getAdminTicketCombos: (token, params = {}) => request(`/api/v1/admin/ticket-pricing/combos${buildQueryString(params)}`, { token }),
+  createAdminTicketCombo: (token, payload) => request('/api/v1/admin/ticket-pricing/combos', { method: 'POST', token, body: payload }),
+  updateAdminTicketCombo: (token, comboId, payload) => request(`/api/v1/admin/ticket-pricing/combos/${encodeURIComponent(comboId)}`, { method: 'PUT', token, body: payload }),
+  deleteAdminTicketCombo: (token, comboId) => request(`/api/v1/admin/ticket-pricing/combos/${encodeURIComponent(comboId)}`, { method: 'DELETE', token }),
+
   // Bookings
+  validateTicketPrice: (body) => request('/api/v1/ticket-pricing/validate', { method: 'POST', body }),
   holdSeats: (token, body) => request('/api/v1/bookings/hold', { method: 'POST', token, body }),
   createBooking: (token, body) => request('/api/v1/bookings', { method: 'POST', token, body }),
   getMyBookings: (token) => request('/api/v1/bookings', { token }),

@@ -7,8 +7,7 @@ import {
   Save, Trash2, Sliders, Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { movies } from '../services/cinemaData';
-import { authApi, getStoredAuth, normalizeUser } from '../services/authApi';
+import { authApi, expireAuthSession, getStoredAuth, normalizeUser } from '../services/authApi';
 import {
   MAX_NAME_LENGTH,
   NAME_VALIDATION_MESSAGE,
@@ -24,11 +23,10 @@ import { useMovies } from '../contexts/MoviesContext';
 export default function ProfileView() {
   const navigate = useNavigate();
   const { isLoggedIn, currentUser, setCurrentUser, setCurrentRole, handleLogout: onLogout } = useAuth();
-  const { showToast, setShowOTP } = useUI();
+  const { showToast } = useUI();
   const { bookedTickets } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onTabChange = (tab) => { const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets' }; navigate(paths[tab] || '/'); };
-  const onOpenOTP = () => setShowOTP(true);
   const onProfileUpdated = (user) => { setCurrentUser(user); setCurrentRole(user.role || 'user'); };
   const [profileImg, setProfileImg] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop');
   const [name, setName] = useState(currentUser?.name || 'MINH HỒNG (VIP)');
@@ -99,7 +97,7 @@ export default function ProfileView() {
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
       showToast("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-      onOpenOTP();
+      expireAuthSession();
       return;
     }
 
@@ -143,7 +141,7 @@ export default function ProfileView() {
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
       showToast("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-      onOpenOTP();
+      expireAuthSession();
       return;
     }
 
@@ -513,10 +511,7 @@ export default function ProfileView() {
                         </button>
                       ) : (
                         <button
-                          onClick={() => {
-                            const mv = movies.find(m => m.id === 'quantum-pulse') || movies[0];
-                            onSelectMovie(mv.id);
-                          }}
+                          onClick={() => onTabChange('explore')}
                           className="bg-neutral-900 border border-white/10 hover:border-white text-neutral-400 hover:text-white px-4 py-2 text-[9px] font-sans tracking-widest font-bold uppercase transition"
                         >
                           {bk.actionLabel}
