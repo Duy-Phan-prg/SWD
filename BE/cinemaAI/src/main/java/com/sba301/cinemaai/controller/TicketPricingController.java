@@ -5,6 +5,7 @@ import com.sba301.cinemaai.dto.response.ticket.TicketComboResponse;
 import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
 import com.sba301.cinemaai.dto.response.ticket.TicketPriceValidationResponse;
 import com.sba301.cinemaai.service.TicketPricingService;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class TicketPricingController {
 
     private final TicketPricingService ticketPricingService;
 
+    @Hidden
     @GetMapping("/combos")
     public ApiResponse<List<TicketComboResponse>> getActiveCombos() {
         return ApiResponse.success(ticketPricingService.getCombos(true));

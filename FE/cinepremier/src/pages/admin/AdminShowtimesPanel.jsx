@@ -31,15 +31,143 @@ const toInputDatetime = (dt) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+const toApiLocalDateTime = (value) => {
+  if (!value) return '';
+  return String(value).length === 16 ? `${value}:00` : String(value).slice(0, 19);
+};
+
+const toLocalDateInput = (date = new Date()) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const buildDateTimeOnDate = (sourceDateTime, targetDate) => {
+  if (!sourceDateTime || !targetDate) return '';
+  const source = new Date(sourceDateTime);
+  if (Number.isNaN(source.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${targetDate}T${pad(source.getHours())}:${pad(source.getMinutes())}`;
+};
+
+const isFutureDateInput = (dateValue) => {
+  if (!dateValue) return false;
+  const today = toLocalDateInput();
+  return dateValue > today;
+};
+
 const EMPTY_FORM = {
   movieId: '', roomId: '', startTime: '',
-  basePrice: '', vipPrice: '', couplePrice: '', status: 'SCHEDULED'
+  basePrice: '', vipPrice: '', couplePrice: '',
+  adultStandardPrice: '', childStandardPrice: '', studentStandardPrice: '',
+  adultVipPrice: '', childVipPrice: '', studentVipPrice: '',
+  adultCouplePrice: '', childCouplePrice: '', studentCouplePrice: '',
+  weekendSurcharge: false, holidaySurcharge: false,
+  status: 'SCHEDULED'
 };
 
 const EMPTY_BULK = {
-  movieId: '', basePrice: '', vipPrice: '', couplePrice: '', defaultStatus: 'SCHEDULED',
-  slots: [{ roomId: '', startTime: '' }]
+  movieId: '', basePrice: '', vipPrice: '', couplePrice: '',
+  adultStandardPrice: '', childStandardPrice: '', studentStandardPrice: '',
+  adultVipPrice: '', childVipPrice: '', studentVipPrice: '',
+  adultCouplePrice: '', childCouplePrice: '', studentCouplePrice: '',
+  weekendSurcharge: false, holidaySurcharge: false,
+  defaultStatus: 'SCHEDULED',
+  slots: [{ roomId: '', startTime: '', selected: true }]
 };
+
+const PRICE_ROWS = [
+  { key: 'adult', label: 'Người lớn' },
+  { key: 'child', label: 'Trẻ em' },
+  { key: 'student', label: 'Sinh viên' },
+];
+
+const PRICE_COLS = [
+  { key: 'Standard', label: 'Ghế thường', addon: 0 },
+  { key: 'Vip', label: 'VIP', addon: 20000 },
+  { key: 'Couple', label: 'Ghế đôi', addon: 30000 },
+];
+
+const priceField = (row, col) => `${row}${col}Price`;
+const priceDigits = (value) => String(value ?? '').replace(/\D/g, '');
+const toPriceNumber = (value) => Number(priceDigits(value) || 0);
+const formatPriceInput = (value) => {
+  const digits = priceDigits(value);
+  return digits ? Number(digits).toLocaleString('vi-VN') : '';
+};
+const withDerivedSeatPrices = (next, rowKey) => {
+  const standard = toPriceNumber(next[priceField(rowKey, 'Standard')]);
+  if (!standard) return next;
+  return {
+    ...next,
+    [priceField(rowKey, 'Vip')]: formatPriceInput(standard + 20000),
+    [priceField(rowKey, 'Couple')]: formatPriceInput(standard + 30000),
+  };
+};
+
+const buildShowtimePayload = (formState, allowChildTickets = true) => ({
+  basePrice: toPriceNumber(formState.adultStandardPrice || formState.basePrice),
+  vipPrice: toPriceNumber(formState.adultVipPrice) ? toPriceNumber(formState.adultVipPrice) : null,
+  couplePrice: toPriceNumber(formState.adultCouplePrice) ? toPriceNumber(formState.adultCouplePrice) : null,
+  adultStandardPrice: toPriceNumber(formState.adultStandardPrice || formState.basePrice),
+  childStandardPrice: allowChildTickets ? toPriceNumber(formState.childStandardPrice || formState.basePrice) : null,
+  studentStandardPrice: toPriceNumber(formState.studentStandardPrice || formState.basePrice),
+  adultVipPrice: toPriceNumber(formState.adultVipPrice) || toPriceNumber(formState.adultStandardPrice || formState.basePrice) + 20000,
+  childVipPrice: allowChildTickets ? toPriceNumber(formState.childVipPrice) || toPriceNumber(formState.childStandardPrice || formState.basePrice) + 20000 : null,
+  studentVipPrice: toPriceNumber(formState.studentVipPrice) || toPriceNumber(formState.studentStandardPrice || formState.basePrice) + 20000,
+  adultCouplePrice: toPriceNumber(formState.adultCouplePrice) || toPriceNumber(formState.adultStandardPrice || formState.basePrice) + 30000,
+  childCouplePrice: allowChildTickets ? toPriceNumber(formState.childCouplePrice) || toPriceNumber(formState.childStandardPrice || formState.basePrice) + 30000 : null,
+  studentCouplePrice: toPriceNumber(formState.studentCouplePrice) || toPriceNumber(formState.studentStandardPrice || formState.basePrice) + 30000,
+  weekendSurcharge: Boolean(formState.weekendSurcharge),
+  holidaySurcharge: Boolean(formState.holidaySurcharge),
+});
+
+const addMinutes = (value, minutes) => {
+  if (!value || !minutes) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setMinutes(d.getMinutes() + minutes);
+  return d;
+};
+
+const formatTimeOnly = (value) => {
+  if (!value) return '--:--';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '--:--';
+  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+};
+
+const getRoomCapacity = (room) => {
+  const direct = Number(room?.capacity ?? room?.totalSeats ?? room?.seatCount ?? room?.numberOfSeats);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const rows = Number(room?.rows);
+  const columns = Number(room?.columns ?? room?.cols);
+  return Number.isFinite(rows) && Number.isFinite(columns) ? rows * columns : 0;
+};
+
+const isNightSlot = (value) => {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  const hour = d.getHours();
+  return hour >= 23 || hour < 5;
+};
+
+const getMovieOptionId = (movie) => String(movie?.backendId ?? movie?.id ?? '');
+
+const getAgeRatingMinimum = (ageRating) => {
+  if (!ageRating) return 0;
+  const match = String(ageRating).match(/\d+/);
+  return match ? Number(match[0]) : 0;
+};
+
+const allowsChildTicketsForMovie = (movie) => getAgeRatingMinimum(movie?.ageRating) < 16;
+
+const clearChildPrices = (state) => ({
+  ...state,
+  childStandardPrice: '',
+  childVipPrice: '',
+  childCouplePrice: '',
+});
 
 /**
  * DateTimePicker
@@ -57,12 +185,12 @@ function DateTimePicker({ value, onChange, error, label }) {
   };
 
   const handleTime = (t) => {
-    const d = datePart || new Date().toISOString().split('T')[0];
+    const d = datePart || toLocalDateInput();
     onChange(`${d}T${t}`);
   };
 
   // Today's date string for min attribute
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalDateInput();
 
   return (
     <div className="space-y-2">
@@ -79,7 +207,7 @@ function DateTimePicker({ value, onChange, error, label }) {
       />
       {/* Time inputs */}
       <div className="border border-zinc-800 bg-black p-3 mt-1">
-        <p className="text-[8px] uppercase tracking-widest text-zinc-600 mb-2 font-bold">Nhập giờ chiếu</p>
+        <p className="text-[9px] uppercase tracking-widest text-zinc-300 mb-2 font-bold">Nhập giờ chiếu</p>
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <input
@@ -133,6 +261,78 @@ function DateTimePicker({ value, onChange, error, label }) {
   );
 }
 
+function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTickets = true, ageRatingLabel = '' }) {
+  const setPrice = (field, nextValue) => {
+    const next = { ...value, [field]: formatPriceInput(nextValue) };
+    const row = PRICE_ROWS.find(item => field === priceField(item.key, 'Standard'));
+    onChange(row ? withDerivedSeatPrices(next, row.key) : next);
+  };
+  const visibleRows = PRICE_ROWS.filter(row => allowChildTickets || row.key !== 'child');
+
+  return (
+    <div className="md:col-span-2 border border-zinc-900 bg-black/30 p-4 space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] uppercase tracking-widest text-amber-500 font-black">Bảng giá theo lứa tuổi</p>
+          <p className="text-[10px] text-zinc-510">Nhập giá ghế thường, hệ thống tự cộng VIP +20k và ghế đôi +30k. Bạn có thể sửa từng mục.</p>
+        </div>
+        <div className="flex gap-3 text-[9px] uppercase tracking-wider text-zinc-400">
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={Boolean(value.weekendSurcharge)}
+              onChange={e => onChange({ ...value, weekendSurcharge: e.target.checked })}
+              className="accent-amber-500" />
+            Cuối tuần +10k
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={Boolean(value.holidaySurcharge)}
+              onChange={e => onChange({ ...value, holidaySurcharge: e.target.checked })}
+              className="accent-amber-500" />
+            Ngày lễ +10k
+          </label>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-[10px]">
+          <thead>
+            <tr className="text-left text-zinc-500 uppercase tracking-wider">
+              <th className="py-2 pr-2">Loại vé</th>
+              {PRICE_COLS.map(col => <th key={col.key} className="py-2 px-2">{col.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map(row => (
+              <tr key={row.key} className="border-t border-zinc-900">
+                <td className="py-2 pr-2 text-zinc-300 font-bold uppercase whitespace-nowrap">{row.label}</td>
+                {PRICE_COLS.map(col => {
+                  const field = priceField(row.key, col.key);
+                  return (
+                    <td key={field} className="py-2 px-2">
+                      <input type="text" inputMode="numeric" value={formatPriceInput(value[field])}
+                        onChange={e => setPrice(field, e.target.value)}
+                        placeholder={col.addon ? `+${formatPriceInput(col.addon)}` : '90.000'}
+                        className="w-full bg-black border border-zinc-800 p-2 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {!allowChildTickets && (
+        <p className="text-[11px] font-black uppercase tracking-wide text-amber-300">
+          Phim {ageRatingLabel || '16+'} Không cho phép bán vé trẻ em, bảng giá mục này vô hiệu hóa!
+        </p>
+      )}
+      {['adultStandardPrice', ...(allowChildTickets ? ['childStandardPrice'] : []), 'studentStandardPrice'].map(field => (
+        errors[`${prefix}${field}`] ? <p key={field} className="text-rose-400 text-[9px]">{errors[`${prefix}${field}`]}</p> : null
+      ))}
+      <p className="text-[10px] text-zinc-400">Phụ thu đêm 23:00-04:59 được hệ thống tự cộng 20k/vé theo giờ bắt đầu suất chiếu.</p>
+    </div>
+  );
+}
+
 
 /* ─── main component ─────────────────────────────────────── */
 export default function AdminShowtimesPanel({ ctx }) {
@@ -149,12 +349,22 @@ export default function AdminShowtimesPanel({ ctx }) {
   const [mode, setMode] = useState('list'); // 'list' | 'create' | 'bulk' | 'edit'
   const [form, setForm] = useState(EMPTY_FORM);
   const [bulkForm, setBulkForm] = useState(EMPTY_BULK);
+  const [editingBulkSlotIndex, setEditingBulkSlotIndex] = useState(0);
   const [editingId, setEditingId] = useState(null);
+  const [editingStatus, setEditingStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
   const [confirmDelete, setConfirmDelete] = useState(null); // showtimeId
+  const [confirmCancel, setConfirmCancel] = useState(null); // showtime object
+  const [copySource, setCopySource] = useState(null); // showtime object
+  const [copyDate, setCopyDate] = useState('');
+  const [isCopying, setIsCopying] = useState(false);
   const [detailModal, setDetailModal] = useState(null); // showtime object
+
+  const findUiMovie = useCallback((movieId) => (
+    (moviesList || []).find(m => getMovieOptionId(m) === String(movieId))
+  ), [moviesList]);
 
   /* fetch rooms once */
   useEffect(() => {
@@ -195,25 +405,31 @@ export default function AdminShowtimesPanel({ ctx }) {
     if (!token) return;
     setErrors({});
     const errs = {};
+    const selectedMovie = findUiMovie(form.movieId);
+    const allowChildTickets = allowsChildTicketsForMovie(selectedMovie);
     if (!form.movieId) errs.movieId = 'Chọn phim';
     if (!form.roomId) errs.roomId = 'Chọn phòng';
     if (!form.startTime || isNaN(new Date(form.startTime).getTime())) errs.startTime = 'Nhập thời gian hợp lệ';
-    if (!form.basePrice) errs.basePrice = 'Nhập giá cơ bản';
+    if (!form.adultStandardPrice && !form.basePrice) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
+    if (allowChildTickets && !form.childStandardPrice) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
+    if (!form.studentStandardPrice) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     const payload = {
       movieId: Number(form.movieId),
       roomId: Number(form.roomId),
-      startTime: new Date(form.startTime).toISOString().slice(0, 19),
-      basePrice: Number(form.basePrice),
-      vipPrice: form.vipPrice ? Number(form.vipPrice) : null,
-      couplePrice: form.couplePrice ? Number(form.couplePrice) : null,
+      startTime: toApiLocalDateTime(form.startTime),
+      ...buildShowtimePayload(form, allowChildTickets),
       status: form.status || 'SCHEDULED',
     };
 
     setSaving(true);
     try {
       if (editingId) {
+        if (editingStatus === 'OPEN') {
+          showToast?.('Suất chiếu đang mở bán không thể chỉnh sửa.', 'error');
+          return;
+        }
         await authApi.updateAdminShowtime(token, editingId, payload);
         showToast?.('Cập nhật suất chiếu thành công', 'success');
       } else {
@@ -223,6 +439,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       setMode('list');
       setForm(EMPTY_FORM);
       setEditingId(null);
+      setEditingStatus('');
       fetchShowtimes(0);
     } catch (e) {
       showToast?.('Lỗi: ' + e.message, 'error');
@@ -237,24 +454,38 @@ export default function AdminShowtimesPanel({ ctx }) {
     const token = getAdminToken();
     if (!token) return;
     const errs = {};
+    const selectedMovie = findUiMovie(bulkForm.movieId);
+    const allowChildTickets = allowsChildTicketsForMovie(selectedMovie);
     if (!bulkForm.movieId) errs.movieId = 'Chọn phim';
-    if (!bulkForm.basePrice) errs.basePrice = 'Nhập giá';
-    bulkForm.slots.forEach((s, i) => {
+    if (!bulkForm.adultStandardPrice && !bulkForm.basePrice) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
+    if (allowChildTickets && !bulkForm.childStandardPrice) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
+    if (!bulkForm.studentStandardPrice) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
+    const selectedSlots = bulkForm.slots.filter(s => s.selected !== false);
+    if (!selectedSlots.length) errs.slot_selection = 'Chon it nhat mot khung gio';
+    const seenRoomStartTimes = new Set();
+    selectedSlots.forEach((s, i) => {
       if (!s.roomId) errs[`slot_room_${i}`] = 'Chọn phòng';
-      if (!s.startTime || isNaN(new Date(s.startTime).getTime())) errs[`slot_time_${i}`] = 'Nhập thời gian hợp lệ';
+      if (!s.startTime || isNaN(new Date(s.startTime).getTime())) {
+        errs[`slot_time_${i}`] = 'Nhập thời gian hợp lệ';
+        return;
+      }
+      const normalizedStart = toApiLocalDateTime(s.startTime).slice(0, 16);
+      const roomStartKey = `${s.roomId}|${normalizedStart}`;
+      if (seenRoomStartTimes.has(roomStartKey)) {
+        errs[`slot_time_${i}`] = 'Phòng này đã có slot khác cùng giờ trong danh sách đang chọn';
+      }
+      seenRoomStartTimes.add(roomStartKey);
     });
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
 
     const payload = {
       movieId: Number(bulkForm.movieId),
-      basePrice: Number(bulkForm.basePrice),
-      vipPrice: bulkForm.vipPrice ? Number(bulkForm.vipPrice) : null,
-      couplePrice: bulkForm.couplePrice ? Number(bulkForm.couplePrice) : null,
+      ...buildShowtimePayload(bulkForm, allowChildTickets),
       defaultStatus: bulkForm.defaultStatus || 'SCHEDULED',
-      slots: bulkForm.slots.map(s => ({
+      slots: selectedSlots.map(s => ({
         roomId: Number(s.roomId),
-        startTime: new Date(s.startTime).toISOString().slice(0, 19),
+        startTime: toApiLocalDateTime(s.startTime),
         status: s.status || null,
       })),
     };
@@ -266,6 +497,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       showToast?.(`Tạo thành công ${count} suất chiếu`, 'success');
       setMode('list');
       setBulkForm(EMPTY_BULK);
+      setEditingStatus('');
       fetchShowtimes(0);
     } catch (e) {
       showToast?.('Lỗi: ' + e.message, 'error');
@@ -303,8 +535,76 @@ export default function AdminShowtimesPanel({ ctx }) {
   };
 
   /* ── open edit form ── */
+  const openCopy = (st) => {
+    const sourceDate = st.startTime ? new Date(st.startTime) : new Date();
+    const target = new Date(sourceDate);
+    target.setDate(target.getDate() + 1);
+    const defaultDate = toLocalDateInput(target);
+    setCopySource(st);
+    setCopyDate(isFutureDateInput(defaultDate) ? defaultDate : '');
+    setErrors({});
+  };
+
+  const handleCopySubmit = async (event) => {
+    event.preventDefault();
+    const token = getAdminToken();
+    if (!token || !copySource) return;
+    if (!isFutureDateInput(copyDate)) {
+      setErrors({ copyDate: 'Chọn một ngày trong tương lai.' });
+      return;
+    }
+
+    const movieId = copySource.movieId ?? copySource.movie?.id;
+    const roomId = copySource.roomId ?? copySource.room?.id;
+    const nextStartTime = buildDateTimeOnDate(copySource.startTime, copyDate);
+    if (!movieId || !roomId || !nextStartTime) {
+      showToast?.('Không đủ dữ liệu phim/phòng/giờ để copy suất chiếu.', 'error');
+      return;
+    }
+
+    const payload = {
+      movieId: Number(movieId),
+      roomId: Number(roomId),
+      startTime: toApiLocalDateTime(nextStartTime),
+      basePrice: copySource.basePrice ?? copySource.adultStandardPrice ?? 0,
+      vipPrice: copySource.vipPrice ?? copySource.adultVipPrice ?? null,
+      couplePrice: copySource.couplePrice ?? copySource.adultCouplePrice ?? null,
+      adultStandardPrice: copySource.adultStandardPrice ?? copySource.basePrice ?? 0,
+      childStandardPrice: copySource.childStandardPrice ?? null,
+      studentStandardPrice: copySource.studentStandardPrice ?? copySource.basePrice ?? 0,
+      adultVipPrice: copySource.adultVipPrice ?? copySource.vipPrice ?? null,
+      childVipPrice: copySource.childVipPrice ?? null,
+      studentVipPrice: copySource.studentVipPrice ?? null,
+      adultCouplePrice: copySource.adultCouplePrice ?? copySource.couplePrice ?? null,
+      childCouplePrice: copySource.childCouplePrice ?? null,
+      studentCouplePrice: copySource.studentCouplePrice ?? null,
+      weekendSurcharge: Boolean(copySource.weekendSurcharge),
+      holidaySurcharge: Boolean(copySource.holidaySurcharge),
+      status: 'SCHEDULED',
+    };
+
+    setIsCopying(true);
+    try {
+      await authApi.createAdminShowtime(token, payload);
+      showToast?.('Đã copy suất chiếu sang ngày mới.', 'success');
+      setCopySource(null);
+      setCopyDate('');
+      setErrors({});
+      fetchShowtimes(page);
+    } catch (e) {
+      showToast?.('Lỗi: ' + e.message, 'error');
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   const openEdit = (st) => {
+    if (st.status === 'OPEN') {
+      showToast?.('Suất chiếu đang mở bán không thể chỉnh sửa.', 'error');
+      return;
+    }
     setEditingId(st.id);
+    setEditingStatus(st.status || '');
     setForm({
       movieId: st.movieId ?? st.movie?.id ?? '',
       roomId: st.roomId ?? st.room?.id ?? '',
@@ -312,6 +612,17 @@ export default function AdminShowtimesPanel({ ctx }) {
       basePrice: st.basePrice ?? '',
       vipPrice: st.vipPrice ?? '',
       couplePrice: st.couplePrice ?? '',
+      adultStandardPrice: st.adultStandardPrice ?? st.basePrice ?? '',
+      childStandardPrice: st.childStandardPrice ?? st.basePrice ?? '',
+      studentStandardPrice: st.studentStandardPrice ?? st.basePrice ?? '',
+      adultVipPrice: st.adultVipPrice ?? st.vipPrice ?? '',
+      childVipPrice: st.childVipPrice ?? '',
+      studentVipPrice: st.studentVipPrice ?? '',
+      adultCouplePrice: st.adultCouplePrice ?? st.couplePrice ?? '',
+      childCouplePrice: st.childCouplePrice ?? '',
+      studentCouplePrice: st.studentCouplePrice ?? '',
+      weekendSurcharge: Boolean(st.weekendSurcharge),
+      holidaySurcharge: Boolean(st.holidaySurcharge),
       status: st.status ?? 'SCHEDULED',
     });
     setErrors({});
@@ -319,6 +630,107 @@ export default function AdminShowtimesPanel({ ctx }) {
   };
 
   const activeMovies = (moviesList || []).filter(m => m.status === 'ACTIVE' || m.status === 'NOW_SHOWING' || m.status === 'UPCOMING');
+  const formMovie = findUiMovie(form.movieId);
+  const formAllowsChildTickets = allowsChildTicketsForMovie(formMovie);
+  const bulkMovie = (moviesList || []).find(m => String(m.backendId ?? m.id) === String(bulkForm.movieId));
+  const bulkAllowsChildTickets = allowsChildTicketsForMovie(bulkMovie);
+  const bulkMovieDuration = Number(bulkMovie?.durationMinutes ?? bulkMovie?.duration ?? 0);
+  const bulkStepMinutes = bulkMovieDuration ? bulkMovieDuration + 15 : 0;
+  const selectedBulkSlotsCount = bulkForm.slots.filter(s => s.selected !== false).length;
+  const activeBulkSlotIndex = Math.min(editingBulkSlotIndex, Math.max(bulkForm.slots.length - 1, 0));
+  const activeBulkSlot = bulkForm.slots[activeBulkSlotIndex] || EMPTY_BULK.slots[0];
+
+  const getBulkSlotEnd = (startTime) => addMinutes(startTime, bulkMovieDuration);
+
+  const getBulkSlotCapacity = (slot) => {
+    const room = rooms.find(r => String(r.id) === String(slot.roomId));
+    return getRoomCapacity(room);
+  };
+
+  const setAllBulkSlotsRoom = (roomId) => {
+    const nextSlots = (bulkForm.slots.length ? bulkForm.slots : EMPTY_BULK.slots)
+      .map(slot => ({ ...slot, roomId, selected: slot.selected !== false }));
+    setBulkForm({ ...bulkForm, slots: nextSlots });
+  };
+
+  const updateBulkSlot = (index, patch) => {
+    const nextSlots = [...bulkForm.slots];
+    nextSlots[index] = { ...nextSlots[index], ...patch };
+    setBulkForm({ ...bulkForm, slots: nextSlots });
+  };
+
+  const toggleBulkSlot = (index) => {
+    const nextSlots = [...bulkForm.slots];
+    nextSlots[index] = { ...nextSlots[index], selected: nextSlots[index].selected === false };
+    setBulkForm({ ...bulkForm, slots: nextSlots });
+  };
+
+  const addManualBulkSlot = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    const sourceSlot = bulkForm.slots[activeBulkSlotIndex] || bulkForm.slots[0] || {};
+    const firstSlot = {
+      roomId: sourceSlot.roomId || bulkForm.slots[0]?.roomId || '',
+      startTime: sourceSlot.startTime || bulkForm.slots[0]?.startTime || ''
+    };
+    const lastSlot = bulkForm.slots[bulkForm.slots.length - 1] || firstSlot;
+    const nextStart = lastSlot.startTime && bulkStepMinutes ? toInputDatetime(addMinutes(lastSlot.startTime, bulkStepMinutes)) : '';
+    const nextIndex = bulkForm.slots.length;
+    setBulkForm({
+      ...bulkForm,
+      slots: [...bulkForm.slots, { roomId: firstSlot.roomId || '', startTime: nextStart, selected: true }]
+    });
+    setEditingBulkSlotIndex(nextIndex);
+  };
+
+  const removeBulkSlot = (index) => {
+    if (bulkForm.slots.length === 1) return;
+    const nextSlots = bulkForm.slots.filter((_, j) => j !== index);
+    setBulkForm({ ...bulkForm, slots: nextSlots });
+    setEditingBulkSlotIndex(prev => Math.max(0, Math.min(prev >= index ? prev - 1 : prev, nextSlots.length - 1)));
+  };
+
+  const generateBulkSlotsForDay = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    const sourceSlot = bulkForm.slots[activeBulkSlotIndex] || bulkForm.slots[0] || {};
+    const firstSlot = {
+      roomId: sourceSlot.roomId || bulkForm.slots[0]?.roomId || '',
+      startTime: sourceSlot.startTime || bulkForm.slots[0]?.startTime || ''
+    };
+    if (!bulkForm.movieId || !firstSlot.roomId || !firstSlot.startTime) {
+      setErrors(prev => ({
+        ...prev,
+        ...(!bulkForm.movieId ? { movieId: 'Chọn phim trước khi tự tạo khung giờ.' } : {}),
+        ...(!firstSlot.roomId ? { [`slot_room_${activeBulkSlotIndex}`]: 'Chọn phòng cho slot đang sửa.' } : {}),
+        ...(!firstSlot.startTime ? { [`slot_time_${activeBulkSlotIndex}`]: 'Nhập giờ bắt đầu cho slot đang sửa.' } : {})
+      }));
+      showToast?.('Chọn phim, phòng và giờ bắt đầu đầu tiên để tự tạo khung giờ.', 'error');
+      return;
+    }
+    if (!bulkMovieDuration) {
+      showToast?.('Phim chưa có thời lượng hợp lệ.', 'error');
+      return;
+    }
+    const start = new Date(firstSlot.startTime);
+    if (Number.isNaN(start.getTime())) {
+      showToast?.('Giờ bắt đầu không hợp lệ.', 'error');
+      return;
+    }
+    const dayEnd = new Date(start);
+    dayEnd.setHours(23, 59, 59, 999);
+    const slots = [];
+    const cursor = new Date(start);
+    while (cursor <= dayEnd) {
+      slots.push({ roomId: firstSlot.roomId, startTime: toInputDatetime(cursor), selected: true });
+      cursor.setMinutes(cursor.getMinutes() + bulkStepMinutes);
+    }
+    setBulkForm({ ...bulkForm, slots });
+    setEditingBulkSlotIndex(0);
+    showToast?.(`Đã tạo ${slots.length} khung giờ trong ngày.`, 'success');
+  };
 
   /* ════════════════════════════════════════════════════════ */
   return (
@@ -327,22 +739,22 @@ export default function AdminShowtimesPanel({ ctx }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="text-sm font-black uppercase tracking-widest text-white font-sans">Quản lý Suất Chiếu</h2>
-          <p className="text-[10px] text-zinc-500 mt-0.5">Tạo, chỉnh sửa và giám sát lịch chiếu phim</p>
+          <p className="text-[13px] text-zinc-520 mt-0.5">Tạo, chỉnh sửa và giám sát lịch chiếu phim</p>
         </div>
         {mode === 'list' && (
           <div className="flex gap-2">
-            <button onClick={() => { setMode('create'); setForm(EMPTY_FORM); setEditingId(null); setErrors({}); }}
+            <button onClick={() => { setMode('create'); setForm(EMPTY_FORM); setEditingId(null); setEditingStatus(''); setErrors({}); }}
               className="flex items-center gap-1.5 px-3 py-2 bg-white text-black text-[10px] font-black uppercase tracking-wider hover:bg-zinc-200 transition">
               <Plus className="w-3 h-3" /> Tạo suất
             </button>
-            <button onClick={() => { setMode('bulk'); setBulkForm(EMPTY_BULK); setErrors({}); }}
+            <button onClick={() => { setMode('bulk'); setBulkForm(EMPTY_BULK); setEditingBulkSlotIndex(0); setEditingId(null); setEditingStatus(''); setErrors({}); }}
               className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition">
               <Zap className="w-3 h-3" /> Tạo hàng loạt
             </button>
           </div>
         )}
         {mode !== 'list' && (
-          <button onClick={() => { setMode('list'); setErrors({}); }}
+          <button onClick={() => { setMode('list'); setEditingId(null); setEditingStatus(''); setErrors({}); }}
             className="flex items-center gap-1.5 px-3 py-2 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase tracking-wider hover:border-zinc-500 transition">
             <X className="w-3 h-3" /> Hủy
           </button>
@@ -362,7 +774,11 @@ export default function AdminShowtimesPanel({ ctx }) {
               {/* Movie */}
               <div className="space-y-1.5">
                 <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phim *</label>
-                <select value={form.movieId} onChange={e => setForm({ ...form, movieId: e.target.value })}
+                <select value={form.movieId} onChange={e => {
+                  const nextMovieId = e.target.value;
+                  const nextState = { ...form, movieId: nextMovieId };
+                  setForm(allowsChildTicketsForMovie(findUiMovie(nextMovieId)) ? nextState : clearChildPrices(nextState));
+                }}
                   className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                   <option value="">-- Chọn phim --</option>
                   {(moviesList || []).map(m => (
@@ -403,31 +819,13 @@ export default function AdminShowtimesPanel({ ctx }) {
                 </select>
               </div>
 
-              {/* Prices */}
-              <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Giá cơ bản (VND) *</label>
-                <input type="number" min="1000" value={form.basePrice}
-                  onChange={e => setForm({ ...form, basePrice: e.target.value })}
-                  placeholder="90000"
-                  className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
-                {errors.basePrice && <p className="text-rose-400 text-[9px]">{errors.basePrice}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Giá Ghế VIP (VND)</label>
-                <input type="number" min="1000" value={form.vipPrice}
-                  onChange={e => setForm({ ...form, vipPrice: e.target.value })}
-                  placeholder="130000 (tùy chọn)"
-                  className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
-              </div>
-
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Giá ghế đôi (VND)</label>
-                <input type="number" min="1000" value={form.couplePrice}
-                  onChange={e => setForm({ ...form, couplePrice: e.target.value })}
-                  placeholder="160000 (tùy chọn)"
-                  className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
-              </div>
+              <PriceMatrix
+                value={form}
+                onChange={setForm}
+                errors={errors}
+                allowChildTickets={formAllowsChildTickets}
+                ageRatingLabel={formMovie?.ageRating}
+              />
 
               <div className="md:col-span-2">
                 <button type="submit" disabled={saving}
@@ -446,7 +844,7 @@ export default function AdminShowtimesPanel({ ctx }) {
             <div className="flex items-center gap-2 mb-4 pb-2 border-b border-zinc-900">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
               <h3 className="text-xs font-black uppercase tracking-wider text-amber-300">Tạo hàng loạt suất chiếu</h3>
-              <span className="text-[9px] text-zinc-500">— Cùng 1 phim, nhiều phòng/thời gian</span>
+
             </div>
             <form onSubmit={handleBulkSubmit} className="space-y-5 text-xs font-sans">
 
@@ -454,7 +852,11 @@ export default function AdminShowtimesPanel({ ctx }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phim *</label>
-                  <select value={bulkForm.movieId} onChange={e => setBulkForm({ ...bulkForm, movieId: e.target.value })}
+                  <select value={bulkForm.movieId} onChange={e => {
+                    const nextMovieId = e.target.value;
+                    const nextState = { ...bulkForm, movieId: nextMovieId };
+                    setBulkForm(allowsChildTicketsForMovie(findUiMovie(nextMovieId)) ? nextState : clearChildPrices(nextState));
+                  }}
                     className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                     <option value="">-- Chọn phim --</option>
                     {(moviesList || []).map(m => (
@@ -471,40 +873,165 @@ export default function AdminShowtimesPanel({ ctx }) {
                     <option value="OPEN">OPEN — mở bán ngay</option>
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Giá cơ bản (VND) *</label>
-                  <input type="number" value={bulkForm.basePrice} onChange={e => setBulkForm({ ...bulkForm, basePrice: e.target.value })}
-                    placeholder="90000"
-                    className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
-                  {errors.basePrice && <p className="text-rose-400 text-[9px]">{errors.basePrice}</p>}
+                <PriceMatrix
+                  value={bulkForm}
+                  onChange={setBulkForm}
+                  errors={errors}
+                  allowChildTickets={bulkAllowsChildTickets}
+                  ageRatingLabel={bulkMovie?.ageRating}
+                />
+              </div>
+
+              <div className="space-y-4 border border-zinc-900 bg-zinc-950/40 p-4">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-amber-500 font-bold">
+                      Khung giờ có thể chiếu ({selectedBulkSlotsCount}/{bulkForm.slots.length} đã chọn)
+                    </label>
+                    <p className="text-[10px] text-zinc-400 mt-1">
+                      Chọn phim, phòng và giờ bắt đầu. Hệ thống cộng thời lượng phim + 15 phút dọn phòng để sinh các ca còn lại trong ngày.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button"
+                      onClick={generateBulkSlotsForDay}
+                      className="flex items-center gap-1.5 text-[9px] text-emerald-300 border border-emerald-500/30 px-3 py-2 hover:border-emerald-400/60 hover:bg-emerald-950/20 transition">
+                      <Clock className="w-3 h-3" /> Tự tạo trong ngày
+                    </button>
+                    <button type="button"
+                      onClick={addManualBulkSlot}
+                      className="flex items-center gap-1.5 text-[9px] text-amber-300 border border-amber-500/30 px-3 py-2 hover:border-amber-400/60 hover:bg-amber-950/20 transition">
+                      <Plus className="w-3 h-3" /> Thêm slot
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <div className="space-y-1.5 flex-1">
-                    <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Giá Ghế VIP (VND)</label>
-                    <input type="number" value={bulkForm.vipPrice} onChange={e => setBulkForm({ ...bulkForm, vipPrice: e.target.value })}
-                      placeholder="VIP"
-                      className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
+
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-start">
+                  <div className="space-y-2">
+                    <label className="text-[9px] uppercase tracking-wider text-zinc-300 font-bold">Phòng chiếu *</label>
+                    <select value={activeBulkSlot?.roomId || ''}
+                      onChange={e => updateBulkSlot(activeBulkSlotIndex, { roomId: e.target.value, selected: true })}
+                      className="w-full bg-black border border-zinc-800 p-2.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400 appearance-none">
+                      <option value="">-- Chọn phòng --</option>
+                      {rooms.filter(r => r.status === 'ACTIVE').map(r => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
+                    {errors[`slot_room_${activeBulkSlotIndex}`] && <p className="text-rose-400 text-[8px]">{errors[`slot_room_${activeBulkSlotIndex}`]}</p>}
+                    <button type="button"
+                      onClick={() => setAllBulkSlotsRoom(activeBulkSlot?.roomId || '')}
+                      disabled={!activeBulkSlot?.roomId}
+                      className="text-[10px] uppercase tracking-wider text-amber-400 hover:text-amber-500 disabled:opacity-40">
+                      Áp dụng phòng này cho tất cả slot
+                    </button>
                   </div>
-                  <div className="space-y-1.5 flex-1">
-                    <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Giá ghế đôi (VND)</label>
-                    <input type="number" value={bulkForm.couplePrice} onChange={e => setBulkForm({ ...bulkForm, couplePrice: e.target.value })}
-                      placeholder="Đôi"
-                      className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
+                  <DateTimePicker
+                    label="Ngày"
+                    value={activeBulkSlot?.startTime || ''}
+                    onChange={v => updateBulkSlot(activeBulkSlotIndex, { startTime: v, selected: true })}
+                    error={errors[`slot_time_${activeBulkSlotIndex}`]}
+                  />
+                  <div className="min-w-[160px] border border-amber-500/20 bg-amber-500/10 p-3 text-[9px] text-zinc-300">
+                    <p className="uppercase tracking-widest text-amber-300 font-black">Bước nhảy</p>
+                    <p className="mt-1 font-mono text-white">{bulkMovieDuration || '--'} phút phim + 15 phút</p>
+                    <p className="mt-2 text-zinc-350">Suất bắt đầu từ 23:00 đến trước 05:00 được BE cộng +20k/vé.</p>
                   </div>
+                </div>
+
+                {errors.slot_selection && <p className="text-rose-400 text-[9px]">{errors.slot_selection}</p>}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                  {bulkForm.slots.map((slot, i) => {
+                    const selected = slot.selected !== false;
+                    const endTime = getBulkSlotEnd(slot.startTime);
+                    const capacity = getBulkSlotCapacity(slot);
+                    const night = isNightSlot(slot.startTime);
+                    return (
+                      <div key={`${slot.startTime}-${i}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setEditingBulkSlotIndex(i)}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return;
+                          e.preventDefault();
+                          setEditingBulkSlotIndex(i);
+                        }}
+                        className={`relative min-h-[132px] overflow-hidden rounded-lg border-2 bg-white text-left shadow-sm transition ${activeBulkSlotIndex === i ? 'border-sky-400 ring-2 ring-sky-400/40' : selected ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-zinc-300 opacity-45 hover:opacity-80'}`}>
+                        <div className="px-5 py-4">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-black tracking-normal text-zinc-950 font-mono">{formatTimeOnly(slot.startTime)}</span>
+                            <span className="text-xl font-semibold text-zinc-500">~{formatTimeOnly(endTime)}</span>
+                          </div>
+                          <p className="mt-2 truncate text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                            {rooms.find(r => String(r.id) === String(slot.roomId))?.name || 'Chưa chọn phòng'}
+                          </p>
+                        </div>
+                        <div className={`border-t px-5 py-3 text-center text-2xl font-medium ${night ? 'border-orange-100 bg-orange-50 text-orange-500' : 'border-zinc-100 bg-zinc-50 text-zinc-500'}`}>
+                          Còn {capacity || '--'}/{capacity || '--'}
+                        </div>
+                        <div className="absolute right-2 top-2 flex gap-1">
+                          {activeBulkSlotIndex === i && <span className="rounded bg-sky-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Sửa</span>}
+                          {night && <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-orange-600">Đêm +20k</span>}
+                          {selected && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Chọn</span>}
+                        </div>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleBulkSlot(i);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleBulkSlot(i);
+                          }}
+                          className={`absolute bottom-2 left-2 rounded px-2 py-1 text-[8px] font-black uppercase tracking-wider ${selected ? 'bg-zinc-900 text-white hover:bg-rose-600' : 'bg-amber-400 text-black hover:bg-amber-300'}`}>
+                          {selected ? 'Bỏ chọn' : 'Chọn'}
+                        </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (bulkForm.slots.length === 1) return;
+                            removeBulkSlot(i);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (bulkForm.slots.length === 1) return;
+                            removeBulkSlot(i);
+                          }}
+                          className={`absolute bottom-2 right-2 p-1 text-zinc-400 hover:text-rose-500 ${bulkForm.slots.length === 1 ? 'pointer-events-none opacity-20' : ''}`}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Slots */}
-              <div className="space-y-3">
+              <div className="hidden">
                 <div className="flex items-center justify-between">
                   <label className="text-[9px] uppercase tracking-wider text-amber-500 font-bold">
                     Danh sách khung giờ ({bulkForm.slots.length} slot)
                   </label>
-                  <button type="button"
-                    onClick={() => setBulkForm({ ...bulkForm, slots: [...bulkForm.slots, { roomId: '', startTime: '' }] })}
-                    className="flex items-center gap-1 text-[9px] text-amber-400 hover:text-amber-300 border border-amber-500/30 px-2 py-1 hover:border-amber-400/50 transition">
-                    <Plus className="w-2.5 h-2.5" /> Thêm slot
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="button"
+                      onClick={generateBulkSlotsForDay}
+                      className="flex items-center gap-1 text-[9px] text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 px-2 py-1 hover:border-emerald-400/50 transition">
+                      <Clock className="w-2.5 h-2.5" /> Tự tạo trong ngày
+                    </button>
+                    <button type="button"
+                      onClick={addManualBulkSlot}
+                      className="flex items-center gap-1 text-[9px] text-amber-400 hover:text-amber-300 border border-amber-500/30 px-2 py-1 hover:border-amber-400/50 transition">
+                      <Plus className="w-2.5 h-2.5" /> Thêm slot
+                    </button>
+                  </div>
                 </div>
 
                 {bulkForm.slots.map((slot, i) => (
@@ -549,7 +1076,7 @@ export default function AdminShowtimesPanel({ ctx }) {
 
               <button type="submit" disabled={saving}
                 className="w-full py-3.5 bg-amber-500 text-black font-black uppercase text-[10.5px] tracking-widest hover:bg-amber-400 transition disabled:opacity-50">
-                {saving ? 'Đang tạo...' : `Tạo ${bulkForm.slots.length} suất chiếu cùng lúc`}
+                {saving ? 'Đang tạo...' : `Tạo ${selectedBulkSlotsCount} suất chiếu cùng lúc`}
               </button>
             </form>
           </motion.div>
@@ -630,7 +1157,12 @@ export default function AdminShowtimesPanel({ ctx }) {
                         <td className="px-3 py-3 text-zinc-400 whitespace-nowrap">{roomName}</td>
                         <td className="px-3 py-3 font-mono text-zinc-300 whitespace-nowrap">{fmt(st.startTime)}</td>
                         <td className="px-3 py-3 font-mono text-zinc-500 whitespace-nowrap">{fmt(st.endTime)}</td>
-                        <td className="px-3 py-3 text-zinc-300 whitespace-nowrap">{fmtPrice(st.basePrice)}</td>
+                        <td className="px-3 py-3 text-zinc-300 whitespace-nowrap">
+                          <div className="font-mono">{fmtPrice(st.adultStandardPrice ?? st.basePrice)}</div>
+                          {Number(st.surchargeAmount || 0) > 0 && (
+                            <div className="text-[9px] text-amber-400">+{fmtPrice(st.surchargeAmount)} phụ thu</div>
+                          )}
+                        </td>
                         <td className="px-3 py-3">
                           <span className={`text-[8.5px] px-1.5 py-0.5 font-bold border ${meta.bg} ${meta.color}`}>
                             {meta.label}
@@ -701,7 +1233,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       <AnimatePresence>
         {confirmDelete && (
           <motion.div key="delete-confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
               className="bg-zinc-950 border border-rose-500/30 p-6 max-w-sm w-full space-y-4">
               <div className="flex items-center gap-2 text-rose-400">
@@ -732,10 +1264,10 @@ export default function AdminShowtimesPanel({ ctx }) {
         {detailModal && (
           <motion.div key="detail-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setDetailModal(null)}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            className="fixed inset-0 z-[250] flex items-start justify-center overflow-y-auto bg-black/80 p-4 pt-20 pb-24 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }}
               onClick={e => e.stopPropagation()}
-              className="bg-zinc-950 border border-zinc-800 p-6 max-w-md w-full space-y-4">
+              className="max-h-[calc(100vh-8rem)] w-full max-w-md space-y-4 overflow-y-auto border border-zinc-800 bg-zinc-950 p-6 shadow-2xl">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black uppercase tracking-wider text-white">Chi tiết suất chiếu #{detailModal.id}</h3>
                 <button onClick={() => setDetailModal(null)} className="text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
@@ -746,9 +1278,12 @@ export default function AdminShowtimesPanel({ ctx }) {
                   ['Phòng', detailModal.roomName ?? detailModal.room?.name],
                   ['Bắt đầu', fmt(detailModal.startTime)],
                   ['Kết thúc', fmt(detailModal.endTime)],
-                  ['Giá cơ bản', fmtPrice(detailModal.basePrice)],
-                  ['Giá VIP', fmtPrice(detailModal.vipPrice)],
-                  ['Giá ghế đôi', fmtPrice(detailModal.couplePrice)],
+                  ['Người lớn - thường', fmtPrice(detailModal.adultStandardPrice ?? detailModal.basePrice)],
+                  ['Trẻ em - thường', fmtPrice(detailModal.childStandardPrice)],
+                  ['Sinh viên - thường', fmtPrice(detailModal.studentStandardPrice)],
+                  ['Người lớn - VIP', fmtPrice(detailModal.adultVipPrice ?? detailModal.vipPrice)],
+                  ['Người lớn - ghế đôi', fmtPrice(detailModal.adultCouplePrice ?? detailModal.couplePrice)],
+                  ['Phụ thu áp dụng', fmtPrice(detailModal.surchargeAmount)],
                   ['Trạng thái', STATUS_META[detailModal.status]?.label ?? detailModal.status],
                 ].map(([label, val]) => (
                   <div key={label} className="flex justify-between border-b border-zinc-900 pb-1.5">

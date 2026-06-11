@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi, clearAuthSession, getStoredAuth, normalizeUser, saveAuthSession } from '../services/authApi';
+import { authApi, clearAuthSession, getStoredAuth, hasBackendAdminAccess, normalizeUser, saveAuthSession } from '../services/authApi';
 import { useUI } from './UIContext';
 
 const AuthContext = createContext(null);
@@ -16,9 +16,10 @@ export function AuthProvider({ children }) {
     const restoreSession = async () => {
       const { accessToken, refreshToken, user } = getStoredAuth();
       if (user) {
+        const restoredRole = hasBackendAdminAccess(accessToken, user) ? 'admin' : user.role || 'user';
         setIsLoggedIn(true);
-        setCurrentUser(user);
-        setCurrentRole(user.role || 'user');
+        setCurrentUser({ ...user, role: restoredRole });
+        setCurrentRole(restoredRole);
       }
       if (!accessToken && !refreshToken) return;
       if (accessToken && user) return;
@@ -61,6 +62,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const handleSessionExpired = () => {
+      clearAuthSession();
       setIsLoggedIn(false);
       setCurrentUser(null);
       setCurrentRole('user');

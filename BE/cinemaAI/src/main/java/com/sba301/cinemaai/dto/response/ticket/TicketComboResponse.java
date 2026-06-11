@@ -9,7 +9,6 @@ public record TicketComboResponse(
         String description,
         int adultCount,
         int childCount,
-        int seniorCount,
         int studentCount,
         BigDecimal price,
         boolean active,

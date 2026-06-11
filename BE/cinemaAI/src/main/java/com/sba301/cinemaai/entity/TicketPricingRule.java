@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.entity;
 
 import com.sba301.cinemaai.enums.RoomType;
+import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.TicketType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,6 +34,10 @@ public class TicketPricingRule extends BaseEntity {
     @Column(name = "room_type", nullable = false, length = 30)
     private RoomType roomType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "seat_type", length = 30)
+    private SeatType seatType = SeatType.STANDARD;
+
     @Column(name = "weekend", nullable = false)
     private boolean weekend;
 
@@ -45,17 +50,19 @@ public class TicketPricingRule extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
-    public TicketPricingRule(TicketType ticketType, RoomType roomType, boolean weekend, boolean holiday, BigDecimal price) {
+    public TicketPricingRule(TicketType ticketType, RoomType roomType, SeatType seatType, boolean weekend, boolean holiday, BigDecimal price) {
         this.ticketType = ticketType;
         this.roomType = roomType;
+        this.seatType = seatType == null ? SeatType.STANDARD : seatType;
         this.weekend = weekend;
         this.holiday = holiday;
         this.price = price;
     }
 
-    public void update(TicketType ticketType, RoomType roomType, boolean weekend, boolean holiday, BigDecimal price, boolean active) {
+    public void update(TicketType ticketType, RoomType roomType, SeatType seatType, boolean weekend, boolean holiday, BigDecimal price, boolean active) {
         this.ticketType = ticketType;
         this.roomType = roomType;
+        this.seatType = seatType == null ? SeatType.STANDARD : seatType;
         this.weekend = weekend;
         this.holiday = holiday;
         this.price = price;

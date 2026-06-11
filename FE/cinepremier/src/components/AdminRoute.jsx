@@ -4,9 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
 
 export default function AdminRoute({ children }) {
-  const { isLoggedIn, currentRole } = useAuth();
+  const { isLoggedIn, currentRole, currentUser } = useAuth();
   const { accessToken, user } = getStoredAuth();
-  if (!isLoggedIn) return <Navigate to="/" replace />;
-  if (currentRole !== 'admin' || !hasBackendAdminAccess(accessToken, user)) return <Navigate to="/" replace />;
+  const hasStoredAdmin = hasBackendAdminAccess(accessToken, user);
+  const hasContextAdmin = currentRole === 'admin' || currentUser?.role === 'admin' || hasBackendAdminAccess(accessToken, currentUser);
+
+  if (!isLoggedIn && !accessToken) return <Navigate to="/" replace />;
+  if (!hasStoredAdmin && !hasContextAdmin) return <Navigate to="/" replace />;
   return children;
 }

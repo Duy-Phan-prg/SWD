@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.dto.request.ticket;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,14 +21,12 @@ public record TicketComboRequest(
         @Min(value = 0, message = "Child count must be zero or positive")
         int childCount,
 
-        @Min(value = 0, message = "Senior count must be zero or positive")
-        int seniorCount,
-
         @Min(value = 0, message = "Student count must be zero or positive")
         int studentCount,
 
         @NotNull(message = "Price is required")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+        @DecimalMin(value = "10000", message = "Price must be at least 10000")
+        @DecimalMax(value = "1000000", message = "Price must be at most 1000000")
         BigDecimal price,
 
         Boolean active

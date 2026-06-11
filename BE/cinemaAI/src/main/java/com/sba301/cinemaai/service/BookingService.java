@@ -6,6 +6,7 @@ import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
 import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
 import com.sba301.cinemaai.dto.response.ticket.TicketLinePriceResponse;
 import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
+import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
 import com.sba301.cinemaai.dto.response.ticket.TicketPriceValidationResponse;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingFoodItem;
@@ -18,6 +19,7 @@ import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.FoodItemStatus;
+import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.enums.SeatStatus;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
@@ -34,7 +36,11 @@ import com.sba301.cinemaai.repository.ShowtimeRepository;
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -85,6 +91,17 @@ public class BookingService {
             subtotal = subtotal.add(bookingSeat.getUnitPrice());
         }
 
+        if (request.tickets() != null && !request.tickets().isEmpty()) {
+            subtotal = applyTicketSelections(booking, request.comboId(), request.holiday(), request.tickets());
+        }
+        if (request.foods() != null) {
+            for (BookingFoodRequest foodRequest : request.foods()) {
+                BookingFoodItem item = createFoodItem(booking, foodRequest);
+                bookingFoodItemRepository.save(item);
+                subtotal = subtotal.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            }
+        }
+
         booking.updateAmounts(subtotal, BigDecimal.ZERO, subtotal);
         return toResponse(booking);
     }
@@ -105,32 +122,7 @@ public class BookingService {
 
         BigDecimal subtotal = booking.getSubtotal();
         if (request.tickets() != null && !request.tickets().isEmpty()) {
-            int ticketQuantity = request.tickets().stream().mapToInt(ticket -> ticket.quantity()).sum();
-            int seatQuantity = bookingSeatRepository.findByBooking(booking).size();
-            if (ticketQuantity != seatQuantity) {
-                throw new BadRequestException("Ticket quantity must match held seat quantity");
-            }
-            TicketPriceValidationResponse validation = ticketPricingService.validatePrice(new TicketPriceValidationRequest(
-                    booking.getShowtime().getId(),
-                    request.comboId(),
-                    request.holiday(),
-                    request.tickets()
-            ));
-            if (!validation.eligible()) {
-                throw new BadRequestException("Ticket selection is not eligible for this movie/showtime");
-            }
-            bookingTicketRepository.findByBooking(booking).forEach(bookingTicketRepository::delete);
-            for (TicketLinePriceResponse ticket : validation.tickets()) {
-                bookingTicketRepository.save(new BookingTicket(
-                        booking,
-                        ticket.ticketType(),
-                        ticket.viewerAge(),
-                        ticket.quantity(),
-                        ticket.unitPrice(),
-                        ticket.lineTotal()
-                ));
-            }
-            subtotal = validation.finalAmount();
+            subtotal = applyTicketSelections(booking, request.comboId(), request.holiday(), request.tickets());
         }
         if (request.foods() != null) {
             for (BookingFoodRequest foodRequest : request.foods()) {
@@ -276,6 +268,99 @@ public class BookingService {
         );
         expiredBookings.forEach(this::expireBooking);
         return expiredBookings.size();
+    }
+
+    private BigDecimal applyTicketSelections(
+            Booking booking,
+            Long comboId,
+            boolean holiday,
+            List<TicketSelectionRequest> tickets
+    ) {
+        validateTicketSelectionsMatchHeldSeats(booking, tickets);
+        TicketPriceValidationResponse validation = ticketPricingService.validatePrice(new TicketPriceValidationRequest(
+                booking.getShowtime().getId(),
+                comboId,
+                holiday,
+                tickets
+        ));
+        if (!validation.eligible()) {
+            throw new BadRequestException("Ticket selection is not eligible for this movie/showtime");
+        }
+        bookingTicketRepository.findByBooking(booking).forEach(bookingTicketRepository::delete);
+        Map<Long, BookingSeat> seatsById = bookingSeatRepository.findByBooking(booking)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        bookingSeat -> bookingSeat.getSeat().getId(),
+                        java.util.function.Function.identity()
+                ));
+        for (int i = 0; i < validation.tickets().size(); i++) {
+            TicketLinePriceResponse ticket = validation.tickets().get(i);
+            bookingTicketRepository.save(new BookingTicket(
+                    booking,
+                    ticket.ticketType(),
+                    ticket.viewerAge(),
+                    ticket.quantity(),
+                    ticket.unitPrice(),
+                    ticket.lineTotal()
+            ));
+            Long seatId = tickets.get(i).seatId();
+            if (seatId != null && ticket.quantity() == 1) {
+                BookingSeat bookingSeat = seatsById.get(seatId);
+                if (bookingSeat != null) {
+                    bookingSeat.changeUnitPrice(ticket.unitPrice());
+                }
+            }
+        }
+        return validation.finalAmount();
+    }
+
+    private void validateTicketSelectionsMatchHeldSeats(
+            Booking booking,
+            List<TicketSelectionRequest> tickets
+    ) {
+        List<BookingSeat> heldSeats = bookingSeatRepository.findByBooking(booking);
+        int ticketQuantity = tickets.stream().mapToInt(ticket -> ticket.quantity()).sum();
+        if (ticketQuantity != heldSeats.size()) {
+            throw new BadRequestException("Ticket quantity must match held seat quantity");
+        }
+
+        boolean allTicketsHaveSeatId = tickets.stream().allMatch(ticket -> ticket.seatId() != null);
+        if (allTicketsHaveSeatId) {
+            Set<Long> heldSeatIds = heldSeats.stream()
+                    .map(bookingSeat -> bookingSeat.getSeat().getId())
+                    .collect(java.util.stream.Collectors.toSet());
+            Set<Long> ticketSeatIds = new HashSet<>();
+            for (TicketSelectionRequest ticket : tickets) {
+                if (ticket.quantity() != 1) {
+                    throw new BadRequestException("Ticket quantity must be 1 when seatId is provided");
+                }
+                if (!ticketSeatIds.add(ticket.seatId())) {
+                    throw new BadRequestException("Duplicate ticket seatId: " + ticket.seatId());
+                }
+            }
+            if (!heldSeatIds.equals(ticketSeatIds)) {
+                throw new BadRequestException("Ticket seat ids must match held seats");
+            }
+            return;
+        }
+
+        Map<SeatType, Integer> heldBySeatType = new EnumMap<>(SeatType.class);
+        for (BookingSeat bookingSeat : heldSeats) {
+            heldBySeatType.merge(normalizeSeatType(bookingSeat.getSeat().getSeatType()), 1, Integer::sum);
+        }
+
+        Map<SeatType, Integer> ticketsBySeatType = new EnumMap<>(SeatType.class);
+        for (TicketSelectionRequest ticket : tickets) {
+            ticketsBySeatType.merge(normalizeSeatType(ticket.seatType()), ticket.quantity(), Integer::sum);
+        }
+
+        if (!heldBySeatType.equals(ticketsBySeatType)) {
+            throw new BadRequestException("Ticket seat types must match held seat types");
+        }
+    }
+
+    private SeatType normalizeSeatType(SeatType seatType) {
+        return seatType == SeatType.NORMAL ? SeatType.STANDARD : seatType;
     }
 
     private BookingFoodItem createFoodItem(Booking booking, BookingFoodRequest request) {

@@ -66,4 +66,5 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             @Param("endTime") LocalDateTime endTime,
             @Param("excludeId") Long excludeId
     );
+
 }

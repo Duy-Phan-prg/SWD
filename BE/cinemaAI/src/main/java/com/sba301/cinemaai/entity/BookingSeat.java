@@ -63,4 +63,8 @@ public class BookingSeat extends BaseEntity {
     public void changeStatus(SeatRuntimeStatus status) {
         this.status = status;
     }
+
+    public void changeUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
 }

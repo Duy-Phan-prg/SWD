@@ -153,7 +153,7 @@ export default function Header({
         </nav>
 
         {/* Right Header Section */}
-        <div className="flex items-center space-x-2.5">
+        <div className="mr-4 flex items-center space-x-2.5">
 
           {/* Search Box */}
           <div className="relative hidden xl:block w-40 xl:w-48 h-9 flex items-center">
@@ -166,7 +166,7 @@ export default function Header({
               onClick={() => {
                 if (activeTab !== 'explore') onTabChange('explore');
               }}
-              className="w-full h-full border border-white/10 bg-neutral-950/80 pl-9 pr-4 text-[9.5px] text-white tracking-widest placeholder-neutral-700 uppercase focus:border-white/30 focus:bg-neutral-900/60 focus:outline-none transition-all duration-300"
+              className="w-full h-full border border-white/10 bg-neutral-950/80 pl-9 pr-4 text-[9.5px] font-semibold text-white tracking-widest placeholder:font-semibold placeholder-neutral-600 uppercase focus:border-white/30 focus:bg-neutral-900/60 focus:outline-none transition-all duration-300"
               id="search-input"
             />
           </div>
@@ -185,7 +185,7 @@ export default function Header({
                 <span className="block truncate font-black text-white">
                   {cinema?.name || (selectedCity ? selectedCity.split('(')[0].trim() : 'Chưa có rạp')}
                 </span>
-                <span className="mt-0.5 block truncate text-[7px] tracking-[0.18em] text-neutral-500">
+                <span className="mt-0.5 block truncate text-[7px] font-bold tracking-[0.18em] text-neutral-400">
                   {cinema?.city || 'ĐỊA ĐIỂM CHIẾU'}
                 </span>
               </span>

@@ -1,5 +1,6 @@
 package com.sba301.cinemaai.dto.response;
 
+import com.sba301.cinemaai.util.MessageTranslator;
 import java.time.LocalDateTime;
 
 public record ApiResponse<T>(
@@ -8,6 +9,10 @@ public record ApiResponse<T>(
         String message,
         LocalDateTime timestamp
 ) {
+
+    public ApiResponse {
+        message = MessageTranslator.translate(message);
+    }
 
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(true, data, "Success", LocalDateTime.now());

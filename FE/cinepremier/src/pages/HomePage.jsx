@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Play, Pause, Sparkles, MessageSquare, Check, HelpCircle, Volume2, VolumeX, ChevronLeft, ChevronRight, Film } from 'lucide-react';
-import { movies } from '../services/cinemaData';
 import MovieCard from '../components/movies/MovieCard';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
@@ -17,14 +16,14 @@ const extractYoutubeId = (url = '') => {
   return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || 'k8m0SaGQ_1c';
 };
 
-export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = movies, homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c' }) {
+export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [], homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c' }) {
   const [selectedMood, setSelectedMood] = useState('#Đỉnh_Cao_Thị_Giác');
   const [userPrompt, setUserPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState(null);
   const [loadingAI, setLoadingAI] = useState(false);
 
   // Filter movies for "Now Playing" and "Upcoming"
-  const sourceMovies = moviesList?.length ? moviesList : movies;
+  const sourceMovies = Array.isArray(moviesList) ? moviesList : [];
   const publicMovies = sourceMovies.filter((m) => m.status !== 'INACTIVE' && !m.isInactive);
   const nowPlaying = publicMovies.filter((m) => m.status === 'NOW_SHOWING' || (!m.status && !m.isUpcoming));
   const upcoming = publicMovies.filter((m) => m.status === 'UPCOMING' || m.isUpcoming);
@@ -34,8 +33,8 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
 
-  const heroMovies = nowPlaying.length ? nowPlaying : publicMovies.length ? publicMovies : movies;
-  const heroMovie = heroMovies[currentHeroIndex] || heroMovies[0];
+  const heroMovies = nowPlaying.length ? nowPlaying : publicMovies;
+  const heroMovie = heroMovies[currentHeroIndex] || heroMovies[0] || null;
   const heroYoutubeId = extractYoutubeId(homepageVideoUrl);
   const heroYoutubeSrc = `https://www.youtube.com/embed/${heroYoutubeId}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${heroYoutubeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1`;
 
@@ -51,17 +50,17 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
   // AI Mood analysis tags
   const moodTags = [
-    { tag: '#Đỉnh_Cao_Thị_Giác', desc: 'Mãn nhãn hình ảnh, hiệu ứng đỉnh cao kịch liệt', movieId: 'neon-horizon' },
-    { tag: '#Căng_Não', desc: 'Tình tiết hack não, giải mật mã lượng tử bất ngờ', movieId: 'quantum-pulse' },
-    { tag: '#Hành_Động_Kịch_Tính', desc: 'Đánh đấm bạo liệt, rượt đuổi nghẹt thở góc tối', movieId: 'the-last-shadow' },
-    { tag: '#Sâu_Lắng_Lấy_Nước_Mắt', desc: 'Cảm xúc tình yêu u sầu, âm nhạc lay động tâm hồn', movieId: 'echoes-of-silence' },
-    { tag: '#Trẻ_Trung_Kỳ_Ảo', desc: 'Kỳ ảo lung linh đầy mộng mơ tươi đẹp trên chín tầng mây', movieId: 'zenith-of-dreams' }
+    { tag: '#Đỉnh_Cao_Thị_Giác', desc: 'Mãn nhãn hình ảnh, hiệu ứng đỉnh cao kịch liệt' },
+    { tag: '#Căng_Não', desc: 'Tình tiết hack não, giải mật mã lượng tử bất ngờ' },
+    { tag: '#Hành_Động_Kịch_Tính', desc: 'Đánh đấm bạo liệt, rượt đuổi nghẹt thở góc tối' },
+    { tag: '#Sâu_Lắng_Lấy_Nước_Mắt', desc: 'Cảm xúc tình yêu u sầu, âm nhạc lay động tâm hồn' },
+    { tag: '#Trẻ_Trung_Kỳ_Ảo', desc: 'Kỳ ảo lung linh đầy mộng mơ tươi đẹp trên chín tầng mây' }
   ];
 
-  const currentRecommendation = moodTags.find(m => m.tag === selectedMood);
-  const recommendedMovie = publicMovies.find(m => m.id === (currentRecommendation?.movieId || 'neon-horizon')) || nowPlaying[0];
+  const recommendedMovie = nowPlaying[0] || publicMovies[0] || null;
 
-  // Simple clever local rule-based cinematic AI engine
+  const findRecommendedMovie = () => recommendedMovie || publicMovies[0] || null;
+
   const handleAISuggest = (e) => {
     e.preventDefault();
     if (!userPrompt.trim()) return;
@@ -70,40 +69,17 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
     setAiResponse(null);
 
     setTimeout(() => {
-      const promptLower = userPrompt.toLowerCase();
-      let reply = '';
-      let recommendedId = 'neon-horizon';
-      let score = 96;
-
-      if (promptLower.includes('buôn') || promptLower.includes('khóc') || promptLower.includes('tình cảm') || promptLower.includes('lãng mạn') || promptLower.includes('nhẹ nhàng')) {
-        reply = 'Xúc cảm của bạn đang thiên về chiều sâu lắng dịu dàng. Tôi phân tích thấy bạn đang tìm kiếm một bến đỗ cảm xúc lãng mạn nhưng có chiều sâu nghệ thuật cực lớn. "Echoes of Silence" chính là kiệt tác dành cho bạn đêm nay. Nhịp điệu vĩ cầm cổ điển hòa vào bước nhảy ballet của hai linh hồn khiếm khuyết sẽ giúp xoa dịu trái tim bạn.';
-        recommendedId = 'echoes-of-silence';
-        score = 99;
-      } else if (promptLower.includes('mệt') || promptLower.includes('vui') || promptLower.includes('hoạt hình') || promptLower.includes('mơ') || promptLower.includes('đẹp')) {
-        reply = 'Bạn đang cần một chuyến du ngoạn kỳ thú để nạp lại nguồn năng lượng tích cực! Tôi đề xuất bộ phim hoạt hình kỳ ảo "Zenith of Dreams". Những hòn đảo lơ lửng, chú mèo biết bay và hành trình rực rỡ sắc màu mây trời sẽ đưa tâm hồn bạn bay bổng xa khỏi mọi căng thẳng thường nhật.';
-        recommendedId = 'zenith-of-dreams';
-        score = 98;
-      } else if (promptLower.includes('hack não') || promptLower.includes('khoa học') || promptLower.includes('lượng tử') || promptLower.includes('bí ẩn') || promptLower.includes('căng thẳng')) {
-        reply = 'Trí não của bạn đang khát khao những thử thách hóc búa mang tầm vũ trụ! "Quantum Pulse" chính là liều thuốc hoàn hảo. Điểm AI đánh giá cốt truyện đạt 9.7 tối đa với thuyết lượng tử và hiện tượng đa vũ trụ nghẹt thở. Từng tích tắc trôi qua sẽ khiến nơ-ron thần kinh của bạn hoạt động ở công suất tối đa.';
-        recommendedId = 'quantum-pulse';
-        score = 97;
-      } else if (promptLower.includes('hành động') || promptLower.includes('đánh') || promptLower.includes('bạo') || promptLower.includes('sát thủ') || promptLower.includes('kịch tính')) {
-        reply = 'Dòng máu phiêu lưu trong bạn đang sục sôi! "The Last Shadow" sẽ thỏa mãn ngay tức khắc cơn thèm những màn đấu võ thuật tay đôi đậm chất điện ảnh noir góc cạnh. Sự giằng xé nội tâm của gã sát thủ cô độc Bảo chắc chắn khiến bạn không thể rời mắt một giây nào.';
-        recommendedId = 'the-last-shadow';
-        score = 96;
-      } else {
-        reply = 'Để có một trải nghiệm điện ảnh rực rỡ bùng nổ mọi giới hạn giác quan, CINEPREMIER đề cử tuyệt phẩm bom tấn Cyberpunk "NEON HORIZON". Hình ảnh tương lai Neo-Saigon tráng lệ kết hợp kịch bản kịch tính sắc nét và điểm AI Rating đạt kỷ lục 9.8 hoàn toàn xứng đáng với tấm vé của bạn.';
-        recommendedId = 'neon-horizon';
-        score = 99;
-      }
-
+      const liveRecommendedMovie = findRecommendedMovie();
       setAiResponse({
-        reply,
-        recommendedMovieId: recommendedId,
-        matchRate: score
+        reply: liveRecommendedMovie
+          ? `Dựa trên mô tả của bạn, CinePremier gợi ý "${liveRecommendedMovie.title}" từ danh sách phim hiện có trong hệ thống.`
+          : 'Chưa có phim khả dụng từ hệ thống để gợi ý. Vui lòng kiểm tra lại dữ liệu phim trong backend.',
+        recommendedMovieId: liveRecommendedMovie?.id || '',
+        recommendedMovie: liveRecommendedMovie,
+        matchRate: liveRecommendedMovie ? 96 : 0
       });
       setLoadingAI(false);
-    }, 1200);
+    }, 500);
   };
 
   const genresList = [
@@ -119,7 +95,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       {/* 1. HERO BANNER WITH DYNAMIC CINEMATIC VIDEO BACKGROUND */}
       <section
         className="relative min-h-[75vh] flex items-center justify-center overflow-hidden bg-cover bg-center px-4 sm:px-6 lg:px-8 py-20 transition-all duration-700"
-        style={{ backgroundImage: `url(${heroMovie.bannerUrl})` }}
+        style={{ backgroundImage: heroMovie?.bannerUrl ? `url(${heroMovie.bannerUrl})` : undefined }}
         id="hero-banner"
       >
         {/* Cinematic background */}
@@ -159,44 +135,46 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
             <div className="space-y-2">
               <h1 className="text-5xl sm:text-7xl font-serif font-light text-white tracking-wide leading-none italic uppercase">
-                {heroMovie.title}
+                {heroMovie?.title || 'Chưa có phim từ hệ thống'}
               </h1>
               <p className="text-xs font-sans text-neutral-400 uppercase tracking-[0.25em] pt-1">
-                {heroMovie.englishTitle}
+                {heroMovie?.englishTitle || 'Dữ liệu phim đang được tải từ backend'}
               </p>
             </div>
 
             <p className="text-neutral-300 text-sm leading-relaxed max-w-lg font-sans">
-              {heroMovie.synopsis}
+              {heroMovie?.synopsis || 'Khi backend có phim đang chiếu hoặc sắp chiếu, danh sách sẽ hiển thị tại đây.'}
             </p>
 
             <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wider font-sans font-medium text-neutral-400">
-              {heroMovie.genre.map((g) => (
+              {(heroMovie?.genre || []).map((g) => (
                 <span key={g} className="border border-white/15 bg-black/40 px-2.5 py-1">
                   {g}
                 </span>
               ))}
               <span className="border border-red-500/50 bg-red-950/20 px-2.5 py-1 text-red-400 font-bold">
-                {heroMovie.ageRating}
+                {heroMovie?.ageRating || 'N/A'}
               </span>
               <span className="border border-white/10 px-2.5 py-1">
-                {heroMovie.duration} MIN
+                {heroMovie?.duration || 0} MIN
               </span>
             </div>
 
             {/* CTA action buttons & Media Controller widgets */}
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <button
-                onClick={() => onBookMovie(heroMovie)}
-                className="border border-white bg-white text-black text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-black hover:text-white hover:border-white transition-all duration-300 font-bold"
+                disabled={!heroMovie}
+                onClick={() => heroMovie && onBookMovie(heroMovie)}
+                className="border border-white bg-white text-black text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-black hover:text-white hover:border-white transition-all duration-300 font-bold disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-black"
                 id="hero-book-now"
               >
                 Hẹn Giờ Đặt Vé Ngay
               </button>
 
               <button
-                onClick={() => onSelectMovie(heroMovie.id)}
-                className="border border-white/20 bg-black text-white text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-white hover:text-black hover:border-white transition-all duration-300"
+                disabled={!heroMovie}
+                onClick={() => heroMovie && onSelectMovie(heroMovie.id)}
+                className="border border-white/20 bg-black text-white text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-white hover:text-black hover:border-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white"
                 id="hero-details"
               >
                 Xem Chi Tiết & AI Analysis
@@ -230,7 +208,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <span className="text-[9px] font-mono text-neutral-400 px-1 font-bold">
-                    {currentHeroIndex + 1}/{heroMovies.length}
+                    {heroMovies.length ? currentHeroIndex + 1 : 0}/{heroMovies.length}
                   </span>
                   <button
                     onClick={handleNextHero}
@@ -244,7 +222,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             </div>
           </div>
 
-          <div className="hidden lg:flex lg:col-span-4 justify-end">
+          {heroMovie && <div className="hidden lg:flex lg:col-span-4 justify-end">
             <div className="relative w-64 aspect-[2/3] border border-white/15 shadow-2xl p-2 bg-black hover:border-white/40 transition-all duration-500 group/poster">
               <div className="w-full h-full relative overflow-hidden border border-white/5">
                 <img
@@ -255,7 +233,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
                 <div className="absolute right-3 top-3 bg-black border border-white/20 text-white font-sans text-[10px] uppercase tracking-wider px-2 py-1">
-                  ⭐ {heroMovie.ratings.aiOverall} AI Rating
+                  ⭐ {heroMovie.ratings?.aiOverall || '--'} AI Rating
                 </div>
 
                 {/* Micro animation to indicate background video control */}
@@ -268,7 +246,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 </div>
               </div>
             </div>
-          </div>
+          </div>}
 
         </div>
       </section>
@@ -413,23 +391,23 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                   </p>
 
                   {/* recommended detailed card from custom prompt */}
-                  {aiResponse.recommendedMovieId && (
+                  {aiResponse.recommendedMovie && (
                     <div className="flex items-center space-x-4 bg-neutral-950 p-4 border border-white/5">
                       <img
-                        src={movies.find(m => m.id === aiResponse.recommendedMovieId)?.posterUrl}
+                        src={aiResponse.recommendedMovie.posterUrl}
                         alt="Recom"
                         className="h-16 w-11 object-cover border border-white/5"
                         referrerPolicy="no-referrer"
                       />
                       <div className="flex-1 min-w-0">
                         <h5 className="text-xs font-serif text-white truncate italic">
-                          {movies.find(m => m.id === aiResponse.recommendedMovieId)?.title}
+                          {aiResponse.recommendedMovie.title}
                         </h5>
                         <p className="text-[9px] text-neutral-500 uppercase tracking-widest truncate">
-                          {movies.find(m => m.id === aiResponse.recommendedMovieId)?.englishTitle}
+                          {aiResponse.recommendedMovie.englishTitle}
                         </p>
                         <button
-                          onClick={() => onSelectMovie(aiResponse.recommendedMovieId)}
+                          onClick={() => onSelectMovie(aiResponse.recommendedMovie.id)}
                           className="text-[9px] uppercase tracking-widest text-neutral-400 hover:text-white font-sans mt-2 block hover:underline"
                         >
                           XEM CHI TIẾT AI →
@@ -437,8 +415,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                       </div>
                       <button
                         onClick={() => {
-                          const mv = movies.find(m => m.id === aiResponse.recommendedMovieId);
-                          if (mv) onBookMovie(mv);
+                          if (aiResponse.recommendedMovie) onBookMovie(aiResponse.recommendedMovie);
                         }}
                         className="bg-white text-black px-4 py-2 text-[9px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition"
                       >

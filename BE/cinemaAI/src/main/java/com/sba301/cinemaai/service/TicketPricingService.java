@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.ticket.TicketComboRequest;
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.ticket.TicketComboResponse;
 import com.sba301.cinemaai.dto.response.ticket.TicketLinePriceResponse;
 import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
@@ -9,14 +10,17 @@ import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
 import com.sba301.cinemaai.dto.response.ticket.TicketPricingRuleResponse;
 import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
 import com.sba301.cinemaai.entity.Movie;
+import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.TicketCombo;
 import com.sba301.cinemaai.entity.TicketPricingRule;
+import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.TicketType;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
+import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.TicketComboRepository;
 import com.sba301.cinemaai.repository.TicketPricingRuleRepository;
 import java.math.BigDecimal;
@@ -28,14 +32,20 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
 public class TicketPricingService {
 
+    private static final BigDecimal LATE_NIGHT_SURCHARGE = BigDecimal.valueOf(20_000);
+
     private final TicketPricingRuleRepository ticketPricingRuleRepository;
     private final TicketComboRepository ticketComboRepository;
     private final ShowtimeRepository showtimeRepository;
+    private final SeatRepository seatRepository;
 
     @Transactional(readOnly = true)
     public List<TicketPricingRuleResponse> getRules() {
@@ -44,11 +54,33 @@ public class TicketPricingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<TicketPricingRuleResponse> searchRules(
+            TicketType ticketType,
+            com.sba301.cinemaai.enums.RoomType roomType,
+            SeatType seatType,
+            Boolean active,
+            int page,
+            int size
+    ) {
+        var pageable = PageRequest.of(
+                Math.max(page, 0),
+                Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "updatedAt")
+        );
+        return PageResponse.from(ticketPricingRuleRepository
+                .searchAdmin(ticketType, roomType, seatType, active, pageable)
+                .map(this::toRuleResponse));
+    }
+
     @Transactional
     public TicketPricingRuleResponse createRule(TicketPricingRuleRequest request) {
+        validateRulePolicy(request);
+        validateUniqueActiveRule(null, request);
         TicketPricingRule rule = new TicketPricingRule(
                 request.ticketType(),
                 request.roomType(),
+                normalizeSeatType(request.seatType()),
                 request.weekend(),
                 request.holiday(),
                 request.price()
@@ -56,6 +88,7 @@ public class TicketPricingService {
         rule.update(
                 request.ticketType(),
                 request.roomType(),
+                normalizeSeatType(request.seatType()),
                 request.weekend(),
                 request.holiday(),
                 request.price(),
@@ -67,9 +100,12 @@ public class TicketPricingService {
     @Transactional
     public TicketPricingRuleResponse updateRule(Long id, TicketPricingRuleRequest request) {
         TicketPricingRule rule = findRule(id);
+        validateRulePolicy(request);
+        validateUniqueActiveRule(id, request);
         rule.update(
                 request.ticketType(),
                 request.roomType(),
+                normalizeSeatType(request.seatType()),
                 request.weekend(),
                 request.holiday(),
                 request.price(),
@@ -91,18 +127,41 @@ public class TicketPricingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<TicketComboResponse> searchCombos(Boolean active, String keyword, int page, int size) {
+        var pageable = PageRequest.of(
+                Math.max(page, 0),
+                Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "updatedAt")
+        );
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
+        Page<TicketCombo> combos;
+        if (active != null && normalizedKeyword != null) {
+            combos = ticketComboRepository.findByActiveAndNameContainingIgnoreCase(active, normalizedKeyword, pageable);
+        } else if (active != null) {
+            combos = ticketComboRepository.findByActive(active, pageable);
+        } else if (normalizedKeyword != null) {
+            combos = ticketComboRepository.findByNameContainingIgnoreCase(normalizedKeyword, pageable);
+        } else {
+            combos = ticketComboRepository.findAll(pageable);
+        }
+        return PageResponse.from(combos.map(this::toComboResponse));
+    }
+
     @Transactional
     public TicketComboResponse createCombo(TicketComboRequest request) {
         validateComboCounts(request);
         ticketComboRepository.findByNameIgnoreCase(request.name()).ifPresent(combo -> {
-            throw new ConflictException("Ticket combo name already exists");
+            if (combo.isActive()) {
+                throw new ConflictException("Ticket combo name already exists");
+            }
+            throw new ConflictException("Ticket combo already exists but is inactive. Do you want to create a new combo?");
         });
         TicketCombo combo = new TicketCombo(
                 request.name().trim(),
                 request.description(),
                 request.adultCount(),
                 request.childCount(),
-                request.seniorCount(),
                 request.studentCount(),
                 request.price()
         );
@@ -111,7 +170,6 @@ public class TicketPricingService {
                 request.description(),
                 request.adultCount(),
                 request.childCount(),
-                request.seniorCount(),
                 request.studentCount(),
                 request.price(),
                 request.active() == null || request.active()
@@ -133,7 +191,6 @@ public class TicketPricingService {
                 request.description(),
                 request.adultCount(),
                 request.childCount(),
-                request.seniorCount(),
                 request.studentCount(),
                 request.price(),
                 request.active() == null || request.active()
@@ -151,18 +208,19 @@ public class TicketPricingService {
         Showtime showtime = showtimeRepository.findById(request.showtimeId())
                 .orElseThrow(() -> new NotFoundException("Showtime not found"));
         Movie movie = showtime.getMovie();
-        boolean weekend = isWeekend(showtime);
         List<TicketLinePriceResponse> ticketLines = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         BigDecimal subtotal = BigDecimal.ZERO;
         boolean eligible = true;
 
         for (TicketSelectionRequest ticket : request.tickets()) {
-            BigDecimal unitPrice = resolvePrice(showtime, ticket.ticketType(), weekend, request.holiday(), warnings);
+            SeatType effectiveSeatType = resolveSeatType(showtime, ticket);
+            boolean seatAllowedByTicketType = allowsSeatType(ticket.ticketType(), effectiveSeatType);
+            BigDecimal unitPrice = showtime.getPriceForTicketAndSeatType(ticket.ticketType(), effectiveSeatType);
             boolean ageAllowedByTicketType = ticket.ticketType().allowsAge(ticket.viewerAge());
             boolean ageAllowedByMovie = movie.getAgeRating() == null || movie.getAgeRating().allowsAge(ticket.viewerAge());
-            boolean lineEligible = ageAllowedByTicketType && ageAllowedByMovie;
-            String message = resolveTicketMessage(ticket, movie, ageAllowedByTicketType, ageAllowedByMovie);
+            boolean lineEligible = seatAllowedByTicketType && ageAllowedByTicketType && ageAllowedByMovie;
+            String message = resolveTicketMessage(ticket, movie, seatAllowedByTicketType, ageAllowedByTicketType, ageAllowedByMovie);
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(ticket.quantity()));
             subtotal = subtotal.add(lineTotal);
             eligible = eligible && lineEligible;
@@ -177,18 +235,10 @@ public class TicketPricingService {
             ));
         }
 
-        TicketCombo combo = request.comboId() == null ? null : findCombo(request.comboId());
         BigDecimal comboPrice = BigDecimal.ZERO;
         BigDecimal finalAmount = subtotal;
-        if (combo != null) {
-            boolean comboMatches = combo.isActive() && matchesCombo(combo, request.tickets());
-            if (comboMatches) {
-                comboPrice = combo.getPrice();
-                finalAmount = comboPrice;
-            } else {
-                eligible = false;
-                warnings.add("Ticket selection does not match combo " + combo.getName());
-            }
+        if (request.comboId() != null) {
+            warnings.add("Ticket combo pricing is disabled. Use food combos from the food API only.");
         }
 
         return new TicketPriceValidationResponse(
@@ -205,25 +255,24 @@ public class TicketPricingService {
         );
     }
 
-    private BigDecimal resolvePrice(
-            Showtime showtime,
-            TicketType ticketType,
-            boolean weekend,
-            boolean holiday,
-            List<String> warnings
-    ) {
-        return ticketPricingRuleRepository
-                .findFirstByTicketTypeAndRoomTypeAndWeekendAndHolidayAndActiveTrueOrderByUpdatedAtDesc(
-                        ticketType,
-                        showtime.getRoom().getRoomType(),
-                        weekend,
-                        holiday
-                )
-                .map(TicketPricingRule::getPrice)
-                .orElseGet(() -> {
-                    warnings.add("No ticket pricing rule found for " + ticketType + "; using showtime base price");
-                    return showtime.getBasePrice();
-                });
+    private SeatType normalizeSeatType(SeatType seatType) {
+        return seatType == SeatType.NORMAL ? SeatType.STANDARD : seatType;
+    }
+
+    private SeatType resolveSeatType(Showtime showtime, TicketSelectionRequest ticket) {
+        if (ticket.seatId() == null) {
+            return normalizeSeatType(ticket.seatType());
+        }
+        Seat seat = seatRepository.findById(ticket.seatId())
+                .orElseThrow(() -> new NotFoundException("Seat not found"));
+        if (!seat.getRoom().getId().equals(showtime.getRoom().getId())) {
+            throw new BadRequestException("Seat does not belong to showtime room");
+        }
+        return normalizeSeatType(seat.getSeatType());
+    }
+
+    private boolean allowsSeatType(TicketType ticketType, SeatType seatType) {
+        return true;
     }
 
     private boolean matchesCombo(TicketCombo combo, List<TicketSelectionRequest> tickets) {
@@ -233,16 +282,19 @@ public class TicketPricingService {
         }
         return counts.getOrDefault(TicketType.ADULT, 0) == combo.getAdultCount()
                 && counts.getOrDefault(TicketType.CHILD, 0) == combo.getChildCount()
-                && counts.getOrDefault(TicketType.SENIOR, 0) == combo.getSeniorCount()
                 && counts.getOrDefault(TicketType.STUDENT, 0) == combo.getStudentCount();
     }
 
     private String resolveTicketMessage(
             TicketSelectionRequest ticket,
             Movie movie,
+            boolean seatAllowedByTicketType,
             boolean ageAllowedByTicketType,
             boolean ageAllowedByMovie
     ) {
+        if (!seatAllowedByTicketType) {
+            return "Couple seat only supports adult ticket";
+        }
         if (!ageAllowedByTicketType) {
             return "Viewer age is not valid for ticket type " + ticket.ticketType();
         }
@@ -252,15 +304,40 @@ public class TicketPricingService {
         return "Eligible";
     }
 
-    private boolean isWeekend(Showtime showtime) {
-        DayOfWeek day = showtime.getStartTime().getDayOfWeek();
-        return day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
-    }
-
     private void validateComboCounts(TicketComboRequest request) {
-        int total = request.adultCount() + request.childCount() + request.seniorCount() + request.studentCount();
+        int total = request.adultCount() + request.childCount() + request.studentCount();
         if (total <= 0) {
             throw new BadRequestException("Ticket combo must contain at least one ticket");
+        }
+    }
+
+    private void validateRulePolicy(TicketPricingRuleRequest request) {
+        // All ticket types can be priced for all seat types.
+    }
+
+    private void validateUniqueActiveRule(Long currentRuleId, TicketPricingRuleRequest request) {
+        boolean requestedActive = request.active() == null || request.active();
+        if (!requestedActive) {
+            return;
+        }
+        boolean exists = currentRuleId == null
+                ? ticketPricingRuleRepository.existsByTicketTypeAndRoomTypeAndSeatTypeAndWeekendAndHolidayAndActiveTrue(
+                        request.ticketType(),
+                        request.roomType(),
+                        normalizeSeatType(request.seatType()),
+                        request.weekend(),
+                        request.holiday()
+                )
+                : ticketPricingRuleRepository.existsByTicketTypeAndRoomTypeAndSeatTypeAndWeekendAndHolidayAndActiveTrueAndIdNot(
+                        request.ticketType(),
+                        request.roomType(),
+                        normalizeSeatType(request.seatType()),
+                        request.weekend(),
+                        request.holiday(),
+                        currentRuleId
+                );
+        if (exists) {
+            throw new ConflictException("Active ticket pricing rule already exists for this ticket type, room type, seat type, weekend, and holiday");
         }
     }
 
@@ -279,6 +356,7 @@ public class TicketPricingService {
                 rule.getId(),
                 rule.getTicketType(),
                 rule.getRoomType(),
+                rule.getSeatType(),
                 rule.isWeekend(),
                 rule.isHoliday(),
                 rule.getPrice(),
@@ -295,7 +373,6 @@ public class TicketPricingService {
                 combo.getDescription(),
                 combo.getAdultCount(),
                 combo.getChildCount(),
-                combo.getSeniorCount(),
                 combo.getStudentCount(),
                 combo.getPrice(),
                 combo.isActive(),

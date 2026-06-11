@@ -102,7 +102,7 @@ class ActorIntegrationTests {
                                 List.of(unlinkedActorId)
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Main actor ids must be included in actor ids"));
+                .andExpect(jsonPath("$.message").value("Danh sách diễn viên chính phải nằm trong danh sách diễn viên"));
 
         Long movieId = createMovie(token, "Actor API Movie " + suffix, linkedActorId);
 
@@ -189,7 +189,7 @@ class ActorIntegrationTests {
                         .param("folder", "actors")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Only JPG, PNG, and WEBP images are allowed"));
+                .andExpect(jsonPath("$.message").value("Chỉ cho phép ảnh JPG, PNG và WEBP"));
     }
 
     private Long createActor(String token, String name) throws Exception {

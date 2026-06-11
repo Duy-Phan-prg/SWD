@@ -15,67 +15,8 @@ export default function WishlistView() {
   const [emailInput, setEmailInput] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Preset cinematic items representing screenshot 3 watchlist state for full visual fidelity
-  const presetWishlistItems = [
-    {
-      id: 'neon-protocol',
-      title: 'Neon Protocol: Zenith',
-      genreSubtitle: 'KHOA HỌC VIỄN TƯỞNG • 2026',
-      status: 'UPCOMING',
-      badge: 'SẮP RA MẮT',
-      badgeColor: 'bg-red-650 text-white border-red-500',
-      actionLabel: 'Nhận thông báo',
-      actionIcon: 'bell',
-      posterUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=300&auto=format&fit=crop'
-    },
-    {
-      id: 'ban-giao-huong',
-      title: 'Bản giao hưởng đêm',
-      genreSubtitle: 'HÀNH ĐỘNG • TÂM LÝ',
-      status: 'SHOWING',
-      badge: 'SÁNG CHIẾU',
-      badgeColor: 'bg-[#0070F3] text-white border-blue-500',
-      actionLabel: 'Đặt vé ngay',
-      actionIcon: 'ticket',
-      posterUrl: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=300&auto=format&fit=crop'
-    },
-    {
-      id: 'anh-sang',
-      title: 'Ánh sáng cuối hầm',
-      genreSubtitle: 'TRINH THÁM • NOIR',
-      status: 'UPCOMING',
-      badge: 'THÔNG BÁO ĐÃ BẬT',
-      badgeColor: 'bg-neutral-900 border-white/20 text-white',
-      actionLabel: 'Sẽ ra mắt vào tháng 12',
-      actionIcon: 'none',
-      badgeTopRightIcon: 'bell',
-      posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=300&auto=format&fit=crop'
-    },
-    {
-      id: 'thanh-pho-dien-tu',
-      title: 'Thành phố điện tử',
-      genreSubtitle: 'VIỄN TƯỞNG • NOIR',
-      status: 'WATCHED',
-      badge: 'ĐÃ XEM',
-      badgeColor: 'bg-neutral-800 text-neutral-400 border-neutral-700',
-      actionLabel: 'Phê bình ngay',
-      actionIcon: 'check',
-      posterUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=300&auto=format&fit=crop'
-    },
-    {
-      id: 'chuyen-xe',
-      title: 'Chuyến xe cuối cùng',
-      genreSubtitle: 'HỒI HỘP • 2026',
-      status: 'UPCOMING',
-      badge: 'SẮP RA MẮT',
-      badgeColor: 'bg-red-650 text-white border-red-500',
-      actionLabel: 'Nhận thông báo',
-      actionIcon: 'bell',
-      posterUrl: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=300&auto=format&fit=crop'
-    }
-  ];
+  // Use only real watchlist items from backend state.
 
-  // Merge real watchlist items from core state with preset visual items
   const dynamicRealItems = watchlist.map((m) => ({
     id: m.id,
     backendId: m.backendId || m.movieId || m.id,

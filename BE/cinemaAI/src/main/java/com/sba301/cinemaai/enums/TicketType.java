@@ -3,7 +3,6 @@ package com.sba301.cinemaai.enums;
 public enum TicketType {
     ADULT(18, 59),
     CHILD(0, 12),
-    SENIOR(60, 150),
     STUDENT(13, 25);
 
     private final int minimumAge;

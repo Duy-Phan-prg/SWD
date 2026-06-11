@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronRight, ChevronLeft, Film, Filter, CalendarDays, X } from 'lucide-react';
-import { movies } from '../services/cinemaData';
 import MovieCard from '../components/movies/MovieCard';
 import { useMovies } from '../contexts/MoviesContext';
 
 export default function ExploreView() {
   const navigate = useNavigate();
   const {
-    moviesList = movies,
+    moviesList = [],
     isMoviesLoading: isLoading = false,
     moviePagination: pagination = null,
     setMoviePagination,
@@ -28,8 +27,10 @@ export default function ExploreView() {
   const itemsPerPage = 8;
   const currentPage = pagination ? (Number(pagination.page) || 0) + 1 : localPage;
 
-  // Pre-configured unique genres list
-  const genres = ['Tất cả', 'Sci-Fi', 'Hành Động', 'Tâm Lý', 'Gây Cấn', 'Hoạt Hình', 'Noir'];
+  const genres = useMemo(() => {
+    const liveGenres = moviesList.flatMap((movie) => movie.genre || []).filter(Boolean);
+    return ['Tất cả', ...Array.from(new Set(liveGenres))];
+  }, [moviesList]);
 
   // Filter and sort logical step
   const processedMovies = useMemo(() => {
@@ -91,7 +92,7 @@ export default function ExploreView() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 space-y-10 pb-24">
-      
+
       {/* Search Header Container */}
       <div className="space-y-4 border-b border-white/5 pb-6">
         <div className="flex items-center space-x-3">
@@ -107,10 +108,10 @@ export default function ExploreView() {
 
       {/* Filter and Control Toolbar */}
       <div className="bg-black border border-white/10 p-5 space-y-4">
-        
+
         {/* Genre Tags Selector & Sort Selection */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          
+
           {/* Genre Chips list */}
           <div className="flex flex-wrap gap-2" id="genre-filter-chips">
             {genres.map((g) => (
@@ -121,11 +122,10 @@ export default function ExploreView() {
                   if (pagination) onPageChange(1);
                   setLocalPage(1);
                 }}
-                className={`px-4 py-2 text-[10px] uppercase font-sans tracking-[0.15em] transition-all duration-300 ${
-                  selectedGenre === g
+                className={`px-4 py-2 text-[10px] uppercase font-sans tracking-[0.15em] transition-all duration-300 ${selectedGenre === g
                     ? 'bg-white text-black border border-white'
                     : 'bg-black text-neutral-400 border border-white/10 hover:text-white hover:border-white/30'
-                }`}
+                  }`}
               >
                 {g}
               </button>
@@ -207,7 +207,7 @@ export default function ExploreView() {
           <Filter className="h-8 w-8 text-neutral-600 mx-auto" />
           <h3 className="text-base font-serif text-white italic">Không tuyển lựa ra kết quả tương thích</h3>
           <p className="text-xs text-neutral-500 max-w-md mx-auto font-sans leading-relaxed">
-             Hãy chuyển dịch lại từ khóa tìm kiếm hoặc bấm nút Thiết lập lại phía dưới để quay lại danh mục chuẩn.
+            Hãy chuyển dịch lại từ khóa tìm kiếm hoặc bấm nút Thiết lập lại phía dưới để quay lại danh mục chuẩn.
           </p>
           <button
             onClick={() => {
@@ -226,7 +226,7 @@ export default function ExploreView() {
       {/* Pagination Container */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center space-x-2 pt-8" id="pagination">
-          
+
           {/* Back button */}
           <button
             disabled={currentPage === 1}
@@ -241,11 +241,10 @@ export default function ExploreView() {
             <button
               key={pg}
               onClick={() => handlePageChange(pg)}
-              className={`h-9 w-9 text-xs transition font-sans ${
-                currentPage === pg
+              className={`h-9 w-9 text-xs transition font-sans ${currentPage === pg
                   ? 'bg-white text-black font-bold border border-white'
                   : 'border border-white/10 bg-black text-neutral-400 hover:border-white hover:text-white'
-              }`}
+                }`}
             >
               {pg}
             </button>

@@ -1,5 +1,6 @@
 package com.sba301.cinemaai.dto.response.promotion;
 
+import com.sba301.cinemaai.util.MessageTranslator;
 import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,4 +15,8 @@ public class ApplyPromotionResponse {
     private BigDecimal discountAmount;   // Số tiền được giảm
     private BigDecimal finalAmount;      // Giá sau giảm
     private String message;
+
+    public String getMessage() {
+        return MessageTranslator.translate(message);
+    }
 }

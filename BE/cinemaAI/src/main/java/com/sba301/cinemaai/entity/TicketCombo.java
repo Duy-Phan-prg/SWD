@@ -33,9 +33,6 @@ public class TicketCombo extends BaseEntity {
     @Column(name = "child_count", nullable = false)
     private int childCount;
 
-    @Column(name = "senior_count", nullable = false)
-    private int seniorCount;
-
     @Column(name = "student_count", nullable = false)
     private int studentCount;
 
@@ -50,7 +47,6 @@ public class TicketCombo extends BaseEntity {
             String description,
             int adultCount,
             int childCount,
-            int seniorCount,
             int studentCount,
             BigDecimal price
     ) {
@@ -58,7 +54,6 @@ public class TicketCombo extends BaseEntity {
         this.description = description;
         this.adultCount = adultCount;
         this.childCount = childCount;
-        this.seniorCount = seniorCount;
         this.studentCount = studentCount;
         this.price = price;
     }
@@ -68,7 +63,6 @@ public class TicketCombo extends BaseEntity {
             String description,
             int adultCount,
             int childCount,
-            int seniorCount,
             int studentCount,
             BigDecimal price,
             boolean active
@@ -77,7 +71,6 @@ public class TicketCombo extends BaseEntity {
         this.description = description;
         this.adultCount = adultCount;
         this.childCount = childCount;
-        this.seniorCount = seniorCount;
         this.studentCount = studentCount;
         this.price = price;
         this.active = active;
