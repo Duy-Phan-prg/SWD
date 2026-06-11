@@ -415,7 +415,7 @@ export const authApi = {
   }),
   getFoodItems: () => request('/api/v1/foods/items'),
   getFoodCombos: () => request('/api/v1/foods/combos'),
-  getPublicCinema: () => request('/api/v1/admin/cinema'),
+  getPublicCinema: () => request('/api/v1/cinema'),
   getAdminCinema: (token) => request('/api/v1/admin/cinema', { token }),
   createAdminCinema: (token, payload) => request('/api/v1/admin/cinema', {
     method: 'POST',
