@@ -54,10 +54,10 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
           <div>
             <h3 className="mb-5 border-l-2 border-amber-400 pl-3 text-sm font-sans font-black uppercase tracking-[0.22em] text-white">DANH MỤC CHIẾU BÓNG</h3>
             <ul className="space-y-3 text-xs uppercase tracking-[0.14em] font-sans font-semibold text-neutral-300">
-              <li><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 hover:border-amber-300 hover:text-amber-200">Phim Đang Chiếu</span></li>
-              <li><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 hover:border-amber-300 hover:text-amber-200">Phim Sắp Chiếu</span></li>
-              <li><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 hover:border-amber-300 hover:text-amber-200">Phòng Chiếu IMAX VIP</span></li>
-              <li><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 hover:border-amber-300 hover:text-amber-200">Lịch Chiếu Toàn Quốc</span></li>
+              <li className="group flex items-center gap-3"><span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" /><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200">Phim Đang Chiếu</span></li>
+              <li className="group flex items-center gap-3"><span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" /><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200">Phim Sắp Chiếu</span></li>
+              <li className="group flex items-center gap-3"><span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" /><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200">Phòng Chiếu IMAX VIP</span></li>
+              <li className="group flex items-center gap-3"><span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" /><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200">Lịch Chiếu Toàn Quốc</span></li>
             </ul>
           </div>
 
@@ -65,39 +65,43 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
           <div>
             <h3 className="mb-5 border-l-2 border-amber-400 pl-3 text-sm font-sans font-black uppercase tracking-[0.22em] text-white">HỖ TRỢ & ĐIỀU CHẾ</h3>
             <ul className="space-y-3 text-xs uppercase tracking-[0.14em] font-sans font-semibold text-neutral-300">
-              <li><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 hover:border-amber-300 hover:text-amber-200">Liên hệ phòng vé</span></li>
-              <li>
+              <li className="group flex items-center gap-3"><span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" /><span className="cursor-pointer border-b border-transparent pb-0.5 transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200">Liên hệ phòng vé</span></li>
+              <li className="group flex items-center gap-3">
+                <span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" />
                 <button
                   type="button"
                   onClick={() => onTabChange('policies')}
-                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 hover:border-amber-300 hover:text-amber-200"
+                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200"
                 >
                   Chính sách rạp
                 </button>
               </li>
-              <li>
+              <li className="group flex items-center gap-3">
+                <span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" />
                 <button
                   type="button"
                   onClick={() => onTabChange('policies')}
-                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 hover:border-amber-300 hover:text-amber-200"
+                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200"
                 >
                   Chính sách bảo mật
                 </button>
               </li>
-              <li>
+              <li className="group flex items-center gap-3">
+                <span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" />
                 <button
                   type="button"
                   onClick={() => onTabChange('policies')}
-                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 hover:border-amber-300 hover:text-amber-200"
+                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200"
                 >
                   Điều hành sử dụng vé
                 </button>
               </li>
-              <li>
+              <li className="group flex items-center gap-3">
+                <span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-amber-300/70 bg-amber-400/20 transition group-hover:bg-amber-300 group-hover:shadow-[0_0_10px_rgba(252,211,77,0.7)]" />
                 <button
                   type="button"
                   onClick={() => onTabChange('policies')}
-                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 hover:border-amber-300 hover:text-amber-200"
+                  className="cursor-pointer border-b border-transparent pb-0.5 text-left transition-colors duration-250 group-hover:border-amber-300 group-hover:text-amber-200"
                 >
                   Quy chuẩn hoạt động
                 </button>
@@ -137,7 +141,7 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
         </div>
 
         {/* Bottom copyright barrier */}
-        <div className="mt-16 border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+        <div className="mt-16 border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between text-[15px] uppercase tracking-[0.16em] text-neutral-500">
           <p>© 2026 CINEPREMIER STUDIOS. ALL RIGHTS RESERVED.</p>
           <div className="mt-4 md:mt-0 flex space-x-4">
             <span>Powered by Smart AI Rating Engine</span>

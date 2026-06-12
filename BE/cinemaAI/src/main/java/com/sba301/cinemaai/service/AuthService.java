@@ -143,7 +143,8 @@ public class AuthService {
                 pendingRegistration.getEmail(),
                 pendingRegistration.getPasswordHash(),
                 pendingRegistration.getFullName(),
-                pendingRegistration.getPhone()
+                pendingRegistration.getPhone(),
+                pendingRegistration.getBirthYear()
         ));
         user.activateEmail();
         userRoleService.assignRole(user, RoleName.CUSTOMER);
@@ -247,6 +248,8 @@ public class AuthService {
                 pendingRegistration.getEmail(),
                 pendingRegistration.getFullName(),
                 pendingRegistration.getPhone(),
+                null,
+                pendingRegistration.getBirthYear(),
                 UserStatus.PENDING_VERIFICATION,
                 false,
                 false,

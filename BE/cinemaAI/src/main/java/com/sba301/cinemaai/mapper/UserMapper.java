@@ -16,6 +16,8 @@ public class UserMapper {
                 user.getEmail(),
                 profile.getFullName(),
                 profile.getPhone(),
+                profile.getAvatarUrl(),
+                user.getBirthYear(),
                 user.getStatus(),
                 user.isEmailVerified(),
                 profile.isPhoneVerified(),

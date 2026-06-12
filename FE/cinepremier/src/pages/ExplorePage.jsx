@@ -15,22 +15,19 @@ export default function ExploreView() {
     setSearchQuery,
     movieDateFilter: selectedDate = '',
     setMovieDateFilter,
+    genres = [],
+    selectedGenreId = '',
+    setSelectedGenreId,
   } = useMovies();
   const onSearchChange = (q) => { setSearchQuery(q); setMoviePagination(prev => ({ ...prev, page: 0 })); };
   const onDateChange = (d) => { setMovieDateFilter(d); setMoviePagination(prev => ({ ...prev, page: 0 })); };
   const onPageChange = (page) => setMoviePagination(prev => ({ ...prev, page: page - 1 }));
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onBookMovie = (movie) => navigate(`/movies/${movie.id}/book`);
-  const [selectedGenre, setSelectedGenre] = useState('Tất cả');
   const [sortBy, setSortBy] = useState('aiOverall'); // aiOverall, newest, duration
   const [localPage, setLocalPage] = useState(1);
   const itemsPerPage = 8;
   const currentPage = pagination ? (Number(pagination.page) || 0) + 1 : localPage;
-
-  const genres = useMemo(() => {
-    const liveGenres = moviesList.flatMap((movie) => movie.genre || []).filter(Boolean);
-    return ['Tất cả', ...Array.from(new Set(liveGenres))];
-  }, [moviesList]);
 
   // Filter and sort logical step
   const processedMovies = useMemo(() => {
@@ -48,12 +45,7 @@ export default function ExploreView() {
       );
     }
 
-    // 2. Genre Filter
-    if (selectedGenre !== 'Tất cả') {
-      result = result.filter((m) => m.genre.includes(selectedGenre));
-    }
-
-    // 3. Sorting
+    // 2. Sorting
     result.sort((a, b) => {
       if (sortBy === 'aiOverall') {
         const aRating = a.ratings?.aiOverall || 0;
@@ -70,7 +62,7 @@ export default function ExploreView() {
     });
 
     return result;
-  }, [searchQuery, selectedGenre, sortBy, moviesList]);
+  }, [searchQuery, sortBy, moviesList]);
 
   // Pagination logical step
   const totalPages = pagination?.totalPages || Math.max(1, Math.ceil(processedMovies.length / itemsPerPage));
@@ -114,20 +106,20 @@ export default function ExploreView() {
 
           {/* Genre Chips list */}
           <div className="flex flex-wrap gap-2" id="genre-filter-chips">
-            {genres.map((g) => (
+            {[{ id: '', name: 'Tất cả' }, ...genres].map((genre) => (
               <button
-                key={g}
+                key={genre.id || 'all'}
                 onClick={() => {
-                  setSelectedGenre(g);
+                  setSelectedGenreId(genre.id);
                   if (pagination) onPageChange(1);
                   setLocalPage(1);
                 }}
-                className={`px-4 py-2 text-[10px] uppercase font-sans tracking-[0.15em] transition-all duration-300 ${selectedGenre === g
+                className={`px-4 py-2 text-[10px] uppercase font-sans tracking-[0.15em] transition-all duration-300 ${String(selectedGenreId) === String(genre.id)
                     ? 'bg-white text-black border border-white'
                     : 'bg-black text-neutral-400 border border-white/10 hover:text-white hover:border-white/30'
                   }`}
               >
-                {g}
+                {genre.name}
               </button>
             ))}
           </div>
@@ -192,7 +184,7 @@ export default function ExploreView() {
 
       {/* Grid movies or Blank fallback page */}
       {currentMovies.length > 0 ? (
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4" id="explore-movies-grid">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" id="explore-movies-grid">
           {currentMovies.map((movie) => (
             <MovieCard
               key={movie.id}
@@ -211,7 +203,7 @@ export default function ExploreView() {
           </p>
           <button
             onClick={() => {
-              setSelectedGenre('Tất cả');
+              setSelectedGenreId('');
               onSearchChange('');
               onDateChange('');
               handlePageChange(1);

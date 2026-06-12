@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical } from 'lucide-react';
+import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { authApi, getStoredAuth } from '../services/authApi';
 import { useAuth } from '../contexts/AuthContext';
 import { useUI } from '../contexts/UIContext';
@@ -42,6 +43,7 @@ export default function MyTicketsView() {
       location: b.cinemaName || 'CinePremier',
       seats: b.seats?.map(s => `${s.rowLabel}${s.seatNumber}`).join(', ') || '—',
       code: b.bookingCode || String(b.id),
+      qrCode: b.qrCode || '',
       badge: b.status === 'PAID' ? 'ĐÃ THANH TOÁN' : b.status === 'USED' ? 'ĐÃ SỬ DỤNG' : 'ĐANG GIỮ',
       badgeColor: b.status === 'PAID' ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20'
         : b.status === 'USED' ? 'bg-neutral-900 text-neutral-400 border-neutral-700'
@@ -180,22 +182,22 @@ export default function MyTicketsView() {
         </div>
 
         {/* Dynamic / Styled tickets flex grid matching secondary screenshot */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8" id="tickets-current-grid">
+        <div className="grid grid-cols-1 gap-8" id="tickets-current-grid">
           {displayTickets.map((t) => (
             <div 
               key={t.id}
-              className="group border border-neutral-800 bg-gradient-to-br from-[#0e0e11] via-[#07070a] to-[#020203] hover:border-neutral-700/80 transition-all duration-300 flex flex-col md:flex-row relative overflow-hidden shadow-2xl rounded-sm md:h-[200px]"
+              className="group border border-neutral-800 bg-gradient-to-br from-[#0e0e11] via-[#07070a] to-[#020203] hover:border-neutral-700/80 transition-all duration-300 flex flex-col md:flex-row relative overflow-hidden shadow-2xl rounded-sm md:min-h-[260px]"
             >
               
               {/* Semicircle paper ticket notch punches for authentic cinema pass feel */}
-              <div className="absolute -top-3 right-[33.3%] w-6 h-6 bg-black border border-neutral-850 rounded-full translate-x-1/2 z-20 hidden md:block"></div>
-              <div className="absolute -bottom-3 right-[33.3%] w-6 h-6 bg-black border border-neutral-850 rounded-full translate-x-1/2 z-20 hidden md:block"></div>
+              <div className="absolute -top-3 right-[220px] w-6 h-6 bg-black border border-neutral-850 rounded-full translate-x-1/2 z-20 hidden md:block"></div>
+              <div className="absolute -bottom-3 right-[220px] w-6 h-6 bg-black border border-neutral-850 rounded-full translate-x-1/2 z-20 hidden md:block"></div>
 
               {/* Vertical line indicator representing tear ticket area */}
-              <div className="absolute right-[33.3%] top-0 bottom-0 border-r border-dashed border-neutral-850 hidden md:block pointer-events-none z-10 w-0"></div>
+              <div className="absolute right-[220px] top-0 bottom-0 border-r border-dashed border-neutral-850 hidden md:block pointer-events-none z-10 w-0"></div>
 
               {/* POSTER CARD LEFT COMPONENT - Compact Fixed width on desktop */}
-              <div className="w-full md:w-[155px] h-44 md:h-full relative bg-neutral-950 flex-shrink-0 overflow-hidden">
+              <div className="w-full md:w-[190px] h-52 md:min-h-[260px] relative bg-neutral-950 flex-shrink-0 overflow-hidden">
                 <img 
                   src={t.poster} 
                   alt={t.title}
@@ -255,20 +257,12 @@ export default function MyTicketsView() {
                   </div>
                 </div>
 
-                {/* Sub scanning prompt & icon lines */}
+                {/* Sub scanning prompt */}
                 <div className="flex items-center justify-between gap-2 pt-0.5">
                   
                   <div className="flex items-center gap-2.5 min-w-0">
-                    {/* Small visual vector barcode */}
-                    <div className="flex gap-[1.5px] items-center bg-white/5 px-2 py-0.5 h-6 shrink-0 rounded-sm">
-                      <div className="w-[1px] bg-neutral-500 h-4"></div>
-                      <div className="w-[3px] bg-neutral-400 h-4"></div>
-                      <div className="w-[1.5px] bg-neutral-600 h-4"></div>
-                      <div className="w-[1px] bg-neutral-300 h-4"></div>
-                      <div className="w-[4px] bg-neutral-400 h-4"></div>
-                      <div className="w-[1px] bg-neutral-600 h-4"></div>
-                      <div className="w-[2px] bg-neutral-300 h-4"></div>
-                      <div className="w-[1.2px] bg-neutral-550 h-4"></div>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-emerald-500/20 bg-emerald-500/5 text-emerald-400">
+                      <ScanLine className="h-4 w-4" />
                     </div>
                     
                     <div className="min-w-0">
@@ -294,6 +288,34 @@ export default function MyTicketsView() {
 
                 </div>
 
+              </div>
+
+              {/* REAL QR CODE FROM BACKEND */}
+              <div className="flex w-full shrink-0 flex-col items-center justify-center gap-3 border-t border-dashed border-neutral-800 bg-black/35 p-5 md:w-[220px] md:border-l md:border-t-0">
+                {t.qrCode ? (
+                  <>
+                    <div className="bg-white p-3 shadow-[0_0_28px_rgba(255,255,255,0.16)]">
+                      <QRCodeSVG
+                        value={t.qrCode}
+                        size={148}
+                        level="M"
+                        marginSize={1}
+                        bgColor="#ffffff"
+                        fgColor="#000000"
+                        title={`QR vé ${t.code}`}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">QR Check-in thật</p>
+                      <p className="mt-1 text-[8px] leading-relaxed text-neutral-500">Nhân viên quét mã để lấy thông tin vé</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3 text-center text-neutral-600">
+                    <ScanLine className="mx-auto h-12 w-12" />
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em]">QR được cấp sau thanh toán</p>
+                  </div>
+                )}
               </div>
 
             </div>

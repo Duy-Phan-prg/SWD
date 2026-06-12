@@ -9,6 +9,8 @@ public record UserProfileResponse(
         String email,
         String fullName,
         String phone,
+        String avatarUrl,
+        Integer birthYear,
         UserStatus status,
         boolean emailVerified,
         boolean phoneVerified,
