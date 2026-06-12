@@ -10,6 +10,7 @@ import com.sba301.cinemaai.dto.request.auth.PasswordResetRequest;
 import com.sba301.cinemaai.dto.request.auth.RefreshTokenRequest;
 import com.sba301.cinemaai.dto.request.auth.RegisterRequest;
 import com.sba301.cinemaai.dto.request.user.ChangePasswordRequest;
+import com.sba301.cinemaai.dto.request.user.UserProfileUpdateRequest;
 import com.sba301.cinemaai.repository.PasswordResetTokenRepository;
 import com.sba301.cinemaai.repository.PendingRegistrationRepository;
 import com.sba301.cinemaai.repository.UserRepository;
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -63,6 +65,7 @@ class AuthIntegrationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.user.email").value(email))
                 .andExpect(jsonPath("$.data.user.roles[0]").value("CUSTOMER"))
+                .andExpect(jsonPath("$.data.user.birthYear").value(2000))
                 .andExpect(jsonPath("$.data.emailVerificationRequired").value(true));
 
         org.assertj.core.api.Assertions.assertThat(userRepository.existsByEmail(email)).isFalse();
@@ -98,7 +101,24 @@ class AuthIntegrationTests {
         mockMvc.perform(get("/api/v1/users/me")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.email").value(email));
+                .andExpect(jsonPath("$.data.email").value(email))
+                .andExpect(jsonPath("$.data.birthYear").value(2000));
+
+        mockMvc.perform(put("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UserProfileUpdateRequest(
+                                "Phase Two Customer",
+                                "0900111222",
+                                1998
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.birthYear").value(1998));
+
+        mockMvc.perform(get("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.birthYear").value(1998));
 
         mockMvc.perform(post("/api/v1/users/me/password")
                         .header("Authorization", "Bearer " + accessToken)

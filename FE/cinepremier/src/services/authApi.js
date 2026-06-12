@@ -326,6 +326,15 @@ export const authApi = {
     token,
     body: payload
   }),
+  uploadMyAvatar: (token, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/api/v1/users/me/avatar', {
+      method: 'POST',
+      token,
+      body: formData
+    });
+  },
   changeMyPassword: (token, payload) => request('/api/v1/users/me/password', {
     method: 'POST',
     token,
@@ -398,6 +407,7 @@ export const authApi = {
     token,
     body: { status }
   }),
+  getGenres: () => request('/api/v1/genres'),
   getAdminGenres: () => request('/api/v1/genres'),
   createAdminGenre: (token, payload) => request('/api/v1/admin/genres', {
     method: 'POST',
@@ -497,7 +507,7 @@ export const authApi = {
   deleteAdminTicketCombo: (token, comboId) => request(`/api/v1/admin/ticket-pricing/combos/${encodeURIComponent(comboId)}`, { method: 'DELETE', token }),
 
   // Bookings
-  validateTicketPrice: (body) => request('/api/v1/ticket-pricing/validate', { method: 'POST', body }),
+  validateTicketPrice: (token, body) => request('/api/v1/ticket-pricing/validate', { method: 'POST', token, body }),
   holdSeats: (token, body) => request('/api/v1/bookings/hold', { method: 'POST', token, body }),
   createBooking: (token, body) => request('/api/v1/bookings', { method: 'POST', token, body }),
   getMyBookings: (token) => request('/api/v1/bookings', { token }),

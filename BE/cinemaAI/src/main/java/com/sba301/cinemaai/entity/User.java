@@ -46,9 +46,14 @@ public class User extends BaseEntity {
     private Integer birthYear;
 
     public User(String email, String passwordHash, String fullName, String phone) {
+        this(email, passwordHash, fullName, phone, null);
+    }
+
+    public User(String email, String passwordHash, String fullName, String phone, Integer birthYear) {
         this.email = email;
         this.passwordHash = passwordHash;
         this.profile = new UserProfile(this, fullName, phone);
+        this.birthYear = birthYear;
     }
 
     public void activateEmail() {
@@ -65,8 +70,9 @@ public class User extends BaseEntity {
         this.status = UserStatus.DISABLED;
     }
 
-    public void updateProfile(String fullName, String phone) {
+    public void updateProfile(String fullName, String phone, Integer birthYear) {
         this.profile.update(fullName, phone);
+        this.birthYear = birthYear;
     }
 
     public void changePassword(String passwordHash) {

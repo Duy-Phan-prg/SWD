@@ -4,7 +4,7 @@ import {
   Camera, CreditCard, Lock, LogOut, Settings, User,
   ChevronRight, Award, Flame, Eye, Film, Sparkles,
   ChevronDown, Check, Shield, Volume2, VolumeX, EyeOff,
-  Save, Trash2, Sliders, Smartphone
+  Save, Trash2, Sliders, Smartphone, Mail, Phone, Cake, BadgeCheck, Loader2, Ticket
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { authApi, expireAuthSession, getStoredAuth, normalizeUser } from '../services/authApi';
@@ -24,13 +24,16 @@ export default function ProfileView() {
   const navigate = useNavigate();
   const { isLoggedIn, currentUser, setCurrentUser, setCurrentRole, handleLogout: onLogout } = useAuth();
   const { showToast } = useUI();
-  const { bookedTickets } = useMovies();
+  const { moviesList } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onTabChange = (tab) => { const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets' }; navigate(paths[tab] || '/'); };
   const onProfileUpdated = (user) => { setCurrentUser(user); setCurrentRole(user.role || 'user'); };
   const [profileImg, setProfileImg] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop');
   const [name, setName] = useState(currentUser?.name || 'MINH HỒNG (VIP)');
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = React.useRef(null);
 
   // Advanced Interactive Settings States
   const [activePanel, setActivePanel] = useState(null); // null | 'profile' | 'payment' | 'security' | 'vibe'
@@ -44,6 +47,8 @@ export default function ProfileView() {
   const [profilePhoneInput, setProfilePhoneInput] = useState('');
   const [profileDateOfBirth, setProfileDateOfBirth] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   // Settings - Payment card states
   const [cardNumber, setCardNumber] = useState('4611 •••• •••• 8899');
@@ -74,8 +79,37 @@ export default function ProfileView() {
       }
       setProfilePhoneInput(normalizePhoneInput(currentUser.phone || ''));
       setProfileDateOfBirth(currentUser.birthYear ? String(currentUser.birthYear) : '');
+      if (currentUser.avatarUrl) setProfileImg(currentUser.avatarUrl);
     }
   }, [currentUser]);
+
+  React.useEffect(() => {
+    if (!isLoggedIn) return;
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) return;
+
+    let cancelled = false;
+    setIsProfileLoading(true);
+    Promise.all([
+      authApi.getMyProfile(accessToken),
+      authApi.getMyBookings(accessToken)
+    ])
+      .then(([profile, bookings]) => {
+        if (cancelled) return;
+        const nextUser = normalizeUser(profile, profile.roles || currentUser?.roles || []);
+        localStorage.setItem('cinepremier_auth_user', JSON.stringify(nextUser));
+        onProfileUpdated(nextUser);
+        setRecentBookings(Array.isArray(bookings) ? bookings : []);
+      })
+      .catch((error) => {
+        if (!cancelled) showToast(error.message || 'Không thể tải dữ liệu hồ sơ từ hệ thống.');
+      })
+      .finally(() => {
+        if (!cancelled) setIsProfileLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [isLoggedIn]);
 
   const handleSaveProfile = async () => {
     const cleanName = profileNameInput.trim();
@@ -186,29 +220,26 @@ export default function ProfileView() {
     } catch (e) { }
   };
 
-  // Fallback default bookings shown in the design screenshot if user has no booked tickets
-  const recentBookings = [
-    {
-      id: 'dune-part-two',
-      title: 'Dune: Part Two',
-      time: 'Hôm nay, 19:30 • Screen 04',
-      seats: 'GH: J12, J13',
-      screenType: 'IMAX',
-      actionLabel: 'Chi tiết',
-      actionType: 'detail',
-      poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=300&auto=format&fit=crop',
-    },
-    {
-      id: 'oppenheimer',
-      title: 'Oppenheimer',
-      time: '15/05/2024 • Screen 01',
-      seats: 'GH: A01',
-      screenType: 'VIP',
-      actionLabel: 'Mua lại',
-      actionType: 'rebuy',
-      poster: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=300&auto=format&fit=crop',
-    }
-  ];
+  const recentApiBookings = [...recentBookings]
+    .sort((a, b) => new Date(b.paidAt || b.showtimeStart || 0) - new Date(a.paidAt || a.showtimeStart || 0))
+    .slice(0, 3);
+  const watchedCount = recentBookings.filter((booking) => booking.status === 'USED').length;
+  const memberSince = currentUser?.createdAt
+    ? new Date(currentUser.createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
+    : 'Đang cập nhật';
+  const getBookingPoster = (booking) => (
+    moviesList.find((movie) => movie.title === booking.movieTitle)?.posterUrl
+    || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop'
+  );
+  const bookingStatusMeta = {
+    PAID: { label: 'Đã thanh toán', className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' },
+    USED: { label: 'Đã sử dụng', className: 'border-neutral-600 bg-neutral-900 text-neutral-400' },
+    HOLDING: { label: 'Đang giữ', className: 'border-amber-500/30 bg-amber-500/10 text-amber-300' },
+    CANCELLED: { label: 'Đã hủy', className: 'border-rose-500/30 bg-rose-500/10 text-rose-300' },
+    EXPIRED: { label: 'Hết hạn', className: 'border-rose-500/20 bg-rose-950/20 text-rose-400' },
+    REFUND_REQUESTED: { label: 'Chờ hoàn tiền', className: 'border-sky-500/30 bg-sky-500/10 text-sky-300' },
+    REFUNDED: { label: 'Đã hoàn tiền', className: 'border-purple-500/30 bg-purple-500/10 text-purple-300' }
+  };
 
   // Radar Chart Calculations for 5-axis polygon:
   // Center is (100, 100), Radius is 60
@@ -240,18 +271,69 @@ export default function ProfileView() {
     { name: 'ACTION', x: 28, y: 76, textAnchor: 'end' }
   ];
 
-  const handleTriggerEditName = () => {
-    if (isEditingName) {
-      setIsEditingName(false);
-    } else {
+  const handleTriggerEditName = async () => {
+    if (!isEditingName) {
+      setName(currentUser?.name || currentUser?.fullName || '');
       setIsEditingName(true);
+      return;
+    }
+
+    const cleanName = name.trim();
+    if (!cleanName || cleanName.length > MAX_NAME_LENGTH) {
+      showToast(!cleanName ? 'Vui lòng nhập tên hồ sơ.' : NAME_VALIDATION_MESSAGE);
+      return;
+    }
+
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      expireAuthSession();
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      const updatedProfile = await authApi.updateMyProfile(accessToken, {
+        fullName: cleanName,
+        phone: currentUser?.phone || profilePhoneInput || null,
+        birthYear: currentUser?.birthYear || (profileDateOfBirth ? Number(profileDateOfBirth) : null)
+      });
+      const nextUser = normalizeUser(updatedProfile, updatedProfile.roles || currentUser?.roles || []);
+      localStorage.setItem('cinepremier_auth_user', JSON.stringify(nextUser));
+      onProfileUpdated(nextUser);
+      setProfileNameInput(nextUser.name);
+      setName(nextUser.name);
+      setIsEditingName(false);
+      showToast('Đã cập nhật tên hồ sơ.');
+    } catch (error) {
+      showToast(error.message || 'Không thể cập nhật tên hồ sơ.');
+    } finally {
+      setIsSavingName(false);
     }
   };
 
-  const handleProfileImageChange = () => {
-    const url = prompt("Nhập URL ảnh đại diện mới của bạn:", profileImg);
-    if (url && url.startsWith('http')) {
-      setProfileImg(url);
+  const handleProfileImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      expireAuthSession();
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const updatedProfile = await authApi.uploadMyAvatar(accessToken, file);
+      const nextUser = normalizeUser(updatedProfile, updatedProfile.roles || currentUser?.roles || []);
+      localStorage.setItem('cinepremier_auth_user', JSON.stringify(nextUser));
+      onProfileUpdated(nextUser);
+      setProfileImg(nextUser.avatarUrl);
+      showToast('Đã cập nhật ảnh đại diện.');
+    } catch (error) {
+      showToast(error.message || 'Không thể tải ảnh đại diện.');
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -287,10 +369,17 @@ export default function ProfileView() {
                 VIP
               </div>
 
-              <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+              <div className="flex flex-col md:flex-row md:items-start items-center gap-6 relative z-10">
 
                 {/* Profile circular avatar with editor button */}
-                <div className="relative group">
+                <div className="relative group md:translate-y-[65px]">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleProfileImageChange}
+                    className="hidden"
+                  />
                   <div className="h-24 w-24 overflow-hidden rounded-md border border-white/15 bg-neutral-950 flex-shrink-0 shadow-2xl">
                     <img
                       src={profileImg}
@@ -300,11 +389,12 @@ export default function ProfileView() {
                     />
                   </div>
                   <button
-                    onClick={handleProfileImageChange}
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
                     className="absolute -bottom-2 -right-2 bg-black border border-white/20 hover:border-white p-2 text-white shadow-xl hover:scale-110 transition shrink-0"
-                    title="Đổi ảnh đại diện"
+                    title="Tải ảnh đại diện từ máy tính"
                   >
-                    <Camera className="h-3.5 w-3.5" />
+                    {isUploadingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                   </button>
                 </div>
 
@@ -318,9 +408,14 @@ export default function ProfileView() {
                           maxLength={MAX_NAME_LENGTH}
                           value={name}
                           onChange={(e) => setName(normalizeNameInput(e.target.value))}
-                          onBlur={() => setIsEditingName(false)}
-                          onKeyDown={(e) => e.key === 'Enter' && setIsEditingName(false)}
-                          className="bg-black border border-white/20 text-white text-xl px-2 py-0.5 focus:outline-none focus:border-white font-sans max-w-[200px]"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleTriggerEditName();
+                            if (e.key === 'Escape') {
+                              setName(currentUser?.name || currentUser?.fullName || '');
+                              setIsEditingName(false);
+                            }
+                          }}
+                          className="bg-black border border-amber-400/50 text-white text-xl px-2 py-0.5 focus:outline-none focus:border-amber-300 font-sans max-w-[260px]"
                           autoFocus
                         />
                       ) : (
@@ -334,8 +429,28 @@ export default function ProfileView() {
                       </span>
                     </div>
                     <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-sans flex items-center justify-center md:justify-start gap-1">
-                      Thành viên từ Tháng 1, 2022 • TP. Hồ Chí Minh
+                      Thành viên từ {memberSince} • {currentUser?.status === 'ACTIVE' ? 'Tài khoản đang hoạt động' : currentUser?.status || 'Đang cập nhật'}
                     </p>
+                  </div>
+
+                  {/* Live personal information from /api/v1/users/me */}
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {[
+                      { icon: Mail, label: 'Email tài khoản', value: currentUser?.email || 'Đang cập nhật' },
+                      { icon: Phone, label: 'Số điện thoại', value: currentUser?.phone || 'Chưa cập nhật' },
+                      { icon: Cake, label: 'Năm sinh', value: currentUser?.birthYear || 'Chưa cập nhật' },
+                      { icon: BadgeCheck, label: 'Xác thực', value: currentUser?.emailVerified ? 'Email đã xác thực' : 'Chưa xác thực email' }
+                    ].map(({ icon: InfoIcon, label, value }) => (
+                      <div key={label} className="flex min-w-0 items-center gap-2.5 border border-white/5 bg-black/50 px-3 py-2 text-left">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-amber-500/20 bg-amber-500/5 text-amber-400">
+                          <InfoIcon className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[7px] font-black uppercase tracking-[0.16em] text-neutral-600">{label}</span>
+                          <span className="mt-0.5 block truncate text-[9px] font-bold text-neutral-300">{value}</span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Level progress info bar matching screenshot */}
@@ -364,7 +479,7 @@ export default function ProfileView() {
                         <Film className="h-3 w-3 text-neutral-500" /> Phim đã xem
                       </span>
                       <span className="text-lg font-mono font-bold text-white mt-1">
-                        {Math.max(42, 42 + bookedTickets.length)}
+                        {watchedCount}
                       </span>
                     </div>
 
@@ -376,10 +491,22 @@ export default function ProfileView() {
                 <div className="hidden md:block">
                   <button
                     onClick={handleTriggerEditName}
-                    className="border border-white/10 hover:border-white/50 bg-black text-[9px] uppercase tracking-widest px-4 py-2 text-white font-sans transition"
+                    disabled={isSavingName}
+                    className="border border-white/10 hover:border-white/50 bg-black text-[9px] uppercase tracking-widest px-4 py-2 text-white font-sans transition disabled:opacity-50"
                   >
-                    {isEditingName ? 'LƯU' : 'SỬA TÊN'}
+                    {isSavingName ? 'ĐANG LƯU...' : isEditingName ? 'LƯU TÊN' : 'SỬA TÊN'}
                   </button>
+                  {isEditingName && (
+                    <button
+                      onClick={() => {
+                        setName(currentUser?.name || currentUser?.fullName || '');
+                        setIsEditingName(false);
+                      }}
+                      className="ml-2 border border-white/5 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500 transition hover:text-white"
+                    >
+                      Hủy
+                    </button>
+                  )}
                 </div>
 
               </div>
@@ -400,126 +527,96 @@ export default function ProfileView() {
                 </button>
               </div>
 
-              {/* List of bookings including actual booked tickets at top if any */}
               <div className="space-y-4">
-                {/* Dynamically display actual booked tickets from this session if they exist */}
-                {bookedTickets.map((ticket) => (
-                  <div
-                    key={ticket.ticketId}
-                    className="border border-white/10 hover:border-white/20 bg-[#0A0A0A] p-4 flex gap-4 transition items-center"
-                  >
-                    <div className="h-16 w-12 overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
-                      <img
-                        src={ticket.movie.posterUrl}
-                        alt={ticket.movie.title}
-                        className="h-full w-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-xs font-bold text-white uppercase italic tracking-wide font-serif truncate">
-                        {ticket.movie.title}
-                      </h4>
-                      <p className="text-[10px] text-neutral-400 font-sans mt-0.5 truncate uppercase">
-                        Hôm nay, {ticket.showtime} • {ticket.hall.split('(')[0]}
-                      </p>
-
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[8px] bg-red-950/20 border border-red-500/30 text-rose-400 px-1.5 font-bold uppercase">
-                          {ticket.movie.ageRating}
-                        </span>
-                        <span className="text-[9px] font-mono text-neutral-500 uppercase">
-                          GHẾ: {ticket.selectedSeats.map(s => s.id).join(', ')}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {/* Barcode line mock matching screen */}
-                      <div className="hidden sm:flex gap-0.5 items-center px-1 py-1 bg-white/5 h-8">
-                        <div className="w-[1.5px] bg-neutral-500 h-6"></div>
-                        <div className="w-[2.5px] bg-neutral-200 h-6"></div>
-                        <div className="w-[1px] bg-neutral-500 h-6"></div>
-                        <div className="w-[4px] bg-white h-6"></div>
-                        <div className="w-[1.5px] bg-neutral-400 h-6"></div>
-                        <div className="w-[2px] bg-neutral-500 h-6"></div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          onTabChange('my-tickets');
-                        }}
-                        className="bg-white hover:bg-neutral-200 text-black px-4 py-2 text-[9px] font-sans tracking-widest font-bold uppercase transition"
-                      >
-                        Chi Tiết
-                      </button>
-                    </div>
+                {isProfileLoading && (
+                  <div className="flex items-center justify-center gap-2 border border-white/10 bg-[#080808] py-10 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                    Đang tải đặt vé từ hệ thống
                   </div>
-                ))}
+                )}
 
-                {/* Simulated Recent static list matching the screenshot */}
-                {recentBookings.map((bk) => (
-                  <div
-                    key={bk.id}
-                    className="border border-white/15 bg-black/60 p-4 flex gap-4 transition items-center"
-                  >
-                    <div className="h-16 w-12 overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
-                      <img
-                        src={bk.poster}
-                        alt={bk.title}
-                        className="h-full w-full object-cover grayscale"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
+                {!isProfileLoading && recentApiBookings.map((booking) => {
+                  const statusMeta = bookingStatusMeta[booking.status] || {
+                    label: booking.status || 'Đang cập nhật',
+                    className: 'border-white/10 bg-neutral-900 text-neutral-400'
+                  };
+                  const showtimeLabel = booking.showtimeStart
+                    ? new Date(booking.showtimeStart).toLocaleString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })
+                    : 'Chưa có lịch chiếu';
+                  const seats = booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || 'Chưa chọn ghế';
 
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-xs font-bold text-white uppercase italic tracking-wide font-serif truncate">
-                        {bk.title}
-                      </h4>
-                      <p className="text-[10px] text-neutral-400 font-sans mt-0.5 truncate uppercase">
-                        {bk.time}
-                      </p>
-
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[8px] border border-white/10 text-neutral-500 px-1.5 font-bold uppercase">
-                          {bk.screenType}
-                        </span>
-                        <span className="text-[9px] font-mono text-neutral-500 uppercase">
-                          {bk.seats}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {/* Barcode line mock matching screen */}
-                      <div className="hidden sm:flex gap-0.5 items-center px-1 py-1 bg-white/5 h-8">
-                        <div className="w-[1.5px] bg-neutral-600 h-6"></div>
-                        <div className="w-[3px] bg-neutral-400 h-6"></div>
-                        <div className="w-[1px] bg-neutral-600 h-6"></div>
-                        <div className="w-[4px] bg-neutral-300 h-6"></div>
-                        <div className="w-[1.5px] bg-neutral-500 h-6"></div>
-                        <div className="w-[2px] bg-neutral-600 h-6"></div>
+                  return (
+                    <div
+                      key={booking.id}
+                      className="border border-white/10 hover:border-white/20 bg-[#0A0A0A] p-4 flex gap-4 transition items-center"
+                    >
+                      <div className="h-16 w-12 overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
+                        <img
+                          src={getBookingPoster(booking)}
+                          alt={booking.movieTitle}
+                          className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
                       </div>
 
-                      {bk.actionType === 'detail' ? (
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold text-white uppercase italic tracking-wide font-serif truncate">
+                          {booking.movieTitle}
+                        </h4>
+                        <p className="text-[10px] text-neutral-400 font-sans mt-0.5 truncate uppercase">
+                          {showtimeLabel} • {booking.roomName} • {booking.cinemaName}
+                        </p>
+
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className={`border px-1.5 text-[8px] font-bold uppercase ${statusMeta.className}`}>
+                            {statusMeta.label}
+                          </span>
+                          <span className="text-[9px] font-mono text-neutral-500 uppercase">
+                            GHẾ: {seats}
+                          </span>
+                          <span className="hidden text-[9px] font-mono text-amber-500 sm:inline">
+                            {Number(booking.totalAmount || 0).toLocaleString('vi-VN')}đ
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {/* Barcode line mock matching screen */}
+                        <div className="hidden sm:flex gap-0.5 items-center px-1 py-1 bg-white/5 h-8">
+                          <div className="w-[1.5px] bg-neutral-500 h-6"></div>
+                          <div className="w-[2.5px] bg-neutral-200 h-6"></div>
+                          <div className="w-[1px] bg-neutral-500 h-6"></div>
+                          <div className="w-[4px] bg-white h-6"></div>
+                          <div className="w-[1.5px] bg-neutral-400 h-6"></div>
+                          <div className="w-[2px] bg-neutral-500 h-6"></div>
+                        </div>
+
                         <button
                           onClick={() => onTabChange('my-tickets')}
-                          className="bg-[#D32F2F] text-white hover:bg-red-700 px-4 py-2 text-[9px] font-sans tracking-widest font-bold uppercase transition"
+                          className="bg-white hover:bg-neutral-200 text-black px-4 py-2 text-[9px] font-sans tracking-widest font-bold uppercase transition"
                         >
-                          {bk.actionLabel}
+                          Chi Tiết
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => onTabChange('explore')}
-                          className="bg-neutral-900 border border-white/10 hover:border-white text-neutral-400 hover:text-white px-4 py-2 text-[9px] font-sans tracking-widest font-bold uppercase transition"
-                        >
-                          {bk.actionLabel}
-                        </button>
-                      )}
+                      </div>
                     </div>
+                  );
+                })}
+
+                {!isProfileLoading && recentApiBookings.length === 0 && (
+                  <div className="border border-dashed border-white/10 bg-[#080808] py-10 text-center">
+                    <Ticket className="mx-auto h-6 w-6 text-neutral-700" />
+                    <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Bạn chưa có đặt vé nào</p>
+                    <button onClick={() => onTabChange('explore')} className="mt-4 border border-white/15 px-4 py-2 text-[9px] font-black uppercase tracking-widest text-white transition hover:bg-white hover:text-black">
+                      Khám phá phim
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 

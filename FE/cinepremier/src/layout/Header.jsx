@@ -104,17 +104,19 @@ export default function Header({
             <span>KHÁM PHÁ</span>
           </button>
 
-          <button
-            onClick={() => onTabChange('my-tickets')}
-            className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
-              ? 'text-white border-white font-bold'
-              : 'text-neutral-400 hover:text-white border-transparent'
-              }`}
-            id="nav-my-bookings"
-          >
-            <Ticket className="h-3.5 w-3.5" />
-            <span>VỀ CỦA TÔI</span>
-          </button>
+          {isLoggedIn && (
+            <button
+              onClick={() => onTabChange('my-tickets')}
+              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
+                ? 'text-white border-white font-bold'
+                : 'text-neutral-400 hover:text-white border-transparent'
+                }`}
+              id="nav-my-bookings"
+            >
+              <Ticket className="h-3.5 w-3.5" />
+              <span>VỀ CỦA TÔI</span>
+            </button>
+          )}
 
           <button
             onClick={() => onTabChange('wishlist')}

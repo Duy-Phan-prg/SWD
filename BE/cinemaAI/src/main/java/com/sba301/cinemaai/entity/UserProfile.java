@@ -34,6 +34,9 @@ public class UserProfile extends BaseEntity {
     @Column(length = 20)
     private String phone;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Column(name = "phone_verified", nullable = false)
     private boolean phoneVerified;
 
@@ -53,5 +56,9 @@ public class UserProfile extends BaseEntity {
 
     public void activatePhone() {
         this.phoneVerified = true;
+    }
+
+    public void updateAvatar(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 }

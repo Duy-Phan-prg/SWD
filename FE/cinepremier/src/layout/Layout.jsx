@@ -27,6 +27,7 @@ export default function Layout({ children }) {
   })();
 
   const handleTabChange = (tab) => {
+    if (tab === 'my-tickets' && !isLoggedIn) return;
     const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', admin: '/admin/overview' };
     navigate(paths[tab] || '/');
   };
@@ -80,8 +81,14 @@ export default function Layout({ children }) {
       <div className="hidden md:flex flex-col items-center justify-between py-12 border-r border-white/10 bg-black text-neutral-500 w-[60px] h-screen fixed left-0 top-0 z-40">
         <div className="text-[9px] uppercase tracking-[0.3em] font-sans font-bold whitespace-nowrap rotate-270 -my-8 text-neutral-400 select-none">EST. 2026</div>
         <div className="flex flex-col items-center space-y-4">
-          {[['home', '/'], ['explore', '/movies'], ['my-tickets', '/tickets'], ['wishlist', '/watchlist']].map(([tab, path]) => (
-            <div key={tab} onClick={() => navigate(path)} className={`w-1.5 h-1.5 rounded-full cursor-pointer transition-all duration-300 ${activeTab === tab ? 'bg-white scale-150' : 'bg-neutral-800'}`} title={tab} />
+          {[['home', '/'], ['explore', '/movies'], ...(isLoggedIn ? [['my-tickets', '/tickets']] : []), ['wishlist', '/watchlist']].map(([tab, path]) => (
+            <button
+              type="button"
+              key={tab}
+              onClick={() => navigate(path)}
+              className={`w-1.5 h-1.5 rounded-full cursor-pointer transition-all duration-300 ${activeTab === tab ? 'bg-white scale-150' : 'bg-neutral-800'}`}
+              title={tab}
+            />
           ))}
         </div>
         <div className="text-[10px] uppercase tracking-[0.25em] font-serif italic text-white text-center select-none font-light">C P</div>

@@ -292,9 +292,14 @@ export default function BookingView() {
       setTicketPriceValidation(null);
       return;
     }
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      setTicketPriceValidation(null);
+      return;
+    }
     const tickets = buildTicketSelections();
     let cancelled = false;
-    authApi.validateTicketPrice({
+    authApi.validateTicketPrice(accessToken, {
       showtimeId: selectedShowtime.id,
       holiday: false,
       tickets
@@ -396,7 +401,7 @@ export default function BookingView() {
 
     setIsHolding(true);
     try {
-      const validation = await authApi.validateTicketPrice({
+      const validation = await authApi.validateTicketPrice(accessToken, {
         showtimeId: selectedShowtime.id,
         holiday: false,
         tickets: buildTicketSelections()
@@ -416,7 +421,6 @@ export default function BookingView() {
         tickets: buildTicketSelections(),
         foods: buildFoodRequests()
       });
-      console.log('[holdSeats] result:', holdResult);
       console.log('[holdSeats] result:', holdResult);
       setHoldBookingId(holdResult.id);
 

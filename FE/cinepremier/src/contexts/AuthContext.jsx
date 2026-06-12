@@ -22,7 +22,6 @@ export function AuthProvider({ children }) {
         setCurrentRole(restoredRole);
       }
       if (!accessToken && !refreshToken) return;
-      if (accessToken && user) return;
 
       try {
         let token = accessToken;
