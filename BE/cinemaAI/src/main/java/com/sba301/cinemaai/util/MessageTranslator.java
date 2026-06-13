@@ -177,6 +177,7 @@ public final class MessageTranslator {
             entry("Seat not found", "Không tìm thấy ghế"),
             entry("Seat not found in its row", "Không tìm thấy ghế trong hàng của ghế đó"),
             entry("Only HOLDING bookings can be paid", "Chỉ đặt vé đang giữ chỗ mới có thể thanh toán"),
+            entry("Only HOLDING or PENDING_PAYMENT bookings can be paid", "Chỉ đặt vé đang giữ ghế hoặc đang chờ thanh toán mới có thể thanh toán"),
             entry("A pending payment already exists for this booking", "Đặt vé này đã có thanh toán đang chờ xử lý"),
             entry("Ticket combo name already exists", "Tên combo vé đã tồn tại"),
             entry("Ticket combo already exists but is inactive. Do you want to create a new combo?", "Combo vé đã tồn tại nhưng đã ngừng hoạt động. Bạn có muốn tạo mới không?"),

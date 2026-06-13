@@ -136,8 +136,7 @@ public class BookingService {
                 .forEach(seat -> seat.changeStatus(SeatRuntimeStatus.BOOKED));
         BigDecimal discount = booking.getDiscountAmount();
         booking.updateAmounts(subtotal, discount, subtotal.subtract(discount));
-        booking.markPaid(qrTicketService.generate(booking));
-        loyaltyPointService.addPointsFromBooking(user, booking);
+        booking.markPendingPayment();
         return toResponse(booking);
     }
 
@@ -266,6 +265,10 @@ public class BookingService {
                 BookingStatus.HOLDING,
                 LocalDateTime.now()
         );
+        expiredBookings.addAll(bookingRepository.findByStatusAndHoldExpiresAtBefore(
+                BookingStatus.PENDING_PAYMENT,
+                LocalDateTime.now()
+        ));
         expiredBookings.forEach(this::expireBooking);
         return expiredBookings.size();
     }

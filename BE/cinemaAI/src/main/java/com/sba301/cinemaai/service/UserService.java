@@ -1,14 +1,18 @@
 package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.user.AdminUserStatusUpdateRequest;
+import com.sba301.cinemaai.dto.request.user.AdminStaffCreateRequest;
 import com.sba301.cinemaai.dto.request.user.ChangePasswordRequest;
 import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import com.sba301.cinemaai.dto.request.user.UserProfileUpdateRequest;
 import com.sba301.cinemaai.entity.User;
+import com.sba301.cinemaai.enums.RoleName;
 import com.sba301.cinemaai.enums.UserStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
+import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.UserMapper;
+import com.sba301.cinemaai.repository.UserProfileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final UserRoleService userRoleService;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -79,6 +84,28 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserProfileResponse getById(Long id) {
         return toProfile(findById(id));
+    }
+
+    @Transactional
+    public UserProfileResponse createStaff(AdminStaffCreateRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ConflictException("Email already exists");
+        }
+        if (request.phone() != null && !request.phone().isBlank()
+                && userProfileRepository.existsByPhone(request.phone())) {
+            throw new ConflictException("Phone already exists");
+        }
+
+        User staff = userRepository.save(new User(
+                request.email(),
+                passwordEncoder.encode(request.password()),
+                request.fullName(),
+                request.phone(),
+                request.birthYear()
+        ));
+        staff.activateEmail();
+        userRoleService.assignRole(staff, RoleName.STAFF);
+        return toProfile(staff);
     }
 
     @Transactional

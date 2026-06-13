@@ -30,7 +30,7 @@ public class PaymentController {
 
     @PostMapping("/vnpay/create")
     @SecurityRequirement(name = "Bearer Authentication")
-    @Operation(summary = "Create VNPAY payment URL", description = "Creates a VNPAY payment for a HOLDING booking")
+    @Operation(summary = "Create VNPAY payment URL", description = "Creates a VNPAY payment for a HOLDING or PENDING_PAYMENT booking")
     public ResponseEntity<ApiResponse<PaymentResponse>> createVnpayPayment(
             @AuthenticationPrincipal AuthenticatedUser user,
             @RequestParam Long bookingId,

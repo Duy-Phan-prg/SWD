@@ -152,23 +152,41 @@ class BookingIntegrationTests {
                         .content(objectMapper.writeValueAsString(new CreateBookingRequest(
                                 holdBookingId,
                                 List.of(new BookingFoodRequest(foodItemId, null, 2))
-                        ))))
+                ))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.status").value("PAID"))
+                .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
                 .andExpect(jsonPath("$.data.totalAmount").value(155000))
-                .andExpect(jsonPath("$.data.qrCode").isNotEmpty())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
         JsonNode bookingJson = objectMapper.readTree(bookingResponse);
         Long bookingId = bookingJson.at("/data/id").asLong();
-        String qrCode = bookingJson.at("/data/qrCode").asText();
 
         mockMvc.perform(get("/api/v1/admin/bookings/{bookingId}", bookingId)
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("PAID"));
+                .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"));
+
+        String paidBookingResponse = mockMvc.perform(post("/api/v1/payments/mock")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .param("bookingId", bookingId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(objectMapper.readTree(paidBookingResponse).at("/data/bookingId").asLong()).isEqualTo(bookingId);
+
+        String paidAdminBookingResponse = mockMvc.perform(get("/api/v1/admin/bookings/{bookingId}", bookingId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PAID"))
+                .andExpect(jsonPath("$.data.qrCode").isNotEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String qrCode = objectMapper.readTree(paidAdminBookingResponse).at("/data/qrCode").asText();
 
         mockMvc.perform(get("/api/v1/admin/bookings")
                         .header("Authorization", "Bearer " + adminToken)
@@ -257,13 +275,19 @@ class BookingIntegrationTests {
                                 List.of(new TicketSelectionRequest(TicketType.ADULT, 22, 1))
                         ))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.status").value("PAID"))
+                .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
                 .andExpect(jsonPath("$.data.totalAmount").value(95000))
                 .andExpect(jsonPath("$.data.tickets[0].ticketType").value("ADULT"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         Long bookingId = objectMapper.readTree(bookingResponse).at("/data/id").asLong();
+
+        mockMvc.perform(post("/api/v1/payments/mock")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .param("bookingId", bookingId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"));
 
         mockMvc.perform(post("/api/v1/bookings/{bookingId}/refund-request", bookingId)
                         .header("Authorization", "Bearer " + customerToken)

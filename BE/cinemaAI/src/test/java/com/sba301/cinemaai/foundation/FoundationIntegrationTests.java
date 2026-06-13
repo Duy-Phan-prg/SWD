@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -34,10 +35,42 @@ class FoundationIntegrationTests {
     }
 
     @Test
+    void shouldGenerateCorrelationIdWhenMissing() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(CorrelationIdFilter.CORRELATION_ID_HEADER))
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    void shouldExposeOpenApiDocsWithBearerSecurityScheme() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(CorrelationIdFilter.CORRELATION_ID_HEADER))
+                .andExpect(jsonPath("$.info.title").value("CineAI API"))
+                .andExpect(jsonPath("$.info.version").value("v1"))
+                .andExpect(jsonPath("$.components.securitySchemes['Bearer Authentication'].type").value("http"))
+                .andExpect(jsonPath("$.components.securitySchemes['Bearer Authentication'].scheme").value("bearer"))
+                .andExpect(jsonPath("$.components.securitySchemes['Bearer Authentication'].bearerFormat").value("JWT"));
+    }
+
+    @Test
     void shouldRequireAuthenticationForProtectedEndpoints() throws Exception {
         mockMvc.perform(get("/api/v1/users/me"))
                 .andExpect(status().is4xxClientError())
                 .andExpect(header().exists(CorrelationIdFilter.CORRELATION_ID_HEADER));
+    }
+
+    @Test
+    void shouldReturnStandardErrorResponseForMissingResource() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/phase-0-not-found"))
+                .andExpect(status().isNotFound())
+                .andExpect(header().exists(CorrelationIdFilter.CORRELATION_ID_HEADER))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Không tìm thấy tài nguyên"))
+                .andExpect(jsonPath("$.path").value("/api/v1/auth/phase-0-not-found"))
+                .andExpect(jsonPath("$.errors").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @RestController

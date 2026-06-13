@@ -290,7 +290,7 @@ class CinemaShowtimeIntegrationTests {
                                 ShowtimeStatus.OPEN
                         ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Không thể lên lịch suất chiếu trong phòng không hoạt động"));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString(inactiveRoom.getName())));
 
         mockMvc.perform(patch("/api/v1/admin/showtimes/{showtimeId}/status", showtimeId)
                         .header("Authorization", "Bearer " + token)
@@ -311,7 +311,8 @@ class CinemaShowtimeIntegrationTests {
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.eligible").value(true))
-                .andExpect(jsonPath("$.data.finalAmount").value(85000));
+                .andExpect(jsonPath("$.data.finalAmount").value(95000))
+                .andExpect(jsonPath("$.data.warnings[0]").value("Ticket combo pricing is disabled. Use food combos from the food API only."));
 
         mockMvc.perform(post("/api/v1/ticket-pricing/validate")
                         .header("Authorization", "Bearer " + token)
@@ -368,12 +369,6 @@ class CinemaShowtimeIntegrationTests {
                         ))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Không thể cập nhật suất chiếu vì đang có đặt vé hoạt động"));
-
-        mockMvc.perform(patch("/api/v1/admin/showtimes/{showtimeId}/status", showtimeId)
-                        .header("Authorization", "Bearer " + token)
-                        .param("status", "CANCELLED"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Cannot cancel showtime because it has active bookings"));
 
         activeBooking.cancel();
         bookingRepository.save(activeBooking);

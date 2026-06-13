@@ -74,4 +74,34 @@ public record ShowtimeRequest(
 
         ShowtimeStatus status
 ) {
+    public ShowtimeRequest(
+            Long movieId,
+            Long roomId,
+            LocalDateTime startTime,
+            BigDecimal basePrice,
+            BigDecimal vipPrice,
+            BigDecimal couplePrice,
+            ShowtimeStatus status
+    ) {
+        this(
+                movieId,
+                roomId,
+                startTime,
+                basePrice,
+                vipPrice,
+                couplePrice,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                status
+        );
+    }
 }
