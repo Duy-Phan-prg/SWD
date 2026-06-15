@@ -18,6 +18,7 @@ export default function Layout({ children }) {
 
   const activeTab = (() => {
     const p = location.pathname;
+    if (p.startsWith('/staff')) return 'staff';
     if (p.startsWith('/admin')) return 'admin';
     if (p.startsWith('/movies')) return 'explore';
     if (p === '/tickets') return 'my-tickets';
@@ -28,7 +29,7 @@ export default function Layout({ children }) {
 
   const handleTabChange = (tab) => {
     if (tab === 'my-tickets' && !isLoggedIn) return;
-    const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', admin: '/admin/overview' };
+    const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
     navigate(paths[tab] || '/');
   };
 
