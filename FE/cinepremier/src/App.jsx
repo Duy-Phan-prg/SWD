@@ -11,6 +11,7 @@ import WishlistView from './pages/WishlistPage';
 import AdminDashboard from './pages/AdminPage';
 import PoliciesPage from './pages/PoliciesPage';
 import PaymentCallbackPage from './pages/PaymentCallbackPage';
+import StaffCheckInPage from './pages/StaffCheckInPage';
 import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UIProvider, useUI } from './contexts/UIContext';
@@ -85,6 +86,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/payment-callback" element={<PaymentCallbackPage />} />
+      <Route path="/staff" element={<StaffCheckInPage />} />
       <Route path="/" element={<AppShell><HomeRoute /></AppShell>} />
       <Route path="/movies" element={<AppShell><ExploreView /></AppShell>} />
       <Route path="/movies/:id" element={<AppShell><DetailView /></AppShell>} />
