@@ -22,7 +22,7 @@ import { useMovies } from '../contexts/MoviesContext';
 
 export default function ProfileView() {
   const navigate = useNavigate();
-  const { isLoggedIn, currentUser, setCurrentUser, setCurrentRole, handleLogout: onLogout } = useAuth();
+  const { isLoggedIn, currentUser, currentRole, setCurrentUser, setCurrentRole, handleLogout: onLogout } = useAuth();
   const { showToast } = useUI();
   const { moviesList } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
@@ -357,7 +357,36 @@ export default function ProfileView() {
       )}
 
       {isLoggedIn && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <>
+          {currentRole === 'admin' && (
+            <div className="border border-amber-500/25 bg-[#090806] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-500">Tài khoản quản trị viên</p>
+                  <h2 className="mt-1 text-sm font-bold uppercase tracking-wider text-white">Chọn khu vực làm việc</h2>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    className="flex items-center justify-center gap-2 border border-white bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-black"
+                  >
+                    <User className="h-4 w-4" />
+                    Thông tin cá nhân
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/admin/overview')}
+                    className="flex items-center justify-center gap-2 border border-amber-500/50 bg-amber-500/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Quản trị viên
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
           {/* LEFT SECTION: MAIN PROFILE SUMMARY INFO & BOOKINGS */}
           <div className="lg:col-span-8 space-y-8">
@@ -1248,10 +1277,10 @@ export default function ProfileView() {
 
           </div>
 
-        </div>
-      )
-      }
+          </div>
+        </>
+      )}
 
-    </div >
+    </div>
   );
 }

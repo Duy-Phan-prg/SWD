@@ -13,6 +13,7 @@ import com.sba301.cinemaai.dto.request.ticket.TicketPriceValidationRequest;
 import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
 import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
 import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.Room;
@@ -29,6 +30,7 @@ import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.enums.TicketType;
 import com.sba301.cinemaai.repository.BookingRepository;
+import com.sba301.cinemaai.repository.CinemaRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.RoleRepository;
 import com.sba301.cinemaai.repository.RoomRepository;
@@ -75,6 +77,9 @@ class CinemaShowtimeIntegrationTests {
     private BookingRepository bookingRepository;
 
     @Autowired
+    private CinemaRepository cinemaRepository;
+
+    @Autowired
     private RoomRepository roomRepository;
 
     @Autowired
@@ -97,7 +102,7 @@ class CinemaShowtimeIntegrationTests {
         String token = loginAsAdmin();
         Movie movie = createMovie();
 
-        Long cinemaId = createCinema(token);
+        Long cinemaId = createConfiguredCinema();
         mockMvc.perform(get("/api/v1/admin/cinema"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(cinemaId))
@@ -116,13 +121,26 @@ class CinemaShowtimeIntegrationTests {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CinemaRequest(
-                                "Second Cinema " + System.nanoTime(),
+                                "Cinema Creation Must Be Disabled",
                                 "2 Phase Street",
                                 "Ho Chi Minh City",
                                 "0900555667",
                                 CinemaStatus.ACTIVE
                         ))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(patch("/api/v1/admin/cinema/status")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", "INACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("INACTIVE"));
+        mockMvc.perform(patch("/api/v1/admin/cinema/status")
+                        .header("Authorization", "Bearer " + token)
+                        .param("status", "ACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+        mockMvc.perform(delete("/api/v1/admin/cinema")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isMethodNotAllowed());
         Long roomId = createRoom(token);
         mockMvc.perform(post("/api/v1/admin/rooms")
                         .header("Authorization", "Bearer " + token)
@@ -433,23 +451,13 @@ class CinemaShowtimeIntegrationTests {
                 .andExpect(jsonPath("$.message").value("Không thể đổi trạng thái suất chiếu đã hủy"));
     }
 
-    private Long createCinema(String token) throws Exception {
-        String response = mockMvc.perform(post("/api/v1/admin/cinema")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CinemaRequest(
-                                "Phase 5 Cinema " + System.nanoTime(),
-                                "1 Phase Street",
-                                "Ho Chi Minh City",
-                                "0900555666",
-                                CinemaStatus.ACTIVE
-                        ))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.id").isNumber())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        return objectMapper.readTree(response).at("/data/id").asLong();
+    private Long createConfiguredCinema() {
+        return cinemaRepository.save(new Cinema(
+                "Phase 5 Cinema " + System.nanoTime(),
+                "1 Phase Street",
+                "Ho Chi Minh City",
+                "0900555666"
+        )).getId();
     }
 
     private Map<String, Object> customSeatRow(String rowLabel, int displayOrder) {

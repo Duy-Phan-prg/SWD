@@ -402,6 +402,11 @@ export const authApi = {
   }),
   getAdminUsers: (token) => request('/api/v1/admin/users', { token }),
   getAdminUserDetail: (token, userId) => request(`/api/v1/admin/users/${encodeURIComponent(userId)}`, { token }),
+  createAdminStaff: (token, payload) => request('/api/v1/admin/users/staff', {
+    method: 'POST',
+    token,
+    body: payload
+  }),
   updateAdminUserStatus: (token, userId, status) => request(`/api/v1/admin/users/${encodeURIComponent(userId)}/status`, {
     method: 'PATCH',
     token,
@@ -427,11 +432,6 @@ export const authApi = {
   getFoodCombos: () => request('/api/v1/foods/combos'),
   getPublicCinema: () => request('/api/v1/cinema'),
   getAdminCinema: (token) => request('/api/v1/admin/cinema', { token }),
-  createAdminCinema: (token, payload) => request('/api/v1/admin/cinema', {
-    method: 'POST',
-    token,
-    body: payload
-  }),
   updateAdminCinema: (token, payload) => request('/api/v1/admin/cinema', {
     method: 'PUT',
     token,
@@ -439,10 +439,6 @@ export const authApi = {
   }),
   updateAdminCinemaStatus: (token, status) => request(`/api/v1/admin/cinema/status?status=${encodeURIComponent(status)}`, {
     method: 'PATCH',
-    token
-  }),
-  deactivateAdminCinema: (token) => request('/api/v1/admin/cinema', {
-    method: 'DELETE',
     token
   }),
   getAdminRooms: (token) => request('/api/v1/admin/rooms', { token }),

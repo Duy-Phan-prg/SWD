@@ -110,7 +110,6 @@ export default function AdminGenresPanel({ ctx }) {
     setMoviesList,
     bookedTickets,
     setBookedTickets,
-    cinemaLocations,
     onSelectMovie,
     showToast,
     initialSection,

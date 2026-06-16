@@ -110,7 +110,6 @@ export default function AdminAiAnalysisPanel({ ctx }) {
     setMoviesList,
     bookedTickets,
     setBookedTickets,
-    cinemaLocations,
     onSelectMovie,
     showToast,
     initialSection,

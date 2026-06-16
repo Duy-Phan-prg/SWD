@@ -55,7 +55,7 @@ function AdminRouteView() {
     homepageVideoUrl,
     handleHomepageVideoUrlChange,
     fetchPublicFoodCatalog,
-    cinemaLocations,
+    publicCinema,
     fetchPublicCinema,
   } = useMovies();
 
@@ -66,8 +66,9 @@ function AdminRouteView() {
         setMoviesList={setMoviesList}
         bookedTickets={bookedTickets}
         setBookedTickets={setBookedTickets}
-        cinemaLocations={cinemaLocations}
+        publicCinema={publicCinema}
         onCinemaChanged={fetchPublicCinema}
+        onOpenCheckIn={() => navigate('/staff')}
         onSelectMovie={(id) => navigate(`/movies/${id}`)}
         showToast={showToast}
         initialSection={section}

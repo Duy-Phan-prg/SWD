@@ -6,7 +6,7 @@ Phase 4 theo mapping bao phủ quản lý rạp, phòng chiếu, sơ đồ ghế
 ## Quy tắc nghiệp vụ chính
 
 - Scope hiện tại giới hạn một rạp chính trong hệ thống.
-- Admin tạo/cập nhật/xóa mềm rạp, phòng, ghế và suất chiếu.
+- Rạp chính được cấu hình sẵn; Admin chỉ lấy và cập nhật thông tin rạp.
 - Room name được chuẩn hóa khoảng trắng và không được trùng trong cùng rạp.
 - Seat layout có thể sinh tự động theo `rowCount`/`columnCount` hoặc thay bằng layout custom theo từng hàng.
 - Ghế đôi `COUPLE` phải có số ghế chẵn trong một hàng.
@@ -16,40 +16,9 @@ Phase 4 theo mapping bao phủ quản lý rạp, phòng chiếu, sơ đồ ghế
 - Không cập nhật/hủy/xóa showtime khi có booking active.
 - Seat map public trả runtime status: `AVAILABLE`, `HOLDING`, `BOOKED`, `CHECKED_IN`, `UNAVAILABLE`.
 
-## 1. Tạo rạp
+## 1. Rạp chính được cấu hình sẵn
 
-### API
-```http
-POST /api/v1/admin/cinema
-Authorization: Bearer {{adminToken}}
-```
-
-### JSON
-```json
-{
-  "name": "CinemaAI Main",
-  "address": "123 Nguyễn Trãi",
-  "city": "Hồ Chí Minh",
-  "phone": "0900999888",
-  "status": "ACTIVE"
-}
-```
-
-### Post-response
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "name": "CinemaAI Main",
-    "address": "123 Nguyễn Trãi",
-    "city": "Hồ Chí Minh",
-    "phone": "0900999888",
-    "status": "ACTIVE"
-  },
-  "message": "Cinema created successfully"
-}
-```
+Hệ thống chỉ có một rạp được tạo bằng seed data hoặc migration. Không có API tạo rạp.
 
 ## 2. Lấy rạp hiện tại
 
@@ -494,7 +463,7 @@ Authorization: Bearer {{adminToken}}
 
 ## Checklist hoàn tất Phase 4
 
-- Admin quản lý được rạp chính.
+- Admin lấy và cập nhật được thông tin rạp chính.
 - Public xem được rạp và danh sách phòng active.
 - Admin tạo/cập nhật room và đổi status room được.
 - Admin sinh seat layout mặc định và thay toàn bộ layout custom được.

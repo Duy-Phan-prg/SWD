@@ -5,11 +5,13 @@ import { QRCodeSVG } from 'qrcode.react';
 import { authApi, getStoredAuth } from '../services/authApi';
 import { useAuth } from '../contexts/AuthContext';
 import { useUI } from '../contexts/UIContext';
+import { useMovies } from '../contexts/MoviesContext';
 
 export default function MyTicketsView() {
   const navigate = useNavigate();
   const { isLoggedIn } = useAuth();
   const { showToast, setShowOTP } = useUI();
+  const { publicCinema } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onOpenOTP = () => setShowOTP(true);
   const [reviewContent, setReviewContent] = useState('');
@@ -40,7 +42,7 @@ export default function MyTicketsView() {
       time: b.showtimeStart ? new Date(b.showtimeStart).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—',
       date: b.showtimeStart ? new Date(b.showtimeStart).toLocaleDateString('vi-VN') : '—',
       room: b.roomName || b.showtime?.roomName || '—',
-      location: b.cinemaName || 'CinePremier',
+      location: b.cinemaName || publicCinema?.name || 'Rạp chưa được cấu hình',
       seats: b.seats?.map(s => `${s.rowLabel}${s.seatNumber}`).join(', ') || '—',
       code: b.bookingCode || String(b.id),
       qrCode: b.qrCode || '',
@@ -56,69 +58,18 @@ export default function MyTicketsView() {
       isReal: true
     }));
 
-  // Mock Preset "Vé hiện tại" shown in screen representation
-  const defaultTickets = [
-    {
-      id: 'mock-ticket-1',
-      title: 'DUNE: HÀNH TINH CÁT',
-      englishTitle: 'Dune: Part Two',
-      time: '19:30',
-      date: '20 THÁNG 10, 2026',
-      room: '04 (IMAX)',
-      location: 'CinePremier District 1',
-      seats: 'J12, J13',
-      code: 'CP-982310',
-      badge: 'IMAX 3D',
-      helperText: 'Sẵn sàng quét / Đưa mã này cho nhân viên soát vé',
-      poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=350&auto=format&fit=crop'
-    },
-    {
-      id: 'mock-ticket-2',
-      title: 'THÁM TỬ NOIR',
-      englishTitle: 'Detective Noir: Immersive Rain',
-      time: '21:00',
-      date: 'NGÀY MAI, 21/05',
-      room: '01',
-      location: 'CinePremier District 1',
-      seats: 'E05, E06',
-      code: 'CP-982442',
-      badge: 'NOIR 2D',
-      helperText: 'Chờ kích hoạt / Mã QR và nhà dụng vào ngày mai',
-      poster: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=350&auto=format&fit=crop'
-    }
-  ];
+  const displayTickets = activeTickets;
 
-  // Combined real booked tickets + mock tickets
-  // Dùng real bookings nếu có, nếu chưa login thì dùng mock
-  const displayTickets = isLoggedIn ? activeTickets : defaultTickets;
-
-  // Mock Preset "Lịch sử đặt vé"
-  const bookingHistory = [
-    {
-      movie: 'Oppenheimer',
-      date: '12/09/2024',
-      location: 'CinePremier Landmark 81',
-      seats: 'H10, H11',
-      status: 'Đã sử dụng',
-      statusColor: 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20'
-    },
-    {
-      movie: 'Interstellar',
-      date: '28/08/2024',
-      location: 'CinePremier Bitexco',
-      seats: 'L01',
-      status: 'Đã sử dụng',
-      statusColor: 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20'
-    },
-    {
-      movie: 'The Batman',
-      date: '15/07/2024',
-      location: 'CinePremier Landmark 81',
-      seats: 'C04, C05',
-      status: 'Hết hạn',
-      statusColor: 'bg-red-950/10 text-rose-500 border-rose-500/10'
-    }
-  ];
+  const bookingHistory = realBookings.map((booking) => ({
+    movie: booking.movieTitle || booking.showtime?.movieTitle || 'Phim',
+    date: booking.showtimeStart ? new Date(booking.showtimeStart).toLocaleDateString('vi-VN') : '—',
+    location: booking.cinemaName || publicCinema?.name || 'Rạp chưa được cấu hình',
+    seats: booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || '—',
+    status: booking.status || 'UNKNOWN',
+    statusColor: booking.status === 'USED'
+      ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20'
+      : 'bg-neutral-900 text-neutral-400 border-neutral-700'
+  }));
 
   const handleReviewSubmit = (e) => {
     e.preventDefault();

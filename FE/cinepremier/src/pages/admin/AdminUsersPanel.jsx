@@ -1,19 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   BadgeCheck,
   Clock,
+  Eye,
+  EyeOff,
   Mail,
   Phone,
+  Plus,
   RefreshCw,
   Search,
   ShieldAlert,
   UserCheck,
+  UserPlus,
   Users,
-  UserX
+  UserX,
+  X
 } from 'lucide-react';
 
 const USER_STATUS_OPTIONS = ['ACTIVE', 'DISABLED', 'PENDING_VERIFICATION'];
+const EMPTY_STAFF_FORM = {
+  email: '',
+  password: '',
+  fullName: '',
+  phone: '',
+  birthYear: ''
+};
 
 const formatDateTime = (value) => {
   if (!value) return 'Chưa có dữ liệu';
@@ -55,13 +67,62 @@ export default function AdminUsersPanel({ ctx }) {
     isUsersLoading,
     isUserDetailLoading,
     isUserStatusSaving,
+    isStaffCreating,
     fetchAdminUsers,
     handleSelectAdminUser,
+    handleCreateStaff,
     handleUpdateAdminUserStatus,
     currentUser
   } = ctx;
+  const [isStaffFormOpen, setIsStaffFormOpen] = useState(false);
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
+  const [staffForm, setStaffForm] = useState(EMPTY_STAFF_FORM);
+  const [staffFormErrors, setStaffFormErrors] = useState({});
 
   if (activeTab !== 'users') return null;
+
+  const updateStaffForm = (field, value) => {
+    setStaffForm((prev) => ({ ...prev, [field]: value }));
+    setStaffFormErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const submitStaffForm = async (event) => {
+    event.preventDefault();
+    const errors = {};
+    const email = staffForm.email.trim();
+    const fullName = staffForm.fullName.trim();
+    const phone = staffForm.phone.trim();
+    const birthYear = staffForm.birthYear ? Number(staffForm.birthYear) : null;
+
+    if (!email) errors.email = 'Email là bắt buộc.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Email không hợp lệ.';
+    if (!fullName) errors.fullName = 'Họ tên là bắt buộc.';
+    if (staffForm.password.length < 8) errors.password = 'Mật khẩu cần ít nhất 8 ký tự.';
+    if (phone && !/^\+?[0-9]{10,15}$/.test(phone)) errors.phone = 'Số điện thoại gồm 10-15 chữ số.';
+    if (birthYear && (birthYear < 1900 || birthYear > 2100)) errors.birthYear = 'Năm sinh không hợp lệ.';
+
+    if (Object.keys(errors).length > 0) {
+      setStaffFormErrors(errors);
+      return;
+    }
+
+    try {
+      const createdStaff = await handleCreateStaff({
+        email,
+        password: staffForm.password,
+        fullName,
+        phone: phone || null,
+        birthYear
+      });
+      if (!createdStaff) return;
+      setStaffForm(EMPTY_STAFF_FORM);
+      setStaffFormErrors({});
+      setShowStaffPassword(false);
+      setIsStaffFormOpen(false);
+    } catch {
+      // The shared admin handler displays the backend validation/conflict message.
+    }
+  };
 
   const query = userSearch.trim().toLowerCase();
   const filteredUsers = adminUsers.filter((user) => {
@@ -101,6 +162,15 @@ export default function AdminUsersPanel({ ctx }) {
 
         <button
           type="button"
+          onClick={() => setIsStaffFormOpen((prev) => !prev)}
+          className="flex items-center justify-center gap-2 border border-amber-500/60 bg-amber-500/10 px-4 py-2 text-[10px] font-mono font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black"
+        >
+          {isStaffFormOpen ? <X className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
+          {isStaffFormOpen ? 'Đóng biểu mẫu' : 'Cấp tài khoản STAFF'}
+        </button>
+
+        <button
+          type="button"
           onClick={fetchAdminUsers}
           disabled={isUsersLoading}
           className="flex items-center justify-center gap-2 border border-neutral-800 bg-black px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition hover:border-amber-400 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
@@ -109,6 +179,86 @@ export default function AdminUsersPanel({ ctx }) {
           Làm mới dữ liệu
         </button>
       </div>
+
+      {isStaffFormOpen && (
+        <motion.form
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          onSubmit={submitStaffForm}
+          className="border border-amber-500/30 bg-[#080704] p-5"
+        >
+          <div className="mb-4 flex items-start justify-between gap-4 border-b border-amber-500/15 pb-4">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-300">
+                <Plus className="h-4 w-4" />
+                Cấp tài khoản STAFF
+              </div>
+              <p className="mt-1 text-[10px] text-neutral-500">
+                Tài khoản được kích hoạt ngay và có quyền truy cập màn hình nghiệp vụ nhân viên.
+              </p>
+            </div>
+            <span className="border border-amber-500/30 bg-black px-2 py-1 text-[8px] font-black uppercase tracking-widest text-amber-300">
+              AUTH-12
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {[
+              { field: 'fullName', label: 'Họ và tên *', placeholder: 'Nguyễn Văn A', type: 'text' },
+              { field: 'email', label: 'Email đăng nhập *', placeholder: 'staff@cinepremier.vn', type: 'email' },
+              { field: 'phone', label: 'Số điện thoại', placeholder: '0901234567', type: 'tel' },
+              { field: 'birthYear', label: 'Năm sinh', placeholder: '2000', type: 'number' }
+            ].map(({ field, label, placeholder, type }) => (
+              <label key={field} className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{label}</span>
+                <input
+                  type={type}
+                  value={staffForm[field]}
+                  onChange={(event) => updateStaffForm(field, event.target.value)}
+                  placeholder={placeholder}
+                  min={field === 'birthYear' ? 1900 : undefined}
+                  max={field === 'birthYear' ? 2100 : undefined}
+                  className={`w-full border bg-black px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400 ${staffFormErrors[field] ? 'border-rose-500' : 'border-neutral-800'}`}
+                />
+                {staffFormErrors[field] && <span className="block text-[9px] text-rose-300">{staffFormErrors[field]}</span>}
+              </label>
+            ))}
+
+            <label className="space-y-1.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Mật khẩu cấp ban đầu *</span>
+              <div className="relative">
+                <input
+                  type={showStaffPassword ? 'text' : 'password'}
+                  value={staffForm.password}
+                  onChange={(event) => updateStaffForm('password', event.target.value)}
+                  placeholder="Tối thiểu 8 ký tự"
+                  className={`w-full border bg-black px-3 py-2.5 pr-10 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400 ${staffFormErrors.password ? 'border-rose-500' : 'border-neutral-800'}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowStaffPassword((prev) => !prev)}
+                  className="absolute right-2.5 top-2.5 text-neutral-500 transition hover:text-white"
+                  aria-label={showStaffPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showStaffPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {staffFormErrors.password && <span className="block text-[9px] text-rose-300">{staffFormErrors.password}</span>}
+            </label>
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <button
+              type="submit"
+              disabled={isStaffCreating}
+              className="flex items-center gap-2 border border-amber-400 bg-amber-500 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isStaffCreating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+              {isStaffCreating ? 'Đang cấp tài khoản...' : 'Tạo tài khoản STAFF'}
+            </button>
+          </div>
+        </motion.form>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <div className="xl:col-span-7 border border-neutral-850 bg-neutral-950 overflow-hidden">

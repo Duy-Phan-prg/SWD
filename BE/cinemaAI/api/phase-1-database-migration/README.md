@@ -85,8 +85,7 @@ Seed data nằm trong package `com.sba301.cinemaai.seeder` và chạy qua
 | `RoleSeeder` | 10 | Tạo toàn bộ role trong `RoleName`. |
 | `AdminAccountSeeder` | 15 | Tạo admin mặc định `admin@cinemaai.com`. |
 | `GenreSeeder` | 20 | Tạo Action, Drama, Comedy, Horror, Romance, Sci-Fi. |
-| `MovieSeeder` | 30 | Tạo phim mẫu và liên kết genre. |
-| `CinemaScheduleSeeder` | 40 | Tạo rạp `CineAI Central`, `Room A`, seat rows/seats và showtime mẫu. |
+| `CinemaScheduleSeeder` | 40 | Tạo rạp `CineAI Central`, `Room A` và seat rows/seats; không tạo phim hoặc showtime mẫu. |
 
 ## 6. Kiểm tra app và database đã sẵn sàng
 
@@ -119,10 +118,10 @@ GET /api/v1/genres
 }
 ```
 
-## 7. Kiểm tra seed movie
+## 7. Kiểm tra movie pagination
 
 ### Tên mô tả API
-Kiểm tra movie seed và phân trang public movie.
+Kiểm tra phân trang public movie. Hệ thống không tự seed phim mẫu vào dữ liệu runtime.
 
 ### API
 ```http

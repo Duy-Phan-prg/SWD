@@ -37,19 +37,6 @@ public class CinemaService {
     }
 
     @Transactional
-    public CinemaResponse create(CinemaRequest request) {
-        if (cinemaRepository.count() > 0) {
-            throw new ConflictException("System is limited to one cinema");
-        }
-        cinemaRepository.findByName(request.name()).ifPresent(cinema -> {
-            throw new ConflictException("Cinema name already exists");
-        });
-        Cinema cinema = new Cinema(request.name(), request.address(), request.city(), request.phone());
-        cinema.changeStatus(request.status() == null ? CinemaStatus.ACTIVE : request.status());
-        return cinemaMapper.toCinemaResponse(cinemaRepository.save(cinema));
-    }
-
-    @Transactional
     public CinemaResponse update(CinemaRequest request) {
         return update(findSingleton().getId(), request);
     }
@@ -77,16 +64,6 @@ public class CinemaService {
         Cinema cinema = findById(id);
         cinema.changeStatus(status);
         return cinemaMapper.toCinemaResponse(cinema);
-    }
-
-    @Transactional
-    public void delete() {
-        delete(findSingleton().getId());
-    }
-
-    @Transactional
-    public void delete(Long id) {
-        findById(id).changeStatus(CinemaStatus.INACTIVE);
     }
 
     public Cinema findById(Long id) {

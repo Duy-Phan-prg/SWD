@@ -39,10 +39,10 @@ if (action?.id) {
 }
 ```
 
-## 2. Kiểm tra movie seed
+## 2. Kiểm tra movie pagination
 
 ### Tên mô tả API
-Kiểm tra schema movie, movie pagination và dữ liệu movie seed.
+Kiểm tra schema và movie pagination. Hệ thống không tự seed phim mẫu.
 
 ### API
 ```http
@@ -59,8 +59,6 @@ GET /api/v1/movies?size=10
 const body = pm.response.json();
 const page = body.data || {};
 const movies = page.items || [];
-const seededMovie = movies.find((movie) => movie.title === "The Last Orbit");
-
 pm.test("Danh sách movie trả về thành công", function () {
   pm.expect(pm.response.code).to.eql(200);
   pm.expect(body.success).to.eql(true);
@@ -74,10 +72,6 @@ pm.test("Movie response có pagination contract", function () {
   pm.expect(page).to.have.property("totalPages");
 });
 
-if (seededMovie?.id) {
-  pm.collectionVariables.set("movieId", seededMovie.id);
-  pm.collectionVariables.set("movieTitle", seededMovie.title);
-}
 ```
 
 ## 3. Kiểm tra cinema/room seed

@@ -11,10 +11,21 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: clip;
   line-height: 1.5;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .font-sans,

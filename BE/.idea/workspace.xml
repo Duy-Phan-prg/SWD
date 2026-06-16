@@ -5,37 +5,35 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="234e65fd-19fb-47a2-8f15-f004cd8a665d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminTicketPricingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminTicketPricingController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/booking/HoldSeatsRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/booking/HoldSeatsRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/BulkShowtimeRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/BulkShowtimeRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/ShowtimeRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/cinema/ShowtimeRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/ticket/TicketComboRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/ticket/TicketComboRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/ticket/TicketPricingRuleRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/ticket/TicketPricingRuleRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/ticket/TicketSelectionRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/request/ticket/TicketSelectionRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ApiResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ApiResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ErrorResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ErrorResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/FieldErrorResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/FieldErrorResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/payment/VNPayPaymentResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/payment/VNPayPaymentResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/promotion/ApplyPromotionResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/promotion/ApplyPromotionResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ticket/TicketComboResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ticket/TicketComboResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ticket/TicketLinePriceResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ticket/TicketLinePriceResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ticket/TicketPricingRuleResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/ticket/TicketPricingRuleResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/TicketCombo.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/TicketCombo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/TicketPricingRule.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/TicketPricingRule.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/enums/TicketType.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/enums/TicketType.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/TicketComboRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/TicketComboRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/TicketPricingRuleRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/TicketPricingRuleRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/BookingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/BookingService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/TicketPricingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/TicketPricingService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/booking/BookingIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/booking/BookingIntegrationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-4-cinema-room-seat-showtime/POST_RESPONSE_SCRIPTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-4-cinema-room-seat-showtime/POST_RESPONSE_SCRIPTS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-4-cinema-room-seat-showtime/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-4-cinema-room-seat-showtime/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/POST_RESPONSE_SCRIPTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/POST_RESPONSE_SCRIPTS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/phase-5-single-cinema-showtime/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/api/post-response-scripts/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api/post-response-scripts/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminCinemaController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/AdminCinemaController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/CinemaService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/CinemaService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/util/MessageTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/util/MessageTranslator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeEndpointInventoryTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeEndpointInventoryTests.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/cinema/CinemaShowtimeIntegrationTests.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/exception/GlobalExceptionHandlerTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/exception/GlobalExceptionHandlerTests.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/movie/ActorIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/movie/ActorIntegrationTests.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Footer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Footer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/contexts/MoviesContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/contexts/MoviesContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Header.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Layout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/layout/Layout.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/AdminPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/AdminPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminShowtimesPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminShowtimesPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/BookingPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/BookingPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/MyTicketsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/MyTicketsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminAiAnalysisPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminAiAnalysisPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminCinemaPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminCinemaPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminFoodsPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminFoodsPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminGenresPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminGenresPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminHomepagePanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminHomepagePanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminMoviesPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminMoviesPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminOverviewPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminOverviewPanel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminTransactionsPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/pages/admin/AdminTransactionsPanel.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/services/authApi.js" beforeDir="false" afterPath="$PROJECT_DIR$/../FE/cinepremier/src/services/authApi.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../FE/cinepremier/src/services/cinemaData.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../docs/ai-analysis-data-contract.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../docs/cinemaAI-conceptual-diagram.mmd" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -136,6 +134,7 @@
       <workItem from="1780735256194" duration="32020000" />
       <workItem from="1780895363166" duration="699000" />
       <workItem from="1780902649487" duration="16771000" />
+      <workItem from="1781521412827" duration="20000" />
     </task>
     <servers />
   </component>

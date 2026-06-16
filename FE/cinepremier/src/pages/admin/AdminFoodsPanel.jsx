@@ -110,7 +110,6 @@ export default function AdminFoodsPanel({ ctx }) {
     setMoviesList,
     bookedTickets,
     setBookedTickets,
-    cinemaLocations,
     onSelectMovie,
     showToast,
     initialSection,

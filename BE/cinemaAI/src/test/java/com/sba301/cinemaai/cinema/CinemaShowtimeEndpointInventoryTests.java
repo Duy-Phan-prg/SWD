@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.cinema;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,13 +16,19 @@ class CinemaShowtimeEndpointInventoryTests {
         String adminCinema = readSource("controller/AdminCinemaController.java");
         for (String endpoint : List.of(
                 "@getmapping(\"/api/v1/admin/cinema\")",
-                "@postmapping(\"/api/v1/admin/cinema\")",
                 "@putmapping(\"/api/v1/admin/cinema\")",
-                "@patchmapping(\"/api/v1/admin/cinema/status\")",
-                "@deletemapping(\"/api/v1/admin/cinema\")"
+                "@patchmapping(\"/api/v1/admin/cinema/status\")"
         )) {
             assertTrue(adminCinema.contains(endpoint), "AdminCinemaController must expose " + endpoint);
         }
+        assertFalse(
+                adminCinema.contains("@postmapping(\"/api/v1/admin/cinema\")"),
+                "AdminCinemaController must not expose cinema creation"
+        );
+        assertFalse(
+                adminCinema.contains("@deletemapping(\"/api/v1/admin/cinema\")"),
+                "AdminCinemaController must not expose cinema deletion"
+        );
 
         String publicCinema = readSource("controller/CinemaController.java");
         assertTrue(publicCinema.contains("@getmapping({\"/api/v1/cinema\", \"/api/v1/cinemas\"})"));

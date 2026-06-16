@@ -18,7 +18,6 @@ export function MoviesProvider({ children }) {
   const [movieDateFilter, setMovieDateFilter] = useState('');
   const [genres, setGenres] = useState([]);
   const [selectedGenreId, setSelectedGenreId] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
   const [publicCinema, setPublicCinema] = useState(null);
   const [watchlist, setWatchlist] = useState([]);
   const [bookedTickets, setBookedTickets] = useState([]);
@@ -31,20 +30,13 @@ export function MoviesProvider({ children }) {
   const { isLoggedIn } = useAuth();
   const location = useLocation();
   const isExplorePage = location.pathname === '/movies';
-  const liveCinemaLocations = publicCinema
-    ? [`${publicCinema.name} (${[publicCinema.address, publicCinema.city].filter(Boolean).join(', ')})`]
-    : [];
-
   const fetchPublicCinema = async () => {
     try {
       const cinema = await authApi.getPublicCinema();
-      const locationLabel = `${cinema.name} (${[cinema.address, cinema.city].filter(Boolean).join(', ')})`;
       setPublicCinema(cinema);
-      setSelectedCity(locationLabel);
       return cinema;
     } catch {
       setPublicCinema(null);
-      setSelectedCity('');
       return null;
     }
   };
@@ -191,9 +183,7 @@ export function MoviesProvider({ children }) {
       searchQuery, setSearchQuery,
       movieDateFilter, setMovieDateFilter,
       genres, selectedGenreId, setSelectedGenreId,
-      selectedCity, setSelectedCity,
       publicCinema,
-      cinemaLocations: liveCinemaLocations,
       fetchPublicCinema,
       watchlist, handleToggleWatchlist, fetchWishlist,
       bookedTickets, setBookedTickets,

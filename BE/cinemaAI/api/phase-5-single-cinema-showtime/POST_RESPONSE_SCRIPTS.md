@@ -2,44 +2,14 @@
 
 Dán phần **Post-response** vào tab **Scripts -> Post-response** trong Postman.
 
-## 1. Tạo rạp
+## 1. Rạp chính được cấu hình sẵn
 
-### Tên mô tả API
-Admin tạo rạp chính của hệ thống và lưu `cinemaId`.
-
-### API
-```http
-POST /api/v1/admin/cinema
-Authorization: Bearer {{adminToken}}
-```
-
-### JSON
-```json
-{
-  "name": "CinemaAI Main",
-  "address": "123 Nguyễn Trãi",
-  "city": "Hồ Chí Minh",
-  "phone": "0900999888",
-  "status": "ACTIVE"
-}
-```
-
-### Post-response
-```javascript
-const body = pm.response.json();
-
-pm.test("Tạo rạp thành công", function () {
-  pm.expect(pm.response.code).to.be.oneOf([200, 201]);
-  pm.expect(body.success).to.eql(true);
-});
-
-pm.collectionVariables.set("cinemaId", body.data.id);
-```
+Không có API tạo rạp. Dùng API GET ở bước tiếp theo để lấy rạp đã được seed.
 
 ## 1.1. Lấy rạp hiện tại
 
 ### Tên mô tả API
-Lấy rạp đã có trong hệ thống và lưu `cinemaId`. Dùng bước này khi API tạo rạp trả `409 System is limited to one cinema`.
+Lấy rạp đã được cấu hình sẵn trong hệ thống và lưu `cinemaId`.
 
 ### API
 ```http

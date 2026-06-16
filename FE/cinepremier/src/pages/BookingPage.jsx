@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
-import { comboItems } from '../services/cinemaData';
 import { authApi, expireAuthSession, getStoredAuth } from '../services/authApi';
 import { useMovies } from '../contexts/MoviesContext';
 import { useUI } from '../contexts/UIContext';
@@ -93,7 +92,7 @@ export default function BookingView() {
     seatScrollRef.current?.scrollBy({ left: direction === 'left' ? -180 : 180, behavior: 'smooth' });
   };
 
-  const concessions = foodCatalog.length > 0 ? foodCatalog : comboItems;
+  const concessions = foodCatalog;
 
   // Showtime & seat map from BE
   const [showtimesList, setShowtimesList] = useState([]);

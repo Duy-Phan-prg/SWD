@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
+  BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ScanLine
 } from 'lucide-react';
 import { authApi, expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
@@ -32,8 +32,9 @@ export default function AdminDashboard({
   setMoviesList,
   bookedTickets,
   setBookedTickets,
-  cinemaLocations,
+  publicCinema,
   onCinemaChanged = () => { },
+  onOpenCheckIn = () => { },
   onSelectMovie,
   showToast = () => { },
   initialSection = 'overview',
@@ -102,7 +103,6 @@ export default function AdminDashboard({
   // State to add a screening schedule
   const [newShowtime, setNewShowtime] = useState({
     movieId: moviesList[0]?.id || '',
-    city: cinemaLocations[0] || '',
     hall: 'Phòng Chiếu Thượng Hạng Gold 01',
     date: 'Thứ Bảy, 23/05/2026',
     time: '19:30',
@@ -147,6 +147,7 @@ export default function AdminDashboard({
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [isUserDetailLoading, setIsUserDetailLoading] = useState(false);
   const [isUserStatusSaving, setIsUserStatusSaving] = useState(false);
+  const [isStaffCreating, setIsStaffCreating] = useState(false);
 
   React.useEffect(() => {
     if (!isAdmin || activeTab !== 'movies') return undefined;
@@ -563,6 +564,26 @@ export default function AdminDashboard({
       showToast(error.message || 'Không thể tải chi tiết người dùng.');
     } finally {
       setIsUserDetailLoading(false);
+    }
+  };
+
+  const handleCreateStaff = async (payload) => {
+    const token = getAdminToken();
+    if (!token) return null;
+
+    setIsStaffCreating(true);
+    try {
+      const createdStaff = await authApi.createAdminStaff(token, payload);
+      setAdminUsers((prev) => [createdStaff, ...prev.filter((user) => String(user.id) !== String(createdStaff.id))]);
+      setSelectedAdminUser(createdStaff);
+      addAuditLog('Cấp tài khoản STAFF', createdStaff.email);
+      showToast(`Đã cấp tài khoản STAFF cho ${createdStaff.email}.`);
+      return createdStaff;
+    } catch (error) {
+      showToast(error.message || 'Không thể cấp tài khoản STAFF.');
+      throw error;
+    } finally {
+      setIsStaffCreating(false);
     }
   };
 
@@ -1116,7 +1137,7 @@ export default function AdminDashboard({
     }
 
     setShowtimeSuccessMessage(`Kích hoạt thành công suất chiếu mới của tác phẩm: ${targetMovie.title}`);
-    addAuditLog('Phát phối suất chiếu mới', `${targetMovie.title} tại ${newShowtime.city}`);
+    addAuditLog('Phát phối suất chiếu mới', `${targetMovie.title} tại ${publicCinema?.name || 'rạp chiếu'}`);
 
     setTimeout(() => {
       setShowtimeSuccessMessage('');
@@ -1256,6 +1277,7 @@ export default function AdminDashboard({
     setIsUserDetailLoading,
     isUserStatusSaving,
     setIsUserStatusSaving,
+    isStaffCreating,
     visibleFoods,
     HALL_OPTIONS,
     TIME_OPTIONS,
@@ -1287,6 +1309,7 @@ export default function AdminDashboard({
     handleDeleteActor,
     fetchAdminUsers,
     handleSelectAdminUser,
+    handleCreateStaff,
     handleUpdateAdminUserStatus,
     totalBookingsCount,
     calculatedRevenue,
@@ -1305,7 +1328,7 @@ export default function AdminDashboard({
     setMoviesList,
     bookedTickets,
     setBookedTickets,
-    cinemaLocations,
+    publicCinema,
     onCinemaChanged,
     onSelectMovie,
     showToast,
@@ -1412,6 +1435,18 @@ export default function AdminDashboard({
                 <span>TỔNG QUAN HỆ THỐNG</span>
               </span>
               {activeTab === 'overview' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { playPulseSound(560, 'sine', 0.06); onOpenCheckIn(); }}
+              className="mt-2 flex w-full items-center justify-between border border-emerald-500/35 bg-emerald-500/10 px-3 py-3 text-[10.5px] font-sans font-black uppercase tracking-widest text-emerald-300 transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-500/20 hover:text-white"
+            >
+              <span className="flex items-center space-x-2.5">
+                <ScanLine className="h-4 w-4 shrink-0 text-emerald-400" />
+                <span>CHECK-IN VÉ</span>
+              </span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             </button>
 
             <button

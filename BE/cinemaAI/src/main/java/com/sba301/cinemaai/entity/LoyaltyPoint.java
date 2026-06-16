@@ -19,8 +19,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * One row per user — stores the user's current loyalty balance.
- * points      : currently usable points (can be redeemed)
- * totalPoints : cumulative points earned, never decreases (audit trail)
+ * points      : points earned automatically from successful bookings
+ * totalPoints : cumulative points earned
  */
 @Getter
 @Entity
@@ -59,10 +59,6 @@ public class LoyaltyPoint extends BaseEntity {
     public void addPoints(int pts) {
         this.points += pts;
         this.totalPoints += pts;
-    }
-
-    public void redeemPoints(int pts) {
-        this.points -= pts;
     }
 
     public void changeStatus(LoyaltyStatus status) {

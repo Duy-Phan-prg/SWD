@@ -1,42 +1,8 @@
 ﻿# Phase 5 - Một rạp, phòng chiếu, ghế, suất chiếu và giá vé
 
-## 1. Tạo rạp
+## 1. Rạp chính được cấu hình sẵn
 
-### Tên mô tả API
-Admin tạo rạp chính của hệ thống. Scope hiện tại là một rạp, nên khi đã có rạp trong hệ thống thì tạo rạp thứ hai sẽ bị conflict.
-
-### API
-```http
-POST /api/v1/admin/cinema
-Authorization: Bearer {{adminToken}}
-```
-
-### JSON
-```json
-{
-  "name": "CinemaAI Main",
-  "address": "123 Nguyễn Trãi",
-  "city": "Hồ Chí Minh",
-  "phone": "0900999888",
-  "status": "ACTIVE"
-}
-```
-
-### Post-response
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "name": "CinemaAI Main",
-    "address": "123 Nguyễn Trãi",
-    "city": "Hồ Chí Minh",
-    "phone": "0900999888",
-    "status": "ACTIVE"
-  },
-  "message": "Cinema created successfully"
-}
-```
+Rạp duy nhất được tạo bằng seed data hoặc migration. Admin không có API tạo rạp.
 
 ## 2. Lấy danh sách rạp public
 
@@ -72,7 +38,7 @@ GET /api/v1/cinemas
 ## 2.1. Lấy rạp hiện tại cho admin
 
 ### Tên mô tả API
-Admin lấy rạp đã có trong hệ thống để lưu `cinemaId`. Dùng API này khi `POST /api/v1/admin/cinema` trả `409 System is limited to one cinema`.
+Admin lấy rạp đã được cấu hình sẵn trong hệ thống để lưu `cinemaId`.
 
 ### API
 ```http
