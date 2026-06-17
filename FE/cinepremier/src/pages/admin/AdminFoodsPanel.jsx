@@ -4,8 +4,10 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
+  BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ImagePlus, ChevronLeft, ChevronRight
 } from 'lucide-react';
+
+const FOOD_PAGE_SIZE = 10;
 
 export default function AdminFoodsPanel({ ctx }) {
   const {
@@ -51,10 +53,6 @@ export default function AdminFoodsPanel({ ctx }) {
     setIsGenreLoading,
     isGenreSaving,
     setIsGenreSaving,
-    homepageForm,
-    setHomepageForm,
-    homepageVideoError,
-    setHomepageVideoError,
     foodItems,
     setFoodItems,
     foodCombos,
@@ -73,6 +71,8 @@ export default function AdminFoodsPanel({ ctx }) {
     setIsFoodLoading,
     isFoodSaving,
     setIsFoodSaving,
+    isFoodImageUploading,
+    handleFoodImageUpload,
     visibleFoods,
     HALL_OPTIONS,
     TIME_OPTIONS,
@@ -80,8 +80,6 @@ export default function AdminFoodsPanel({ ctx }) {
     auditLogs,
     setAuditLogs,
     addAuditLog,
-    getYoutubeId,
-    handleHomepageVideoSubmit,
     resetFoodForm,
     validateFoodForm,
     fetchFoods,
@@ -114,11 +112,24 @@ export default function AdminFoodsPanel({ ctx }) {
     showToast,
     initialSection,
     onSectionChange,
-    homepageVideoUrl,
-    onHomepageVideoUrlChange,
     onFoodCatalogChanged,
     isAdmin
   } = ctx;
+  const [foodPage, setFoodPage] = React.useState(1);
+  const totalFoodPages = Math.max(1, Math.ceil(visibleFoods.length / FOOD_PAGE_SIZE));
+  const safeFoodPage = Math.min(foodPage, totalFoodPages);
+  const foodStartIndex = (safeFoodPage - 1) * FOOD_PAGE_SIZE;
+  const paginatedFoods = visibleFoods.slice(foodStartIndex, foodStartIndex + FOOD_PAGE_SIZE);
+  const foodDisplayStart = visibleFoods.length === 0 ? 0 : foodStartIndex + 1;
+  const foodDisplayEnd = Math.min(foodStartIndex + FOOD_PAGE_SIZE, visibleFoods.length);
+
+  React.useEffect(() => {
+    setFoodPage(1);
+  }, [foodSearch]);
+
+  React.useEffect(() => {
+    setFoodPage((page) => Math.min(page, totalFoodPages));
+  }, [totalFoodPages]);
 
   return (
     <>
@@ -219,16 +230,62 @@ export default function AdminFoodsPanel({ ctx }) {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">URL hình ảnh</label>
+                        <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Số lượng tồn kho</label>
                         <input
-                          value={foodForm.imageUrl}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={foodForm.stockQuantity}
                           onChange={(e) => {
-                            setFoodForm((prev) => ({ ...prev, imageUrl: e.target.value }));
-                            if (foodErrors.imageUrl) setFoodErrors((prev) => ({ ...prev, imageUrl: undefined }));
+                            setFoodForm((prev) => ({ ...prev, stockQuantity: e.target.value }));
+                            if (foodErrors.stockQuantity) setFoodErrors((prev) => ({ ...prev, stockQuantity: undefined }));
                           }}
-                          placeholder="https://..."
-                          className={`w-full bg-black border p-3 text-xs text-white focus:outline-none rounded-none ${foodErrors.imageUrl ? 'border-rose-500' : 'border-neutral-800 focus:border-amber-400'}`}
+                          placeholder="VD: 120"
+                          className={`w-full bg-black border p-3 text-sm text-white focus:outline-none rounded-none font-bold ${foodErrors.stockQuantity ? 'border-rose-500' : 'border-neutral-800 focus:border-amber-400'}`}
                         />
+                        {foodErrors.stockQuantity && <p className="text-[10px] text-rose-400 font-bold">{foodErrors.stockQuantity}</p>}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">URL hình ảnh</label>
+                        <div className="flex gap-2">
+                          <input
+                            value={foodForm.imageUrl}
+                            onChange={(e) => {
+                              setFoodForm((prev) => ({ ...prev, imageUrl: e.target.value }));
+                              if (foodErrors.imageUrl) setFoodErrors((prev) => ({ ...prev, imageUrl: undefined }));
+                            }}
+                            placeholder="https://res.cloudinary.com/..."
+                            className={`min-w-0 flex-1 bg-black border p-3 text-xs text-white focus:outline-none rounded-none ${foodErrors.imageUrl ? 'border-rose-500' : 'border-neutral-800 focus:border-amber-400'}`}
+                          />
+                          <label
+                            className={`inline-flex min-w-[92px] cursor-pointer items-center justify-center gap-2 border px-3 text-[10px] font-black uppercase tracking-widest transition ${isFoodImageUploading ? 'pointer-events-none border-neutral-800 text-neutral-500 opacity-70' : 'border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-400 hover:text-black'}`}
+                            title="Upload ảnh từ máy lên Cloudinary"
+                          >
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              onChange={handleFoodImageUpload}
+                              disabled={isFoodImageUploading}
+                              className="hidden"
+                            />
+                            {isFoodImageUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                            Local
+                          </label>
+                        </div>
+                        {foodForm.imageUrl && (
+                          <div className="overflow-hidden border border-neutral-850 bg-black">
+                            <img
+                              src={foodForm.imageUrl}
+                              alt={foodForm.name || 'Ảnh món'}
+                              className="h-32 w-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        )}
+                        <p className="text-[10px] text-neutral-500 font-medium">
+                          Chọn ảnh từ máy để upload lên Cloudinary, hoặc dán URL ảnh có sẵn.
+                        </p>
                         {foodErrors.imageUrl && <p className="text-[10px] text-rose-400 font-bold">{foodErrors.imageUrl}</p>}
                       </div>
 
@@ -293,9 +350,8 @@ export default function AdminFoodsPanel({ ctx }) {
                                   Đang tải danh sách bắp nước...
                                 </td>
                               </tr>
-                            ) : (
-                              [...foodCombos.map((item) => ({ ...item, kind: 'combo' })), ...foodItems.map((item) => ({ ...item, kind: 'item' }))]
-                                .filter((item) => item.name?.toLowerCase().includes(foodSearch.toLowerCase()))
+                            ) : visibleFoods.length > 0 ? (
+                              paginatedFoods
                                 .map((item) => (
                                   <tr key={`${item.kind}-${item.id}`} className="hover:bg-neutral-900/50 transition">
                                     <td className="py-3.5 px-4 min-w-0">
@@ -308,6 +364,9 @@ export default function AdminFoodsPanel({ ctx }) {
                                         />
                                         <div className="min-w-0">
                                           <div className="font-black text-white text-sm uppercase tracking-wide truncate">{item.name}</div>
+                                          <div className={`text-[10px] font-black uppercase tracking-wider ${Number(item.stockQuantity || 0) === 0 ? 'text-rose-300' : Number(item.stockQuantity || 0) <= 5 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                                            Tồn kho: {Number(item.stockQuantity || 0).toLocaleString('vi-VN')}
+                                          </div>
                                           <div className="text-[10px] text-neutral-500 truncate">{item.description || 'Chưa có mô tả'}</div>
                                         </div>
                                       </div>
@@ -341,9 +400,38 @@ export default function AdminFoodsPanel({ ctx }) {
                                     </td>
                                   </tr>
                                 ))
+                            ) : (
+                              <tr>
+                                <td colSpan={5} className="py-10 text-center text-neutral-500 font-mono uppercase tracking-wider">
+                                  Không có món bắp nước phù hợp.
+                                </td>
+                              </tr>
                             )}
                           </tbody>
                         </table>
+                      </div>
+                      <div className="flex flex-col gap-3 border-t border-neutral-850 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+                        <span>
+                          Hiển thị {foodDisplayStart}-{foodDisplayEnd}/{visibleFoods.length} món - Trang {safeFoodPage}/{totalFoodPages}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={safeFoodPage <= 1}
+                            onClick={() => setFoodPage((page) => Math.max(1, page - 1))}
+                            className="inline-flex items-center gap-1 border border-neutral-800 px-3 py-2 text-white transition hover:border-white disabled:opacity-30"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" /> Trước
+                          </button>
+                          <button
+                            type="button"
+                            disabled={safeFoodPage >= totalFoodPages}
+                            onClick={() => setFoodPage((page) => Math.min(totalFoodPages, page + 1))}
+                            className="inline-flex items-center gap-1 border border-neutral-800 px-3 py-2 text-white transition hover:border-white disabled:opacity-30"
+                          >
+                            Sau <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

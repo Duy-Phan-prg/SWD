@@ -37,6 +37,9 @@ public class FoodCombo extends BaseEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Column(name = "stock_quantity", nullable = false, columnDefinition = "integer default 0")
+    private int stockQuantity;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private FoodItemStatus status = FoodItemStatus.ACTIVE;
@@ -47,14 +50,26 @@ public class FoodCombo extends BaseEntity {
         this.price = price;
     }
 
-    public void update(String name, String description, BigDecimal price, String imageUrl) {
+    public void update(String name, String description, BigDecimal price, String imageUrl, int stockQuantity) {
         this.name = name;
         this.description = description;
         this.price = price;
         this.imageUrl = imageUrl;
+        this.stockQuantity = stockQuantity;
     }
 
     public void changeStatus(FoodItemStatus status) {
         this.status = status;
+    }
+
+    public void decreaseStock(int quantity) {
+        this.stockQuantity -= quantity;
+        if (this.stockQuantity == 0) {
+            this.status = FoodItemStatus.OUT_OF_STOCK;
+        }
+    }
+
+    public void increaseStock(int quantity) {
+        this.stockQuantity += quantity;
     }
 }

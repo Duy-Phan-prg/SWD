@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.movie.MovieResponse;
+import com.sba301.cinemaai.dto.response.movie.MovieSummaryResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.enums.MovieStatus;
@@ -22,7 +23,7 @@ public class MovieController {
     private final MovieService movieService;
 
     @GetMapping
-    public ApiResponse<PageResponse<MovieResponse>> searchMovies(
+    public ApiResponse<PageResponse<MovieSummaryResponse>> searchMovies(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) MovieStatus status,
             @RequestParam(required = false) Long genreId,

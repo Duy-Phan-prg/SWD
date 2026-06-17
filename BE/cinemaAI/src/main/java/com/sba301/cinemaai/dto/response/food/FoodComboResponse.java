@@ -9,6 +9,7 @@ public record FoodComboResponse(
         String description,
         BigDecimal price,
         String imageUrl,
+        int stockQuantity,
         FoodItemStatus status
 ) {
 }

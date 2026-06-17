@@ -235,7 +235,7 @@ PENDING --> SUCCESS
 | MOV-08 | Admin CRUD diễn viên và gán diễn viên chính | Có | Có | **ĐÃ HOÀN THÀNH** |
 | MOV-09 | Trailer interaction được gửi về recommendation | Có API | Chưa thấy FE gọi API interaction | **HOÀN THÀNH MỘT PHẦN** |
 
-Lưu ý nghiệp vụ quản lý phim: Nếu phim đã qua ngày phát hành, ADMIN không được chuyển trạng thái ngược lại về `UPCOMING`; phim đã `ENDED` cũng không được lùi về `NOW_SHOWING` hoặc `UPCOMING`. Form quản trị phim cho phép nhập URL hoặc upload ảnh local cho poster và banner qua API upload ảnh. Tất cả field tạo/cập nhật phim được validate ở BE và FE phải hiển thị thông báo lỗi field-level trả về từ API. Rule nhập phim: tên phim tối đa 50 ký tự, tên tiếng Anh/tiêu đề gốc tối đa 30 ký tự, mô tả tối đa 1000 ký tự, trailer URL bắt buộc, thời lượng từ 60 đến 180 phút, ngôn ngữ tối đa 30 ký tự, phụ đề tối đa 30 ký tự và đạo diễn tối đa 50 ký tự.
+Lưu ý nghiệp vụ quản lý phim: Nếu phim đã qua ngày phát hành, ADMIN không được chuyển trạng thái ngược lại về `UPCOMING`; phim đã `ENDED` cũng không được lùi về `NOW_SHOWING` hoặc `UPCOMING`. Form quản trị phim cho phép nhập URL hoặc upload ảnh local cho poster và banner qua API upload ảnh. Trailer cho phép nhập URL ngoài hoặc upload video local lên Cloudinary qua API upload video, sau đó lưu URL trả về vào `trailerUrl`. Tất cả field tạo/cập nhật phim được validate ở BE và FE phải hiển thị thông báo lỗi field-level trả về từ API. Rule nhập phim: tên phim tối đa 50 ký tự, tên tiếng Anh/tiêu đề gốc tối đa 30 ký tự, mô tả tối đa 1000 ký tự, trailer URL bắt buộc, thời lượng từ 60 đến 180 phút, ngôn ngữ tối đa 30 ký tự, phụ đề tối đa 30 ký tự và đạo diễn tối đa 50 ký tự.
 
 ## 5.5 Rạp, phòng và sơ đồ ghế
 

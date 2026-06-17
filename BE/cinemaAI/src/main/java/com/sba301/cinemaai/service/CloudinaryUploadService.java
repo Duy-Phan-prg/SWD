@@ -23,10 +23,16 @@ import org.springframework.web.multipart.MultipartFile;
 public class CloudinaryUploadService {
 
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+    private static final long MAX_VIDEO_SIZE = 100 * 1024 * 1024;
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
             "image/jpeg",
             "image/png",
             "image/webp"
+    );
+    private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of(
+            "video/mp4",
+            "video/webm",
+            "video/quicktime"
     );
 
     private final Cloudinary cloudinary;
@@ -57,6 +63,29 @@ public class CloudinaryUploadService {
         return toResponse(savedFile);
     }
 
+    @Transactional
+    public UploadedFileResponse uploadVideo(MultipartFile file, String requestedFolder, Long userId) {
+        validateVideo(file);
+        validateCloudinaryConfiguration();
+        String folder = normalizeFolder(requestedFolder, "videos");
+        User uploadedBy = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        Map<?, ?> result = uploadToCloudinary(file, folder, "video");
+        String url = String.valueOf(result.get("secure_url"));
+        String publicId = String.valueOf(result.get("public_id"));
+        UploadedFile savedFile = uploadedFileRepository.save(new UploadedFile(
+                file.getOriginalFilename(),
+                publicId,
+                "CLOUDINARY",
+                url,
+                file.getContentType(),
+                file.getSize(),
+                uploadedBy
+        ));
+        return toResponse(savedFile);
+    }
+
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Image file is required");
@@ -69,6 +98,18 @@ public class CloudinaryUploadService {
         }
     }
 
+    private void validateVideo(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Video file is required");
+        }
+        if (file.getSize() > MAX_VIDEO_SIZE) {
+            throw new BadRequestException("Video file must not exceed 100 MB");
+        }
+        if (!ALLOWED_VIDEO_TYPES.contains(file.getContentType())) {
+            throw new BadRequestException("Only MP4, WEBM, and MOV videos are allowed");
+        }
+    }
+
     private void validateCloudinaryConfiguration() {
         if (!cloudinaryCredentials.isConfigured()) {
             throw new BadRequestException("Cloudinary is not configured");
@@ -76,12 +117,16 @@ public class CloudinaryUploadService {
     }
 
     private Map<?, ?> uploadToCloudinary(MultipartFile file, String folder) {
+        return uploadToCloudinary(file, folder, "image");
+    }
+
+    private Map<?, ?> uploadToCloudinary(MultipartFile file, String folder, String resourceType) {
         try {
             return cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
                             "folder", "cinema-ai/" + folder,
-                            "resource_type", "image",
+                            "resource_type", resourceType,
                             "unique_filename", true
                     )
             );
@@ -99,11 +144,15 @@ public class CloudinaryUploadService {
     }
 
     private String normalizeFolder(String folder) {
+        return normalizeFolder(folder, "images");
+    }
+
+    private String normalizeFolder(String folder, String fallback) {
         if (folder == null || folder.isBlank()) {
-            return "images";
+            return fallback;
         }
         String normalized = folder.trim().toLowerCase().replaceAll("[^a-z0-9-]", "-");
-        return normalized.isBlank() ? "images" : normalized;
+        return normalized.isBlank() ? fallback : normalized;
     }
 
     private UploadedFileResponse toResponse(UploadedFile file) {

@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
+  BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Tags
 } from 'lucide-react';
 import { authApi, expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
@@ -12,7 +12,6 @@ import AdminMoviesPanel from './admin/AdminMoviesPanel';
 import AdminGenresPanel from './admin/AdminGenresPanel';
 import AdminActorsPanel from './admin/AdminActorsPanel';
 import AdminFoodsPanel from './admin/AdminFoodsPanel';
-import AdminHomepagePanel from './admin/AdminHomepagePanel';
 import AdminShowtimesPanel from './admin/AdminShowtimesPanel';
 import AdminTransactionsPanel from './admin/AdminTransactionsPanel';
 import AdminAiAnalysisPanel from './admin/AdminAiAnalysisPanel';
@@ -23,9 +22,25 @@ import AdminRoomsPanel from './admin/AdminRoomsPanel';
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies', 'foods'].includes(section)) return 'movies';
   if (['rooms', 'showtimes', 'transactions'].includes(section)) return 'cinema';
-  if (['homepage', 'users', 'ai-analysis'].includes(section)) return 'system';
+  if (['users', 'ai-analysis'].includes(section)) return 'system';
   return null;
 };
+
+const ADMIN_SECTIONS = new Set([
+  'overview',
+  'genres',
+  'actors',
+  'movies',
+  'foods',
+  'rooms',
+  'showtimes',
+  'transactions',
+  'users',
+  'cinema',
+  'ai-analysis'
+]);
+
+const normalizeAdminSection = (section) => (ADMIN_SECTIONS.has(section) ? section : 'overview');
 
 export default function AdminDashboard({
   moviesList,
@@ -38,14 +53,12 @@ export default function AdminDashboard({
   showToast = () => { },
   initialSection = 'overview',
   onSectionChange = () => { },
-  homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c',
-  onHomepageVideoUrlChange = () => { },
   onFoodCatalogChanged = () => { },
   isAdmin = false,
   currentUser = null
 }) {
-  const [activeTab, setActiveTab] = useState(initialSection || 'overview'); // 'overview' | 'movies' | 'genres' | 'foods' | 'homepage' | 'showtimes' | 'transactions' | 'users' | 'ai-analysis'
-  const [openNavGroup, setOpenNavGroup] = useState(getNavGroup(initialSection));
+  const [activeTab, setActiveTab] = useState(normalizeAdminSection(initialSection)); // 'overview' | 'movies' | 'genres' | 'foods' | 'showtimes' | 'transactions' | 'users' | 'ai-analysis'
+  const [openNavGroup, setOpenNavGroup] = useState(getNavGroup(normalizeAdminSection(initialSection)));
   const [selectedAnalysisMovieId, setSelectedAnalysisMovieId] = useState(moviesList[0]?.id || '');
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [analysisScrambleOffset, setAnalysisScrambleOffset] = useState({
@@ -123,8 +136,6 @@ export default function AdminDashboard({
   const [editingActorId, setEditingActorId] = useState(null);
   const [isActorLoading, setIsActorLoading] = useState(false);
   const [isActorSaving, setIsActorSaving] = useState(false);
-  const [homepageForm, setHomepageForm] = useState({ videoUrl: homepageVideoUrl });
-  const [homepageVideoError, setHomepageVideoError] = useState('');
   const [foodItems, setFoodItems] = useState([]);
   const [foodCombos, setFoodCombos] = useState([]);
   const [foodSearch, setFoodSearch] = useState('');
@@ -135,11 +146,13 @@ export default function AdminDashboard({
     description: '',
     price: '',
     imageUrl: '',
+    stockQuantity: '',
     status: 'ACTIVE'
   });
   const [foodErrors, setFoodErrors] = useState({});
   const [isFoodLoading, setIsFoodLoading] = useState(false);
   const [isFoodSaving, setIsFoodSaving] = useState(false);
+  const [isFoodImageUploading, setIsFoodImageUploading] = useState(false);
   const [adminUsers, setAdminUsers] = useState([]);
   const [selectedAdminUser, setSelectedAdminUser] = useState(null);
   const [userSearch, setUserSearch] = useState('');
@@ -251,42 +264,8 @@ export default function AdminDashboard({
     ]);
   };
 
-  const getYoutubeId = (url = '') => {
-    const trimmed = url.trim();
-    if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
-
-    const patterns = [
-      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
-    ];
-
-    return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || '';
-  };
-
-  const handleHomepageVideoSubmit = (e) => {
-    e.preventDefault();
-    const nextUrl = homepageForm.videoUrl.trim();
-    const youtubeId = getYoutubeId(nextUrl);
-
-    if (!nextUrl) {
-      setHomepageVideoError('URL video trang chủ là bắt buộc.');
-      return;
-    }
-
-    if (!youtubeId) {
-      setHomepageVideoError('Chỉ hỗ trợ URL YouTube hợp lệ: watch, youtu.be, embed hoặc shorts.');
-      return;
-    }
-
-    setHomepageVideoError('');
-    onHomepageVideoUrlChange(nextUrl);
-    addAuditLog('Cập nhật video trang chủ', nextUrl);
-  };
-
   const resetFoodForm = () => {
-    setFoodForm({ name: '', description: '', price: '', imageUrl: '', status: 'ACTIVE' });
+    setFoodForm({ name: '', description: '', price: '', imageUrl: '', stockQuantity: '', status: 'ACTIVE' });
     setFoodErrors({});
     setEditingFood(null);
     setFoodKind('item');
@@ -298,6 +277,7 @@ export default function AdminDashboard({
     const description = foodForm.description.trim();
     const price = Number(foodForm.price);
     const imageUrl = foodForm.imageUrl.trim();
+    const stockQuantity = Number(foodForm.stockQuantity);
 
     if (!name) errors.name = 'Tên món là bắt buộc.';
     if (name.length > 255) errors.name = 'Tên món tối đa 255 ký tự.';
@@ -305,6 +285,9 @@ export default function AdminDashboard({
     if (!foodForm.price) errors.price = 'Giá bán là bắt buộc.';
     if (!Number.isFinite(price) || price <= 0) errors.price = 'Giá bán phải lớn hơn 0.';
     if (imageUrl.length > 500) errors.imageUrl = 'URL hình ảnh tối đa 500 ký tự.';
+
+    if (foodForm.stockQuantity === '') errors.stockQuantity = 'Số lượng tồn kho là bắt buộc.';
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) errors.stockQuantity = 'Số lượng tồn kho phải là số nguyên từ 0 trở lên.';
 
     const allFoods = foodKind === 'item' ? foodItems : foodCombos;
     const duplicate = allFoods.some((item) => (
@@ -353,6 +336,7 @@ export default function AdminDashboard({
       description: foodForm.description.trim(),
       price: Number(foodForm.price),
       imageUrl: foodForm.imageUrl.trim(),
+      stockQuantity: Number(foodForm.stockQuantity),
       status: foodForm.status
     };
 
@@ -394,6 +378,7 @@ export default function AdminDashboard({
       description: food.description || '',
       price: food.price || '',
       imageUrl: food.imageUrl || '',
+      stockQuantity: food.stockQuantity ?? '',
       status: food.status || 'ACTIVE'
     });
     setFoodErrors({});
@@ -409,6 +394,7 @@ export default function AdminDashboard({
       description: food.description || '',
       price: Number(food.price),
       imageUrl: food.imageUrl || '',
+      stockQuantity: Number(food.stockQuantity ?? 0),
       status: nextStatus
     };
 
@@ -462,10 +448,37 @@ export default function AdminDashboard({
     return accessToken;
   };
 
+  const handleFoodImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const token = getAdminToken();
+    if (!token) return;
+
+    setIsFoodImageUploading(true);
+    try {
+      const uploaded = await authApi.uploadAdminImage(token, file, 'foods');
+      const uploadedUrl = uploaded?.url || uploaded?.secureUrl || uploaded?.imageUrl || uploaded?.data?.url;
+      if (!uploadedUrl) {
+        throw new Error('Không nhận được URL ảnh từ Cloudinary.');
+      }
+
+      setFoodForm((prev) => ({ ...prev, imageUrl: uploadedUrl }));
+      setFoodErrors((prev) => ({ ...prev, imageUrl: undefined }));
+      showToast('Đã upload ảnh món lên Cloudinary.');
+    } catch (error) {
+      showToast(error.message || 'Không thể upload ảnh món lên Cloudinary.');
+    } finally {
+      setIsFoodImageUploading(false);
+    }
+  };
+
   const changeAdminSection = (section) => {
-    setActiveTab(section);
-    onSectionChange(section);
-    window.history.replaceState(null, '', `/admin/${section}`);
+    const nextSection = normalizeAdminSection(section);
+    setActiveTab(nextSection);
+    onSectionChange(nextSection);
+    window.history.replaceState(null, '', `/admin/${nextSection}`);
   };
 
   const validateGenreForm = () => {
@@ -616,8 +629,13 @@ export default function AdminDashboard({
   };
 
   React.useEffect(() => {
-    setActiveTab(initialSection || 'overview');
-    setOpenNavGroup(getNavGroup(initialSection));
+    const nextSection = normalizeAdminSection(initialSection);
+    setActiveTab(nextSection);
+    setOpenNavGroup(getNavGroup(nextSection));
+    if (nextSection !== initialSection) {
+      onSectionChange(nextSection);
+      window.history.replaceState(null, '', `/admin/${nextSection}`);
+    }
   }, [initialSection]);
 
   React.useEffect(() => {
@@ -640,10 +658,6 @@ export default function AdminDashboard({
     const timeoutId = setTimeout(() => fetchActors(actorSearch), 300);
     return () => clearTimeout(timeoutId);
   }, [activeTab, actorSearch]);
-
-  React.useEffect(() => {
-    setHomepageForm({ videoUrl: homepageVideoUrl });
-  }, [homepageVideoUrl]);
 
   const resetGenreForm = () => {
     setGenreForm({ name: '', description: '' });
@@ -1266,10 +1280,6 @@ export default function AdminDashboard({
     setEditingActorId,
     isActorLoading,
     isActorSaving,
-    homepageForm,
-    setHomepageForm,
-    homepageVideoError,
-    setHomepageVideoError,
     foodItems,
     setFoodItems,
     foodCombos,
@@ -1288,6 +1298,8 @@ export default function AdminDashboard({
     setIsFoodLoading,
     isFoodSaving,
     setIsFoodSaving,
+    isFoodImageUploading,
+    handleFoodImageUpload,
     adminUsers,
     setAdminUsers,
     selectedAdminUser,
@@ -1308,8 +1320,6 @@ export default function AdminDashboard({
     auditLogs,
     setAuditLogs,
     addAuditLog,
-    getYoutubeId,
-    handleHomepageVideoSubmit,
     resetFoodForm,
     validateFoodForm,
     fetchFoods,
@@ -1357,8 +1367,6 @@ export default function AdminDashboard({
     showToast,
     initialSection,
     onSectionChange,
-    homepageVideoUrl,
-    onHomepageVideoUrlChange,
     onFoodCatalogChanged,
     isAdmin,
     currentUser
@@ -1370,7 +1378,6 @@ export default function AdminDashboard({
     genres: AdminGenresPanel,
     actors: AdminActorsPanel,
     foods: AdminFoodsPanel,
-    homepage: AdminHomepagePanel,
     showtimes: AdminShowtimesPanel,
     transactions: AdminTransactionsPanel,
     users: AdminUsersPanel,
@@ -1614,20 +1621,6 @@ export default function AdminDashboard({
                   exit={{ height: 0, opacity: 0 }}
                   className="space-y-1.5 overflow-hidden"
                 >
-                  <button
-                    onClick={() => { playPulseSound(475, 'sine', 0.05); changeAdminSection('homepage'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'homepage'
-                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
-                      }`}
-                  >
-                    <span className="flex items-center space-x-2.5">
-                      <Globe className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>VIDEO TRANG CHỦ</span>
-                    </span>
-                    {activeTab === 'homepage' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
-                  </button>
-
                   <button
                     onClick={() => { playPulseSound(510, 'sine', 0.05); changeAdminSection('users'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'users'

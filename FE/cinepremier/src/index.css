@@ -106,11 +106,11 @@ h3 {
   position: fixed;
   inset: 0;
   z-index: 0;
-  opacity: 0.35;
+  opacity: 0.5;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 34px 34px;
   mask-image: linear-gradient(to bottom, black, transparent 75%);
 }
@@ -130,13 +130,13 @@ h3 {
 .staff-orb-one {
   top: -9rem;
   right: -7rem;
-  background: rgb(52 211 153);
+  background: rgb(16 185 129);
 }
 
 .staff-orb-two {
   bottom: -12rem;
   left: -8rem;
-  background: rgb(34 211 238);
+  background: rgb(245 158 11);
   animation-delay: -5s;
 }
 

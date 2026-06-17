@@ -108,7 +108,11 @@ const tryRefreshToken = async () => {
   return null;
 };
 
-const request = async (path, { method = 'GET', body, token } = {}) => {
+const inflightGetRequests = new Map();
+
+const getDedupeKey = (path, token) => `${token ? `auth:${token}` : 'public'}:${path}`;
+
+const performRequest = async (path, { method = 'GET', body, token } = {}) => {
   const isFormData = body instanceof FormData;
   const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -141,6 +145,24 @@ const request = async (path, { method = 'GET', body, token } = {}) => {
   }
 
   return parseResponse(response);
+};
+
+const request = (path, { method = 'GET', body, token } = {}) => {
+  const normalizedMethod = String(method || 'GET').toUpperCase();
+  const shouldDedupe = normalizedMethod === 'GET' && body === undefined;
+
+  if (!shouldDedupe) {
+    return performRequest(path, { method: normalizedMethod, body, token });
+  }
+
+  const dedupeKey = getDedupeKey(path, token);
+  const existingRequest = inflightGetRequests.get(dedupeKey);
+  if (existingRequest) return existingRequest;
+
+  const promise = performRequest(path, { method: normalizedMethod, body, token })
+    .finally(() => inflightGetRequests.delete(dedupeKey));
+  inflightGetRequests.set(dedupeKey, promise);
+  return promise;
 };
 
 const buildQueryString = (params = {}) => {
@@ -402,6 +424,16 @@ export const authApi = {
       body: formData
     });
   },
+  uploadAdminVideo: (token, file, folder = 'videos') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    return request('/api/v1/admin/uploads/videos', {
+      method: 'POST',
+      token,
+      body: formData
+    });
+  },
   createAdminActor: (token, payload) => request('/api/v1/admin/actors', {
     method: 'POST',
     token,
@@ -575,6 +607,16 @@ export const authApi = {
     method: 'POST',
     token,
     body: { qrCode }
+  }),
+  getStaffFoodItems: (token) => request('/api/v1/staff/foods/items', { token }),
+  getStaffFoodCombos: (token) => request('/api/v1/staff/foods/combos', { token }),
+  updateStaffFoodItemStatus: (token, itemId, status) => request(`/api/v1/staff/foods/items/${encodeURIComponent(itemId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  }),
+  updateStaffFoodComboStatus: (token, comboId, status) => request(`/api/v1/staff/foods/combos/${encodeURIComponent(comboId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
   }),
 
   getAdminFoodItems: (token) => request('/api/v1/admin/foods/items', { token }),

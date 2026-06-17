@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Sparkles, MessageSquare, Check, HelpCircle, Volume2, VolumeX, ChevronLeft, ChevronRight, Film } from 'lucide-react';
 import MovieCard from '../components/movies/MovieCard';
 import Snowfall from 'react-snowfall';
@@ -13,10 +13,40 @@ const extractYoutubeId = (url = '') => {
     /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
   ];
 
-  return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || 'k8m0SaGQ_1c';
+  return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || '';
 };
 
-export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [], homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c' }) {
+const isDirectVideoUrl = (url = '') => {
+  const value = url.trim().toLowerCase();
+  return /\.(mp4|webm|mov)(\?|#|$)/.test(value) || value.includes('/video/upload/');
+};
+
+const loadYoutubeIframeApi = () => {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+
+  if (!window.__cinepremierYoutubeApiPromise) {
+    window.__cinepremierYoutubeApiPromise = new Promise((resolve) => {
+      const previousReady = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previousReady === 'function') previousReady();
+        resolve(window.YT);
+      };
+
+      const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        document.body.appendChild(script);
+      }
+    });
+  }
+
+  return window.__cinepremierYoutubeApiPromise;
+};
+
+export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [] }) {
   const [selectedMood, setSelectedMood] = useState('#Đỉnh_Cao_Thị_Giác');
   const [userPrompt, setUserPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState(null);
@@ -32,11 +62,97 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
+  const heroVideoRef = useRef(null);
+  const youtubeFrameRef = useRef(null);
+  const youtubePlayerRef = useRef(null);
 
   const heroMovies = nowPlaying.length ? nowPlaying : publicMovies;
   const heroMovie = heroMovies[currentHeroIndex] || heroMovies[0] || null;
-  const heroYoutubeId = extractYoutubeId(homepageVideoUrl);
-  const heroYoutubeSrc = `https://www.youtube.com/embed/${heroYoutubeId}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${heroYoutubeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1`;
+  const heroTrailerUrl = heroMovie?.trailerUrl?.trim() || '';
+  const heroYoutubeId = extractYoutubeId(heroTrailerUrl);
+  const hasDirectHeroVideo = !heroYoutubeId && isDirectVideoUrl(heroTrailerUrl);
+  const youtubeOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const heroYoutubeSrc = heroYoutubeId
+    ? `https://www.youtube.com/embed/${heroYoutubeId}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${heroYoutubeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1${youtubeOrigin ? `&origin=${encodeURIComponent(youtubeOrigin)}` : ''}`
+    : '';
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+    if (isPlaying) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isPlaying, isMuted, heroTrailerUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!heroYoutubeId) {
+      if (youtubePlayerRef.current?.destroy) {
+        youtubePlayerRef.current.destroy();
+        youtubePlayerRef.current = null;
+      }
+      return undefined;
+    }
+
+    loadYoutubeIframeApi().then((YT) => {
+      if (cancelled || !YT?.Player || !youtubeFrameRef.current) return;
+
+      if (youtubePlayerRef.current?.destroy) {
+        youtubePlayerRef.current.destroy();
+        youtubePlayerRef.current = null;
+      }
+
+      youtubePlayerRef.current = new YT.Player(youtubeFrameRef.current, {
+        events: {
+          onReady: (event) => {
+            if (isMuted) event.target.mute();
+            else event.target.unMute();
+            if (isPlaying) event.target.playVideo();
+          },
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.ENDED) {
+              event.target.seekTo(0, true);
+              if (isPlaying) event.target.playVideo();
+            }
+          }
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      if (youtubePlayerRef.current?.destroy) {
+        youtubePlayerRef.current.destroy();
+        youtubePlayerRef.current = null;
+      }
+    };
+  }, [heroYoutubeId]);
+
+  useEffect(() => {
+    const player = youtubePlayerRef.current;
+    if (!heroYoutubeId || !player?.playVideo) return;
+
+    try {
+      if (isMuted) player.mute();
+      else player.unMute();
+
+      if (isPlaying) player.playVideo();
+      else player.pauseVideo();
+    } catch {
+      // The iframe API can ignore commands while the player is still booting.
+    }
+  }, [heroYoutubeId, isPlaying, isMuted]);
+
+  const restartHeroVideo = () => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    if (isPlaying) video.play().catch(() => {});
+  };
 
   const handlePrevHero = () => {
     if (!heroMovies.length) return;
@@ -58,6 +174,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   ];
 
   const recommendedMovie = nowPlaying[0] || publicMovies[0] || null;
+  const isMovieBookable = (movie) => movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
 
   const findRecommendedMovie = () => recommendedMovie || publicMovies[0] || null;
 
@@ -100,15 +217,32 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       >
         {/* Cinematic background */}
         <div className="absolute inset-0 z-0 select-none pointer-events-none">
-          <iframe
-            key={`${heroYoutubeId}-${isPlaying}-${isMuted}`}
-            className={`absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-80'}`}
-            src={heroYoutubeSrc}
-            title="CinePremier hero trailer"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            referrerPolicy="strict-origin-when-cross-origin"
-            aria-hidden="true"
-          />
+          {heroYoutubeId ? (
+            <iframe
+              key={`${heroMovie?.id || 'hero'}-${heroYoutubeId}`}
+              ref={youtubeFrameRef}
+              className={`absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-80'}`}
+              src={heroYoutubeSrc}
+              title={`${heroMovie?.title || 'CinePremier'} trailer`}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+              aria-hidden="true"
+            />
+          ) : hasDirectHeroVideo ? (
+            <video
+              key={`${heroMovie?.id || 'hero'}-${heroTrailerUrl}`}
+              ref={heroVideoRef}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-80'}`}
+              src={heroTrailerUrl}
+              autoPlay={isPlaying}
+              muted={isMuted}
+              loop
+              playsInline
+              preload="metadata"
+              onEnded={restartHeroVideo}
+              aria-hidden="true"
+            />
+          ) : null}
           {/* Subtle cinematic overlays: dark enough on the left for text readability, clear in center and right for video action */}
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-black/15 z-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/10 z-10" />
@@ -129,7 +263,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
               <div className="inline-flex items-center space-x-1.5 border border-amber-500/30 bg-amber-950/20 px-3 py-1 text-[9px] font-mono tracking-wider uppercase text-amber-400 font-bold rounded-none">
                 <Film className="h-3 w-3 animate-spin duration-1000" />
-                <span>YOUTUBE TRAILER</span>
+                <span>{heroTrailerUrl ? 'TRAILER PHIM' : 'CHƯA CÓ TRAILER'}</span>
               </div>
             </div>
 
@@ -163,7 +297,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             {/* CTA action buttons & Media Controller widgets */}
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <button
-                disabled={!heroMovie}
+                disabled={!heroMovie || !isMovieBookable(heroMovie)}
                 onClick={() => heroMovie && onBookMovie(heroMovie)}
                 className="border border-white bg-white text-black text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-black hover:text-white hover:border-white transition-all duration-300 font-bold disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-black"
                 id="hero-book-now"
@@ -177,7 +311,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 className="border border-white/20 bg-black text-white text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-white hover:text-black hover:border-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white"
                 id="hero-details"
               >
-                Xem Chi Tiết & AI Analysis
+                Xem Chi Tiết
               </button>
 
               {/* Media play/pause and sound controller for elegant cinematic interaction */}
@@ -363,8 +497,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                         VÌ SAO PHÙ HỢP? →
                       </button>
                       <button
-                        onClick={() => onBookMovie(recommendedMovie)}
-                        className="bg-white text-black px-5 py-2 text-[10px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition-colors"
+                        disabled={!isMovieBookable(recommendedMovie)}
+                        onClick={() => isMovieBookable(recommendedMovie) && onBookMovie(recommendedMovie)}
+                        className="bg-white text-black px-5 py-2 text-[10px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         ĐẶT NGAY
                       </button>

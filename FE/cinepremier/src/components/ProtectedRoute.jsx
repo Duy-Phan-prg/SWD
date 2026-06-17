@@ -6,12 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUI } from '../contexts/UIContext';
 
 export default function ProtectedRoute({ children }) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isAuthReady } = useAuth();
   const { setAuthMode, setShowOTP, showToast } = useUI();
   const location = useLocation();
   const promptedRef = useRef(false);
 
   useEffect(() => {
+    if (!isAuthReady) return;
     if (isLoggedIn) return;
     const redirectPath = `${location.pathname}${location.search}${location.hash}`;
     sessionStorage.setItem('cinepremier_post_login_redirect', redirectPath);
@@ -21,7 +22,17 @@ export default function ProtectedRoute({ children }) {
       promptedRef.current = true;
       showToast('Vui lòng đăng nhập hoặc đăng ký để tiếp tục đặt vé.', 6000);
     }
-  }, [isLoggedIn, location.hash, location.pathname, location.search]);
+  }, [isAuthReady, isLoggedIn, location.hash, location.pathname, location.search]);
+
+  if (!isAuthReady) {
+    return (
+      <section className="flex min-h-[72vh] items-center justify-center bg-black px-5 py-24 text-white">
+        <div className="border border-white/10 bg-neutral-950 px-6 py-4 text-[10px] font-black uppercase tracking-[0.22em] text-neutral-400">
+          Đang khôi phục phiên đăng nhập...
+        </div>
+      </section>
+    );
+  }
 
   if (isLoggedIn) return children;
 

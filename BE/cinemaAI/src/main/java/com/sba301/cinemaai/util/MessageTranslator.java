@@ -10,6 +10,13 @@ import static java.util.Map.entry;
 public final class MessageTranslator {
 
     private static final Map<String, String> EXACT_MESSAGES = Map.ofEntries(
+            entry("Child tickets are not allowed for movies rated 13+ or higher", "Phim giới hạn từ 13+ trở lên không được bán vé trẻ em"),
+            entry("Food item status updated successfully", "Cập nhật trạng thái món ăn thành công"),
+            entry("Food combo status updated successfully", "Cập nhật trạng thái combo đồ ăn thành công"),
+            entry("Food item stock is insufficient", "Số lượng món ăn trong kho không đủ"),
+            entry("Food combo stock is insufficient", "Số lượng combo trong kho không đủ"),
+            entry("Stock quantity is required", "Số lượng tồn kho là bắt buộc"),
+            entry("Stock quantity must be zero or positive", "Số lượng tồn kho phải bằng 0 hoặc lớn hơn"),
             entry("Success", "Thành công"),
             entry("Validation failed", "Dữ liệu không hợp lệ"),
             entry("Request body is invalid", "Nội dung yêu cầu không hợp lệ"),
@@ -65,6 +72,7 @@ public final class MessageTranslator {
             entry("Ticket combo updated successfully", "Cập nhật combo vé thành công"),
             entry("Ticket combo deleted successfully", "Xóa combo vé thành công"),
             entry("Image uploaded successfully", "Tải ảnh lên thành công"),
+            entry("Video uploaded successfully", "Tải video lên thành công"),
             entry("User status updated successfully", "Cập nhật trạng thái người dùng thành công"),
             entry("Registered successfully", "Đăng ký thành công"),
             entry("Logged in successfully", "Đăng nhập thành công"),
@@ -141,6 +149,9 @@ public final class MessageTranslator {
             entry("Image file is required", "Vui lòng chọn tệp ảnh"),
             entry("Image file must not exceed 5 MB", "Tệp ảnh không được vượt quá 5 MB"),
             entry("Only JPG, PNG, and WEBP images are allowed", "Chỉ cho phép ảnh JPG, PNG và WEBP"),
+            entry("Video file is required", "Vui lòng chọn tệp video"),
+            entry("Video file must not exceed 100 MB", "Tệp video không được vượt quá 100 MB"),
+            entry("Only MP4, WEBM, and MOV videos are allowed", "Chỉ cho phép video MP4, WEBM và MOV"),
             entry("Cloudinary is not configured", "Cloudinary chưa được cấu hình"),
             entry("User not found", "Không tìm thấy người dùng"),
             entry("Recipient email is required", "Email người nhận là bắt buộc"),

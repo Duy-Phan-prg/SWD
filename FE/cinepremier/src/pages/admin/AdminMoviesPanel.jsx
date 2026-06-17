@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ImageUp
+  BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ImageUp, Video
 } from 'lucide-react';
 import { authApi } from '../../services/authApi';
 
@@ -57,10 +57,6 @@ export default function AdminMoviesPanel({ ctx }) {
     setIsGenreLoading,
     isGenreSaving,
     setIsGenreSaving,
-    homepageForm,
-    setHomepageForm,
-    homepageVideoError,
-    setHomepageVideoError,
     foodItems,
     setFoodItems,
     foodCombos,
@@ -86,8 +82,6 @@ export default function AdminMoviesPanel({ ctx }) {
     auditLogs,
     setAuditLogs,
     addAuditLog,
-    getYoutubeId,
-    handleHomepageVideoSubmit,
     resetFoodForm,
     validateFoodForm,
     fetchFoods,
@@ -122,8 +116,6 @@ export default function AdminMoviesPanel({ ctx }) {
     showToast,
     initialSection,
     onSectionChange,
-    homepageVideoUrl,
-    onHomepageVideoUrlChange,
     onFoodCatalogChanged,
     isAdmin
   } = ctx;
@@ -133,6 +125,7 @@ export default function AdminMoviesPanel({ ctx }) {
   const [isActorImageUploading, setIsActorImageUploading] = useState(false);
   const [isPosterUploading, setIsPosterUploading] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
+  const [isTrailerUploading, setIsTrailerUploading] = useState(false);
   const [createdActors, setCreatedActors] = useState([]);
 
   const hasReleaseDatePassed = (value) => {
@@ -192,10 +185,10 @@ export default function AdminMoviesPanel({ ctx }) {
   const toggleMovieMainActor = (actorId) => {
     const id = Number(actorId);
     const actorIds = (formData.actorIds || []).map(Number);
-    if (!actorIds.includes(id)) return;
     const mainActorIds = (formData.mainActorIds || []).map(Number);
     setFormData({
       ...formData,
+      actorIds: actorIds.includes(id) ? actorIds : [...actorIds, id],
       mainActorIds: mainActorIds.includes(id)
         ? mainActorIds.filter((item) => item !== id)
         : [...mainActorIds, id]
@@ -272,6 +265,25 @@ export default function AdminMoviesPanel({ ctx }) {
       showToast(error.message || 'Không thể tải ảnh lên Cloudinary.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleTrailerVideoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const token = getAdminToken();
+    if (!token) return;
+
+    setIsTrailerUploading(true);
+    try {
+      const uploaded = await authApi.uploadAdminVideo(token, file, 'movies/trailers');
+      setFormData((prev) => ({ ...prev, trailerUrl: uploaded.url }));
+      showToast('Đã tải trailer lên Cloudinary.');
+    } catch (error) {
+      showToast(error.message || 'Không thể tải trailer lên Cloudinary.');
+    } finally {
+      setIsTrailerUploading(false);
     }
   };
 
@@ -597,12 +609,21 @@ export default function AdminMoviesPanel({ ctx }) {
                               </button>
                               <button
                                 type="button"
-                                disabled={!isSelected}
                                 onClick={() => toggleMovieMainActor(actorId)}
-                                className={`px-2 py-1 text-[9px] font-black uppercase border disabled:opacity-25 ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-neutral-400'}`}
+                                className={`px-2 py-1 text-[9px] font-black uppercase border ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-neutral-400 hover:border-amber-400 hover:text-amber-300'}`}
                               >
                                 Main
                               </button>
+                              {isSelected && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleMovieActor(actorId)}
+                                  className="border border-rose-500/30 px-2 py-1 text-[9px] font-black uppercase text-rose-300 transition hover:bg-rose-500 hover:text-white"
+                                  title="Bỏ chọn diễn viên khỏi phim"
+                                >
+                                  Xóa
+                                </button>
+                              )}
                             </div>
                           );
                         }) : <p className="text-[10px] text-neutral-500">Chưa có actor. Tạo actor bên dưới hoặc tại mục Diễn viên.</p>}
@@ -656,14 +677,27 @@ export default function AdminMoviesPanel({ ctx }) {
 
                     <div className="space-y-1.5">
                       <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trailer URL</label>
-                      <input
-                        type="text"
-                        placeholder="Bắt buộc: https://youtube.com/watch?v=..."
-                        maxLength={500}
-                        value={formData.trailerUrl}
-                        onChange={(e) => setFormData({ ...formData, trailerUrl: e.target.value })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Dán URL trailer hoặc bấm Local để upload video"
+                          maxLength={500}
+                          value={formData.trailerUrl}
+                          onChange={(e) => setFormData({ ...formData, trailerUrl: e.target.value })}
+                          className="min-w-0 flex-1 bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                        />
+                        <label className={`flex cursor-pointer items-center gap-1.5 border border-amber-500/40 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isTrailerUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                          {isTrailerUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
+                          Local
+                          <input
+                            type="file"
+                            accept="video/mp4,video/webm,video/quicktime"
+                            onChange={handleTrailerVideoUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                      <p className="text-[9px] text-neutral-500">Hỗ trợ URL YouTube/Cloudinary hoặc video local MP4, WEBM, MOV tối đa 100MB.</p>
                     </div>
                   </div>
 

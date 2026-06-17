@@ -17,6 +17,7 @@ import com.sba301.cinemaai.enums.RoomStatus;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.enums.SeatStatus;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
+import com.sba301.cinemaai.enums.TicketType;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
@@ -306,11 +307,12 @@ public class ShowtimeService {
             java.math.BigDecimal childVipPrice,
             java.math.BigDecimal childCouplePrice
     ) {
-        if (movie.getAgeRating() == null || movie.getAgeRating().getMinimumAge() < 16) {
+        if (movie.getAgeRating() == null
+                || movie.getAgeRating().getMinimumAge() <= TicketType.CHILD.getMaximumAge()) {
             return;
         }
         if (childStandardPrice != null || childVipPrice != null || childCouplePrice != null) {
-            throw new BadRequestException("Child tickets are not allowed for movies rated 16+ or higher");
+            throw new BadRequestException("Child tickets are not allowed for movies rated 13+ or higher");
         }
     }
 

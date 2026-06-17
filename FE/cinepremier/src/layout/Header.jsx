@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Search, MapPin, Ticket, User, Heart, Compass, Home,
-  Building2, ChevronDown, Phone, Settings2, X, ExternalLink, ScanLine
+  Building2, ChevronDown, Phone, Settings2, X, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -138,20 +138,6 @@ export default function Header({
             >
               <User className="h-3.5 w-3.5" />
               <span>CÁ NHÂN</span>
-            </button>
-          )}
-
-          {currentRole === 'staff' && (
-            <button
-              onClick={() => onTabChange('staff')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'staff'
-                ? 'text-emerald-400 border-emerald-400 font-extrabold'
-                : 'text-neutral-400 hover:text-emerald-400 border-transparent'
-                }`}
-              id="nav-staff-tab"
-            >
-              <ScanLine className="h-4 w-4" />
-              <span>CHECK-IN</span>
             </button>
           )}
         </nav>

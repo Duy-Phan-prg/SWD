@@ -3,6 +3,7 @@ package com.sba301.cinemaai.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.response.payment.PaymentResponse;
 import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.BookingFoodItem;
 import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.PaymentProvider;
@@ -11,6 +12,7 @@ import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
+import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
@@ -28,10 +30,12 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
+    private final BookingFoodItemRepository bookingFoodItemRepository;
     private final BookingSeatRepository bookingSeatRepository;
     private final VNPayService vnpayService;
     private final QrTicketService qrTicketService;
     private final LoyaltyPointService loyaltyPointService;
+    private final FoodService foodService;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -50,6 +54,7 @@ public class PaymentService {
             throw new ConflictException("A pending payment already exists for this booking");
         }
 
+        reserveFoodStockIfNeeded(booking);
         Payment payment = paymentRepository.save(new Payment(booking, PaymentProvider.VNPAY, booking.getTotalAmount()));
         if (booking.getStatus() == BookingStatus.HOLDING) {
             booking.markPendingPayment();
@@ -128,6 +133,7 @@ public class PaymentService {
             throw new BadRequestException("Only HOLDING or PENDING_PAYMENT bookings can be paid");
         }
         if (booking.getStatus() == BookingStatus.HOLDING) {
+            reserveFoodStockIfNeeded(booking);
             booking.markPendingPayment();
         }
         Payment payment = paymentRepository.save(new Payment(booking, PaymentProvider.MOCK, booking.getTotalAmount()));
@@ -157,6 +163,24 @@ public class PaymentService {
         booking.markPaid(qrTicketService.generate(booking));
         loyaltyPointService.addPointsFromBooking(booking.getUser(), booking);
         log.info("Payment {} confirmed for booking {}", payment.getId(), booking.getBookingCode());
+    }
+
+    private void reserveFoodStockIfNeeded(Booking booking) {
+        if (booking.isFoodStockReserved()) {
+            return;
+        }
+        java.util.List<BookingFoodItem> foodItems = bookingFoodItemRepository.findByBooking(booking);
+        if (foodItems.isEmpty()) {
+            return;
+        }
+        for (BookingFoodItem item : foodItems) {
+            if (item.getFoodItem() != null) {
+                foodService.reserveItemStock(item.getFoodItem().getId(), item.getQuantity());
+            } else {
+                foodService.reserveComboStock(item.getFoodCombo().getId(), item.getQuantity());
+            }
+        }
+        booking.markFoodStockReserved();
     }
 
     private Payment findPaymentByTxnRef(String txnRef) {

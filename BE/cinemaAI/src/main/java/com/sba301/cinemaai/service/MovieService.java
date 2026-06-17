@@ -3,6 +3,7 @@ package com.sba301.cinemaai.service;
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
 import com.sba301.cinemaai.dto.response.movie.ActorResponse;
 import com.sba301.cinemaai.dto.response.movie.MovieResponse;
+import com.sba301.cinemaai.dto.response.movie.MovieSummaryResponse;
 import com.sba301.cinemaai.dto.request.movie.MovieStatusUpdateRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieUpdateRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
@@ -50,7 +51,7 @@ public class MovieService {
     private final MovieMapper movieMapper;
 
     @Transactional(readOnly = true)
-    public PageResponse<MovieResponse> searchPublic(
+    public PageResponse<MovieSummaryResponse> searchPublic(
             String keyword,
             MovieStatus status,
             Long genreId,
@@ -61,7 +62,7 @@ public class MovieService {
     ) {
         MovieStatus effectiveStatus = status == null ? null : status;
         Specification<Movie> spec = buildSpec(keyword, effectiveStatus, genreId, fromDate, toDate, true);
-        return mapPage(movieRepository.findAll(spec, pageable(page, size)));
+        return mapSummaryPage(movieRepository.findAll(spec, pageable(page, size)));
     }
 
     @Transactional(readOnly = true)
@@ -279,6 +280,26 @@ public class MovieService {
 
     private PageResponse<MovieResponse> mapPage(Page<Movie> page) {
         return PageResponse.from(page.map(this::toResponse));
+    }
+
+    private PageResponse<MovieSummaryResponse> mapSummaryPage(Page<Movie> page) {
+        List<Long> movieIds = page.getContent()
+                .stream()
+                .map(Movie::getId)
+                .toList();
+        Map<Long, List<Genre>> genresByMovieId = movieIds.isEmpty()
+                ? Map.of()
+                : movieGenreRepository.findByMovieIdIn(movieIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                movieGenre -> movieGenre.getMovie().getId(),
+                                Collectors.mapping(MovieGenre::getGenre, Collectors.toList())
+                        ));
+
+        return PageResponse.from(page.map(movie -> movieMapper.toMovieSummaryResponse(
+                movie,
+                genresByMovieId.getOrDefault(movie.getId(), List.of())
+        )));
     }
 
     private MovieResponse toResponse(Movie movie) {
