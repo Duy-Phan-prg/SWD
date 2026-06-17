@@ -117,6 +117,7 @@ class RecommendationIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MovieCreateRequest(
                                 title,
+                                "Recommendation Original",
                                 "A recommendation test movie.",
                                 "https://example.com/trailer",
                                 "https://example.com/poster.jpg",

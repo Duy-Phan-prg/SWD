@@ -12,7 +12,7 @@ import { useMovies } from '../contexts/MoviesContext';
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast, setToast, showOTP, setShowOTP, showWatchlist, setShowWatchlist } = useUI();
+  const { toast, setToast, showOTP, setShowOTP, authMode, setAuthMode, showWatchlist, setShowWatchlist } = useUI();
   const { isLoggedIn, currentUser, currentRole, setCurrentRole, handleLoginSuccess } = useAuth();
   const { searchQuery, setSearchQuery, setMoviePagination, publicCinema, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
 
@@ -106,7 +106,7 @@ export default function Layout({ children }) {
             cinema={publicCinema}
             onManageCinema={() => navigate('/admin/cinema')}
             onOpenWatchlist={() => setShowWatchlist(true)}
-            onOpenOTP={() => setShowOTP(true)}
+            onOpenOTP={() => { setAuthMode('login'); setShowOTP(true); }}
             isLoggedIn={isLoggedIn}
             currentUser={currentUser}
             currentRole={currentRole}
@@ -179,6 +179,7 @@ export default function Layout({ children }) {
       <AuthModal
         isOpen={showOTP}
         onClose={() => setShowOTP(false)}
+        initialTab={authMode}
         isLoggedIn={isLoggedIn}
         setIsLoggedIn={(v) => { }}
         currentRole={currentRole}

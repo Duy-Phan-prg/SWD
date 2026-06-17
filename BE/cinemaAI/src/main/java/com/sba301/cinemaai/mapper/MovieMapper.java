@@ -43,6 +43,7 @@ public class MovieMapper {
         return new MovieResponse(
                 movie.getId(),
                 movie.getTitle(),
+                movie.getEnglishTitle(),
                 movie.getDescription(),
                 movie.getTrailerUrl(),
                 movie.getPosterUrl(),

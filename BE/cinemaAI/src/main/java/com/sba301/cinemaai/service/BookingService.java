@@ -153,6 +153,15 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
+    public List<BookingResponse> getStaffBookingsByShowtime(Long showtimeId) {
+        Showtime showtime = findShowtime(showtimeId);
+        return bookingRepository.findByShowtime(showtime)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public BookingResponse getMyBooking(String email, Long bookingId) {
         User user = userService.getByEmail(email);
         Booking booking = findBooking(bookingId);
@@ -236,26 +245,21 @@ public class BookingService {
         return toResponse(booking);
     }
 
-    @Transactional
-    public BookingResponse checkInAdmin(Long bookingId, String qrCode) {
-        Booking booking = findBooking(bookingId);
-        if (qrCode != null && !qrCode.isBlank()) {
-            String bookingCode;
+    @Transactional(readOnly = true)
+    public BookingResponse lookupForCheckIn(String bookingCode, String qrCode) {
+        String resolvedCode = bookingCode;
+        if ((resolvedCode == null || resolvedCode.isBlank()) && qrCode != null && !qrCode.isBlank()) {
             try {
-                bookingCode = qrTicketService.extractBookingCode(qrCode);
+                resolvedCode = qrTicketService.extractBookingCode(qrCode);
             } catch (IllegalArgumentException exception) {
                 throw new BadRequestException(exception.getMessage());
             }
-            if (!booking.getBookingCode().equals(bookingCode)) {
-                throw new BadRequestException("QR code does not match booking");
-            }
         }
-        if (booking.getStatus() != BookingStatus.PAID) {
-            throw new BadRequestException("Only paid booking can be checked in");
+        if (resolvedCode == null || resolvedCode.isBlank()) {
+            throw new BadRequestException("Booking code or QR code is required");
         }
-        booking.checkIn();
-        bookingSeatRepository.findByBooking(booking)
-                .forEach(seat -> seat.changeStatus(SeatRuntimeStatus.CHECKED_IN));
+        Booking booking = bookingRepository.findByBookingCode(resolvedCode.trim())
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
         return toResponse(booking);
     }
 

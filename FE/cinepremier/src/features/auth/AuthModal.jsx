@@ -44,6 +44,7 @@ export default function AuthModal({
   otpCode,
   setOtpCode,
   onLoginSuccess,
+  initialTab = 'login',
   onPolicyClick = () => { }
 }) {
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register' | 'forgot_password'
@@ -97,6 +98,15 @@ export default function AuthModal({
   // Password Login States
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPass, setLoginPass] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!['login', 'register'].includes(initialTab)) return;
+    setActiveTab(initialTab);
+    if (initialTab === 'register') {
+      setRegisterStep('form');
+    }
+  }, [initialTab, isOpen]);
 
   // Clean Web Audio VIP synth ping sound for high-class vibe
   const playPing = (freq = 440, type = 'sine', duration = 0.1) => {

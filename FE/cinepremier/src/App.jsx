@@ -13,6 +13,7 @@ import PoliciesPage from './pages/PoliciesPage';
 import PaymentCallbackPage from './pages/PaymentCallbackPage';
 import StaffCheckInPage from './pages/StaffCheckInPage';
 import AdminRoute from './components/AdminRoute';
+import StaffRoute from './components/StaffRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UIProvider, useUI } from './contexts/UIContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -68,7 +69,6 @@ function AdminRouteView() {
         setBookedTickets={setBookedTickets}
         publicCinema={publicCinema}
         onCinemaChanged={fetchPublicCinema}
-        onOpenCheckIn={() => navigate('/staff')}
         onSelectMovie={(id) => navigate(`/movies/${id}`)}
         showToast={showToast}
         initialSection={section}
@@ -87,7 +87,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/payment-callback" element={<PaymentCallbackPage />} />
-      <Route path="/staff" element={<StaffCheckInPage />} />
+      <Route path="/staff" element={<StaffRoute><StaffCheckInPage /></StaffRoute>} />
       <Route path="/" element={<AppShell><HomeRoute /></AppShell>} />
       <Route path="/movies" element={<AppShell><ExploreView /></AppShell>} />
       <Route path="/movies/:id" element={<AppShell><DetailView /></AppShell>} />

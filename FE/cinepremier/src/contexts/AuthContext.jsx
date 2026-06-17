@@ -104,7 +104,9 @@ export function AuthProvider({ children }) {
     if (userData) {
       setCurrentUser(userData);
       setCurrentRole(userData.role || 'user');
-      navigate(userData.role === 'admin' ? '/admin/overview' : '/');
+      const redirectPath = sessionStorage.getItem('cinepremier_post_login_redirect');
+      sessionStorage.removeItem('cinepremier_post_login_redirect');
+      navigate(userData.role === 'admin' ? '/admin/overview' : redirectPath || '/');
     }
   };
 

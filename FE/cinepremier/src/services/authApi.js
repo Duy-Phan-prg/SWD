@@ -34,6 +34,22 @@ export const hasBackendAdminAccess = (accessToken, user = null) => {
   return roleValues.includes('ADMIN') || roleValues.includes('ROLE_ADMIN');
 };
 
+export const hasBackendStaffAccess = (accessToken, user = null) => {
+  const tokenPayload = parseJwtPayload(accessToken);
+  const isTokenExpired = tokenPayload?.exp ? tokenPayload.exp * 1000 <= Date.now() : false;
+  if (!accessToken || isTokenExpired) return false;
+
+  const roleValues = [
+    user?.role,
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    ...(Array.isArray(tokenPayload?.roles) ? tokenPayload.roles : []),
+    ...(Array.isArray(tokenPayload?.authorities) ? tokenPayload.authorities : []),
+    ...(Array.isArray(tokenPayload?.scope) ? tokenPayload.scope : String(tokenPayload?.scope || '').split(' '))
+  ].map((role) => String(role).toUpperCase()).filter(Boolean);
+
+  return roleValues.includes('STAFF') || roleValues.includes('ROLE_STAFF');
+};
+
 const resolveRole = (roles = []) => {
   const normalized = roles.map((role) => String(role).toUpperCase());
   if (ADMIN_ACCESS_OVERRIDE || normalized.includes('ADMIN') || normalized.includes('ROLE_ADMIN')) return 'admin';
@@ -412,6 +428,21 @@ export const authApi = {
     token,
     body: { status }
   }),
+  getAdminStaffProfiles: (token, params = {}) => request(`/api/v1/admin/staff-profiles${buildQueryString(params)}`, { token }),
+  createAdminStaffProfile: (token, payload) => request('/api/v1/admin/staff-profiles', {
+    method: 'POST',
+    token,
+    body: payload
+  }),
+  updateAdminStaffProfile: (token, profileId, payload) => request(`/api/v1/admin/staff-profiles/${encodeURIComponent(profileId)}`, {
+    method: 'PUT',
+    token,
+    body: payload
+  }),
+  updateAdminStaffProfileStatus: (token, profileId, status) => request(`/api/v1/admin/staff-profiles/${encodeURIComponent(profileId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  }),
   getGenres: () => request('/api/v1/genres'),
   getAdminGenres: () => request('/api/v1/genres'),
   createAdminGenre: (token, payload) => request('/api/v1/admin/genres', {
@@ -531,6 +562,20 @@ export const authApi = {
   createVnpayPayment: (token, bookingId) => request(`/api/v1/payments/vnpay/create?bookingId=${bookingId}`, { method: 'POST', token }),
   mockPayment: (token, bookingId) => request(`/api/v1/payments/mock?bookingId=${bookingId}`, { method: 'POST', token }),
   getPaymentByBooking: (token, bookingId) => request(`/api/v1/payments/booking/${bookingId}`, { token }),
+
+  // Staff check-in
+  lookupStaffCheckInBooking: (token, { bookingCode, qrCode }) => {
+    const params = new URLSearchParams();
+    if (bookingCode) params.set('bookingCode', bookingCode);
+    if (qrCode) params.set('qrCode', qrCode);
+    return request(`/api/v1/staff/check-in/lookup?${params.toString()}`, { token });
+  },
+  getStaffShowtimeBookings: (token, showtimeId) => request(`/api/v1/staff/check-in/showtimes/${encodeURIComponent(showtimeId)}/bookings`, { token }),
+  checkInStaffBooking: (token, qrCode) => request('/api/v1/staff/check-in', {
+    method: 'POST',
+    token,
+    body: { qrCode }
+  }),
 
   getAdminFoodItems: (token) => request('/api/v1/admin/foods/items', { token }),
   getAdminFoodCombos: (token) => request('/api/v1/admin/foods/combos', { token }),

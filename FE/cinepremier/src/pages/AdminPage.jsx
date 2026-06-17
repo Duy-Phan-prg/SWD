@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ScanLine
+  BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags
 } from 'lucide-react';
 import { authApi, expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
@@ -34,7 +34,6 @@ export default function AdminDashboard({
   setBookedTickets,
   publicCinema,
   onCinemaChanged = () => { },
-  onOpenCheckIn = () => { },
   onSelectMovie,
   showToast = () => { },
   initialSection = 'overview',
@@ -813,6 +812,22 @@ export default function AdminDashboard({
   };
 
   const resolveMovieId = (movie) => movie?.backendId ?? movie?.id ?? movie?.raw?.id ?? movie?.raw?.movieId;
+  const hasReleaseDatePassed = (value) => {
+    if (!value) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const releaseDate = new Date(value);
+    releaseDate.setHours(0, 0, 0, 0);
+    return !Number.isNaN(releaseDate.getTime()) && releaseDate < today;
+  };
+  const movieStatusRank = (status) => ({ UPCOMING: 0, NOW_SHOWING: 1, ENDED: 2 }[String(status || '').toUpperCase()] ?? -1);
+  const isInvalidMovieStatusTransition = (movie, requestedStatus) => {
+    if (requestedStatus === 'INACTIVE' || !hasReleaseDatePassed(movie?.releaseDate)) return false;
+    if (requestedStatus === 'UPCOMING') return true;
+    const currentRank = movieStatusRank(movie?.status);
+    const requestedRank = movieStatusRank(requestedStatus);
+    return currentRank >= 0 && requestedRank >= 0 && requestedRank < currentRank;
+  };
 
   const resolveGenreIdsForMovie = (movie) => {
     const raw = movie?.raw || movie || {};
@@ -892,6 +907,10 @@ export default function AdminDashboard({
       showToast('Phim đang ở trạng thái INACTIVE nên không thể cập nhật.');
       return;
     }
+    if (String(movie?.status || '').toUpperCase() !== 'UPCOMING') {
+      showToast('Chỉ cho cập nhật thông tin phim khi phim đang ở trạng thái UPCOMING.');
+      return;
+    }
 
     const defaultForm = buildDefaultMovieForm();
     const genreIds = resolveGenreIdsForMovie(movie);
@@ -961,17 +980,16 @@ export default function AdminDashboard({
     e.preventDefault();
     playPulseSound(587.33, 'sine', 0.2); // D5 success note
 
-    if (!formData.title || !formData.genreIds?.length || !formData.actorIds?.length || !formData.mainActorIds?.length) {
-      showToast("Vui lòng điền tiêu đề, thể loại, diễn viên và diễn viên chính.");
-      return;
-    }
-
     const token = getAdminToken();
     if (!token) return;
 
     const targetMovieId = editingMovie ? resolveMovieId(editingMovie) : null;
     if (editingMovie && (editingMovie.status === 'INACTIVE' || editingMovie.isInactive)) {
       showToast('Phim đang ở trạng thái INACTIVE nên không thể cập nhật.');
+      return;
+    }
+    if (editingMovie && String(editingMovie.status || '').toUpperCase() !== 'UPCOMING') {
+      showToast('Chỉ cho cập nhật thông tin phim khi phim đang ở trạng thái UPCOMING.');
       return;
     }
     if (editingMovie && !targetMovieId) {
@@ -981,18 +999,19 @@ export default function AdminDashboard({
 
     const payload = {
       title: formData.title.trim(),
+      englishTitle: formData.englishTitle.trim(),
       description: formData.synopsis.trim(),
       trailerUrl: formData.trailerUrl.trim(),
       posterUrl: formData.posterUrl,
       avatarUrl: formData.bannerUrl,
-      durationMinutes: Number(formData.duration) || 1,
-      releaseDate: formData.releaseDate,
+      durationMinutes: Number(formData.duration),
+      releaseDate: formData.releaseDate || null,
       language: formData.language.trim(),
       subtitleLanguage: formData.subtitleLanguage.trim(),
       status: formData.status,
       ageRating: formData.ageRating,
       director: formData.director.trim(),
-      genreIds: formData.genreIds.map((id) => Number(id)),
+      genreIds: (formData.genreIds || []).map((id) => Number(id)),
       actorIds: (formData.actorIds || []).map(Number).filter(Number.isFinite),
       mainActorIds: (formData.mainActorIds || []).map(Number).filter(Number.isFinite)
     };
@@ -1113,6 +1132,10 @@ export default function AdminDashboard({
     const movieId = resolveMovieId(movie);
     const token = getAdminToken();
     if (!token || !movieId || !status || status === movie.status) return;
+    if (isInvalidMovieStatusTransition(movie, status)) {
+      showToast('Phim đã qua ngày phát hành nên không thể chuyển ngược trạng thái.');
+      return;
+    }
 
     try {
       const updatedMovie = await authApi.updateAdminMovieStatus(token, movieId, status);
@@ -1435,18 +1458,6 @@ export default function AdminDashboard({
                 <span>TỔNG QUAN HỆ THỐNG</span>
               </span>
               {activeTab === 'overview' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { playPulseSound(560, 'sine', 0.06); onOpenCheckIn(); }}
-              className="mt-2 flex w-full items-center justify-between border border-emerald-500/35 bg-emerald-500/10 px-3 py-3 text-[10.5px] font-sans font-black uppercase tracking-widest text-emerald-300 transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-500/20 hover:text-white"
-            >
-              <span className="flex items-center space-x-2.5">
-                <ScanLine className="h-4 w-4 shrink-0 text-emerald-400" />
-                <span>CHECK-IN VÉ</span>
-              </span>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             </button>
 
             <button

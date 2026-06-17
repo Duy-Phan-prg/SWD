@@ -364,10 +364,10 @@ Luồng chính:
 Ghi chú:
 
 - AUTH-12 hiện chỉ cấp tài khoản đăng nhập STAFF.
-- Quản lý hồ sơ nhân viên cơ bản thuộc `OPS-03`.
+- Quản lý hồ sơ nhân viên cơ bản thuộc `OPS-03` và đã có API/UI.
 - Nên bổ sung chính sách bắt buộc đổi mật khẩu lần đầu trong tương lai.
 
-Trạng thái: cấp tài khoản đã hoàn thành; staff profile cơ bản chưa hoàn chỉnh.
+Trạng thái: cấp tài khoản và staff profile cơ bản đã hoàn thành.
 
 ### STAFF-02: Check-in booking bằng QR
 
@@ -400,7 +400,7 @@ Phạm vi hiện tại:
 - QR gắn với booking, một lần quét xác nhận toàn bộ booking.
 - Nếu cần check-in từng vé/ghế riêng lẻ, phải bổ sung QR và trạng thái riêng cho từng vé.
 
-Trạng thái: BE có API; FE staff đang mock và cần tích hợp API thật.
+Trạng thái: đã hoàn thành với API thật cho role `STAFF`.
 
 ### STAFF-03: Tra cứu booking thủ công
 
@@ -408,14 +408,19 @@ Liên quan SRS: `TICKET-05`, `OPS-02`.
 
 Tiền điều kiện: STAFF đã đăng nhập.
 
-Luồng mong muốn:
+Luồng chính:
 
-1. STAFF nhập booking code, email, SĐT hoặc chọn suất chiếu.
-2. Hệ thống trả danh sách booking phù hợp.
+1. STAFF nhập booking code hoặc QR.
+2. Hệ thống trả booking phù hợp.
 3. STAFF xem trạng thái thanh toán/check-in.
 4. STAFF check-in booking hợp lệ.
 
-Trạng thái: chưa thực hiện; chưa có staff endpoint phù hợp.
+Phạm vi hiện tại:
+
+- Đã có tra cứu theo booking code hoặc QR.
+- Đã có danh sách booking theo suất chiếu cho STAFF bằng `showtimeId`.
+
+Trạng thái: hoàn thành tra cứu thủ công theo mã/QR và xem danh sách theo suất chiếu.
 
 ---
 
@@ -451,7 +456,7 @@ Luồng staff profile cơ bản cần bổ sung:
 1. ADMIN tạo/cập nhật mã nhân viên, vị trí, SĐT, trạng thái và rạp duy nhất.
 2. ADMIN vô hiệu hóa/kích hoạt hồ sơ nhân viên.
 
-Trạng thái: AUTH-11/AUTH-12 đã hoàn thành; staff profile cơ bản chưa thực hiện.
+Trạng thái: AUTH-11/AUTH-12 và staff profile cơ bản đã hoàn thành.
 
 ### ADMIN-02: Quản lý phim, thể loại và diễn viên
 
@@ -741,12 +746,8 @@ Trạng thái: workflow admin đã có; provider thật chưa bật mặc địn
 
 ## 9. Điểm cần đồng bộ code với nghiệp vụ
 
-1. **Quyền check-in:** nghiệp vụ yêu cầu chỉ `STAFF` được check-in, `ADMIN` không có quyền check-in. Cần rà lại security/controller nếu code còn cho phép `ADMIN` gọi endpoint check-in.
-2. **Staff page:** FE staff hiện còn mock, cần gọi API thật.
-3. **Staff profile:** AUTH-12 đã cấp tài khoản, nhưng quản lý hồ sơ nhân viên cơ bản chưa có service/controller/UI đầy đủ.
-4. **Refund:** cần UI đầy đủ, chính sách thời hạn refund và VNPay Refund API tự động.
-5. **Loyalty:** cần ledger để cộng điểm theo ghế, đổi điểm, và hoàn/trừ điểm khi refund.
-6. **Review:** cần controller/service, điều kiện booking `USED`, một review mỗi CUSTOMER mỗi phim, và moderation.
-7. **Promotion:** đã loại khỏi phạm vi nghiệp vụ hiện tại; nếu code còn API promotion thì không đưa vào luồng bàn giao.
-8. **Hủy suất:** giữ đúng code hiện tại: chỉ hủy suất khi chưa có booking; nếu có booking thì từ chối.
-
+1. **Refund:** cần UI đầy đủ, chính sách thời hạn refund và VNPay Refund API tự động.
+2. **Loyalty:** cần ledger để cộng điểm theo ghế, đổi điểm, và hoàn/trừ điểm khi refund.
+3. **Review:** cần controller/service, điều kiện booking `USED`, một review mỗi CUSTOMER mỗi phim, và moderation.
+4. **Promotion:** đã loại khỏi phạm vi nghiệp vụ hiện tại; nếu code còn API promotion thì không đưa vào luồng bàn giao.
+5. **Hủy suất:** giữ đúng code hiện tại: chỉ hủy suất khi chưa có booking; nếu có booking thì từ chối.

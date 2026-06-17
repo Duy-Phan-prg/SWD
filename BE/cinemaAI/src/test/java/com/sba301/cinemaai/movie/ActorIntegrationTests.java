@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.request.auth.LoginRequest;
 import com.sba301.cinemaai.dto.request.movie.ActorRequest;
+import com.sba301.cinemaai.dto.request.movie.GenreRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.User;
@@ -60,6 +61,7 @@ class ActorIntegrationTests {
         String suffix = String.valueOf(System.nanoTime());
         Long linkedActorId = createActor(token, "Linked " + suffix);
         Long unlinkedActorId = createActor(token, "Unused " + suffix);
+        Long genreId = createGenre(token, "Actor Flow Genre " + suffix);
 
         mockMvc.perform(get("/api/v1/admin/actors")
                         .header("Authorization", "Bearer " + token)
@@ -85,7 +87,8 @@ class ActorIntegrationTests {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MovieCreateRequest(
-                                "Invalid Main Actor Movie " + suffix,
+                                "Bad Main " + suffix,
+                                "Bad Main Original",
                                 "Main actor must belong to the movie cast.",
                                 "https://example.com/trailer",
                                 "https://example.com/poster.jpg",
@@ -97,7 +100,7 @@ class ActorIntegrationTests {
                                 MovieStatus.UPCOMING,
                                 "13+",
                                 "Actor Test Director",
-                                List.of(),
+                                List.of(genreId),
                                 List.of(linkedActorId),
                                 List.of(unlinkedActorId)
                         ))))
@@ -209,11 +212,13 @@ class ActorIntegrationTests {
     }
 
     private Long createMovie(String token, String title, Long actorId) throws Exception {
+        Long genreId = createGenre(token, "Actor Movie Genre " + System.nanoTime());
         String response = mockMvc.perform(post("/api/v1/admin/movies")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MovieCreateRequest(
                                 title,
+                                "Actor Movie Original",
                                 "Actor integration test movie.",
                                 "https://example.com/trailer",
                                 "https://example.com/poster.jpg",
@@ -225,12 +230,26 @@ class ActorIntegrationTests {
                                 MovieStatus.NOW_SHOWING,
                                 "13+",
                                 "Actor Test Director",
-                                List.of(),
+                                List.of(genreId),
                                 List.of(actorId),
                                 List.of(actorId)
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.mainActors").value("Linked " + title.substring(title.lastIndexOf(' ') + 1)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(response).at("/data/id").asLong();
+    }
+
+    private Long createGenre(String token, String name) throws Exception {
+        String description = ("Created by actor integration test with a deliberately long description. ")
+                .repeat(4);
+        String response = mockMvc.perform(post("/api/v1/admin/genres")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GenreRequest(name, description))))
+                .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

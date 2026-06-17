@@ -114,6 +114,7 @@ class BookingIntegrationTests {
     @Test
     void shouldHoldBookPreventDuplicateSeatAndCheckInByQr() throws Exception {
         String adminToken = loginAs("phase6.admin.", RoleName.ADMIN);
+        String staffToken = loginAs("phase6.staff.", RoleName.STAFF);
         String customerToken = loginAs("phase6.customer.", RoleName.CUSTOMER);
         String anotherCustomerToken = loginAs("phase6.other.", RoleName.CUSTOMER);
 
@@ -198,8 +199,30 @@ class BookingIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.seats[0].runtimeStatus").value("BOOKED"));
 
-        mockMvc.perform(post("/api/v1/admin/check-in")
+        mockMvc.perform(post("/api/v1/staff/check-in")
                         .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CheckInRequest(qrCode))))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/staff/check-in/lookup")
+                        .header("Authorization", "Bearer " + staffToken)
+                        .param("bookingCode", objectMapper.readTree(paidAdminBookingResponse).at("/data/bookingCode").asText()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PAID"));
+
+        mockMvc.perform(get("/api/v1/staff/check-in/showtimes/{showtimeId}/bookings", showtime.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/staff/check-in/showtimes/{showtimeId}/bookings", showtime.getId())
+                        .header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(bookingId))
+                .andExpect(jsonPath("$.data[0].status").value("PAID"));
+
+        mockMvc.perform(post("/api/v1/staff/check-in")
+                        .header("Authorization", "Bearer " + staffToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CheckInRequest(qrCode))))
                 .andExpect(status().isOk())

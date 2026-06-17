@@ -4,6 +4,7 @@ const UIContext = createContext(null);
 
 export function UIProvider({ children }) {
   const [showOTP, setShowOTP] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
   const [showWatchlist, setShowWatchlist] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
@@ -61,7 +62,7 @@ export function UIProvider({ children }) {
   }, [toast?.id]);
 
   return (
-    <UIContext.Provider value={{ showOTP, setShowOTP, showWatchlist, setShowWatchlist, toast, setToast, showToast }}>
+    <UIContext.Provider value={{ showOTP, setShowOTP, authMode, setAuthMode, showWatchlist, setShowWatchlist, toast, setToast, showToast }}>
       {children}
     </UIContext.Provider>
   );

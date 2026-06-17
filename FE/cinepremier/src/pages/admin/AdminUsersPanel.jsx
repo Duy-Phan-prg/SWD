@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { authApi, getStoredAuth } from '../../services/authApi';
 import {
   BadgeCheck,
   Clock,
@@ -19,12 +20,18 @@ import {
 } from 'lucide-react';
 
 const USER_STATUS_OPTIONS = ['ACTIVE', 'DISABLED', 'PENDING_VERIFICATION'];
+const STAFF_PROFILE_STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
 const EMPTY_STAFF_FORM = {
   email: '',
   password: '',
   fullName: '',
   phone: '',
   birthYear: ''
+};
+const EMPTY_PROFILE_FORM = {
+  employeeCode: '',
+  position: '',
+  status: 'ACTIVE'
 };
 
 const formatDateTime = (value) => {
@@ -78,12 +85,109 @@ export default function AdminUsersPanel({ ctx }) {
   const [showStaffPassword, setShowStaffPassword] = useState(false);
   const [staffForm, setStaffForm] = useState(EMPTY_STAFF_FORM);
   const [staffFormErrors, setStaffFormErrors] = useState({});
+  const [staffProfiles, setStaffProfiles] = useState([]);
+  const [profileForm, setProfileForm] = useState(EMPTY_PROFILE_FORM);
+  const [profileError, setProfileError] = useState('');
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+
+  const selectedStaffProfile = staffProfiles.find((profile) => (
+    String(profile.userId) === String(selectedAdminUser?.id)
+  ));
+  const isSelectedStaff = (selectedAdminUser?.roles || []).some((role) => (
+    String(role).toUpperCase().replace('ROLE_', '') === 'STAFF'
+  ));
+
+  useEffect(() => {
+    if (activeTab !== 'users') return undefined;
+    let cancelled = false;
+    const loadProfiles = async () => {
+      const { accessToken } = getStoredAuth();
+      if (!accessToken) return;
+      setIsProfileLoading(true);
+      try {
+        const profiles = await authApi.getAdminStaffProfiles(accessToken);
+        if (!cancelled) setStaffProfiles(Array.isArray(profiles) ? profiles : []);
+      } catch (error) {
+        if (!cancelled) setProfileError(error.message || 'Khong the tai staff profile.');
+      } finally {
+        if (!cancelled) setIsProfileLoading(false);
+      }
+    };
+    loadProfiles();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedStaffProfile) {
+      setProfileForm({
+        employeeCode: selectedStaffProfile.employeeCode || '',
+        position: selectedStaffProfile.position || '',
+        status: selectedStaffProfile.status || 'ACTIVE'
+      });
+      setProfileError('');
+      return;
+    }
+    setProfileForm(EMPTY_PROFILE_FORM);
+    setProfileError('');
+  }, [selectedStaffProfile?.id, selectedAdminUser?.id]);
 
   if (activeTab !== 'users') return null;
 
   const updateStaffForm = (field, value) => {
     setStaffForm((prev) => ({ ...prev, [field]: value }));
     setStaffFormErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const updateProfileForm = (field, value) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+    setProfileError('');
+  };
+
+  const saveStaffProfile = async (event) => {
+    event.preventDefault();
+    if (!selectedAdminUser?.id || !isSelectedStaff) return;
+
+    const employeeCode = profileForm.employeeCode.trim();
+    const position = profileForm.position.trim();
+    if (!employeeCode || !position) {
+      setProfileError('Nhap ma nhan vien va vi tri truoc khi luu.');
+      return;
+    }
+
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      setProfileError('Phien dang nhap admin khong hop le.');
+      return;
+    }
+
+    setIsProfileSaving(true);
+    try {
+      const payload = {
+        userId: Number(selectedAdminUser.id),
+        employeeCode,
+        position,
+        status: profileForm.status || 'ACTIVE'
+      };
+      const savedProfile = selectedStaffProfile
+        ? await authApi.updateAdminStaffProfile(accessToken, selectedStaffProfile.id, {
+          employeeCode,
+          position,
+          status: payload.status
+        })
+        : await authApi.createAdminStaffProfile(accessToken, payload);
+      setStaffProfiles((prev) => [
+        savedProfile,
+        ...prev.filter((profile) => String(profile.id) !== String(savedProfile.id))
+      ]);
+      setProfileError('');
+    } catch (error) {
+      setProfileError(error.message || 'Khong the luu staff profile.');
+    } finally {
+      setIsProfileSaving(false);
+    }
   };
 
   const submitStaffForm = async (event) => {
@@ -417,6 +521,75 @@ export default function AdminUsersPanel({ ctx }) {
                       </div>
                     </div>
                   </div>
+
+                  {isSelectedStaff && (
+                    <form onSubmit={saveStaffProfile} className="border border-amber-500/20 bg-black p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-black uppercase tracking-widest text-amber-300">
+                            Staff profile
+                          </div>
+                          <p className="mt-1 text-[10px] text-neutral-500">
+                            Ma nhan vien, vi tri, trang thai va rap duy nhat cua STAFF.
+                          </p>
+                        </div>
+                        {isProfileLoading && <RefreshCw className="h-4 w-4 animate-spin text-amber-300" />}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="space-y-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Ma nhan vien *</span>
+                          <input
+                            value={profileForm.employeeCode}
+                            onChange={(event) => updateProfileForm('employeeCode', event.target.value)}
+                            placeholder="EMP001"
+                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+                          />
+                        </label>
+                        <label className="space-y-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Vi tri *</span>
+                          <input
+                            value={profileForm.position}
+                            onChange={(event) => updateProfileForm('position', event.target.value)}
+                            placeholder="Gate Staff"
+                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {STAFF_PROFILE_STATUS_OPTIONS.map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateProfileForm('status', status)}
+                            className={`border px-2 py-2 text-[8px] font-black uppercase tracking-wider transition ${
+                              profileForm.status === status
+                                ? 'border-amber-400 bg-amber-500 text-black'
+                                : 'border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-amber-400 hover:text-amber-300'
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+
+                      {selectedStaffProfile?.cinemaName && (
+                        <div className="border border-neutral-850 bg-neutral-950 px-3 py-2 text-[10px] text-neutral-400">
+                          Rap: <span className="font-bold text-neutral-200">{selectedStaffProfile.cinemaName}</span>
+                        </div>
+                      )}
+                      {profileError && <div className="text-[10px] font-bold text-rose-300">{profileError}</div>}
+                      <button
+                        type="submit"
+                        disabled={isProfileSaving}
+                        className="flex items-center justify-center gap-2 border border-amber-400 bg-amber-500 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isProfileSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="h-3.5 w-3.5" />}
+                        {selectedStaffProfile ? 'Cap nhat profile' : 'Tao profile'}
+                      </button>
+                    </form>
+                  )}
 
                   <div className="border border-neutral-850 bg-black p-4 space-y-3">
                     <div className="text-[10px] font-black uppercase tracking-widest text-neutral-400">

@@ -235,6 +235,8 @@ PENDING --> SUCCESS
 | MOV-08 | Admin CRUD diễn viên và gán diễn viên chính | Có | Có | **ĐÃ HOÀN THÀNH** |
 | MOV-09 | Trailer interaction được gửi về recommendation | Có API | Chưa thấy FE gọi API interaction | **HOÀN THÀNH MỘT PHẦN** |
 
+Lưu ý nghiệp vụ quản lý phim: Nếu phim đã qua ngày phát hành, ADMIN không được chuyển trạng thái ngược lại về `UPCOMING`; phim đã `ENDED` cũng không được lùi về `NOW_SHOWING` hoặc `UPCOMING`. Form quản trị phim cho phép nhập URL hoặc upload ảnh local cho poster và banner qua API upload ảnh. Tất cả field tạo/cập nhật phim được validate ở BE và FE phải hiển thị thông báo lỗi field-level trả về từ API. Rule nhập phim: tên phim tối đa 50 ký tự, tên tiếng Anh/tiêu đề gốc tối đa 30 ký tự, mô tả tối đa 1000 ký tự, trailer URL bắt buộc, thời lượng từ 60 đến 180 phút, ngôn ngữ tối đa 30 ký tự, phụ đề tối đa 30 ký tự và đạo diễn tối đa 50 ký tự.
+
 ## 5.5 Rạp, phòng và sơ đồ ghế
 
 | ID | Yêu cầu | BE | FE | Tổng thể |
@@ -338,9 +340,9 @@ Quy tắc refund: CUSTOMER chỉ được gửi yêu cầu refund cho booking `P
 |---|---|---|---|---|
 | TICKET-01 | Sinh QR sau thanh toán | Có chuỗi QR | Có hiển thị vé | **ĐÃ HOÀN THÀNH** |
 | TICKET-02 | QR có chữ ký/checksum chống giả mạo | Chưa có | Không áp dụng | **CHƯA THỰC HIỆN** |
-| TICKET-03 | Staff check-in bằng QR | Có API | Trang staff đang dùng dữ liệu mock, chưa gọi API | **HOÀN THÀNH MỘT PHẦN** |
-| TICKET-04 | Chặn check-in vé chưa thanh toán/đã dùng | Có | FE mock có mô phỏng | **HOÀN THÀNH MỘT PHẦN** |
-| TICKET-05 | Tra cứu booking thủ công cho staff | Admin có API booking; staff chưa có API tra cứu phù hợp | FE mock | **CHƯA THỰC HIỆN** |
+| TICKET-03 | Staff check-in bằng QR | Có API chỉ cho `STAFF` | Có gọi API thật | **ĐÃ HOÀN THÀNH** |
+| TICKET-04 | Chặn check-in vé chưa thanh toán/đã dùng | Có | Có hiển thị lỗi từ API thật | **ĐÃ HOÀN THÀNH** |
+| TICKET-05 | Tra cứu booking thủ công cho staff | Có API staff lookup theo booking code/QR | Có form tra cứu thật | **ĐÃ HOÀN THÀNH** |
 | TICKET-06 | Camera quét QR thực tế | Không áp dụng | Chỉ mô phỏng quét | **CHƯA THỰC HIỆN** |
 | TICKET-07 | Gửi vé QR qua email | Chưa có | Chưa có | **CHƯA THỰC HIỆN** |
 
@@ -413,9 +415,9 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 
 | ID | Yêu cầu                                                    | Trạng thái | Ghi chú |
 |---|------------------------------------------------------------|---|---|
-| OPS-01 | Staff check-in QR                                          | **HOÀN THÀNH MỘT PHẦN** | BE có, FE staff đang mock. |
-| OPS-02 | Staff xem booking theo suất chiếu                          | **CHƯA THỰC HIỆN** | FE hiển thị mock; chưa có staff endpoint tương ứng. |
-| OPS-03 | Quản lý staff profile cơ bản                              | **CHƯA THỰC HIỆN** | Cần quản lý tối thiểu mã nhân viên, họ tên, email tài khoản, số điện thoại, vị trí, trạng thái và rạp duy nhất. Có entity/repository, chưa có service/controller/UI đầy đủ. |
+| OPS-01 | Staff check-in QR                                          | **ĐÃ HOÀN THÀNH** | BE và FE đã dùng API thật; chỉ role `STAFF` được check-in. |
+| OPS-02 | Staff xem booking theo suất chiếu                          | **ĐÃ HOÀN THÀNH** | BE có endpoint STAFF lấy booking theo `showtimeId`; FE Staff page đã gọi API thật và cho check-in từ danh sách. |
+| OPS-03 | Quản lý staff profile cơ bản                              | **ĐÃ HOÀN THÀNH** | Admin có API/UI quản lý mã nhân viên, thông tin tài khoản STAFF, số điện thoại, vị trí, trạng thái và rạp duy nhất. |
 | RPT-01 | Báo cáo doanh thu của rạp duy nhất theo ngày/tháng/quý/năm | **CHƯA THỰC HIỆN** | Admin overview hiện dùng dữ liệu tính cục bộ/mock. |
 | RPT-02 | Báo cáo vé bán, phim bán chạy, suất chiếu                  | **CHƯA THỰC HIỆN** | Chưa có report API. |
 | RPT-03 | Báo cáo combo bắp nước và tỷ lệ lấp đầy theo phòng         | **CHƯA THỰC HIỆN** | Chưa có report API. |
@@ -454,11 +456,11 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 | Phase 2 | Auth, Customer & Security | **ĐÃ HOÀN THÀNH** | Luồng CUSTOMER chính đã tích hợp FE-BE. |
 | Phase 3 | Movie, Genre & Actor | **ĐÃ HOÀN THÀNH** | CRUD và public catalog đã tích hợp. |
 | Phase 4 | Cinema, Room, Seat & Showtime | **HOÀN THÀNH MỘT PHẦN** | Quản lý rạp đúng phạm vi GET/UPDATE/PATCH status, không có CREATE/DELETE; FE đã chỉ dùng một địa điểm từ API, scheduler trạng thái suất còn thiếu. |
-| Phase 5 | Booking, Seat Locking, F&B & QR | **HOÀN THÀNH MỘT PHẦN** | Booking hoạt động, còn thiếu lock đồng thời và staff FE thật. |
+| Phase 5 | Booking, Seat Locking, F&B & QR | **HOÀN THÀNH MỘT PHẦN** | Booking và staff check-in hoạt động với API thật; còn thiếu lock đồng thời. |
 | Phase 6 | Payment & Refund | **HOÀN THÀNH MỘT PHẦN** | VNPay/payment có; refund provider và UI vận hành chưa hoàn chỉnh. |
 | Phase 7 | Loyalty & Notification | **HOÀN THÀNH MỘT PHẦN** | Có API nền, FE và event integration còn thiếu; loyalty cần ledger để hoàn điểm khi refund. |
 | Phase 8 | Review | **CHƯA THỰC HIỆN** | Chỉ có entity/repository. |
-| Phase 9 | Staff Operations & Reports | **CHƯA THỰC HIỆN** | Staff UI còn mock và report API chưa có. |
+| Phase 9 | Staff Operations & Reports | **HOÀN THÀNH MỘT PHẦN** | Staff check-in, danh sách booking theo suất chiếu và staff profile cơ bản đã dùng API thật; report API chưa có. |
 | Phase 10 | Storage, Email, WebSocket & Scheduler | **HOÀN THÀNH MỘT PHẦN** | Upload và OTP mail có; ticket email/WebSocket/showtime scheduler thiếu. |
 | Phase 11 | Recommendation & AI Analysis | **HOÀN THÀNH MỘT PHẦN** | AI analysis admin tốt; recommendation chưa tích hợp FE và provider thật chưa bật. |
 | Phase 12 | Integration & QA | **HOÀN THÀNH MỘT PHẦN** | Backend test tốt; thiếu FE/E2E và kiểm thử tích hợp dịch vụ thật. |
@@ -490,8 +492,7 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 3. Thêm database lock hoặc unique constraint phù hợp để chống double booking.
 4. Ký QR bằng HMAC/JWT hoặc checksum bí mật.
 5. Tắt hoặc bảo vệ mock payment trong môi trường production.
-6. Tích hợp staff page với API thật và bảo vệ route `/staff`.
-7. Bổ sung test đồng thời giữ ghế và test end-to-end booking -> payment -> check-in.
+6. Bổ sung test đồng thời giữ ghế và test end-to-end booking -> payment -> check-in.
 
 ### 9.2 Ưu tiên P1 - Hoàn thiện nghiệp vụ bàn giao
 
@@ -552,6 +553,6 @@ Hệ thống được xem là sẵn sàng bàn giao production khi:
 
 ## 12. Kết luận
 
-Hệ thống hiện đã hoàn thành tốt phần lõi của website đặt vé cho một rạp duy nhất: auth, catalog, cập nhật và vô hiệu hóa/kích hoạt lại rạp, quản trị phòng, ghế, suất chiếu, booking, tính giá, F&B, payment và AI analysis. Quản lý rạp hiện đúng phạm vi: có GET, UPDATE và PATCH trạng thái; không có API/UI tạo mới hoặc xóa rạp. Frontend đã loại bỏ nội dung mock nhiều địa điểm và lấy thông tin rạp duy nhất từ API; hệ thống chưa nên được xem là hoàn chỉnh ở mức production do còn thiếu cơ chế chống double booking ở database, migration đúng chuẩn PostgreSQL, bảo mật QR/secret, staff FE tích hợp thật, review, báo cáo, notification event-driven và refund provider.
+Hệ thống hiện đã hoàn thành tốt phần lõi của website đặt vé cho một rạp duy nhất: auth, catalog, cập nhật và vô hiệu hóa/kích hoạt lại rạp, quản trị phòng, ghế, suất chiếu, booking, tính giá, F&B, payment, staff check-in và AI analysis. Quản lý rạp hiện đúng phạm vi: có GET, UPDATE và PATCH trạng thái; không có API/UI tạo mới hoặc xóa rạp. Frontend đã loại bỏ nội dung mock nhiều địa điểm và lấy thông tin rạp duy nhất từ API; hệ thống chưa nên được xem là hoàn chỉnh ở mức production do còn thiếu cơ chế chống double booking ở database, migration đúng chuẩn PostgreSQL, bảo mật QR/secret, review, báo cáo, notification event-driven và refund provider.
 
 Tài liệu này là baseline SRS và trạng thái triển khai để tiếp tục phát triển, kiểm thử và nghiệm thu dự án.

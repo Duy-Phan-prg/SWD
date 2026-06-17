@@ -35,10 +35,14 @@ public class Movie extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String title;
 
+    @Column(name = "english_title", length = 30)
+    private String englishTitle;
+
     @Lob
+    @Column(length = 1000)
     private String description;
 
     @Column(name = "trailer_url", length = 500)
@@ -56,10 +60,10 @@ public class Movie extends BaseEntity {
     @Column(name = "release_date")
     private LocalDate releaseDate;
 
-    @Column(length = 50)
+    @Column(length = 30)
     private String language;
 
-    @Column(name = "subtitle_language", length = 50)
+    @Column(name = "subtitle_language", length = 30)
     private String subtitleLanguage;
 
     @Enumerated(EnumType.STRING)
@@ -70,6 +74,7 @@ public class Movie extends BaseEntity {
     @Column(name = "age_rating", length = 20)
     private AgeRating ageRating;
 
+    @Column(length = 50)
     private String director;
 
     @Column(name = "main_actors", length = 1000)
@@ -85,7 +90,12 @@ public class Movie extends BaseEntity {
     }
 
     public void updateDetails(String title, String description, int durationMinutes, LocalDate releaseDate) {
+        updateDetails(title, this.englishTitle, description, durationMinutes, releaseDate);
+    }
+
+    public void updateDetails(String title, String englishTitle, String description, int durationMinutes, LocalDate releaseDate) {
         this.title = title;
+        this.englishTitle = englishTitle;
         this.description = description;
         this.durationMinutes = durationMinutes;
         this.releaseDate = releaseDate;
