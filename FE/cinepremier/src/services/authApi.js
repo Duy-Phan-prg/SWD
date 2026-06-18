@@ -34,6 +34,22 @@ export const hasBackendAdminAccess = (accessToken, user = null) => {
   return roleValues.includes('ADMIN') || roleValues.includes('ROLE_ADMIN');
 };
 
+export const hasBackendStaffAccess = (accessToken, user = null) => {
+  const tokenPayload = parseJwtPayload(accessToken);
+  const isTokenExpired = tokenPayload?.exp ? tokenPayload.exp * 1000 <= Date.now() : false;
+  if (!accessToken || isTokenExpired) return false;
+
+  const roleValues = [
+    user?.role,
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    ...(Array.isArray(tokenPayload?.roles) ? tokenPayload.roles : []),
+    ...(Array.isArray(tokenPayload?.authorities) ? tokenPayload.authorities : []),
+    ...(Array.isArray(tokenPayload?.scope) ? tokenPayload.scope : String(tokenPayload?.scope || '').split(' '))
+  ].map((role) => String(role).toUpperCase()).filter(Boolean);
+
+  return roleValues.includes('STAFF') || roleValues.includes('ROLE_STAFF');
+};
+
 const resolveRole = (roles = []) => {
   const normalized = roles.map((role) => String(role).toUpperCase());
   if (ADMIN_ACCESS_OVERRIDE || normalized.includes('ADMIN') || normalized.includes('ROLE_ADMIN')) return 'admin';
@@ -92,7 +108,11 @@ const tryRefreshToken = async () => {
   return null;
 };
 
-const request = async (path, { method = 'GET', body, token } = {}) => {
+const inflightGetRequests = new Map();
+
+const getDedupeKey = (path, token) => `${token ? `auth:${token}` : 'public'}:${path}`;
+
+const performRequest = async (path, { method = 'GET', body, token } = {}) => {
   const isFormData = body instanceof FormData;
   const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -125,6 +145,24 @@ const request = async (path, { method = 'GET', body, token } = {}) => {
   }
 
   return parseResponse(response);
+};
+
+const request = (path, { method = 'GET', body, token } = {}) => {
+  const normalizedMethod = String(method || 'GET').toUpperCase();
+  const shouldDedupe = normalizedMethod === 'GET' && body === undefined;
+
+  if (!shouldDedupe) {
+    return performRequest(path, { method: normalizedMethod, body, token });
+  }
+
+  const dedupeKey = getDedupeKey(path, token);
+  const existingRequest = inflightGetRequests.get(dedupeKey);
+  if (existingRequest) return existingRequest;
+
+  const promise = performRequest(path, { method: normalizedMethod, body, token })
+    .finally(() => inflightGetRequests.delete(dedupeKey));
+  inflightGetRequests.set(dedupeKey, promise);
+  return promise;
 };
 
 const buildQueryString = (params = {}) => {
@@ -386,6 +424,16 @@ export const authApi = {
       body: formData
     });
   },
+  uploadAdminVideo: (token, file, folder = 'videos') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    return request('/api/v1/admin/uploads/videos', {
+      method: 'POST',
+      token,
+      body: formData
+    });
+  },
   createAdminActor: (token, payload) => request('/api/v1/admin/actors', {
     method: 'POST',
     token,
@@ -402,10 +450,30 @@ export const authApi = {
   }),
   getAdminUsers: (token) => request('/api/v1/admin/users', { token }),
   getAdminUserDetail: (token, userId) => request(`/api/v1/admin/users/${encodeURIComponent(userId)}`, { token }),
+  createAdminStaff: (token, payload) => request('/api/v1/admin/users/staff', {
+    method: 'POST',
+    token,
+    body: payload
+  }),
   updateAdminUserStatus: (token, userId, status) => request(`/api/v1/admin/users/${encodeURIComponent(userId)}/status`, {
     method: 'PATCH',
     token,
     body: { status }
+  }),
+  getAdminStaffProfiles: (token, params = {}) => request(`/api/v1/admin/staff-profiles${buildQueryString(params)}`, { token }),
+  createAdminStaffProfile: (token, payload) => request('/api/v1/admin/staff-profiles', {
+    method: 'POST',
+    token,
+    body: payload
+  }),
+  updateAdminStaffProfile: (token, profileId, payload) => request(`/api/v1/admin/staff-profiles/${encodeURIComponent(profileId)}`, {
+    method: 'PUT',
+    token,
+    body: payload
+  }),
+  updateAdminStaffProfileStatus: (token, profileId, status) => request(`/api/v1/admin/staff-profiles/${encodeURIComponent(profileId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
   }),
   getGenres: () => request('/api/v1/genres'),
   getAdminGenres: () => request('/api/v1/genres'),
@@ -427,11 +495,6 @@ export const authApi = {
   getFoodCombos: () => request('/api/v1/foods/combos'),
   getPublicCinema: () => request('/api/v1/cinema'),
   getAdminCinema: (token) => request('/api/v1/admin/cinema', { token }),
-  createAdminCinema: (token, payload) => request('/api/v1/admin/cinema', {
-    method: 'POST',
-    token,
-    body: payload
-  }),
   updateAdminCinema: (token, payload) => request('/api/v1/admin/cinema', {
     method: 'PUT',
     token,
@@ -439,10 +502,6 @@ export const authApi = {
   }),
   updateAdminCinemaStatus: (token, status) => request(`/api/v1/admin/cinema/status?status=${encodeURIComponent(status)}`, {
     method: 'PATCH',
-    token
-  }),
-  deactivateAdminCinema: (token) => request('/api/v1/admin/cinema', {
-    method: 'DELETE',
     token
   }),
   getAdminRooms: (token) => request('/api/v1/admin/rooms', { token }),
@@ -535,6 +594,30 @@ export const authApi = {
   createVnpayPayment: (token, bookingId) => request(`/api/v1/payments/vnpay/create?bookingId=${bookingId}`, { method: 'POST', token }),
   mockPayment: (token, bookingId) => request(`/api/v1/payments/mock?bookingId=${bookingId}`, { method: 'POST', token }),
   getPaymentByBooking: (token, bookingId) => request(`/api/v1/payments/booking/${bookingId}`, { token }),
+
+  // Staff check-in
+  lookupStaffCheckInBooking: (token, { bookingCode, qrCode }) => {
+    const params = new URLSearchParams();
+    if (bookingCode) params.set('bookingCode', bookingCode);
+    if (qrCode) params.set('qrCode', qrCode);
+    return request(`/api/v1/staff/check-in/lookup?${params.toString()}`, { token });
+  },
+  getStaffShowtimeBookings: (token, showtimeId) => request(`/api/v1/staff/check-in/showtimes/${encodeURIComponent(showtimeId)}/bookings`, { token }),
+  checkInStaffBooking: (token, qrCode) => request('/api/v1/staff/check-in', {
+    method: 'POST',
+    token,
+    body: { qrCode }
+  }),
+  getStaffFoodItems: (token) => request('/api/v1/staff/foods/items', { token }),
+  getStaffFoodCombos: (token) => request('/api/v1/staff/foods/combos', { token }),
+  updateStaffFoodItemStatus: (token, itemId, status) => request(`/api/v1/staff/foods/items/${encodeURIComponent(itemId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  }),
+  updateStaffFoodComboStatus: (token, comboId, status) => request(`/api/v1/staff/foods/combos/${encodeURIComponent(comboId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  }),
 
   getAdminFoodItems: (token) => request('/api/v1/admin/foods/items', { token }),
   getAdminFoodCombos: (token) => request('/api/v1/admin/foods/combos', { token }),

@@ -51,10 +51,6 @@ export default function AdminOverviewPanel({ ctx }) {
     setIsGenreLoading,
     isGenreSaving,
     setIsGenreSaving,
-    homepageForm,
-    setHomepageForm,
-    homepageVideoError,
-    setHomepageVideoError,
     foodItems,
     setFoodItems,
     foodCombos,
@@ -80,8 +76,6 @@ export default function AdminOverviewPanel({ ctx }) {
     auditLogs,
     setAuditLogs,
     addAuditLog,
-    getYoutubeId,
-    handleHomepageVideoSubmit,
     resetFoodForm,
     validateFoodForm,
     fetchFoods,
@@ -110,13 +104,11 @@ export default function AdminOverviewPanel({ ctx }) {
     setMoviesList,
     bookedTickets,
     setBookedTickets,
-    cinemaLocations,
+    publicCinema,
     onSelectMovie,
     showToast,
     initialSection,
     onSectionChange,
-    homepageVideoUrl,
-    onHomepageVideoUrlChange,
     onFoodCatalogChanged,
     isAdmin
   } = ctx;
@@ -303,12 +295,15 @@ export default function AdminOverviewPanel({ ctx }) {
                       {/* Regional breakdown chart under the line graph */}
                       <div className="pt-2 border-t border-zinc-900 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <span className="text-[8.5px] font-mono text-neutral-500 uppercase block font-bold mb-2">Phân bổ doanh thu theo địa hạt đô thị</span>
+                          <span className="text-[8.5px] font-mono text-neutral-500 uppercase block font-bold mb-2">Doanh thu tại rạp</span>
                           <div className="space-y-3 pt-1">
                             {[
-                              { city: 'Hà Nội (CineWest Lake & Royal)', revenue: 15450000, percentage: 80, color: 'bg-amber-400' },
-                              { city: 'TP. Hồ Chí Minh (CineLandmark 81 & IMAX)', revenue: 18900000, percentage: 100, color: 'bg-cyan-400' },
-                              { city: 'Đà Nẵng & Nha Trang rạp liên kết', revenue: 9200000, percentage: 55, color: 'bg-rose-500' }
+                              {
+                                city: publicCinema?.name || 'Rạp chưa được cấu hình',
+                                revenue: calculatedRevenue,
+                                percentage: 100,
+                                color: 'bg-amber-400'
+                              }
                             ].map((row) => (
                               <div key={row.city} className="space-y-1">
                                 <div className="flex justify-between items-center text-[10px] font-sans">

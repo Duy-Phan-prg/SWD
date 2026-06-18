@@ -31,7 +31,6 @@ class BookingFoodQrEndpointInventoryTests {
                 "@getmapping",
                 "@getmapping(\"/{bookingid}\")",
                 "@deletemapping(\"/{bookingid}\")",
-                "@postmapping(\"/{bookingid}/check-in\")",
                 "@postmapping(\"/{bookingid}/refund-request\")",
                 "@postmapping(\"/{bookingid}/mark-refunded\")"
         )) {
@@ -83,11 +82,15 @@ class BookingFoodQrEndpointInventoryTests {
     }
 
     @Test
-    void checkInControllerShouldExposeStaffAndAdminQrAliases() throws IOException {
+    void checkInControllerShouldExposeStaffQrEndpoints() throws IOException {
         String controller = readSource("controller/StaffCheckInController.java");
-        assertTrue(controller.contains("@requestmapping({\"/api/v1/staff/check-in\", \"/api/v1/admin/check-in\"})"));
+        assertTrue(controller.contains("@requestmapping(\"/api/v1/staff/check-in\")"));
+        assertTrue(controller.contains("@getmapping(\"/lookup\")"));
+        assertTrue(controller.contains("@getmapping(\"/showtimes/{showtimeid}/bookings\")"));
         assertTrue(controller.contains("@postmapping"));
         assertTrue(controller.contains("bookingservice.checkin(request.qrcode())"));
+        assertTrue(controller.contains("bookingservice.lookupforcheckin(bookingcode, qrcode)"));
+        assertTrue(controller.contains("bookingservice.getstaffbookingsbyshowtime(showtimeid)"));
     }
 
     @Test
@@ -164,10 +167,12 @@ class BookingFoodQrEndpointInventoryTests {
         String foodItem = readSource("dto/request/food/FoodItemRequest.java");
         assertTrue(foodItem.contains("fooditemstatus status"));
         assertTrue(foodItem.contains("string imageurl"));
+        assertTrue(foodItem.contains("integer stockquantity"));
 
         String foodCombo = readSource("dto/request/food/FoodComboRequest.java");
         assertTrue(foodCombo.contains("fooditemstatus status"));
         assertTrue(foodCombo.contains("string imageurl"));
+        assertTrue(foodCombo.contains("integer stockquantity"));
     }
 
     private String readSource(String relativePath) throws IOException {

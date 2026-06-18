@@ -58,7 +58,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/payments/vnpay/return", "/api/v1/payments/vnpay/ipn").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/staff/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/v1/staff/**").hasRole("STAFF")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

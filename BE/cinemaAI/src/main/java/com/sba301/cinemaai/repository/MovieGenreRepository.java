@@ -13,6 +13,15 @@ public interface MovieGenreRepository extends JpaRepository<MovieGenre, Long> {
 
     List<MovieGenre> findByMovie(Movie movie);
 
+    @Query("""
+            select movieGenre
+            from MovieGenre movieGenre
+            join fetch movieGenre.genre
+            where movieGenre.movie.id in :movieIds
+            order by movieGenre.movie.id, movieGenre.genre.name
+            """)
+    List<MovieGenre> findByMovieIdIn(@Param("movieIds") List<Long> movieIds);
+
     List<MovieGenre> findByGenre(Genre genre);
 
     boolean existsByMovieAndGenre(Movie movie, Genre genre);

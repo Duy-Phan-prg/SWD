@@ -1,16 +1,10 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
-  ArrowLeft,
-  CalendarDays,
-  Camera,
-  Check,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
-  ChevronDown,
   Clock3,
-  Film,
-  LogOut,
-  Monitor,
   Printer,
   QrCode,
   RefreshCw,
@@ -18,390 +12,629 @@ import {
   Search,
   ShieldCheck,
   Ticket,
-  UserRound,
-  UsersRound,
-  X,
   XCircle,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'motion/react';
+import { motion } from 'motion/react';
+import { authApi, getStoredAuth } from '../services/authApi';
+import { useAuth } from '../contexts/AuthContext';
 
-const SHOWTIMES = [
-  {
-    id: 'st-01',
-    movie: 'Dune: Part Two',
-    format: 'IMAX 2D',
-    room: 'IMAX 01',
-    time: '19:30',
-    endTime: '22:16',
-    date: '15/06/2026',
-    status: 'NOW_SHOWING',
-  },
-  {
-    id: 'st-02',
-    movie: 'Inside Out 2',
-    format: '2D Phụ đề',
-    room: 'Phòng 03',
-    time: '20:00',
-    endTime: '21:36',
-    date: '15/06/2026',
-    status: 'SCHEDULED',
-  },
-  {
-    id: 'st-03',
-    movie: 'Furiosa: A Mad Max Saga',
-    format: '4DX',
-    room: 'Phòng 4DX',
-    time: '21:15',
-    endTime: '23:43',
-    date: '15/06/2026',
-    status: 'SCHEDULED',
-  },
-];
+const FOOD_PAGE_SIZE = 10;
 
-const INITIAL_TICKETS = [
-  { id: 'TCK-260615-001', bookingCode: 'CP8X2K9', showtimeId: 'st-01', customer: 'Nguyễn Minh Anh', phone: '090 123 4567', seat: 'H8', seatType: 'VIP', payment: 'PAID', status: 'USED', checkedAt: '19:06', checkedBy: 'Trần Gia Huy' },
-  { id: 'TCK-260615-002', bookingCode: 'CP8X2K9', showtimeId: 'st-01', customer: 'Nguyễn Minh Anh', phone: '090 123 4567', seat: 'H9', seatType: 'VIP', payment: 'PAID', status: 'ACTIVE' },
-  { id: 'TCK-260615-003', bookingCode: 'CP4L7M1', showtimeId: 'st-01', customer: 'Lê Hoàng Nam', phone: '098 765 4321', seat: 'G5', seatType: 'Standard', payment: 'PAID', status: 'ACTIVE' },
-  { id: 'TCK-260615-004', bookingCode: 'CP4L7M1', showtimeId: 'st-01', customer: 'Lê Hoàng Nam', phone: '098 765 4321', seat: 'G6', seatType: 'Standard', payment: 'PAID', status: 'ACTIVE' },
-  { id: 'TCK-260615-005', bookingCode: 'CP1Q8P4', showtimeId: 'st-01', customer: 'Phạm Thu Hà', phone: '093 456 7890', seat: 'D10', seatType: 'Couple', payment: 'PAID', status: 'USED', checkedAt: '19:12', checkedBy: 'Trần Gia Huy' },
-  { id: 'TCK-260615-006', bookingCode: 'CP6N2A7', showtimeId: 'st-01', customer: 'Đỗ Quang Vinh', phone: '091 223 3445', seat: 'C3', seatType: 'Standard', payment: 'PENDING', status: 'ACTIVE' },
-  { id: 'TCK-260615-007', bookingCode: 'CP3B5T8', showtimeId: 'st-02', customer: 'Vũ Ngọc Mai', phone: '097 888 1122', seat: 'F7', seatType: 'VIP', payment: 'PAID', status: 'ACTIVE' },
-  { id: 'TCK-260615-008', bookingCode: 'CP3B5T8', showtimeId: 'st-02', customer: 'Vũ Ngọc Mai', phone: '097 888 1122', seat: 'F8', seatType: 'VIP', payment: 'PAID', status: 'ACTIVE' },
-];
+const formatDateTime = (value) => {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('vi-VN');
+};
 
-const statusStyle = {
-  ACTIVE: 'border-amber-300 bg-amber-50 text-amber-700',
-  USED: 'border-emerald-300 bg-emerald-50 text-emerald-700',
-  CANCELLED: 'border-rose-300 bg-rose-50 text-rose-700',
+const formatSeats = (booking) => {
+  const seats = booking?.seats || [];
+  if (!seats.length) return 'Chưa có ghế';
+  return seats.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ');
+};
+
+const getBookingStatusMeta = (status = '') => {
+  const normalized = String(status).toUpperCase();
+  if (normalized === 'PAID') {
+    return {
+      label: 'Sẵn sàng check-in',
+      className: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
+    };
+  }
+  if (normalized === 'USED') {
+    return {
+      label: 'Đã check-in',
+      className: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300',
+    };
+  }
+  return {
+    label: normalized || 'Không hợp lệ',
+    className: 'border-rose-400/40 bg-rose-500/10 text-rose-300',
+  };
 };
 
 function StatusBadge({ status }) {
+  const meta = getBookingStatusMeta(status);
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm transition hover:-translate-y-0.5 ${statusStyle[status] || statusStyle.CANCELLED}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${status === 'USED' ? 'bg-emerald-300' : status === 'ACTIVE' ? 'bg-amber-300' : 'bg-rose-300'}`} />
-      {status === 'USED' ? 'Đã check-in' : status === 'ACTIVE' ? 'Chưa check-in' : 'Không hợp lệ'}
+    <span className={`inline-flex items-center gap-1.5 border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${meta.className}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {meta.label}
     </span>
   );
 }
 
-export default function StaffCheckInPage() {
-  const navigate = useNavigate();
-  const [selectedShowtimeId, setSelectedShowtimeId] = useState(SHOWTIMES[0].id);
-  const [tickets, setTickets] = useState(INITIAL_TICKETS);
-  const [activeMode, setActiveMode] = useState('scan');
-  const [searchValue, setSearchValue] = useState('');
-  const [tableSearch, setTableSearch] = useState('');
-  const [scanResult, setScanResult] = useState(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [selectedTicketIds, setSelectedTicketIds] = useState([]);
-  const [showtimeMenuOpen, setShowtimeMenuOpen] = useState(false);
-
-  const selectedShowtime = SHOWTIMES.find((item) => item.id === selectedShowtimeId);
-  const showtimeTickets = tickets.filter((ticket) => ticket.showtimeId === selectedShowtimeId);
-  const filteredTickets = showtimeTickets.filter((ticket) => {
-    const query = tableSearch.trim().toLowerCase();
-    return !query || [ticket.bookingCode, ticket.customer, ticket.seat, ticket.phone].some((value) => value.toLowerCase().includes(query));
-  });
-  const checkedIn = showtimeTickets.filter((ticket) => ticket.status === 'USED').length;
-  const active = showtimeTickets.filter((ticket) => ticket.status === 'ACTIVE').length;
-  const progress = showtimeTickets.length ? Math.round((checkedIn / showtimeTickets.length) * 100) : 0;
-
-  const manualMatches = useMemo(() => {
-    const query = searchValue.trim().toLowerCase();
-    if (!query) return [];
-    return tickets.filter((ticket) =>
-      ticket.bookingCode.toLowerCase().includes(query)
-      || ticket.id.toLowerCase().includes(query)
-      || ticket.phone.replace(/\s/g, '').includes(query.replace(/\s/g, ''))
+function ResultCard({ result }) {
+  if (!result) {
+    return (
+      <div className="flex min-h-[260px] flex-col items-center justify-center border border-dashed border-neutral-800 bg-[#070707] p-6 text-center">
+        <ShieldCheck className="h-10 w-10 text-emerald-400/60" />
+        <p className="mt-4 text-xs font-black uppercase tracking-widest text-neutral-400">Chưa có kết quả</p>
+        <p className="mt-2 max-w-sm text-xs leading-6 text-neutral-500">
+          Nhập mã QR hoặc mã booking để hệ thống kiểm tra dữ liệu thật từ backend.
+        </p>
+      </div>
     );
-  }, [searchValue, tickets]);
+  }
 
-  const checkInTicket = (ticket) => {
-    if (!ticket) {
-      setScanResult({ type: 'error', title: 'Vé không tồn tại.', message: 'Không tìm thấy mã vé trong hệ thống.' });
-      return;
-    }
-    if (ticket.showtimeId !== selectedShowtimeId) {
-      const actualShowtime = SHOWTIMES.find((item) => item.id === ticket.showtimeId);
-      setScanResult({ type: 'error', title: 'Vé sai suất chiếu.', message: `Vé này thuộc suất ${actualShowtime?.time} · ${actualShowtime?.room}.`, ticket });
-      return;
-    }
-    if (ticket.status === 'USED') {
-      setScanResult({ type: 'error', title: 'Vé đã được sử dụng.', message: `Đã check-in lúc ${ticket.checkedAt} bởi ${ticket.checkedBy}.`, ticket });
-      return;
-    }
-    if (ticket.payment !== 'PAID') {
-      setScanResult({ type: 'error', title: 'Vé chưa được thanh toán.', message: 'Vui lòng hướng dẫn khách hoàn tất thanh toán.', ticket });
-      return;
-    }
+  const Icon = result.type === 'success' ? CheckCircle2 : result.type === 'warning' ? AlertCircle : XCircle;
+  const color = result.type === 'success' ? 'text-emerald-300' : result.type === 'warning' ? 'text-amber-300' : 'text-rose-300';
 
-    const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const checkedTicket = { ...ticket, status: 'USED', checkedAt: now, checkedBy: 'Trần Gia Huy' };
-    setTickets((current) => current.map((item) => item.id === ticket.id ? checkedTicket : item));
-    setScanResult({ type: 'success', title: 'Check-in thành công.', message: 'Vé hợp lệ. Có thể hướng dẫn khách vào phòng chiếu.', ticket: checkedTicket });
-    setSelectedTicketIds((current) => current.filter((id) => id !== ticket.id));
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border border-neutral-800 bg-[#070707] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)]"
+    >
+      <div className="flex items-start gap-3">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-800 bg-black ${color}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-black uppercase tracking-wider text-white">{result.title}</h3>
+          <p className="mt-1 text-xs leading-6 text-neutral-400">{result.message}</p>
+        </div>
+      </div>
+
+      {result.booking && (
+        <div className="mt-5 space-y-3 border border-neutral-800 bg-black p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-mono text-sm font-black text-white">{result.booking.bookingCode}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Booking #{result.booking.id}</p>
+            </div>
+            <StatusBadge status={result.booking.status} />
+          </div>
+          <div className="grid gap-3 text-xs text-neutral-400 sm:grid-cols-2">
+            <div><span className="font-black text-white">Phim:</span> {result.booking.movieTitle}</div>
+            <div><span className="font-black text-white">Phòng:</span> {result.booking.roomName}</div>
+            <div><span className="font-black text-white">Suất:</span> {formatDateTime(result.booking.showtimeStart)}</div>
+            <div><span className="font-black text-white">Ghế:</span> {formatSeats(result.booking)}</div>
+            <div><span className="font-black text-white">Tổng tiền:</span> {Number(result.booking.totalAmount || 0).toLocaleString('vi-VN')}đ</div>
+            <div><span className="font-black text-white">Check-in:</span> {formatDateTime(result.booking.checkedInAt)}</div>
+          </div>
+        </div>
+      )}
+
+      {result.type === 'success' && (
+        <button type="button" className="mt-5 flex w-full items-center justify-center gap-2 border border-emerald-400/40 bg-emerald-400 px-4 py-3 text-[9px] font-black uppercase tracking-widest text-black transition hover:bg-emerald-300">
+          <Printer className="h-3.5 w-3.5" /> In vé vào cửa
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
+export default function StaffCheckInPage() {
+  const { currentUser } = useAuth();
+  const [qrCode, setQrCode] = useState('');
+  const [bookingCode, setBookingCode] = useState('');
+  const [result, setResult] = useState(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [showtimeId, setShowtimeId] = useState('');
+  const [isLoadingShowtime, setIsLoadingShowtime] = useState(false);
+  const [showtimeError, setShowtimeError] = useState('');
+  const [showtimeBookings, setShowtimeBookings] = useState([]);
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [staffFoodItems, setStaffFoodItems] = useState([]);
+  const [staffFoodCombos, setStaffFoodCombos] = useState([]);
+  const [staffFoodError, setStaffFoodError] = useState('');
+  const [isLoadingStaffFoods, setIsLoadingStaffFoods] = useState(false);
+  const [savingStaffFoodKey, setSavingStaffFoodKey] = useState('');
+  const [staffFoodPage, setStaffFoodPage] = useState(1);
+
+  const visibleBookings = showtimeBookings.length > 0 ? showtimeBookings : recentBookings;
+  const isShowingShowtimeBookings = showtimeBookings.length > 0;
+  const staffFoods = useMemo(() => [
+    ...staffFoodCombos.map((item) => ({ ...item, kind: 'combo' })),
+    ...staffFoodItems.map((item) => ({ ...item, kind: 'item' })),
+  ], [staffFoodCombos, staffFoodItems]);
+
+  const foodStats = useMemo(() => {
+    const outOfStock = staffFoods.filter((item) => item.status === 'OUT_OF_STOCK' || Number(item.stockQuantity || 0) === 0).length;
+    const active = staffFoods.filter((item) => item.status === 'ACTIVE').length;
+    return { active, outOfStock, total: staffFoods.length };
+  }, [staffFoods]);
+  const staffFoodTotalPages = Math.max(1, Math.ceil(staffFoods.length / FOOD_PAGE_SIZE));
+  const safeStaffFoodPage = Math.min(staffFoodPage, staffFoodTotalPages);
+  const staffFoodStartIndex = (safeStaffFoodPage - 1) * FOOD_PAGE_SIZE;
+  const paginatedStaffFoods = staffFoods.slice(staffFoodStartIndex, staffFoodStartIndex + FOOD_PAGE_SIZE);
+  const staffFoodDisplayStart = staffFoods.length === 0 ? 0 : staffFoodStartIndex + 1;
+  const staffFoodDisplayEnd = Math.min(staffFoodStartIndex + FOOD_PAGE_SIZE, staffFoods.length);
+
+  useEffect(() => {
+    setStaffFoodPage((page) => Math.min(page, staffFoodTotalPages));
+  }, [staffFoodTotalPages]);
+
+  const stats = useMemo(() => {
+    const checked = visibleBookings.filter((booking) => booking.status === 'USED').length;
+    const paid = visibleBookings.filter((booking) => booking.status === 'PAID').length;
+    return { checked, paid, total: visibleBookings.length };
+  }, [visibleBookings]);
+
+  const getToken = () => {
+    const { accessToken } = getStoredAuth();
+    return accessToken;
   };
 
-  const runMockScan = () => {
-    setIsScanning(true);
-    setScanResult(null);
-    window.setTimeout(() => {
-      const nextTicket = tickets.find((ticket) => ticket.showtimeId === selectedShowtimeId && ticket.status === 'ACTIVE' && ticket.payment === 'PAID');
-      checkInTicket(nextTicket || showtimeTickets[0]);
-      setIsScanning(false);
-    }, 850);
+  const rememberBooking = (booking) => {
+    if (!booking?.id) return;
+    setShowtimeBookings((current) => current.map((item) => (
+      String(item.id) === String(booking.id) ? booking : item
+    )));
+    setRecentBookings((current) => [
+      booking,
+      ...current.filter((item) => String(item.id) !== String(booking.id)),
+    ].slice(0, 8));
   };
 
-  const checkInSelected = () => {
-    const eligible = tickets.filter((ticket) => selectedTicketIds.includes(ticket.id) && ticket.status === 'ACTIVE' && ticket.payment === 'PAID');
-    if (!eligible.length) {
-      setScanResult({ type: 'error', title: 'Không có vé hợp lệ được chọn.', message: 'Chỉ vé đã thanh toán và chưa sử dụng mới có thể check-in.' });
+  const loadStaffFoods = async () => {
+    const token = getToken();
+    if (!token) {
+      setStaffFoodError('Vui lòng đăng nhập bằng tài khoản STAFF.');
       return;
     }
-    const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    setTickets((current) => current.map((ticket) => selectedTicketIds.includes(ticket.id) && ticket.status === 'ACTIVE' && ticket.payment === 'PAID'
-      ? { ...ticket, status: 'USED', checkedAt: now, checkedBy: 'Trần Gia Huy' }
-      : ticket));
-    setScanResult({ type: 'success', title: `Đã check-in ${eligible.length} vé.`, message: 'Trạng thái booking đã được cập nhật.' });
-    setSelectedTicketIds([]);
+
+    setIsLoadingStaffFoods(true);
+    setStaffFoodError('');
+    try {
+      const [items, combos] = await Promise.all([
+        authApi.getStaffFoodItems(token),
+        authApi.getStaffFoodCombos(token),
+      ]);
+      setStaffFoodItems(Array.isArray(items) ? items : []);
+      setStaffFoodCombos(Array.isArray(combos) ? combos : []);
+    } catch (error) {
+      setStaffFoodError(error.message || 'Không thể tải danh sách bắp nước.');
+    } finally {
+      setIsLoadingStaffFoods(false);
+    }
+  };
+
+  const updateStaffFoodStatus = async (food, nextStatus) => {
+    const token = getToken();
+    if (!token) {
+      setStaffFoodError('Vui lòng đăng nhập bằng tài khoản STAFF.');
+      return;
+    }
+
+    const foodKey = `${food.kind}-${food.id}`;
+    setSavingStaffFoodKey(foodKey);
+    setStaffFoodError('');
+    try {
+      const saved = food.kind === 'combo'
+        ? await authApi.updateStaffFoodComboStatus(token, food.id, nextStatus)
+        : await authApi.updateStaffFoodItemStatus(token, food.id, nextStatus);
+
+      if (food.kind === 'combo') {
+        setStaffFoodCombos((current) => current.map((item) => (item.id === food.id ? saved : item)));
+      } else {
+        setStaffFoodItems((current) => current.map((item) => (item.id === food.id ? saved : item)));
+      }
+    } catch (error) {
+      setStaffFoodError(error.message || 'Không thể đổi trạng thái món.');
+    } finally {
+      setSavingStaffFoodKey('');
+    }
+  };
+
+  useEffect(() => {
+    loadStaffFoods();
+  }, []);
+
+  const lookupBooking = async ({ preferQr = false } = {}) => {
+    const token = getToken();
+    const trimmedQr = qrCode.trim();
+    const trimmedCode = bookingCode.trim();
+    if (!token) {
+      setResult({ type: 'error', title: 'Phiên đăng nhập không hợp lệ.', message: 'Vui lòng đăng nhập bằng tài khoản STAFF.' });
+      return null;
+    }
+    if (!trimmedQr && !trimmedCode) {
+      setResult({ type: 'warning', title: 'Thiếu dữ liệu tra cứu.', message: 'Nhập mã QR hoặc mã booking trước khi tra cứu.' });
+      return null;
+    }
+
+    setIsLookingUp(true);
+    try {
+      const booking = await authApi.lookupStaffCheckInBooking(token, {
+        qrCode: preferQr ? trimmedQr : '',
+        bookingCode: preferQr ? '' : trimmedCode,
+      });
+      rememberBooking(booking);
+      setResult({
+        type: booking.status === 'PAID' ? 'warning' : booking.status === 'USED' ? 'success' : 'error',
+        title: booking.status === 'PAID' ? 'Booking hợp lệ, chờ check-in.' : booking.status === 'USED' ? 'Booking đã check-in.' : 'Booking chưa đủ điều kiện.',
+        message: booking.status === 'PAID'
+          ? 'Có thể xác nhận check-in bằng mã QR của booking này.'
+          : `Trạng thái hiện tại: ${booking.status}.`,
+        booking,
+      });
+      return booking;
+    } catch (error) {
+      setResult({ type: 'error', title: 'Không tìm thấy booking.', message: error.message || 'Không thể tra cứu booking từ hệ thống.' });
+      return null;
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
+  const checkInByQr = async (value = qrCode) => {
+    const token = getToken();
+    const trimmedQr = String(value || '').trim();
+    if (!token) {
+      setResult({ type: 'error', title: 'Phiên đăng nhập không hợp lệ.', message: 'Vui lòng đăng nhập bằng tài khoản STAFF.' });
+      return;
+    }
+    if (!trimmedQr) {
+      setResult({ type: 'warning', title: 'Chưa có mã QR.', message: 'Nhập hoặc quét mã QR trước khi xác nhận check-in.' });
+      return;
+    }
+
+    setIsCheckingIn(true);
+    try {
+      const booking = await authApi.checkInStaffBooking(token, trimmedQr);
+      rememberBooking(booking);
+      setResult({
+        type: 'success',
+        title: 'Check-in thành công.',
+        message: 'Booking đã được xác nhận. Có thể hướng dẫn khách vào phòng chiếu.',
+        booking,
+      });
+    } catch (error) {
+      setResult({ type: 'error', title: 'Không thể check-in.', message: error.message || 'Booking không đủ điều kiện check-in.' });
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
+  const loadShowtimeBookings = async () => {
+    const token = getToken();
+    const trimmedShowtimeId = showtimeId.trim();
+    if (!token) {
+      setShowtimeError('Vui lòng đăng nhập bằng tài khoản STAFF.');
+      return;
+    }
+    if (!trimmedShowtimeId) {
+      setShowtimeError('Nhập showtimeId trước khi tải danh sách.');
+      return;
+    }
+
+    setShowtimeError('');
+    setIsLoadingShowtime(true);
+    try {
+      const bookings = await authApi.getStaffShowtimeBookings(token, trimmedShowtimeId);
+      setShowtimeBookings(Array.isArray(bookings) ? bookings : []);
+    } catch (error) {
+      setShowtimeBookings([]);
+      setShowtimeError(error.message || 'Không thể tải danh sách booking của suất chiếu.');
+    } finally {
+      setIsLoadingShowtime(false);
+    }
   };
 
   return (
-    <div className="staff-page relative min-h-screen overflow-hidden bg-[#f4f7f6] text-slate-900">
+    <div className="staff-page relative overflow-hidden bg-black text-white">
       <div className="staff-orb staff-orb-one" />
       <div className="staff-orb staff-orb-two" />
       <div className="staff-grid-bg" />
-      <header className="sticky top-0 z-40 border-b border-white/80 bg-white/75 shadow-[0_8px_30px_rgba(15,23,42,0.05)] backdrop-blur-2xl">
-        <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <button type="button" onClick={() => navigate('/')} className="staff-icon-button flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-400 hover:text-slate-900" title="Về trang chủ">
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <motion.div animate={{ rotate: [0, -5, 5, 0], scale: [1, 1.06, 1] }} transition={{ duration: 4, repeat: Infinity }} className="staff-logo-pulse relative flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400 text-black shadow-[0_0_24px_rgba(52,211,153,0.3)]">
-              <ScanLine className="h-5 w-5" />
-            </motion.div>
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-400">CinePremier Operations</p>
-              <h1 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Staff Check-in</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-xs font-bold text-slate-900">Trần Gia Huy</p>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Nhân viên soát vé · Ca tối</p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm">
-              <UserRound className="h-4 w-4" />
-            </div>
-            <button type="button" onClick={() => navigate('/')} className="hidden h-9 items-center gap-2 border border-slate-200 px-3 text-[9px] font-black uppercase tracking-widest text-slate-600 transition hover:text-slate-900 lg:flex">
-              <LogOut className="h-3.5 w-3.5" /> Thoát ca
-            </button>
-          </div>
-        </div>
-      </header>
 
-      <main className="relative z-10 mx-auto max-w-[1600px] space-y-5 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+      <main className="relative z-10 mx-auto max-w-[1500px] space-y-5 px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
         <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="staff-glass-card staff-hero relative overflow-hidden rounded-2xl border border-white/80 bg-gradient-to-r from-white/95 to-emerald-50/90 p-5 shadow-sm sm:p-6">
-            <div className="staff-hero-shimmer" />
-            <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.12),transparent_62%)]" />
-            <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-              <div>
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="flex items-center gap-1.5 border border-rose-300 bg-rose-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-rose-700">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-300" /> Đang chiếu
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Quầy kiểm soát cửa số 02</span>
-                </div>
-                <h2 className="text-2xl font-black uppercase tracking-tight sm:text-3xl">{selectedShowtime.movie}</h2>
-                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-slate-600">
-                  <span className="flex items-center gap-2"><Clock3 className="h-3.5 w-3.5 text-emerald-400" /> {selectedShowtime.time} - {selectedShowtime.endTime}</span>
-                  <span className="flex items-center gap-2"><Monitor className="h-3.5 w-3.5 text-emerald-400" /> {selectedShowtime.room}</span>
-                  <span className="flex items-center gap-2"><Film className="h-3.5 w-3.5 text-emerald-400" /> {selectedShowtime.format}</span>
-                  <span className="flex items-center gap-2"><CalendarDays className="h-3.5 w-3.5 text-emerald-400" /> {selectedShowtime.date}</span>
-                </div>
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden border border-neutral-800 bg-gradient-to-r from-[#090909] to-[#050505] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-6">
+            <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_62%)]" />
+            <div className="relative">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-300">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" /> API thật
+                </span>
+                <span className="border border-amber-400/20 bg-amber-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-amber-300">
+                  STAFF OPERATIONS
+                </span>
               </div>
-              <div className="relative min-w-[280px]">
-                <button type="button" onClick={() => setShowtimeMenuOpen((open) => !open)} className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-left shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-lg">
-                  <span>
-                    <span className="block text-[9px] font-black uppercase tracking-widest text-slate-500">Đổi suất chiếu</span>
-                    <span className="mt-1 block text-xs font-bold text-slate-900">{selectedShowtime.time} · {selectedShowtime.room}</span>
-                  </span>
-                  <ChevronDown className={`h-4 w-4 text-slate-500 transition ${showtimeMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {showtimeMenuOpen && (
-                  <motion.div initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="absolute right-0 top-full z-30 mt-2 w-full rounded-xl border border-slate-200 bg-white/95 p-1 shadow-2xl backdrop-blur-xl">
-                    {SHOWTIMES.map((showtime) => (
-                      <button key={showtime.id} type="button" onClick={() => { setSelectedShowtimeId(showtime.id); setShowtimeMenuOpen(false); setScanResult(null); setSelectedTicketIds([]); }} className={`flex w-full items-center justify-between px-3 py-3 text-left transition hover:bg-slate-100 ${showtime.id === selectedShowtimeId ? 'bg-emerald-400/10' : ''}`}>
-                        <span>
-                          <span className="block text-xs font-bold">{showtime.movie}</span>
-                          <span className="mt-1 block text-[9px] font-bold uppercase tracking-widest text-slate-500">{showtime.time} · {showtime.room}</span>
-                        </span>
-                        {showtime.id === selectedShowtimeId && <Check className="h-4 w-4 text-emerald-400" />}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </div>
+              <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Kiểm soát vé bằng QR booking</h2>
+              <p className="mt-3 max-w-2xl text-xs leading-6 text-neutral-400">
+                Mỗi QR gắn với một booking thật. Khi xác nhận, toàn bộ booking chuyển sang trạng thái đã check-in theo API backend.
+              </p>
+              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                Nhân viên: {currentUser?.fullName || currentUser?.name || currentUser?.email || 'STAFF'}
+              </p>
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="staff-glass-card rounded-2xl border border-white/80 bg-white/85 p-5 shadow-sm backdrop-blur-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Tiến độ check-in</p>
-                <p className="mt-1 text-2xl font-black">{progress}%</p>
-              </div>
-              <div className="staff-progress-ring flex h-14 w-14 items-center justify-center rounded-full text-xs font-black text-emerald-700" style={{ '--staff-progress': `${progress * 3.6}deg` }}><span className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-inner">{checkedIn}/{showtimeTickets.length}</span></div>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-100 shadow-inner"><div className="staff-progress-bar h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all duration-700" style={{ width: `${progress}%` }} /></div>
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="border border-neutral-800 bg-[#070707] p-5">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Phiên hiện tại</p>
+            <p className="mt-1 text-2xl font-black text-white">{stats.checked}/{stats.total}</p>
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="staff-stat-card rounded-xl border border-emerald-100 bg-emerald-50/70 p-2.5"><p className="text-lg font-black text-emerald-700">{checkedIn}</p><p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Đã vào</p></div>
-              <div className="staff-stat-card rounded-xl border border-amber-100 bg-amber-50/70 p-2.5"><p className="text-lg font-black text-amber-700">{active}</p><p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Chờ vào</p></div>
-              <div className="staff-stat-card rounded-xl border border-slate-100 bg-slate-50/70 p-2.5"><p className="text-lg font-black text-slate-900">{showtimeTickets.length}</p><p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Tổng vé</p></div>
+              <div className="border border-emerald-400/20 bg-emerald-400/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã vào</p></div>
+              <div className="border border-amber-400/20 bg-amber-500/10 p-2.5"><p className="text-lg font-black text-amber-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Chờ vào</p></div>
+              <div className="border border-neutral-800 bg-black p-2.5"><p className="text-lg font-black text-white">{stats.total}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã tra</p></div>
             </div>
           </motion.div>
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(390px,0.75fr)]">
-          <div className="staff-glass-card overflow-hidden rounded-2xl border border-white/80 bg-white/85 shadow-sm backdrop-blur-xl">
-            <div className="flex border-b border-slate-200">
-              <button type="button" onClick={() => setActiveMode('scan')} className={`flex flex-1 items-center justify-center gap-2 border-r border-slate-200 px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${activeMode === 'scan' ? 'bg-emerald-400 text-black' : 'text-slate-500 hover:text-slate-900'}`}>
-                <QrCode className="h-4 w-4" /> Quét mã QR
-              </button>
-              <button type="button" onClick={() => setActiveMode('manual')} className={`flex flex-1 items-center justify-center gap-2 px-4 py-4 text-[10px] font-black uppercase tracking-widest transition ${activeMode === 'manual' ? 'bg-emerald-400 text-black' : 'text-slate-500 hover:text-slate-900'}`}>
-                <Search className="h-4 w-4" /> Tra cứu thủ công
-              </button>
-            </div>
-
-            {activeMode === 'scan' ? (
-              <div className="p-5 sm:p-7">
-                <div className="grid gap-6 md:grid-cols-[minmax(260px,0.8fr)_1.2fr]">
-                  <div className={`staff-scanner relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-3xl border border-emerald-300 bg-slate-50 shadow-[0_20px_50px_rgba(16,185,129,0.14)] ${isScanning ? 'is-scanning' : ''}`}>
-                    <div className="staff-scanner-grid" />
-                    <div className="staff-scanner-ring staff-scanner-ring-one" />
-                    <div className="staff-scanner-ring staff-scanner-ring-two" />
-                    <div className="absolute inset-5 border border-slate-200 bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.08),transparent_65%)]" />
-                    <span className="absolute left-5 top-5 h-10 w-10 border-l-2 border-t-2 border-emerald-400" />
-                    <span className="absolute right-5 top-5 h-10 w-10 border-r-2 border-t-2 border-emerald-400" />
-                    <span className="absolute bottom-5 left-5 h-10 w-10 border-b-2 border-l-2 border-emerald-400" />
-                    <span className="absolute bottom-5 right-5 h-10 w-10 border-b-2 border-r-2 border-emerald-400" />
-                    <div className={`absolute left-8 right-8 h-px bg-emerald-300 shadow-[0_0_15px_rgba(52,211,153,1)] ${isScanning ? 'animate-scan-line' : 'top-1/2'}`} />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                      <Camera className={`h-10 w-10 ${isScanning ? 'animate-pulse text-emerald-300' : 'text-slate-300'}`} />
-                      <p className="mt-4 text-[9px] font-black uppercase tracking-[0.22em] text-slate-400">{isScanning ? 'Đang nhận diện mã...' : 'Đưa mã QR vào khung'}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col justify-center">
-                    <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-400">Kiểm soát vé nhanh</p>
-                    <h3 className="mt-2 text-xl font-black uppercase">Sẵn sàng quét mã</h3>
-                    <p className="mt-3 max-w-md text-xs leading-6 text-slate-500">Đặt mã QR của khách vào giữa khung. Hệ thống sẽ tự động kiểm tra suất chiếu, thanh toán và trạng thái sử dụng.</p>
-                    <button type="button" onClick={runMockScan} disabled={isScanning} className="staff-primary-button mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-black shadow-[0_12px_25px_rgba(16,185,129,0.25)] transition hover:-translate-y-1 disabled:opacity-60">
-                      {isScanning ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} {isScanning ? 'Đang quét...' : 'Mô phỏng quét QR'}
-                    </button>
-                    <p className="mt-3 text-center text-[9px] font-bold text-slate-400">Camera: Integrated Webcam · Đang hoạt động</p>
-                  </div>
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.75fr)]">
+          <div className="border border-neutral-800 bg-[#070707] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.35)] sm:p-7">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-400">Quét/Xác nhận QR</p>
+                  <h3 className="mt-2 text-xl font-black uppercase text-white">Check-in bằng mã QR</h3>
+                  <p className="mt-2 text-xs leading-6 text-neutral-500">Dán chuỗi QR dạng `CINEAI:...` từ vé khách hàng để xác nhận check-in.</p>
+                </div>
+                <textarea
+                  value={qrCode}
+                  onChange={(event) => setQrCode(event.target.value)}
+                  placeholder="Dán mã QR booking tại đây..."
+                  rows={6}
+                  className="w-full resize-none border border-neutral-800 bg-black p-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => lookupBooking({ preferQr: true })}
+                    disabled={isLookingUp || !qrCode.trim()}
+                    className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+                  >
+                    {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Kiểm tra QR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => checkInByQr()}
+                    disabled={isCheckingIn || !qrCode.trim()}
+                    className="flex items-center justify-center gap-2 bg-emerald-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-black transition hover:bg-emerald-300 disabled:opacity-50"
+                  >
+                    {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} Xác nhận check-in
+                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="p-5 sm:p-7">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="Nhập mã booking, mã vé hoặc số điện thoại..." className="w-full border border-slate-200 bg-slate-50 py-4 pl-11 pr-4 text-sm font-bold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400/60" />
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-amber-400">Tra cứu thủ công</p>
+                  <h3 className="mt-2 text-xl font-black uppercase text-white">Tìm theo mã booking</h3>
+                  <p className="mt-2 text-xs leading-6 text-neutral-500">Dùng khi khách đọc mã booking nhưng chưa mở được QR.</p>
                 </div>
-                {!searchValue && <div className="flex min-h-[250px] flex-col items-center justify-center text-center"><Search className="h-8 w-8 text-slate-300" /><p className="mt-4 text-xs font-bold text-slate-500">Nhập thông tin để tra cứu booking</p><p className="mt-1 text-[9px] uppercase tracking-widest text-slate-300">Thử: CP8X2K9 hoặc 0901234567</p></div>}
-                {searchValue && manualMatches.length === 0 && <div className="flex min-h-[250px] flex-col items-center justify-center text-center"><XCircle className="h-8 w-8 text-rose-500" /><p className="mt-4 text-xs font-bold text-rose-700">Vé không tồn tại.</p></div>}
-                {manualMatches.length > 0 && (
-                  <div className="mt-5 space-y-3">
-                    {manualMatches.map((ticket) => (
-                      <div key={ticket.id} className="flex flex-col justify-between gap-4 border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-11 w-11 items-center justify-center border border-slate-200 text-slate-500"><Ticket className="h-4 w-4" /></div>
-                          <div><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-black">{ticket.seat}</p><StatusBadge status={ticket.status} /></div><p className="mt-1 text-[10px] font-bold text-slate-500">{ticket.customer} · {ticket.bookingCode}</p></div>
-                        </div>
-                        <button type="button" disabled={ticket.status === 'USED'} onClick={() => checkInTicket(ticket)} className="border border-slate-300 bg-white px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-slate-900 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400">{ticket.status === 'USED' ? 'Đã xác nhận' : 'Xác nhận check-in'}</button>
-                      </div>
-                    ))}
-                  </div>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600" />
+                  <input
+                    value={bookingCode}
+                    onChange={(event) => setBookingCode(event.target.value)}
+                    placeholder="VD: BKABC123..."
+                    className="w-full border border-neutral-800 bg-black py-4 pl-11 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => lookupBooking()}
+                  disabled={isLookingUp || !bookingCode.trim()}
+                  className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-amber-400 hover:text-white disabled:opacity-50"
+                >
+                  {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tra cứu booking
+                </button>
+                {result?.booking?.qrCode && result.booking.status === 'PAID' && (
+                  <button
+                    type="button"
+                    onClick={() => checkInByQr(result.booking.qrCode)}
+                    disabled={isCheckingIn}
+                    className="flex w-full items-center justify-center gap-2 border border-emerald-400/40 bg-emerald-400/10 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300 transition hover:bg-emerald-400 hover:text-black disabled:opacity-50"
+                  >
+                    {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Check-in booking vừa tra
+                  </button>
                 )}
               </div>
-            )}
+            </div>
           </div>
 
-          <div className="staff-glass-card overflow-hidden rounded-2xl border border-white/80 bg-white/85 shadow-sm backdrop-blur-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Kết quả gần nhất</p><h3 className="mt-1 text-sm font-black uppercase">Thông tin xác nhận</h3></div>
-              {scanResult && <button type="button" onClick={() => setScanResult(null)} className="p-2 text-slate-400 hover:text-slate-900"><X className="h-4 w-4" /></button>}
+          <ResultCard result={result} />
+        </section>
+
+        <section className="border border-neutral-800 bg-[#070707] p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Danh sách theo suất chiếu</p>
+              <h3 className="mt-1 text-lg font-black uppercase text-white">Tải booking của một showtime</h3>
+              <p className="mt-2 text-xs leading-6 text-neutral-500">
+                STAFF có thể nhập showtimeId để xem toàn bộ booking thật của suất đó, sau đó check-in trực tiếp các booking PAID.
+              </p>
             </div>
-            <AnimatePresence mode="wait">
-            {!scanResult ? (
-              <motion.div key="empty-result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex min-h-[360px] flex-col items-center justify-center px-8 text-center">
-                <div className="staff-empty-icon flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50"><ShieldCheck className="h-10 w-10 text-emerald-300" /></div>
-                <p className="mt-5 text-xs font-bold text-slate-500">Chưa có vé được kiểm tra</p>
-                <p className="mt-2 text-[9px] font-bold uppercase tracking-widest text-slate-300">Kết quả sẽ hiển thị tại đây</p>
-              </motion.div>
-            ) : (
-              <motion.div key={`${scanResult.type}-${scanResult.title}`} initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} className="p-5">
-                <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm ${scanResult.type === 'success' ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-white' : 'border-rose-300 bg-gradient-to-br from-rose-50 to-white'}`}>
-                  <div className="staff-result-shimmer" />
-                  <motion.div initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 220 }} className={`flex h-12 w-12 items-center justify-center rounded-xl shadow-lg ${scanResult.type === 'success' ? 'bg-emerald-400 text-black' : 'bg-rose-400 text-black'}`}>
-                    {scanResult.type === 'success' ? <CheckCircle2 className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}
-                  </motion.div>
-                  <h3 className={`mt-5 text-lg font-black ${scanResult.type === 'success' ? 'text-emerald-700' : 'text-rose-700'}`}>{scanResult.title}</h3>
-                  <p className="mt-2 text-xs leading-5 text-slate-600">{scanResult.message}</p>
-                  {scanResult.ticket && (
-                    <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-xs">
-                      <div className="flex justify-between gap-3"><span className="text-slate-400">Khách hàng</span><span className="text-right font-bold">{scanResult.ticket.customer}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-slate-400">Ghế / Loại ghế</span><span className="font-black text-slate-900">{scanResult.ticket.seat} · {scanResult.ticket.seatType}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-slate-400">Phòng chiếu</span><span className="font-bold">{selectedShowtime.room}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-slate-400">Mã booking</span><span className="font-mono font-bold text-emerald-700">{scanResult.ticket.bookingCode}</span></div>
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+              <input
+                value={showtimeId}
+                onChange={(event) => setShowtimeId(event.target.value)}
+                placeholder="showtimeId..."
+                className="min-w-[220px] border border-neutral-800 bg-black px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+              />
+              <button
+                type="button"
+                onClick={loadShowtimeBookings}
+                disabled={isLoadingShowtime || !showtimeId.trim()}
+                className="flex items-center justify-center gap-2 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-black transition hover:bg-emerald-400 disabled:opacity-50"
+              >
+                {isLoadingShowtime ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tải danh sách
+              </button>
+              {isShowingShowtimeBookings && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowtimeBookings([]);
+                    setShowtimeError('');
+                  }}
+                  className="border border-neutral-700 bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-white hover:text-white"
+                >
+                  Về danh sách phiên
+                </button>
+              )}
+            </div>
+          </div>
+          {showtimeError && <p className="mt-3 text-xs font-bold text-rose-400">{showtimeError}</p>}
+        </section>
+
+        <section className="border border-neutral-800 bg-[#070707] p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-400">Quầy bắp nước</p>
+              <h3 className="mt-1 text-lg font-black uppercase text-white">Trạng thái món/combo</h3>
+              <p className="mt-2 text-xs leading-6 text-neutral-500">
+                STAFF có thể đổi nhanh trạng thái khi món hết đột ngột. Số lượng tồn sẽ tự giảm khi khách tạo booking có bắp nước.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="border border-neutral-700 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300">
+                {foodStats.active}/{foodStats.total} đang bán
+              </span>
+              <span className="border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300">
+                {foodStats.outOfStock} hết hàng
+              </span>
+              <button
+                type="button"
+                onClick={loadStaffFoods}
+                disabled={isLoadingStaffFoods}
+                className="flex items-center gap-2 border border-neutral-700 bg-black px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingStaffFoods ? 'animate-spin' : ''}`} /> Làm mới
+              </button>
+            </div>
+          </div>
+
+          {staffFoodError && <p className="mt-3 text-xs font-bold text-rose-400">{staffFoodError}</p>}
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {isLoadingStaffFoods ? (
+              <div className="border border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">Đang tải danh sách bắp nước...</div>
+            ) : staffFoods.length > 0 ? paginatedStaffFoods.map((food) => {
+              const foodKey = `${food.kind}-${food.id}`;
+              const stock = Number(food.stockQuantity || 0);
+              return (
+                <div key={foodKey} className="border border-neutral-800 bg-black p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black uppercase text-white">{food.name}</p>
+                      <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-neutral-500">{food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
                     </div>
-                  )}
-                  {scanResult.type === 'success' && <button type="button" className="mt-5 flex w-full items-center justify-center gap-2 border border-slate-300 bg-white px-4 py-3 text-[9px] font-black uppercase tracking-widest text-black transition hover:bg-emerald-300"><Printer className="h-3.5 w-3.5" /> In vé vào cửa</button>}
+                    <span className={`px-2 py-1 text-[9px] font-black uppercase ${stock === 0 ? 'bg-rose-500/10 text-rose-300' : stock <= 5 ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-400/10 text-emerald-300'}`}>
+                      Tồn {stock.toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  <select
+                    value={food.status || 'ACTIVE'}
+                    onChange={(event) => updateStaffFoodStatus(food, event.target.value)}
+                    disabled={savingStaffFoodKey === foodKey}
+                    className="mt-4 w-full border border-neutral-800 bg-[#070707] px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-emerald-400 disabled:opacity-50"
+                  >
+                    <option value="ACTIVE">ACTIVE - Đang bán</option>
+                    <option value="OUT_OF_STOCK">OUT_OF_STOCK - Hết hàng</option>
+                    <option value="INACTIVE">INACTIVE - Tạm ẩn</option>
+                  </select>
                 </div>
-              </motion.div>
+              );
+            }) : (
+              <div className="border border-dashed border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">Chưa có món bắp nước nào.</div>
             )}
-            </AnimatePresence>
+          </div>
+          <div className="mt-4 flex flex-col gap-3 border border-neutral-800 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Hiển thị {staffFoodDisplayStart}-{staffFoodDisplayEnd}/{staffFoods.length} món - Trang {safeStaffFoodPage}/{staffFoodTotalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={safeStaffFoodPage <= 1}
+                onClick={() => setStaffFoodPage((page) => Math.max(1, page - 1))}
+                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Trước
+              </button>
+              <button
+                type="button"
+                disabled={safeStaffFoodPage >= staffFoodTotalPages}
+                onClick={() => setStaffFoodPage((page) => Math.min(staffFoodTotalPages, page + 1))}
+                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+              >
+                Sau <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </section>
 
-        <section className="staff-glass-card overflow-hidden rounded-2xl border border-white/80 bg-white/85 shadow-sm backdrop-blur-xl">
-          <div className="flex flex-col justify-between gap-4 border-b border-slate-200 p-5 lg:flex-row lg:items-center">
-            <div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Theo suất chiếu</p><h3 className="mt-1 text-lg font-black uppercase">Danh sách booking</h3></div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative min-w-[280px]"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" /><input value={tableSearch} onChange={(event) => setTableSearch(event.target.value)} placeholder="Tìm booking, khách hàng, ghế..." className="w-full border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-[10px] font-bold text-slate-900 outline-none placeholder:text-slate-300 focus:border-emerald-400/50" /></div>
-              <button type="button" onClick={checkInSelected} disabled={!selectedTicketIds.length} className="flex items-center justify-center gap-2 bg-emerald-400 px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-black transition hover:bg-emerald-300 disabled:bg-slate-100 disabled:text-slate-400"><CheckCircle2 className="h-3.5 w-3.5" /> Check-in đã chọn ({selectedTicketIds.length})</button>
-            </div>
+        <section className="overflow-hidden border border-neutral-800 bg-[#070707]">
+          <div className="border-b border-neutral-800 p-5">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
+              {isShowingShowtimeBookings ? 'Dữ liệu showtime từ API' : 'Dữ liệu phiên làm việc'}
+            </p>
+            <h3 className="mt-1 text-lg font-black uppercase text-white">
+              {isShowingShowtimeBookings ? `Booking của showtime #${showtimeId}` : 'Booking vừa tra cứu/check-in'}
+            </h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] text-left">
-              <thead className="border-b border-slate-200 bg-slate-50 text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                <tr><th className="w-12 px-5 py-3"><span className="sr-only">Chọn</span></th><th className="px-3 py-3">Booking</th><th className="px-3 py-3">Khách hàng</th><th className="px-3 py-3">Ghế</th><th className="px-3 py-3">Thanh toán</th><th className="px-3 py-3">Trạng thái vé</th><th className="px-3 py-3">Thời gian check-in</th><th className="px-5 py-3 text-right">Thao tác</th></tr>
+            <table className="w-full min-w-[900px] text-left">
+              <thead className="border-b border-neutral-800 bg-black text-[8px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                <tr>
+                  <th className="px-5 py-3">Booking</th>
+                  <th className="px-3 py-3">Phim</th>
+                  <th className="px-3 py-3">Suất</th>
+                  <th className="px-3 py-3">Ghế</th>
+                  <th className="px-3 py-3">Trạng thái</th>
+                  <th className="px-5 py-3 text-right">Thao tác</th>
+                </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTickets.map((ticket) => (
-                  <tr key={ticket.id} className="staff-table-row transition hover:bg-emerald-50/50">
-                    <td className="px-5 py-4"><input type="checkbox" checked={selectedTicketIds.includes(ticket.id)} disabled={ticket.status === 'USED'} onChange={(event) => setSelectedTicketIds((current) => event.target.checked ? [...current, ticket.id] : current.filter((id) => id !== ticket.id))} className="h-3.5 w-3.5 accent-emerald-400 disabled:opacity-20" /></td>
-                    <td className="px-3 py-4"><p className="font-mono text-[11px] font-black text-slate-900">{ticket.bookingCode}</p><p className="mt-1 font-mono text-[8px] text-slate-300">{ticket.id}</p></td>
-                    <td className="px-3 py-4"><p className="text-xs font-bold">{ticket.customer}</p><p className="mt-1 text-[9px] text-slate-400">{ticket.phone}</p></td>
-                    <td className="px-3 py-4"><span className="text-sm font-black text-slate-900">{ticket.seat}</span><span className="ml-2 text-[9px] font-bold text-slate-400">{ticket.seatType}</span></td>
-                    <td className="px-3 py-4"><span className={`text-[9px] font-black uppercase tracking-wider ${ticket.payment === 'PAID' ? 'text-emerald-700' : 'text-rose-700'}`}>{ticket.payment === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}</span></td>
-                    <td className="px-3 py-4"><StatusBadge status={ticket.status} /></td>
-                    <td className="px-3 py-4"><p className="text-[10px] font-bold text-slate-600">{ticket.checkedAt || '--:--'}</p><p className="mt-1 text-[8px] text-slate-300">{ticket.checkedBy || 'Chưa có'}</p></td>
-                    <td className="px-5 py-4 text-right"><button type="button" onClick={() => checkInTicket(ticket)} disabled={ticket.status === 'USED'} className="border border-slate-200 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-slate-900 transition hover:border-emerald-400 hover:text-emerald-700 disabled:border-slate-100 disabled:text-slate-300">{ticket.status === 'USED' ? 'Đã xác nhận' : 'Xác nhận'}</button></td>
+              <tbody className="divide-y divide-neutral-900">
+                {visibleBookings.length > 0 ? visibleBookings.map((booking) => (
+                  <tr key={booking.id} className="transition hover:bg-emerald-400/5">
+                    <td className="px-5 py-4"><p className="font-mono text-[11px] font-black text-white">{booking.bookingCode}</p><p className="mt-1 font-mono text-[8px] text-neutral-600">#{booking.id}</p></td>
+                    <td className="px-3 py-4 text-xs font-bold text-neutral-300">{booking.movieTitle}</td>
+                    <td className="px-3 py-4 text-[10px] font-bold text-neutral-500">{formatDateTime(booking.showtimeStart)}</td>
+                    <td className="px-3 py-4 text-xs font-black text-white">{formatSeats(booking)}</td>
+                    <td className="px-3 py-4"><StatusBadge status={booking.status} /></td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => checkInByQr(booking.qrCode)}
+                        disabled={booking.status !== 'PAID' || !booking.qrCode || isCheckingIn}
+                        className="border border-neutral-700 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-emerald-300 disabled:border-neutral-900 disabled:text-neutral-700"
+                      >
+                        {booking.status === 'USED' ? 'Đã xác nhận' : 'Check-in'}
+                      </button>
+                    </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center">
+                      <Ticket className="mx-auto h-8 w-8 text-neutral-700" />
+                      <p className="mt-3 text-xs font-bold text-neutral-500">Chưa có booking nào trong phiên này.</p>
+                      {isShowingShowtimeBookings && <p className="mt-1 text-[10px] font-bold text-neutral-600">Showtime này chưa có booking.</p>}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-          <div className="flex flex-col justify-between gap-3 border-t border-slate-200 px-5 py-4 text-[9px] font-bold uppercase tracking-widest text-slate-400 sm:flex-row sm:items-center">
-            <span>Hiển thị {filteredTickets.length} / {showtimeTickets.length} vé của suất chiếu</span>
-            <span className="flex items-center gap-2"><UsersRound className="h-3.5 w-3.5" /> Cập nhật lần cuối: vừa xong</span>
+          <div className="flex flex-col justify-between gap-3 border-t border-neutral-800 px-5 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-500 sm:flex-row sm:items-center">
+            <span>{isShowingShowtimeBookings ? 'Danh sách booking lấy trực tiếp theo showtimeId' : 'Hiển thị tối đa 8 booking gần nhất trong phiên làm việc'}</span>
+            <span className="flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Cập nhật theo API backend</span>
           </div>
         </section>
       </main>
     </div>
   );
 }
-

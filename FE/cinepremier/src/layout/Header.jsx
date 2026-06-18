@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  Search, MapPin, Ticket, User, Heart, Compass, Home, ShieldAlert,
-  Building2, ChevronDown, Phone, Settings2, X, ExternalLink, ScanLine
+  Search, MapPin, Ticket, User, Heart, Compass, Home,
+  Building2, ChevronDown, Phone, Settings2, X, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -11,10 +11,7 @@ export default function Header({
   onTabChange,
   searchQuery,
   onSearchChange,
-  selectedCity,
-  cinemaLocations = [],
   cinema = null,
-  onCityChange = () => { },
   onManageCinema = () => { },
   onOpenWatchlist,
   onOpenOTP,
@@ -31,8 +28,8 @@ export default function Header({
     : 'https://www.google.com/maps';
 
   return (
-    <header className="sticky top-0 z-[100] w-full overflow-visible border-b border-white/10 bg-black/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 sm:px-6 lg:px-10">
+    <header className="sticky top-0 z-[100] w-full max-w-full overflow-visible border-b border-white/10 bg-black/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 w-full max-w-[1500px] min-w-0 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
 
         {/* Logo CINEPREMIER */}
         <motion.div
@@ -79,7 +76,7 @@ export default function Header({
         </motion.div>
 
         {/* Categories Tab list matching screenshot 2 & 3 navigation style */}
-        <nav className="hidden lg:flex items-center space-x-0.5" id="main-nav-bar">
+        <nav className="hidden min-w-0 shrink items-center space-x-0.5 xl:flex" id="main-nav-bar">
           <button
             onClick={() => onTabChange('home')}
             className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'home'
@@ -143,38 +140,10 @@ export default function Header({
               <span>CÁ NHÂN</span>
             </button>
           )}
-
-          {currentRole === 'admin' && (
-            <button
-              onClick={() => onTabChange('admin')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'admin'
-                ? 'text-amber-500 border-amber-500 font-extrabold'
-                : 'text-neutral-400 hover:text-amber-500 border-transparent'
-                }`}
-              id="nav-admin-tab"
-            >
-              <ShieldAlert className="h-4 w-4 text-amber-500 animate-pulse" />
-              <span>QUẢN TRỊ VIÊN</span>
-            </button>
-          )}
-
-          {(currentRole === 'staff' || currentRole === 'admin') && (
-            <button
-              onClick={() => onTabChange('staff')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'staff'
-                ? 'text-emerald-400 border-emerald-400 font-extrabold'
-                : 'text-neutral-400 hover:text-emerald-400 border-transparent'
-                }`}
-              id="nav-staff-tab"
-            >
-              <ScanLine className="h-4 w-4" />
-              <span>CHECK-IN</span>
-            </button>
-          )}
         </nav>
 
         {/* Right Header Section */}
-        <div className="mr-4 flex items-center space-x-2.5">
+        <div className="flex min-w-0 shrink-0 items-center space-x-2.5">
 
           {/* Search Box */}
           <div className="relative hidden xl:block w-40 xl:w-48 h-9 flex items-center">
@@ -204,7 +173,7 @@ export default function Header({
               </span>
               <span className="hidden max-w-[120px] text-left sm:block">
                 <span className="block truncate font-black text-white">
-                  {cinema?.name || (selectedCity ? selectedCity.split('(')[0].trim() : 'Chưa có rạp')}
+                  {cinema?.name || 'Chưa có rạp'}
                 </span>
                 <span className="mt-0.5 block truncate text-[7px] font-bold tracking-[0.18em] text-neutral-400">
                   {cinema?.city || 'ĐỊA ĐIỂM CHIẾU'}

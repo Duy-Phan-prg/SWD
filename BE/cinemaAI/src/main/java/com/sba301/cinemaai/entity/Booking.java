@@ -84,6 +84,9 @@ public class Booking extends BaseEntity {
     @Column(name = "qr_code", length = 500)
     private String qrCode;
 
+    @Column(name = "food_stock_reserved", nullable = false, columnDefinition = "boolean default false")
+    private boolean foodStockReserved;
+
     public Booking(String bookingCode, User user, Showtime showtime, LocalDateTime holdExpiresAt) {
         this.bookingCode = bookingCode;
         this.user = user;
@@ -105,6 +108,14 @@ public class Booking extends BaseEntity {
         this.qrCode = qrCode;
         this.paidAt = LocalDateTime.now();
         this.status = BookingStatus.PAID;
+    }
+
+    public void markFoodStockReserved() {
+        this.foodStockReserved = true;
+    }
+
+    public void clearFoodStockReserved() {
+        this.foodStockReserved = false;
     }
 
     public void cancel() {

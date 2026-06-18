@@ -1,22 +1,15 @@
 package com.sba301.cinemaai.seeder;
 
 import com.sba301.cinemaai.entity.Cinema;
-import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.SeatRow;
-import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.enums.RoomType;
 import com.sba301.cinemaai.enums.SeatType;
-import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.repository.CinemaRepository;
-import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.RoomRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.SeatRowRepository;
-import com.sba301.cinemaai.repository.ShowtimeRepository;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -31,9 +24,6 @@ public class CinemaScheduleSeeder implements Seeder {
     private final RoomRepository roomRepository;
     private final SeatRepository seatRepository;
     private final SeatRowRepository seatRowRepository;
-    private final ShowtimeRepository showtimeRepository;
-    private final MovieRepository movieRepository;
-
     @Override
     @Transactional
     public void seed() {
@@ -49,7 +39,6 @@ public class CinemaScheduleSeeder implements Seeder {
                 .orElseGet(() -> roomRepository.save(new Room(cinema, "Room A", RoomType.TWO_D, 5, 8)));
 
         seedSeats(room);
-        seedShowtimes(room);
     }
 
     private void seedSeats(Room room) {
@@ -73,23 +62,4 @@ public class CinemaScheduleSeeder implements Seeder {
         }
     }
 
-    private void seedShowtimes(Room room) {
-        movieRepository.findByTitle("The Last Orbit").ifPresent(movie ->
-                seedShowtime(room, movie, LocalDateTime.now().plusDays(1).withHour(18).withMinute(30).withSecond(0).withNano(0))
-        );
-        movieRepository.findByTitle("Saigon Midnight").ifPresent(movie ->
-                seedShowtime(room, movie, LocalDateTime.now().plusDays(2).withHour(20).withMinute(0).withSecond(0).withNano(0))
-        );
-    }
-
-    private void seedShowtime(Room room, Movie movie, LocalDateTime startTime) {
-        if (showtimeRepository.existsByRoomAndMovieAndStartTime(room, movie, startTime)) {
-            return;
-        }
-
-        LocalDateTime endTime = startTime.plusMinutes(movie.getDurationMinutes()).plusMinutes(15);
-        Showtime showtime = new Showtime(movie, room, startTime, endTime, BigDecimal.valueOf(90000));
-        showtime.changeStatus(ShowtimeStatus.OPEN);
-        showtimeRepository.save(showtime);
-    }
 }

@@ -120,16 +120,37 @@ public class BookingService {
             throw new BadRequestException("Seat hold has expired");
         }
 
+        List<BookingFoodItem> heldFoodItems = bookingFoodItemRepository.findByBooking(booking);
+        boolean hasTicketSelections = request.tickets() != null && !request.tickets().isEmpty();
+        boolean replacesFoodSelection = request.foods() != null;
         BigDecimal subtotal = booking.getSubtotal();
-        if (request.tickets() != null && !request.tickets().isEmpty()) {
+        if (hasTicketSelections) {
             subtotal = applyTicketSelections(booking, request.comboId(), request.holiday(), request.tickets());
         }
-        if (request.foods() != null) {
+
+        if (replacesFoodSelection) {
+            if (!hasTicketSelections) {
+                subtotal = subtotal.subtract(heldFoodItems.stream()
+                        .map(this::foodLineTotal)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add));
+            }
+            heldFoodItems.forEach(bookingFoodItemRepository::delete);
             for (BookingFoodRequest foodRequest : request.foods()) {
                 BookingFoodItem item = createFoodItem(booking, foodRequest);
+                reserveFoodStock(foodRequest);
                 bookingFoodItemRepository.save(item);
                 subtotal = subtotal.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
             }
+        } else {
+            for (BookingFoodItem item : heldFoodItems) {
+                reserveFoodStock(item);
+                if (hasTicketSelections) {
+                    subtotal = subtotal.add(foodLineTotal(item));
+                }
+            }
+        }
+        if ((replacesFoodSelection && !request.foods().isEmpty()) || (!replacesFoodSelection && !heldFoodItems.isEmpty())) {
+            booking.markFoodStockReserved();
         }
 
         bookingSeatRepository.findByBooking(booking)
@@ -150,6 +171,15 @@ public class BookingService {
     public List<BookingResponse> getAdminBookings(BookingStatus status) {
         List<Booking> bookings = status == null ? bookingRepository.findAll() : bookingRepository.findByStatus(status);
         return bookings.stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getStaffBookingsByShowtime(Long showtimeId) {
+        Showtime showtime = findShowtime(showtimeId);
+        return bookingRepository.findByShowtime(showtime)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -212,6 +242,9 @@ public class BookingService {
         if (booking.getStatus() == BookingStatus.USED) {
             throw new BadRequestException("Checked-in booking cannot be cancelled");
         }
+        if (booking.getStatus() == BookingStatus.HOLDING || booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            releaseFoodStockReservation(booking);
+        }
         releaseSeats(booking);
         booking.cancel();
         return toResponse(booking);
@@ -236,26 +269,21 @@ public class BookingService {
         return toResponse(booking);
     }
 
-    @Transactional
-    public BookingResponse checkInAdmin(Long bookingId, String qrCode) {
-        Booking booking = findBooking(bookingId);
-        if (qrCode != null && !qrCode.isBlank()) {
-            String bookingCode;
+    @Transactional(readOnly = true)
+    public BookingResponse lookupForCheckIn(String bookingCode, String qrCode) {
+        String resolvedCode = bookingCode;
+        if ((resolvedCode == null || resolvedCode.isBlank()) && qrCode != null && !qrCode.isBlank()) {
             try {
-                bookingCode = qrTicketService.extractBookingCode(qrCode);
+                resolvedCode = qrTicketService.extractBookingCode(qrCode);
             } catch (IllegalArgumentException exception) {
                 throw new BadRequestException(exception.getMessage());
             }
-            if (!booking.getBookingCode().equals(bookingCode)) {
-                throw new BadRequestException("QR code does not match booking");
-            }
         }
-        if (booking.getStatus() != BookingStatus.PAID) {
-            throw new BadRequestException("Only paid booking can be checked in");
+        if (resolvedCode == null || resolvedCode.isBlank()) {
+            throw new BadRequestException("Booking code or QR code is required");
         }
-        booking.checkIn();
-        bookingSeatRepository.findByBooking(booking)
-                .forEach(seat -> seat.changeStatus(SeatRuntimeStatus.CHECKED_IN));
+        Booking booking = bookingRepository.findByBookingCode(resolvedCode.trim())
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
         return toResponse(booking);
     }
 
@@ -379,13 +407,53 @@ public class BookingService {
             if (foodItem.getStatus() != FoodItemStatus.ACTIVE) {
                 throw new BadRequestException("Food item is not available");
             }
+            if (foodItem.getStockQuantity() < request.quantity()) {
+                throw new BadRequestException("Food item stock is insufficient");
+            }
             return new BookingFoodItem(booking, foodItem, null, request.quantity(), foodItem.getPrice());
         }
         FoodCombo foodCombo = foodService.findCombo(request.foodComboId());
         if (foodCombo.getStatus() != FoodItemStatus.ACTIVE) {
             throw new BadRequestException("Food combo is not available");
         }
+        if (foodCombo.getStockQuantity() < request.quantity()) {
+            throw new BadRequestException("Food combo stock is insufficient");
+        }
         return new BookingFoodItem(booking, null, foodCombo, request.quantity(), foodCombo.getPrice());
+    }
+
+    private void reserveFoodStock(BookingFoodRequest request) {
+        if (request.foodItemId() != null) {
+            foodService.reserveItemStock(request.foodItemId(), request.quantity());
+            return;
+        }
+        foodService.reserveComboStock(request.foodComboId(), request.quantity());
+    }
+
+    private void reserveFoodStock(BookingFoodItem item) {
+        if (item.getFoodItem() != null) {
+            foodService.reserveItemStock(item.getFoodItem().getId(), item.getQuantity());
+            return;
+        }
+        foodService.reserveComboStock(item.getFoodCombo().getId(), item.getQuantity());
+    }
+
+    private void releaseFoodStockReservation(Booking booking) {
+        if (!booking.isFoodStockReserved()) {
+            return;
+        }
+        bookingFoodItemRepository.findByBooking(booking).forEach(item -> {
+            if (item.getFoodItem() != null) {
+                foodService.releaseItemStock(item.getFoodItem().getId(), item.getQuantity());
+            } else {
+                foodService.releaseComboStock(item.getFoodCombo().getId(), item.getQuantity());
+            }
+        });
+        booking.clearFoodStockReserved();
+    }
+
+    private BigDecimal foodLineTotal(BookingFoodItem item) {
+        return item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
     }
 
     private void validateSeatForShowtime(Showtime showtime, Seat seat) {
@@ -414,6 +482,7 @@ public class BookingService {
     }
 
     private void expireBooking(Booking booking) {
+        releaseFoodStockReservation(booking);
         releaseSeats(booking);
         booking.expire();
     }

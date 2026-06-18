@@ -8,6 +8,7 @@ import java.util.List;
 public record MovieResponse(
         Long id,
         String title,
+        String englishTitle,
         String description,
         String trailerUrl,
         String posterUrl,

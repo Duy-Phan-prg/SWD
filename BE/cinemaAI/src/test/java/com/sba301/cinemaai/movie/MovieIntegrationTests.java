@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -64,6 +65,52 @@ class MovieIntegrationTests {
         Long actorOneId = createActor(token, "Actor One");
         Long actorTwoId = createActor(token, "Actor Two");
         Long actorThreeId = createActor(token, "Actor Three");
+        LocalDate futureReleaseDate = LocalDate.now().plusDays(30);
+
+        String invalidMovieResponse = mockMvc.perform(post("/api/v1/admin/movies")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new MovieCreateRequest(
+                                "",
+                                "",
+                                "",
+                                "ftp://invalid-trailer",
+                                "poster-without-http",
+                                "banner-without-http",
+                                0,
+                                null,
+                                "",
+                                "",
+                                null,
+                                "",
+                                "",
+                                List.of(),
+                                List.of(),
+                                List.of()
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String validationErrors = objectMapper.readTree(invalidMovieResponse).at("/errors").toString();
+        assertThat(validationErrors)
+                .contains("title")
+                .contains("englishTitle")
+                .contains("description")
+                .contains("trailerUrl")
+                .contains("posterUrl")
+                .contains("avatarUrl")
+                .contains("durationMinutes")
+                .contains("releaseDate")
+                .contains("language")
+                .contains("subtitleLanguage")
+                .contains("status")
+                .contains("ageRating")
+                .contains("director")
+                .contains("genreIds")
+                .contains("actorIds")
+                .contains("mainActorIds");
 
         mockMvc.perform(get("/api/v1/admin/actors")
                         .header("Authorization", "Bearer " + token)
@@ -78,12 +125,13 @@ class MovieIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MovieCreateRequest(
                                 "Phase 3 Orbit",
+                                "Orbit Original",
                                 "A testable movie catalog entry.",
                                 "https://example.com/trailer",
                                 "https://example.com/poster.jpg",
                                 "https://example.com/avatar.jpg",
                                 121,
-                                LocalDate.of(2026, 5, 19),
+                                futureReleaseDate,
                                 "English",
                                 "Vietnamese",
                                 MovieStatus.UPCOMING,
@@ -122,12 +170,13 @@ class MovieIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MovieUpdateRequest(
                                 "Phase 3 Orbit Updated",
+                                "Orbit Updated Original",
                                 "Updated movie catalog entry.",
                                 "https://example.com/trailer-2",
                                 "https://example.com/poster-2.jpg",
                                 "https://example.com/avatar-2.jpg",
                                 125,
-                                LocalDate.of(2026, 6, 1),
+                                futureReleaseDate.plusDays(7),
                                 "English",
                                 "Vietnamese",
                                 MovieStatus.UPCOMING,
@@ -155,6 +204,7 @@ class MovieIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new MovieUpdateRequest(
                                 "Blocked Update",
+                                "Blocked Original",
                                 "Should not update now showing movie.",
                                 "https://example.com/trailer-3",
                                 "https://example.com/poster-3.jpg",
@@ -178,6 +228,39 @@ class MovieIntegrationTests {
                         .content(objectMapper.writeValueAsString(new MovieStatusUpdateRequest(MovieStatus.INACTIVE))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("INACTIVE"));
+
+        String releasedMovieResponse = mockMvc.perform(post("/api/v1/admin/movies")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new MovieCreateRequest(
+                                "Phase 3 Released",
+                                "Released Original",
+                                "A released movie cannot move backward.",
+                                "https://example.com/trailer-released",
+                                "https://example.com/poster-released.jpg",
+                                "https://example.com/avatar-released.jpg",
+                                100,
+                                LocalDate.now().minusDays(1),
+                                "English",
+                                "Vietnamese",
+                                MovieStatus.NOW_SHOWING,
+                                "13+",
+                                "Released Director",
+                                List.of(genreId),
+                                List.of(actorOneId),
+                                List.of(actorOneId)
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long releasedMovieId = objectMapper.readTree(releasedMovieResponse).at("/data/id").asLong();
+
+        mockMvc.perform(patch("/api/v1/admin/movies/{movieId}/status", releasedMovieId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new MovieStatusUpdateRequest(MovieStatus.UPCOMING))))
+                .andExpect(status().isBadRequest());
 
         mockMvc.perform(get("/api/v1/movies/{movieId}", movieId))
                 .andExpect(status().isNotFound());

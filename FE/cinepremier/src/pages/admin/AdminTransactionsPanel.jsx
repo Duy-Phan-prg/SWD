@@ -51,10 +51,6 @@ export default function AdminTransactionsPanel({ ctx }) {
     setIsGenreLoading,
     isGenreSaving,
     setIsGenreSaving,
-    homepageForm,
-    setHomepageForm,
-    homepageVideoError,
-    setHomepageVideoError,
     foodItems,
     setFoodItems,
     foodCombos,
@@ -80,8 +76,6 @@ export default function AdminTransactionsPanel({ ctx }) {
     auditLogs,
     setAuditLogs,
     addAuditLog,
-    getYoutubeId,
-    handleHomepageVideoSubmit,
     resetFoodForm,
     validateFoodForm,
     fetchFoods,
@@ -110,13 +104,10 @@ export default function AdminTransactionsPanel({ ctx }) {
     setMoviesList,
     bookedTickets,
     setBookedTickets,
-    cinemaLocations,
     onSelectMovie,
     showToast,
     initialSection,
     onSectionChange,
-    homepageVideoUrl,
-    onHomepageVideoUrlChange,
     onFoodCatalogChanged,
     isAdmin
   } = ctx;
@@ -200,76 +191,6 @@ export default function AdminTransactionsPanel({ ctx }) {
                               </td>
                             </tr>
                           ))}
-
-                          {/* Historical seed rows for the empty transaction state */}
-                          <tr className="hover:bg-neutral-900/35 transition-all opacity-85">
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="font-bold text-zinc-400 font-sans flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-zinc-500"></span> Nguyễn Văn Nam
-                              </div>
-                              <span className="text-[10px] font-mono text-zinc-500 tracking-wider">CP-748293</span>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <div className="font-serif italic font-black text-xs text-zinc-400">PHIM TỪ HỆ THỐNG</div>
-                              <span className="text-[9px] text-[#556268] font-mono block uppercase">Dữ liệu giao dịch mẫu</span>
-                            </td>
-                            <td className="py-3.5 px-4 font-sans text-zinc-400 whitespace-nowrap">
-                              <div className="font-semibold">CinePremier Landmark 81</div>
-                              <div className="text-[10px] text-zinc-500 font-mono">19:15 - Thứ Bảy, 23/05</div>
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="flex items-center justify-center gap-1 flex-wrap max-w-[120px] mx-auto">
-                                {["C12", "C14"].map(s => (
-                                  <span key={s} className="inline-flex items-center px-1.5 py-0.5 bg-neutral-900 border border-neutral-850 font-mono text-zinc-500 text-[10px] rounded-sm">
-                                    {s}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-mono text-zinc-300 font-bold text-sm whitespace-nowrap">
-                              240.000đ
-                            </td>
-                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                              <span className="inline-block px-2.5 py-1 bg-zinc-900 text-zinc-600 text-[9.5px] uppercase font-bold tracking-widest border border-neutral-800 rounded-sm">
-                                HOÀN THÀNH TẠI QUẦY
-                              </span>
-                            </td>
-                          </tr>
-
-                          <tr className="hover:bg-neutral-900/35 transition-all opacity-85">
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="font-bold text-zinc-400 font-sans flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-zinc-500"></span> Đặng Thuỳ Trang
-                              </div>
-                              <span className="text-[10px] font-mono text-zinc-500 tracking-wider">CP-491028</span>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <div className="font-serif italic font-black text-xs text-zinc-400">PHIM TỪ HỆ THỐNG</div>
-                              <span className="text-[9px] text-[#556268] font-mono block uppercase">Dữ liệu giao dịch mẫu</span>
-                            </td>
-                            <td className="py-3.5 px-4 font-sans text-zinc-400 whitespace-nowrap">
-                              <div className="font-semibold">CinePremier West Lake</div>
-                              <div className="text-[10px] text-zinc-500 font-mono">14:15 - Chủ Nhật, 24/05</div>
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="flex items-center justify-center gap-1 flex-wrap max-w-[120px] mx-auto">
-                                {["F8", "F9", "F10"].map(s => (
-                                  <span key={s} className="inline-flex items-center px-1.5 py-0.5 bg-neutral-900 border border-neutral-850 font-mono text-zinc-500 text-[10px] rounded-sm">
-                                    {s}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-mono text-zinc-300 font-bold text-sm whitespace-nowrap">
-                              360.000đ
-                            </td>
-                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                              <span className="inline-block px-2.5 py-1 bg-zinc-900 text-zinc-600 text-[9.5px] uppercase font-bold tracking-widest border border-neutral-800 rounded-sm">
-                                HOÀN THÀNH TẠI QUẦY
-                              </span>
-                            </td>
-                          </tr>
-
                         </tbody>
                       </table>
                     </div>

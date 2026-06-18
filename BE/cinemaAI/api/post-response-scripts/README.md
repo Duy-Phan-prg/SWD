@@ -139,12 +139,12 @@ if (body.data.refreshToken) {
 }
 ```
 
-## 6. Tạo rạp
+## 6. Lấy rạp đã cấu hình
 
 API:
 
 ```http
-POST /api/v1/admin/cinema
+GET /api/v1/admin/cinema
 ```
 
 Post-response script:
@@ -152,8 +152,8 @@ Post-response script:
 ```javascript
 const body = pm.response.json();
 
-pm.test("Tạo rạp thành công", function () {
-  pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+pm.test("Lấy rạp thành công", function () {
+  pm.expect(pm.response.code).to.eql(200);
   pm.expect(body.success).to.eql(true);
 });
 

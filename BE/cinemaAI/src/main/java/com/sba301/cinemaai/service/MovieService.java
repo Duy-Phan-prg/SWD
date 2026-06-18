@@ -3,6 +3,7 @@ package com.sba301.cinemaai.service;
 import com.sba301.cinemaai.dto.request.movie.MovieCreateRequest;
 import com.sba301.cinemaai.dto.response.movie.ActorResponse;
 import com.sba301.cinemaai.dto.response.movie.MovieResponse;
+import com.sba301.cinemaai.dto.response.movie.MovieSummaryResponse;
 import com.sba301.cinemaai.dto.request.movie.MovieStatusUpdateRequest;
 import com.sba301.cinemaai.dto.request.movie.MovieUpdateRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
@@ -50,7 +51,7 @@ public class MovieService {
     private final MovieMapper movieMapper;
 
     @Transactional(readOnly = true)
-    public PageResponse<MovieResponse> searchPublic(
+    public PageResponse<MovieSummaryResponse> searchPublic(
             String keyword,
             MovieStatus status,
             Long genreId,
@@ -61,7 +62,7 @@ public class MovieService {
     ) {
         MovieStatus effectiveStatus = status == null ? null : status;
         Specification<Movie> spec = buildSpec(keyword, effectiveStatus, genreId, fromDate, toDate, true);
-        return mapPage(movieRepository.findAll(spec, pageable(page, size)));
+        return mapSummaryPage(movieRepository.findAll(spec, pageable(page, size)));
     }
 
     @Transactional(readOnly = true)
@@ -96,6 +97,7 @@ public class MovieService {
         if (movieRepository.existsByTitle(request.title())) {
             throw new ConflictException("Movie title already exists");
         }
+        validateReleaseDateCompatibleWithStatus(request.releaseDate(), request.status());
 
         Movie movie = new Movie(request.title(), request.durationMinutes(), request.status());
         List<Actor> actors = resolveActors(request.actorIds());
@@ -104,7 +106,7 @@ public class MovieService {
         String mainActorNames = actorNamesText(actors.stream()
                 .filter(actor -> mainActorIds.contains(actor.getId()))
                 .toList());
-        applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
+        applyMovieFields(movie, request.englishTitle(), request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
                 request.director(), mainActorNames, actorNames, request.status());
         Movie saved = movieRepository.save(movie);
@@ -119,6 +121,7 @@ public class MovieService {
         if (movie.getStatus() != MovieStatus.UPCOMING) {
             throw new BadRequestException("Only UPCOMING movies can be updated");
         }
+        validateReleaseDateCompatibleWithStatus(request.releaseDate(), request.status());
         movieRepository.findByTitle(request.title())
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
@@ -130,10 +133,10 @@ public class MovieService {
         String mainActorNames = actorNamesText(actors.stream()
                 .filter(actor -> mainActorIds.contains(actor.getId()))
                 .toList());
-        applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
+        applyMovieFields(movie, request.englishTitle(), request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
                 request.director(), mainActorNames, actorNames, request.status());
-        movie.updateDetails(request.title(), request.description(), request.durationMinutes(), request.releaseDate());
+        movie.updateDetails(request.title(), request.englishTitle(), request.description(), request.durationMinutes(), request.releaseDate());
         replaceGenres(movie, request.genreIds());
         replaceActors(movie, actors, mainActorIds);
         return toResponse(movie);
@@ -168,6 +171,7 @@ public class MovieService {
     @Transactional
     public MovieResponse updateStatus(Long id, MovieStatusUpdateRequest request) {
         Movie movie = findById(id);
+        validateStatusTransition(movie, request.status());
         movie.changeStatus(request.status());
         return toResponse(movie);
     }
@@ -178,8 +182,36 @@ public class MovieService {
         movie.changeStatus(MovieStatus.INACTIVE);
     }
 
+    private void validateReleaseDateCompatibleWithStatus(LocalDate releaseDate, MovieStatus status) {
+        if (releaseDate != null && releaseDate.isBefore(LocalDate.now()) && status == MovieStatus.UPCOMING) {
+            throw new BadRequestException("Released movies cannot be moved back to UPCOMING");
+        }
+    }
+
+    private void validateStatusTransition(Movie movie, MovieStatus requestedStatus) {
+        validateReleaseDateCompatibleWithStatus(movie.getReleaseDate(), requestedStatus);
+        if (requestedStatus == MovieStatus.INACTIVE || movie.getReleaseDate() == null || !movie.getReleaseDate().isBefore(LocalDate.now())) {
+            return;
+        }
+        int currentRank = statusRank(movie.getStatus());
+        int requestedRank = statusRank(requestedStatus);
+        if (currentRank >= 0 && requestedRank >= 0 && requestedRank < currentRank) {
+            throw new BadRequestException("Released movies cannot be moved back to an earlier status");
+        }
+    }
+
+    private int statusRank(MovieStatus status) {
+        return switch (status) {
+            case UPCOMING -> 0;
+            case NOW_SHOWING -> 1;
+            case ENDED -> 2;
+            case INACTIVE -> -1;
+        };
+    }
+
     private void applyMovieFields(
             Movie movie,
+            String englishTitle,
             String description,
             LocalDate releaseDate,
             String trailerUrl,
@@ -193,7 +225,7 @@ public class MovieService {
             String castList,
             MovieStatus status
     ) {
-        movie.updateDetails(movie.getTitle(), description, movie.getDurationMinutes(), releaseDate);
+        movie.updateDetails(movie.getTitle(), englishTitle, description, movie.getDurationMinutes(), releaseDate);
         movie.updateMedia(trailerUrl, posterUrl, avatarUrl);
         movie.updateMetadata(language, subtitleLanguage, ageRating, director, mainActors, castList);
         movie.changeStatus(status);
@@ -248,6 +280,26 @@ public class MovieService {
 
     private PageResponse<MovieResponse> mapPage(Page<Movie> page) {
         return PageResponse.from(page.map(this::toResponse));
+    }
+
+    private PageResponse<MovieSummaryResponse> mapSummaryPage(Page<Movie> page) {
+        List<Long> movieIds = page.getContent()
+                .stream()
+                .map(Movie::getId)
+                .toList();
+        Map<Long, List<Genre>> genresByMovieId = movieIds.isEmpty()
+                ? Map.of()
+                : movieGenreRepository.findByMovieIdIn(movieIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                movieGenre -> movieGenre.getMovie().getId(),
+                                Collectors.mapping(MovieGenre::getGenre, Collectors.toList())
+                        ));
+
+        return PageResponse.from(page.map(movie -> movieMapper.toMovieSummaryResponse(
+                movie,
+                genresByMovieId.getOrDefault(movie.getId(), List.of())
+        )));
     }
 
     private MovieResponse toResponse(Movie movie) {
@@ -311,6 +363,7 @@ public class MovieService {
                 String pattern = "%" + keyword.toLowerCase() + "%";
                 predicate = builder.and(predicate, builder.or(
                         builder.like(builder.lower(root.get("title")), pattern),
+                        builder.like(builder.lower(root.get("englishTitle")), pattern),
                         builder.like(builder.lower(root.get("director")), pattern),
                         builder.like(builder.lower(root.get("language")), pattern)
                 ));

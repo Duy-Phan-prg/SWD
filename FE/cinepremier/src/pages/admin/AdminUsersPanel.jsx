@@ -1,19 +1,38 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { authApi, getStoredAuth } from '../../services/authApi';
 import {
   BadgeCheck,
   Clock,
+  Eye,
+  EyeOff,
   Mail,
   Phone,
+  Plus,
   RefreshCw,
   Search,
   ShieldAlert,
   UserCheck,
+  UserPlus,
   Users,
-  UserX
+  UserX,
+  X
 } from 'lucide-react';
 
 const USER_STATUS_OPTIONS = ['ACTIVE', 'DISABLED', 'PENDING_VERIFICATION'];
+const STAFF_PROFILE_STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
+const EMPTY_STAFF_FORM = {
+  email: '',
+  password: '',
+  fullName: '',
+  phone: '',
+  birthYear: ''
+};
+const EMPTY_PROFILE_FORM = {
+  employeeCode: '',
+  position: '',
+  status: 'ACTIVE'
+};
 
 const formatDateTime = (value) => {
   if (!value) return 'Chưa có dữ liệu';
@@ -55,13 +74,159 @@ export default function AdminUsersPanel({ ctx }) {
     isUsersLoading,
     isUserDetailLoading,
     isUserStatusSaving,
+    isStaffCreating,
     fetchAdminUsers,
     handleSelectAdminUser,
+    handleCreateStaff,
     handleUpdateAdminUserStatus,
     currentUser
   } = ctx;
+  const [isStaffFormOpen, setIsStaffFormOpen] = useState(false);
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
+  const [staffForm, setStaffForm] = useState(EMPTY_STAFF_FORM);
+  const [staffFormErrors, setStaffFormErrors] = useState({});
+  const [staffProfiles, setStaffProfiles] = useState([]);
+  const [profileForm, setProfileForm] = useState(EMPTY_PROFILE_FORM);
+  const [profileError, setProfileError] = useState('');
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+
+  const selectedStaffProfile = staffProfiles.find((profile) => (
+    String(profile.userId) === String(selectedAdminUser?.id)
+  ));
+  const isSelectedStaff = (selectedAdminUser?.roles || []).some((role) => (
+    String(role).toUpperCase().replace('ROLE_', '') === 'STAFF'
+  ));
+
+  useEffect(() => {
+    if (activeTab !== 'users') return undefined;
+    let cancelled = false;
+    const loadProfiles = async () => {
+      const { accessToken } = getStoredAuth();
+      if (!accessToken) return;
+      setIsProfileLoading(true);
+      try {
+        const profiles = await authApi.getAdminStaffProfiles(accessToken);
+        if (!cancelled) setStaffProfiles(Array.isArray(profiles) ? profiles : []);
+      } catch (error) {
+        if (!cancelled) setProfileError(error.message || 'Khong the tai staff profile.');
+      } finally {
+        if (!cancelled) setIsProfileLoading(false);
+      }
+    };
+    loadProfiles();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedStaffProfile) {
+      setProfileForm({
+        employeeCode: selectedStaffProfile.employeeCode || '',
+        position: selectedStaffProfile.position || '',
+        status: selectedStaffProfile.status || 'ACTIVE'
+      });
+      setProfileError('');
+      return;
+    }
+    setProfileForm(EMPTY_PROFILE_FORM);
+    setProfileError('');
+  }, [selectedStaffProfile?.id, selectedAdminUser?.id]);
 
   if (activeTab !== 'users') return null;
+
+  const updateStaffForm = (field, value) => {
+    setStaffForm((prev) => ({ ...prev, [field]: value }));
+    setStaffFormErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const updateProfileForm = (field, value) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+    setProfileError('');
+  };
+
+  const saveStaffProfile = async (event) => {
+    event.preventDefault();
+    if (!selectedAdminUser?.id || !isSelectedStaff) return;
+
+    const employeeCode = profileForm.employeeCode.trim();
+    const position = profileForm.position.trim();
+    if (!employeeCode || !position) {
+      setProfileError('Nhap ma nhan vien va vi tri truoc khi luu.');
+      return;
+    }
+
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      setProfileError('Phien dang nhap admin khong hop le.');
+      return;
+    }
+
+    setIsProfileSaving(true);
+    try {
+      const payload = {
+        userId: Number(selectedAdminUser.id),
+        employeeCode,
+        position,
+        status: profileForm.status || 'ACTIVE'
+      };
+      const savedProfile = selectedStaffProfile
+        ? await authApi.updateAdminStaffProfile(accessToken, selectedStaffProfile.id, {
+          employeeCode,
+          position,
+          status: payload.status
+        })
+        : await authApi.createAdminStaffProfile(accessToken, payload);
+      setStaffProfiles((prev) => [
+        savedProfile,
+        ...prev.filter((profile) => String(profile.id) !== String(savedProfile.id))
+      ]);
+      setProfileError('');
+    } catch (error) {
+      setProfileError(error.message || 'Khong the luu staff profile.');
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
+
+  const submitStaffForm = async (event) => {
+    event.preventDefault();
+    const errors = {};
+    const email = staffForm.email.trim();
+    const fullName = staffForm.fullName.trim();
+    const phone = staffForm.phone.trim();
+    const birthYear = staffForm.birthYear ? Number(staffForm.birthYear) : null;
+
+    if (!email) errors.email = 'Email là bắt buộc.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Email không hợp lệ.';
+    if (!fullName) errors.fullName = 'Họ tên là bắt buộc.';
+    if (staffForm.password.length < 8) errors.password = 'Mật khẩu cần ít nhất 8 ký tự.';
+    if (phone && !/^\+?[0-9]{10,15}$/.test(phone)) errors.phone = 'Số điện thoại gồm 10-15 chữ số.';
+    if (birthYear && (birthYear < 1900 || birthYear > 2100)) errors.birthYear = 'Năm sinh không hợp lệ.';
+
+    if (Object.keys(errors).length > 0) {
+      setStaffFormErrors(errors);
+      return;
+    }
+
+    try {
+      const createdStaff = await handleCreateStaff({
+        email,
+        password: staffForm.password,
+        fullName,
+        phone: phone || null,
+        birthYear
+      });
+      if (!createdStaff) return;
+      setStaffForm(EMPTY_STAFF_FORM);
+      setStaffFormErrors({});
+      setShowStaffPassword(false);
+      setIsStaffFormOpen(false);
+    } catch {
+      // The shared admin handler displays the backend validation/conflict message.
+    }
+  };
 
   const query = userSearch.trim().toLowerCase();
   const filteredUsers = adminUsers.filter((user) => {
@@ -101,6 +266,15 @@ export default function AdminUsersPanel({ ctx }) {
 
         <button
           type="button"
+          onClick={() => setIsStaffFormOpen((prev) => !prev)}
+          className="flex items-center justify-center gap-2 border border-amber-500/60 bg-amber-500/10 px-4 py-2 text-[10px] font-mono font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black"
+        >
+          {isStaffFormOpen ? <X className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
+          {isStaffFormOpen ? 'Đóng biểu mẫu' : 'Cấp tài khoản STAFF'}
+        </button>
+
+        <button
+          type="button"
           onClick={fetchAdminUsers}
           disabled={isUsersLoading}
           className="flex items-center justify-center gap-2 border border-neutral-800 bg-black px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition hover:border-amber-400 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
@@ -109,6 +283,86 @@ export default function AdminUsersPanel({ ctx }) {
           Làm mới dữ liệu
         </button>
       </div>
+
+      {isStaffFormOpen && (
+        <motion.form
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          onSubmit={submitStaffForm}
+          className="border border-amber-500/30 bg-[#080704] p-5"
+        >
+          <div className="mb-4 flex items-start justify-between gap-4 border-b border-amber-500/15 pb-4">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-300">
+                <Plus className="h-4 w-4" />
+                Cấp tài khoản STAFF
+              </div>
+              <p className="mt-1 text-[10px] text-neutral-500">
+                Tài khoản được kích hoạt ngay và có quyền truy cập màn hình nghiệp vụ nhân viên.
+              </p>
+            </div>
+            <span className="border border-amber-500/30 bg-black px-2 py-1 text-[8px] font-black uppercase tracking-widest text-amber-300">
+              AUTH-12
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {[
+              { field: 'fullName', label: 'Họ và tên *', placeholder: 'Nguyễn Văn A', type: 'text' },
+              { field: 'email', label: 'Email đăng nhập *', placeholder: 'staff@cinepremier.vn', type: 'email' },
+              { field: 'phone', label: 'Số điện thoại', placeholder: '0901234567', type: 'tel' },
+              { field: 'birthYear', label: 'Năm sinh', placeholder: '2000', type: 'number' }
+            ].map(({ field, label, placeholder, type }) => (
+              <label key={field} className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{label}</span>
+                <input
+                  type={type}
+                  value={staffForm[field]}
+                  onChange={(event) => updateStaffForm(field, event.target.value)}
+                  placeholder={placeholder}
+                  min={field === 'birthYear' ? 1900 : undefined}
+                  max={field === 'birthYear' ? 2100 : undefined}
+                  className={`w-full border bg-black px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400 ${staffFormErrors[field] ? 'border-rose-500' : 'border-neutral-800'}`}
+                />
+                {staffFormErrors[field] && <span className="block text-[9px] text-rose-300">{staffFormErrors[field]}</span>}
+              </label>
+            ))}
+
+            <label className="space-y-1.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Mật khẩu cấp ban đầu *</span>
+              <div className="relative">
+                <input
+                  type={showStaffPassword ? 'text' : 'password'}
+                  value={staffForm.password}
+                  onChange={(event) => updateStaffForm('password', event.target.value)}
+                  placeholder="Tối thiểu 8 ký tự"
+                  className={`w-full border bg-black px-3 py-2.5 pr-10 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400 ${staffFormErrors.password ? 'border-rose-500' : 'border-neutral-800'}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowStaffPassword((prev) => !prev)}
+                  className="absolute right-2.5 top-2.5 text-neutral-500 transition hover:text-white"
+                  aria-label={showStaffPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showStaffPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {staffFormErrors.password && <span className="block text-[9px] text-rose-300">{staffFormErrors.password}</span>}
+            </label>
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <button
+              type="submit"
+              disabled={isStaffCreating}
+              className="flex items-center gap-2 border border-amber-400 bg-amber-500 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isStaffCreating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+              {isStaffCreating ? 'Đang cấp tài khoản...' : 'Tạo tài khoản STAFF'}
+            </button>
+          </div>
+        </motion.form>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <div className="xl:col-span-7 border border-neutral-850 bg-neutral-950 overflow-hidden">
@@ -267,6 +521,75 @@ export default function AdminUsersPanel({ ctx }) {
                       </div>
                     </div>
                   </div>
+
+                  {isSelectedStaff && (
+                    <form onSubmit={saveStaffProfile} className="border border-amber-500/20 bg-black p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-black uppercase tracking-widest text-amber-300">
+                            Staff profile
+                          </div>
+                          <p className="mt-1 text-[10px] text-neutral-500">
+                            Ma nhan vien, vi tri, trang thai va rap duy nhat cua STAFF.
+                          </p>
+                        </div>
+                        {isProfileLoading && <RefreshCw className="h-4 w-4 animate-spin text-amber-300" />}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="space-y-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Ma nhan vien *</span>
+                          <input
+                            value={profileForm.employeeCode}
+                            onChange={(event) => updateProfileForm('employeeCode', event.target.value)}
+                            placeholder="EMP001"
+                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+                          />
+                        </label>
+                        <label className="space-y-1.5">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Vi tri *</span>
+                          <input
+                            value={profileForm.position}
+                            onChange={(event) => updateProfileForm('position', event.target.value)}
+                            placeholder="Gate Staff"
+                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {STAFF_PROFILE_STATUS_OPTIONS.map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateProfileForm('status', status)}
+                            className={`border px-2 py-2 text-[8px] font-black uppercase tracking-wider transition ${
+                              profileForm.status === status
+                                ? 'border-amber-400 bg-amber-500 text-black'
+                                : 'border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-amber-400 hover:text-amber-300'
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+
+                      {selectedStaffProfile?.cinemaName && (
+                        <div className="border border-neutral-850 bg-neutral-950 px-3 py-2 text-[10px] text-neutral-400">
+                          Rap: <span className="font-bold text-neutral-200">{selectedStaffProfile.cinemaName}</span>
+                        </div>
+                      )}
+                      {profileError && <div className="text-[10px] font-bold text-rose-300">{profileError}</div>}
+                      <button
+                        type="submit"
+                        disabled={isProfileSaving}
+                        className="flex items-center justify-center gap-2 border border-amber-400 bg-amber-500 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isProfileSaving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="h-3.5 w-3.5" />}
+                        {selectedStaffProfile ? 'Cap nhat profile' : 'Tao profile'}
+                      </button>
+                    </form>
+                  )}
 
                   <div className="border border-neutral-850 bg-black p-4 space-y-3">
                     <div className="text-[10px] font-black uppercase tracking-widest text-neutral-400">

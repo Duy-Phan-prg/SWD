@@ -2,28 +2,9 @@
 
 Dán phần **Post-response** vào tab **Scripts -> Post-response** trong Postman.
 
-## 1. Tạo rạp
+## 1. Rạp chính được cấu hình sẵn
 
-### API
-```http
-POST /api/v1/admin/cinema
-Authorization: Bearer {{adminToken}}
-```
-
-### Post-response
-```javascript
-const body = pm.response.json();
-
-pm.test("Tạo rạp thành công hoặc bị giới hạn một rạp", function () {
-  pm.expect(pm.response.code).to.be.oneOf([201, 409]);
-});
-
-if (pm.response.code === 201) {
-  pm.expect(body.success).to.eql(true);
-  pm.collectionVariables.set("cinemaId", body.data.id);
-  pm.collectionVariables.set("cinemaName", body.data.name);
-}
-```
+Không có API tạo rạp. Dùng API GET ở bước tiếp theo để lấy rạp đã được seed.
 
 ## 2. Lấy rạp hiện tại
 

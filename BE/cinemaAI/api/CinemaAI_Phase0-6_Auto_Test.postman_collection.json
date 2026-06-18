@@ -1241,6 +1241,36 @@
           }
         }
       ]
+    },
+    {
+      "name": "Cleanup - Remove Auto-Test Movie From Public Catalog",
+      "item": [
+        {
+          "name": "Deactivate Auto-Test Movie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('auto-test movie removed from public catalog', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/movies/{{movieId}}"
+          }
+        }
+      ]
     }
   ]
 }
