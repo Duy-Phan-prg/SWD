@@ -26,6 +26,7 @@ public class BookingMapper {
                 booking.getUser().getId(),
                 booking.getShowtime().getId(),
                 booking.getShowtime().getMovie().getTitle(),
+                booking.getShowtime().getMovie().getPosterUrl(),
                 booking.getShowtime().getRoom().getName(),
                 booking.getShowtime().getRoom().getCinema().getName(),
                 booking.getShowtime().getStartTime(),

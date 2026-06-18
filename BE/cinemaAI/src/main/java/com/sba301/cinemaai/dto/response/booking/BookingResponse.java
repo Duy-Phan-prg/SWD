@@ -11,6 +11,7 @@ public record BookingResponse(
         Long userId,
         Long showtimeId,
         String movieTitle,
+        String posterUrl,
         String roomName,
         String cinemaName,
         LocalDateTime showtimeStart,

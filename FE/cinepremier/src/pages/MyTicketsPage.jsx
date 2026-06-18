@@ -54,7 +54,7 @@ export default function MyTicketsView() {
         : b.status === 'HOLDING' ? `Ghế giữ đến ${b.holdExpiresAt ? new Date(b.holdExpiresAt).toLocaleTimeString('vi-VN') : ''}`
           : 'Đã sử dụng',
       totalAmount: b.totalAmount,
-      poster: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop',
+      poster: b.posterUrl || b.moviePosterUrl || b.showtime?.posterUrl || b.showtime?.moviePosterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop',
       isReal: true
     }));
 
