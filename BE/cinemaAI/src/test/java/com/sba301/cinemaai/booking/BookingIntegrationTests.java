@@ -267,7 +267,63 @@ class BookingIntegrationTests {
     }
 
     @Test
-    void shouldCreateBookingWithTicketValidationAndRefundFlow() throws Exception {
+    void shouldCancelPendingPaymentBookingAndReleaseSeat() throws Exception {
+        String adminToken = loginAs("phase6.cancel.admin.", RoleName.ADMIN);
+        String customerToken = loginAs("phase6.cancel.customer.", RoleName.CUSTOMER);
+        String anotherCustomerToken = loginAs("phase6.cancel.other.", RoleName.CUSTOMER);
+        Showtime showtime = createShowtimeFixture();
+        createAdultTicketRule(adminToken);
+        Seat firstSeat = seatRepository.findByRoom(showtime.getRoom()).get(0);
+
+        String holdResponse = mockMvc.perform(post("/api/v1/bookings/hold")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new HoldSeatsRequest(
+                                showtime.getId(),
+                                List.of(firstSeat.getId())
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long holdBookingId = objectMapper.readTree(holdResponse).at("/data/id").asLong();
+
+        String bookingResponse = mockMvc.perform(post("/api/v1/bookings")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateBookingRequest(
+                                holdBookingId,
+                                null,
+                                null,
+                                false,
+                                List.of(new TicketSelectionRequest(TicketType.ADULT, 22, 1))
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long bookingId = objectMapper.readTree(bookingResponse).at("/data/id").asLong();
+
+        mockMvc.perform(delete("/api/v1/bookings/{bookingId}", bookingId)
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.data.seats[0].status").value("RELEASED"));
+
+        mockMvc.perform(post("/api/v1/bookings/hold")
+                        .header("Authorization", "Bearer " + anotherCustomerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new HoldSeatsRequest(
+                                showtime.getId(),
+                                List.of(firstSeat.getId())
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("HOLDING"));
+    }
+
+    @Test
+    void shouldCreateBookingWithTicketValidationAndRejectCustomerRefundAfterPayment() throws Exception {
         String adminToken = loginAs("phase6.ticket.admin.", RoleName.ADMIN);
         String customerToken = loginAs("phase6.ticket.customer.", RoleName.CUSTOMER);
         Showtime showtime = createShowtimeFixture();
@@ -316,15 +372,16 @@ class BookingIntegrationTests {
                         .header("Authorization", "Bearer " + customerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RefundRequest("Cúp điện trong rạp"))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("REFUND_REQUESTED"))
-                .andExpect(jsonPath("$.data.refundReason").value("Cúp điện trong rạp"));
+                .andExpect(status().isBadRequest());
 
-        mockMvc.perform(post("/api/v1/admin/bookings/{bookingId}/mark-refunded", bookingId)
-                        .header("Authorization", "Bearer " + adminToken))
+        mockMvc.perform(delete("/api/v1/bookings/{bookingId}", bookingId)
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/bookings/{bookingId}", bookingId)
+                        .header("Authorization", "Bearer " + customerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("REFUNDED"))
-                .andExpect(jsonPath("$.data.refundedAt").isNotEmpty());
+                .andExpect(jsonPath("$.data.status").value("PAID"));
     }
 
     private Long createFoodItem(String adminToken) throws Exception {
@@ -347,7 +404,7 @@ class BookingIntegrationTests {
     }
 
     private void createAdultTicketRule(String adminToken) throws Exception {
-        mockMvc.perform(post("/api/v1/admin/ticket-pricing/rules")
+        int statusCode = mockMvc.perform(post("/api/v1/admin/ticket-pricing/rules")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new TicketPricingRuleRequest(
@@ -359,8 +416,10 @@ class BookingIntegrationTests {
                                 BigDecimal.valueOf(95000),
                                 true
                         ))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.ticketType").value("ADULT"));
+                .andReturn()
+                .getResponse()
+                .getStatus();
+        assertThat(statusCode).isIn(201, 409);
     }
 
     private Showtime createShowtimeFixture() {

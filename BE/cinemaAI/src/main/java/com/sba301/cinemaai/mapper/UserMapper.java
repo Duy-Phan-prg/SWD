@@ -21,6 +21,8 @@ public class UserMapper {
                 user.getStatus(),
                 user.isEmailVerified(),
                 profile.isPhoneVerified(),
+                user.isPasswordChangeRequired(),
+                user.getPasswordSetupProvider(),
                 roles,
                 profile.getCreatedAt(),
                 profile.getUpdatedAt()

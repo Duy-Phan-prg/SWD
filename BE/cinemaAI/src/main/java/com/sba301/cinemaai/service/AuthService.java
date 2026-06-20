@@ -22,6 +22,7 @@ import com.sba301.cinemaai.security.JwtProperties;
 import com.sba301.cinemaai.security.JwtService;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final int EMAIL_VERIFICATION_EXPIRES_IN_SECONDS = 90;
+    private static final String PASSWORD_SETUP_PROVIDER_GOOGLE = "GOOGLE";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
@@ -170,14 +172,21 @@ public class AuthService {
     @Transactional
     public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
         GoogleTokenVerifier.GoogleTokenInfo tokenInfo = googleTokenVerifier.verify(request.credential());
-        User user = userRepository.findByEmail(tokenInfo.email())
+        GoogleLoginUser googleLoginUser = userRepository.findByEmail(tokenInfo.email())
+                .map(GoogleLoginUser::new)
                 .orElseGet(() -> createGoogleUser(tokenInfo));
+        User user = googleLoginUser.user();
 
         if (user.getStatus() == UserStatus.DISABLED) {
             throw new UnauthorizedException("User is disabled");
         }
         if (!user.isEmailVerified()) {
             user.activateEmail();
+        }
+        if (user.isPasswordChangeRequired()
+                && PASSWORD_SETUP_PROVIDER_GOOGLE.equals(user.getPasswordSetupProvider())
+                && !googleLoginUser.newUser()) {
+            issueTemporaryPassword(user);
         }
 
         return createAuthResponse(user);
@@ -203,21 +212,24 @@ public class AuthService {
         refreshTokenService.revoke(refreshTokenValue);
     }
 
-    private User createGoogleUser(GoogleTokenVerifier.GoogleTokenInfo tokenInfo) {
+    private GoogleLoginUser createGoogleUser(GoogleTokenVerifier.GoogleTokenInfo tokenInfo) {
         String fullName = tokenInfo.name();
         if (fullName == null || fullName.isBlank()) {
             fullName = tokenInfo.email();
         }
+        String temporaryPassword = generateTemporaryPassword();
 
         User user = userRepository.save(new User(
                 tokenInfo.email(),
-                passwordEncoder.encode(tokenInfo.subject()),
+                passwordEncoder.encode(temporaryPassword),
                 fullName,
                 null
         ));
         user.activateEmail();
+        user.requirePasswordChange(passwordEncoder.encode(temporaryPassword), PASSWORD_SETUP_PROVIDER_GOOGLE);
         userRoleService.assignRole(user, RoleName.CUSTOMER);
-        return user;
+        mailService.sendTemporaryPassword(user.getEmail(), temporaryPassword);
+        return new GoogleLoginUser(user, true);
     }
 
     private AuthResponse createAuthResponse(User user) {
@@ -229,7 +241,8 @@ public class AuthService {
                 "Bearer",
                 jwtProperties.accessExpirationMs(),
                 userService.toProfile(user),
-                roles
+                roles,
+                user.isPasswordChangeRequired()
         );
     }
 
@@ -253,6 +266,8 @@ public class AuthService {
                 UserStatus.PENDING_VERIFICATION,
                 false,
                 false,
+                false,
+                null,
                 List.of(RoleName.CUSTOMER.name()),
                 pendingRegistration.getCreatedAt(),
                 pendingRegistration.getUpdatedAt()
@@ -261,5 +276,23 @@ public class AuthService {
 
     private String generateOtp() {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+    }
+
+    private void issueTemporaryPassword(User user) {
+        String temporaryPassword = generateTemporaryPassword();
+        user.requirePasswordChange(passwordEncoder.encode(temporaryPassword), PASSWORD_SETUP_PROVIDER_GOOGLE);
+        mailService.sendTemporaryPassword(user.getEmail(), temporaryPassword);
+    }
+
+    private String generateTemporaryPassword() {
+        byte[] randomBytes = new byte[18];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        return "Gg@" + Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    private record GoogleLoginUser(User user, boolean newUser) {
+        private GoogleLoginUser(User user) {
+            this(user, false);
+        }
     }
 }

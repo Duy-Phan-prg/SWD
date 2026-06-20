@@ -82,7 +82,6 @@ export default function ProfileView() {
       if (currentUser.avatarUrl) setProfileImg(currentUser.avatarUrl);
     }
   }, [currentUser]);
-
   React.useEffect(() => {
     if (!isLoggedIn) return;
     const { accessToken } = getStoredAuth();

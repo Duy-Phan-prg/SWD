@@ -66,7 +66,8 @@ export const normalizeUser = (user, roles = user?.roles || []) => {
     roles: resolvedRoles,
     name: user.fullName || user.name || user.email,
     role: resolveRole(resolvedRoles),
-    emailVerified: Boolean(user.emailVerified)
+    emailVerified: Boolean(user.emailVerified),
+    passwordChangeRequired: Boolean(user.passwordChangeRequired)
   };
 };
 
@@ -207,6 +208,18 @@ const normalizeGenres = (movie = {}) => {
 
 const normalizeMovieStatus = (movie = {}) => String(movie.status || movie.movieStatus || '').toUpperCase();
 
+const getMovieTrailerUrl = (movie = {}, fallback = {}) => (
+  movie.trailerUrl
+  || movie.trailerURL
+  || movie.trailer_url
+  || movie.trailer
+  || movie.videoUrl
+  || movie.videoURL
+  || movie.video_url
+  || fallback.trailerUrl
+  || ''
+);
+
 export const normalizeMovie = (movie = {}, fallback = {}) => {
   const status = normalizeMovieStatus(movie) || normalizeMovieStatus(fallback);
   const id = movie.id ?? movie.movieId ?? movie.slug ?? movie.code ?? fallback.id;
@@ -231,7 +244,7 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     posterUrl: movie.posterUrl || movie.poster || movie.posterImageUrl || movie.imageUrl || movie.thumbnailUrl || fallback.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=600&auto=format&fit=crop',
     bannerUrl: movie.bannerUrl || movie.avatarUrl || movie.backdropUrl || movie.coverUrl || movie.bannerImageUrl || fallback.bannerUrl || movie.posterUrl || fallback.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200&auto=format&fit=crop',
     releaseDate: movie.releaseDate || movie.premiereDate || movie.startDate || fallback.releaseDate || 'Đang cập nhật',
-    trailerUrl: movie.trailerUrl || movie.trailer || fallback.trailerUrl || '',
+    trailerUrl: getMovieTrailerUrl(movie, fallback),
     director: movie.director || movie.directorName || fallback.director || 'Đang cập nhật',
     mainActors: movie.mainActors || fallback.mainActors || movie.castList || fallback.castList || '',
     castList: movie.castList || fallback.castList || movie.mainActors || fallback.mainActors || '',

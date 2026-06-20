@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine } from 'lucide-react';
+import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { authApi, getStoredAuth } from '../services/authApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,23 +20,102 @@ export default function MyTicketsView() {
   const [reviewsList, setReviewsList] = useState([]);
   const [realBookings, setRealBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [cancellingBookingId, setCancellingBookingId] = useState('');
 
-  useEffect(() => {
+  const loadBookings = () => {
     if (!isLoggedIn) return;
     const { accessToken } = getStoredAuth();
     if (!accessToken) return;
     setIsLoading(true);
-    authApi.getMyBookings(accessToken)
+    return authApi.getMyBookings(accessToken)
       .then(data => setRealBookings(Array.isArray(data) ? data : []))
       .catch(() => setRealBookings([]))
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadBookings();
   }, [isLoggedIn]);
+
+  const canCancelBooking = (booking) => {
+    if (!['HOLDING', 'PENDING_PAYMENT'].includes(booking.status)) return false;
+    if (!booking.holdExpiresAt) return true;
+    return new Date(booking.holdExpiresAt).getTime() > Date.now();
+  };
+
+  const getBookingBadge = (status) => {
+    switch (status) {
+      case 'PAID':
+        return 'ĐÃ THANH TOÁN';
+      case 'USED':
+        return 'ĐÃ SỬ DỤNG';
+      case 'PENDING_PAYMENT':
+        return 'CHỜ THANH TOÁN';
+      case 'HOLDING':
+        return 'ĐANG GIỮ';
+      default:
+        return status || 'KHÔNG RÕ';
+    }
+  };
+
+  const getBookingBadgeColor = (status) => {
+    switch (status) {
+      case 'PAID':
+        return 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20';
+      case 'USED':
+        return 'bg-neutral-900 text-neutral-400 border-neutral-700';
+      case 'PENDING_PAYMENT':
+        return 'bg-sky-950/25 text-sky-300 border-sky-500/20';
+      case 'HOLDING':
+        return 'bg-amber-950/20 text-amber-400 border-amber-500/20';
+      case 'CANCELLED':
+        return 'bg-rose-950/25 text-rose-300 border-rose-500/20';
+      case 'EXPIRED':
+        return 'bg-zinc-900 text-zinc-500 border-zinc-700';
+      default:
+        return 'bg-neutral-900 text-neutral-400 border-neutral-700';
+    }
+  };
+
+  const getBookingHelperText = (booking) => {
+    if (booking.status === 'PAID') return 'Sẵn sàng quét / Đưa mã cho nhân viên soát vé';
+    if (booking.status === 'PENDING_PAYMENT') return 'Có thể hủy trước thanh toán hoặc tiếp tục thanh toán';
+    if (booking.status === 'HOLDING') {
+      return `Ghế giữ đến ${booking.holdExpiresAt ? new Date(booking.holdExpiresAt).toLocaleTimeString('vi-VN') : ''}`;
+    }
+    return 'Đã sử dụng';
+  };
+
+  const handleCancelBooking = async (booking) => {
+    if (!booking?.bookingId || !canCancelBooking(booking)) return;
+    const confirmed = window.confirm('Hủy booking này? Ghế đang giữ sẽ được giải phóng và vé đã thanh toán không thể hủy theo yêu cầu khách hàng.');
+    if (!confirmed) return;
+
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      showToast('Vui lòng đăng nhập lại để hủy booking.', 4500, null, 'sad');
+      return;
+    }
+
+    setCancellingBookingId(String(booking.bookingId));
+    try {
+      await authApi.cancelBooking(accessToken, booking.bookingId);
+      showToast('Đã hủy booking trước thanh toán và giải phóng ghế.');
+      await loadBookings();
+    } catch (error) {
+      showToast(error.message || 'Không thể hủy booking này.', 4500, null, 'sad');
+    } finally {
+      setCancellingBookingId('');
+    }
+  };
 
   // Map BE booking sang display format
   const activeTickets = realBookings
-    .filter(b => b.status === 'PAID' || b.status === 'USED' || b.status === 'HOLDING')
+    .filter(b => b.status === 'PAID' || b.status === 'USED' || b.status === 'HOLDING' || b.status === 'PENDING_PAYMENT')
     .map(b => ({
+      bookingId: b.id,
       id: b.bookingCode || String(b.id),
+      status: b.status,
       title: b.movieTitle || b.showtime?.movieTitle || 'Phim',
       englishTitle: b.bookingCode || '',
       time: b.showtimeStart ? new Date(b.showtimeStart).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—',
@@ -46,13 +125,11 @@ export default function MyTicketsView() {
       seats: b.seats?.map(s => `${s.rowLabel}${s.seatNumber}`).join(', ') || '—',
       code: b.bookingCode || String(b.id),
       qrCode: b.qrCode || '',
-      badge: b.status === 'PAID' ? 'ĐÃ THANH TOÁN' : b.status === 'USED' ? 'ĐÃ SỬ DỤNG' : 'ĐANG GIỮ',
-      badgeColor: b.status === 'PAID' ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
-        : b.status === 'USED' ? 'bg-neutral-900 text-neutral-400 border-neutral-700'
-          : 'bg-amber-950/20 text-amber-400 border-amber-500/20',
-      helperText: b.status === 'PAID' ? 'Sẵn sàng quét / Đưa mã cho nhân viên soát vé'
-        : b.status === 'HOLDING' ? `Ghế giữ đến ${b.holdExpiresAt ? new Date(b.holdExpiresAt).toLocaleTimeString('vi-VN') : ''}`
-          : 'Đã sử dụng',
+      badge: getBookingBadge(b.status),
+      badgeColor: getBookingBadgeColor(b.status),
+      helperText: getBookingHelperText(b),
+      holdExpiresAt: b.holdExpiresAt,
+      canCancel: canCancelBooking(b),
       totalAmount: b.totalAmount,
       poster: b.posterUrl || b.moviePosterUrl || b.showtime?.posterUrl || b.showtime?.moviePosterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop',
       isReal: true
@@ -66,9 +143,7 @@ export default function MyTicketsView() {
     location: booking.cinemaName || publicCinema?.name || 'Rạp chưa được cấu hình',
     seats: booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || '—',
     status: booking.status || 'UNKNOWN',
-    statusColor: booking.status === 'USED'
-      ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/20'
-      : 'bg-neutral-900 text-neutral-400 border-neutral-700'
+    statusColor: getBookingBadgeColor(booking.status)
   }));
 
   const handleReviewSubmit = (e) => {
@@ -228,6 +303,22 @@ export default function MyTicketsView() {
 
                       {/* Context trigger option */}
                       <div className="flex items-center space-x-1 shrink-0">
+                        {t.canCancel && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelBooking(t)}
+                            disabled={cancellingBookingId === String(t.bookingId)}
+                            className="inline-flex items-center gap-1.5 border border-rose-500/30 bg-rose-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-rose-300 transition hover:bg-rose-500 hover:text-white disabled:cursor-wait disabled:opacity-60"
+                            title="Hủy booking trước thanh toán"
+                          >
+                            {cancellingBookingId === String(t.bookingId) ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <XCircle className="h-3.5 w-3.5" />
+                            )}
+                            Hủy booking
+                          </button>
+                        )}
                         <button
                           onClick={() => showToast(`Mã rạp chiếu kĩ thuật số: ${t.code} đã được gửi lên hệ thống. Đưa mã này khi nhận vé bắp nước combo VIP.`)}
                           className="p-1.5 hover:bg-neutral-900 text-neutral-500 hover:text-white transition rounded-full shrink-0"

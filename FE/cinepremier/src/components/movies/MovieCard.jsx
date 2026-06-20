@@ -1,7 +1,7 @@
 import React from 'react';
-import { Calendar, Flame, Play } from 'lucide-react';
+import { Calendar, Heart, Play } from 'lucide-react';
 
-export default function MovieCard({ movie, onSelect, onBook }) {
+export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = false, onToggleWatchlist }) {
   const isBookable = movie.status === 'NOW_SHOWING' || (!movie.status && !movie.isUpcoming);
   const isUpcoming = movie.status === 'UPCOMING' || movie.isUpcoming;
 
@@ -51,21 +51,42 @@ export default function MovieCard({ movie, onSelect, onBook }) {
             <span>Chi Tiết Phim</span>
           </button>
           
-          {isBookable ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onBook(movie);
-              }}
-              className="flex w-full items-center justify-center space-x-2 border border-white bg-white py-2.5 text-xs font-sans uppercase tracking-[0.15em] text-black hover:bg-black hover:text-white transition-all duration-200"
-            >
-              Đặt Vé Ngay
-            </button>
-          ) : (
-            <div className="text-center border border-white/20 bg-neutral-900 text-white text-xs py-2 px-4 uppercase tracking-[0.1em] font-sans">
-              Sắp Ra Mắt
-            </div>
-          )}
+          <div className="flex items-stretch gap-2">
+            {isBookable ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBook(movie);
+                }}
+                className="flex min-w-0 flex-1 items-center justify-center space-x-2 border border-white bg-white py-2.5 text-xs font-sans uppercase tracking-[0.15em] text-black hover:bg-black hover:text-white transition-all duration-200"
+              >
+                Đặt Vé Ngay
+              </button>
+            ) : (
+              <div className="flex min-w-0 flex-1 items-center justify-center border border-white/20 bg-neutral-900 px-4 py-2 text-center text-xs uppercase tracking-[0.1em] text-white font-sans">
+                Sắp Ra Mắt
+              </div>
+            )}
+
+            {onToggleWatchlist && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleWatchlist(movie);
+                }}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center border transition-all duration-200 ${
+                  isWatchlisted
+                    ? 'border-rose-400/70 bg-rose-500 text-white'
+                    : 'border-white/20 bg-black/85 text-white hover:border-white hover:bg-white hover:text-black'
+                }`}
+                title={isWatchlisted ? 'Xóa khỏi danh sách yêu thích' : 'Thêm vào danh sách yêu thích'}
+                aria-label={isWatchlisted ? 'Xóa khỏi danh sách yêu thích' : 'Thêm vào danh sách yêu thích'}
+              >
+                <Heart className={`h-4 w-4 ${isWatchlisted ? 'fill-current' : ''}`} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Age Rating tag */}

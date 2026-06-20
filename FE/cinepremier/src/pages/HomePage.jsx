@@ -1,16 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Sparkles, MessageSquare, Check, HelpCircle, Volume2, VolumeX, ChevronLeft, ChevronRight, Film } from 'lucide-react';
 import MovieCard from '../components/movies/MovieCard';
+import { useMovies } from '../contexts/MoviesContext';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
   const trimmed = url.trim();
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
 
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.replace(/^www\./, '');
+    const parts = parsed.pathname.split('/').filter(Boolean);
+
+    if (host === 'youtu.be') return parts[0] || '';
+    if (host.endsWith('youtube.com')) {
+      const videoId = parsed.searchParams.get('v');
+      if (videoId) return videoId;
+      if (['embed', 'shorts', 'live'].includes(parts[0])) return parts[1] || '';
+    }
+  } catch {
+    // Fall back to regex parsing for partially pasted URLs.
+  }
+
   const patterns = [
     /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
     /youtu\.be\/([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/live\/([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})/
   ];
 
   return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || '';
@@ -47,6 +65,7 @@ const loadYoutubeIframeApi = () => {
 };
 
 export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [] }) {
+  const { watchlist = [], handleToggleWatchlist } = useMovies();
   const [selectedMood, setSelectedMood] = useState('#Đỉnh_Cao_Thị_Giác');
   const [userPrompt, setUserPrompt] = useState('');
   const [suggestionResponse, setSuggestionResponse] = useState(null);
@@ -175,6 +194,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
   const recommendedMovie = nowPlaying[0] || publicMovies[0] || null;
   const isMovieBookable = (movie) => movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
+  const isMovieWatchlisted = (movie) => watchlist.some((item) => (
+    String(item.backendId || item.movieId || item.id) === String(movie?.backendId || movie?.movieId || movie?.id)
+  ));
 
   const findRecommendedMovie = () => recommendedMovie || publicMovies[0] || null;
 
@@ -414,6 +436,8 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
               movie={movie}
               onSelect={onSelectMovie}
               onBook={onBookMovie}
+              isWatchlisted={isMovieWatchlisted(movie)}
+              onToggleWatchlist={handleToggleWatchlist}
             />
           ))}
         </div>

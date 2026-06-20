@@ -18,12 +18,17 @@ export default function ExploreView() {
     genres = [],
     selectedGenreId = '',
     setSelectedGenreId,
+    watchlist = [],
+    handleToggleWatchlist,
   } = useMovies();
   const onSearchChange = (q) => { setSearchQuery(q); setMoviePagination(prev => ({ ...prev, page: 0 })); };
   const onDateChange = (d) => { setMovieDateFilter(d); setMoviePagination(prev => ({ ...prev, page: 0 })); };
   const onPageChange = (page) => setMoviePagination(prev => ({ ...prev, page: page - 1 }));
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onBookMovie = (movie) => navigate(`/movies/${movie.id}/book`);
+  const isMovieWatchlisted = (movie) => watchlist.some((item) => (
+    String(item.backendId || item.movieId || item.id) === String(movie.backendId || movie.movieId || movie.id)
+  ));
   const [sortBy, setSortBy] = useState('rating'); // rating, newest, duration
   const [localPage, setLocalPage] = useState(1);
   const itemsPerPage = 8;
@@ -191,6 +196,8 @@ export default function ExploreView() {
               movie={movie}
               onSelect={onSelectMovie}
               onBook={onBookMovie}
+              isWatchlisted={isMovieWatchlisted(movie)}
+              onToggleWatchlist={handleToggleWatchlist}
             />
           ))}
         </div>
