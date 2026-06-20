@@ -3,7 +3,7 @@ import {
   AlertTriangle, Armchair, Check, ChevronRight, CircleOff, DoorOpen,
   Edit3, Loader2, Plus, RefreshCw, Save, ScreenShare, Trash2, X
 } from 'lucide-react';
-import { authApi } from '../../services/authApi';
+import { adminService } from '../../services/adminService';
 
 const EMPTY_ROOM = {
   name: '',
@@ -121,7 +121,7 @@ export default function AdminRoomsPanel({ ctx }) {
     const token = getAdminToken();
     if (!token || !roomId) return;
     try {
-      const data = await authApi.getAdminRoomSeats(token, roomId);
+      const data = await adminService.getAdminRoomSeats(token, roomId);
       setSeats(data || []);
       setLayoutRows(data?.length ? buildLayoutRowsFromSeats(data) : buildLayoutRows(room, defaultSeatType));
       setSelectedSeat(null);
@@ -135,7 +135,7 @@ export default function AdminRoomsPanel({ ctx }) {
     if (!token) return;
     setIsLoading(true);
     try {
-      const data = await authApi.getAdminRooms(token);
+      const data = await adminService.getAdminRooms(token);
       setRooms(data || []);
       const nextId = (data || []).some((room) => room.id === preferredRoomId)
         ? preferredRoomId
@@ -207,8 +207,8 @@ export default function AdminRoomsPanel({ ctx }) {
         if (!token) return;
         try {
           const saved = selectedRoom
-            ? await authApi.updateAdminRoom(token, selectedRoom.id, payload)
-            : await authApi.createAdminRoom(token, payload);
+            ? await adminService.updateAdminRoom(token, selectedRoom.id, payload)
+            : await adminService.createAdminRoom(token, payload);
           addAuditLog(selectedRoom ? 'Cập nhật phòng chiếu' : 'Tạo phòng chiếu', saved.name);
           showToast(selectedRoom ? 'Đã cập nhật phòng chiếu.' : 'Đã tạo phòng chiếu.');
           await loadRooms(saved.id);
@@ -231,7 +231,7 @@ export default function AdminRoomsPanel({ ctx }) {
         const token = getAdminToken();
         if (!token) return;
         try {
-          const saved = await authApi.updateAdminRoomStatus(token, selectedRoom.id, nextStatus);
+          const saved = await adminService.updateAdminRoomStatus(token, selectedRoom.id, nextStatus);
           addAuditLog('Đổi trạng thái phòng chiếu', `${saved.name}: ${saved.status}`);
           showToast(nextStatus === 'ACTIVE' ? 'Đã mở lại phòng chiếu.' : 'Đã tạm ngừng phòng chiếu.');
           await loadRooms(saved.id);
@@ -300,8 +300,8 @@ export default function AdminRoomsPanel({ ctx }) {
             rows: normalizedRows.map(({ rawSeatNumbers, ...row }) => row)
           };
           const data = replacing
-            ? await authApi.replaceAdminRoomSeats(token, selectedRoom.id, payload)
-            : await authApi.createAdminRoomSeats(token, selectedRoom.id, payload);
+            ? await adminService.replaceAdminRoomSeats(token, selectedRoom.id, payload)
+            : await adminService.createAdminRoomSeats(token, selectedRoom.id, payload);
           setSeats(data || []);
           setLayoutRows(buildLayoutRowsFromSeats(data || []));
           setSelectedSeat(null);
@@ -369,7 +369,7 @@ export default function AdminRoomsPanel({ ctx }) {
         const token = getAdminToken();
         if (!token) return;
         try {
-          const saved = await authApi.updateAdminSeat(token, selectedSeat.id, seatForm);
+          const saved = await adminService.updateAdminSeat(token, selectedSeat.id, seatForm);
           await loadSeats(selectedRoom.id, selectedRoom);
           addAuditLog('Cập nhật ghế', `${saved.rowLabel}${saved.seatNumber}`);
           showToast(affectsCouple ? 'Đã cập nhật cả cặp ghế đôi.' : 'Đã cập nhật ghế.');
@@ -390,7 +390,7 @@ export default function AdminRoomsPanel({ ctx }) {
         const token = getAdminToken();
         if (!token) return;
         try {
-          const saved = await authApi.deactivateAdminSeat(token, selectedSeat.id);
+          const saved = await adminService.deactivateAdminSeat(token, selectedSeat.id);
           await loadSeats(selectedRoom.id, selectedRoom);
           addAuditLog('Ngừng sử dụng ghế', `${saved.rowLabel}${saved.seatNumber}`);
           showToast(isCoupleSeat ? 'Đã ngừng sử dụng cả cặp ghế đôi.' : 'Đã ngừng sử dụng ghế.');

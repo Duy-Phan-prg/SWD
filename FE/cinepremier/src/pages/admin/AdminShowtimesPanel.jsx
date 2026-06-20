@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, Layers, DollarSign,
   Play, PauseCircle, Ban, Check, X, Info, Zap
 } from 'lucide-react';
-import { authApi } from '../../services/authApi';
+import { adminService } from '../../services/adminService';
 
 /* ─── helpers ────────────────────────────────────────────── */
 const STATUS_META = {
@@ -371,7 +371,7 @@ export default function AdminShowtimesPanel({ ctx }) {
   useEffect(() => {
     const token = getAdminToken();
     if (!token) return;
-    authApi.getAdminRooms(token).then(data => {
+    adminService.getAdminRooms(token).then(data => {
       const list = Array.isArray(data) ? data : (data?.content || data?.items || []);
       setRooms(list);
     }).catch(() => { });
@@ -385,7 +385,7 @@ export default function AdminShowtimesPanel({ ctx }) {
     try {
       const params = { page: p, size: 10, ...filters };
       Object.keys(params).forEach(k => { if (!params[k]) delete params[k]; });
-      const data = await authApi.getAdminShowtimes(token, params);
+      const data = await adminService.getAdminShowtimes(token, params);
       const items = data?.content || data?.items || (Array.isArray(data) ? data : []);
       setShowtimes(items);
       setTotalPages(data?.totalPages || 1);
@@ -431,10 +431,10 @@ export default function AdminShowtimesPanel({ ctx }) {
           showToast?.('Suất chiếu đang mở bán không thể chỉnh sửa.', 'error');
           return;
         }
-        await authApi.updateAdminShowtime(token, editingId, payload);
+        await adminService.updateAdminShowtime(token, editingId, payload);
         showToast?.('Cập nhật suất chiếu thành công', 'success');
       } else {
-        await authApi.createAdminShowtime(token, payload);
+        await adminService.createAdminShowtime(token, payload);
         showToast?.('Tạo suất chiếu thành công', 'success');
       }
       setMode('list');
@@ -493,7 +493,7 @@ export default function AdminShowtimesPanel({ ctx }) {
 
     setSaving(true);
     try {
-      const result = await authApi.createAdminShowtimesBulk(token, payload);
+      const result = await adminService.createAdminShowtimesBulk(token, payload);
       const count = Array.isArray(result) ? result.length : '?';
       showToast?.(`Tạo thành công ${count} suất chiếu`, 'success');
       setMode('list');
@@ -512,7 +512,7 @@ export default function AdminShowtimesPanel({ ctx }) {
     const token = getAdminToken();
     if (!token) return;
     try {
-      await authApi.updateAdminShowtimeStatus(token, showtimeId, newStatus);
+      await adminService.updateAdminShowtimeStatus(token, showtimeId, newStatus);
       showToast?.('Cập nhật trạng thái thành công', 'success');
       fetchShowtimes(page);
     } catch (e) {
@@ -525,7 +525,7 @@ export default function AdminShowtimesPanel({ ctx }) {
     const token = getAdminToken();
     if (!token) return;
     try {
-      await authApi.deleteAdminShowtime(token, showtimeId);
+      await adminService.deleteAdminShowtime(token, showtimeId);
       showToast?.('Đã xóa suất chiếu', 'success');
       setConfirmDelete(null);
       fetchShowtimes(page);
@@ -588,7 +588,7 @@ export default function AdminShowtimesPanel({ ctx }) {
 
     setIsCopying(true);
     try {
-      await authApi.createAdminShowtime(token, payload);
+      await adminService.createAdminShowtime(token, payload);
       showToast?.('Đã copy suất chiếu sang ngày mới.', 'success');
       setCopySource(null);
       setCopyDate('');

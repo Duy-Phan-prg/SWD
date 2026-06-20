@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Check, Edit3, ImageUp, Plus, Search, Trash2, UserRound } from 'lucide-react';
-import { authApi } from '../../services/authApi';
+import { adminService } from '../../services/adminService';
 
 export default function AdminActorsPanel({ ctx }) {
   const {
@@ -26,7 +26,7 @@ export default function AdminActorsPanel({ ctx }) {
 
     setIsUploadingAvatar(true);
     try {
-      const uploaded = await authApi.uploadAdminImage(token, file, 'actors');
+      const uploaded = await adminService.uploadAdminImage(token, file, 'actors');
       updateField('avatarUrl', uploaded.url);
       showToast('Đã tải ảnh diễn viên lên Cloudinary.');
     } catch (error) {

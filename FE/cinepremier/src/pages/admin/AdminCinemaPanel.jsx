@@ -3,7 +3,7 @@ import {
   Building2, CheckCircle2, Globe2, MapPin,
   Phone, Power, RefreshCw, Save, ShieldCheck
 } from 'lucide-react';
-import { authApi } from '../../services/authApi';
+import { adminService } from '../../services/adminService';
 
 const emptyForm = {
   name: '',
@@ -36,7 +36,7 @@ export default function AdminCinemaPanel({ ctx }) {
     if (!token) return;
     setIsLoading(true);
     try {
-      syncForm(await authApi.getAdminCinema(token));
+      syncForm(await adminService.getAdminCinema(token));
     } catch (error) {
       if (error.status === 404) {
         syncForm(null);
@@ -69,7 +69,7 @@ export default function AdminCinemaPanel({ ctx }) {
         phone: form.phone.trim(),
         status: form.status
       };
-      const saved = await authApi.updateAdminCinema(token, payload);
+      const saved = await adminService.updateAdminCinema(token, payload);
       syncForm(saved);
       addAuditLog('Cập nhật rạp chiếu', saved.name);
       showToast('Đã cập nhật thông tin rạp.');
@@ -86,7 +86,7 @@ export default function AdminCinemaPanel({ ctx }) {
     if (!token) return;
     setIsSaving(true);
     try {
-      const saved = await authApi.updateAdminCinemaStatus(token, status);
+      const saved = await adminService.updateAdminCinemaStatus(token, status);
       syncForm(saved);
       addAuditLog('Đổi trạng thái rạp', `${saved.name}: ${saved.status}`);
       showToast(`Đã chuyển rạp sang trạng thái ${saved.status === 'ACTIVE' ? 'đang hoạt động' : 'tạm ẩn'}.`);
