@@ -885,7 +885,7 @@ export default function BookingView() {
 
                 </button>
                 <p className="text-[9px] text-zinc-600 text-center font-mono uppercase tracking-wider">
-                  Bạn sẽ được chuyển sang cổng VNPAY · Ghế giữ trong 10 phút
+                  Bạn sẽ được chuyển sang cổng VNPAY · Ghế giữ trong 2 phút
                 </p>
               </div>
 

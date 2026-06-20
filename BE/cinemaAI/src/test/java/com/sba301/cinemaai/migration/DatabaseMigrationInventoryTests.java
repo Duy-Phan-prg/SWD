@@ -56,8 +56,6 @@ class DatabaseMigrationInventoryTests {
                 "showtimes",
                 "ticket_pricing_rules",
                 "ticket_combos",
-                "ai_analyses",
-                "ai_emotion_segments",
                 "bookings",
                 "booking_seats",
                 "booking_tickets",

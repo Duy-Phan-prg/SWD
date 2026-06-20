@@ -24,7 +24,7 @@ export default function ExploreView() {
   const onPageChange = (page) => setMoviePagination(prev => ({ ...prev, page: page - 1 }));
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onBookMovie = (movie) => navigate(`/movies/${movie.id}/book`);
-  const [sortBy, setSortBy] = useState('aiOverall'); // aiOverall, newest, duration
+  const [sortBy, setSortBy] = useState('rating'); // rating, newest, duration
   const [localPage, setLocalPage] = useState(1);
   const itemsPerPage = 8;
   const currentPage = pagination ? (Number(pagination.page) || 0) + 1 : localPage;
@@ -47,9 +47,9 @@ export default function ExploreView() {
 
     // 2. Sorting
     result.sort((a, b) => {
-      if (sortBy === 'aiOverall') {
-        const aRating = a.ratings?.aiOverall || 0;
-        const bRating = b.ratings?.aiOverall || 0;
+      if (sortBy === 'rating') {
+        const aRating = a.ratings?.overall || 0;
+        const bRating = b.ratings?.overall || 0;
         return bRating - aRating;
       }
       if (sortBy === 'newest') {
@@ -94,7 +94,7 @@ export default function ExploreView() {
           </h1>
         </div>
         <p className="text-xs sm:text-sm text-neutral-400 font-sans leading-relaxed max-w-2xl">
-          Trải nghiệm vũ trụ điện ảnh với hệ thống tối ưu hóa và đo lường xung động AI, giúp khớp tần số điện ảnh lý tưởng cho thị giác của bạn.
+          Trải nghiệm vũ trụ điện ảnh với bộ lọc phim, lịch chiếu và gợi ý theo gu xem của bạn.
         </p>
       </div>
 
@@ -155,7 +155,7 @@ export default function ExploreView() {
               className="border border-white/10 bg-black px-4 py-2 text-[10px] uppercase font-sans tracking-widest text-white focus:border-white focus:outline-none"
               id="sort-select"
             >
-              <option value="aiOverall">Điểm AI Rating</option>
+              <option value="rating">Điểm đánh giá</option>
               <option value="newest">Mới nhất</option>
               <option value="duration">Thời lượng</option>
             </select>

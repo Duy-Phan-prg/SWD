@@ -30,11 +30,11 @@ export default function MovieCard({ movie, onSelect, onBook }) {
         {/* Dark overlay backdrop on hover */}
         <div className="absolute inset-0 bg-neutral-950/30 group-hover:bg-neutral-950/75 transition-all duration-300" />
 
-        {/* AI Rating Badge */}
+        {/* Rating Badge */}
         {isBookable && (
           <div className="absolute left-3 top-3 flex items-center space-x-1.5 bg-black border border-white/20 px-2 py-1 text-[10px] font-sans tracking-[0.1em] uppercase text-white">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-            <span>{movie.ratings.aiOverall} AI Rating</span>
+            <span>{movie.ratings?.overall || '--'} Rating</span>
           </div>
         )}
 

@@ -51,11 +51,10 @@ password_reset_tokens, email_verification_tokens, pending_registrations,
 phone_verification_tokens, staff_profiles, staff_shifts
 ```
 
-### Movie catalog và AI
+### Movie catalog và recommendation
 ```text
 genres, movies, movie_genres, actors, movie_actors,
-trailer_interactions, user_preference_profiles, user_cohort_preferences,
-ai_analyses, ai_emotion_segments
+trailer_interactions, user_preference_profiles, user_cohort_preferences
 ```
 
 ### Cinema, room, seat và showtime

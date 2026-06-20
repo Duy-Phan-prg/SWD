@@ -211,7 +211,7 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
   const status = normalizeMovieStatus(movie) || normalizeMovieStatus(fallback);
   const id = movie.id ?? movie.movieId ?? movie.slug ?? movie.code ?? fallback.id;
   const ratings = movie.ratings || {};
-  const aiOverall = Number(movie.aiOverall ?? movie.rating ?? movie.averageRating ?? ratings.aiOverall ?? fallback.ratings?.aiOverall ?? 8.8);
+  const overall = Number(movie.rating ?? movie.averageRating ?? ratings.overall ?? fallback.ratings?.overall ?? 8.8);
   const statusFromFlags = (movie.isUpcoming ?? fallback.isUpcoming) ? 'UPCOMING' : 'NOW_SHOWING';
   const effectiveStatus = status || statusFromFlags;
   const isUpcoming = ['UPCOMING', 'COMING_SOON', 'SCHEDULED', 'DRAFT'].includes(effectiveStatus);
@@ -251,14 +251,13 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     ratings: {
       ...fallback.ratings,
       ...ratings,
-      aiOverall,
-      aiStory: Number(movie.aiStory ?? ratings.aiStory ?? fallback.ratings?.aiStory ?? Math.max(0, aiOverall - 0.2)),
-      aiActing: Number(movie.aiActing ?? ratings.aiActing ?? fallback.ratings?.aiActing ?? Math.max(0, aiOverall - 0.3)),
-      aiVisual: Number(movie.aiVisual ?? ratings.aiVisual ?? fallback.ratings?.aiVisual ?? aiOverall),
-      aiAudio: Number(movie.aiAudio ?? ratings.aiAudio ?? fallback.ratings?.aiAudio ?? Math.max(0, aiOverall - 0.1))
+      overall,
+      story: Number(ratings.story ?? fallback.ratings?.story ?? Math.max(0, overall - 0.2)),
+      acting: Number(ratings.acting ?? fallback.ratings?.acting ?? Math.max(0, overall - 0.3)),
+      visual: Number(ratings.visual ?? fallback.ratings?.visual ?? overall),
+      audio: Number(ratings.audio ?? fallback.ratings?.audio ?? Math.max(0, overall - 0.1))
     },
-    aiAnalysisTags: movie.aiAnalysisTags || movie.tags || fallback.aiAnalysisTags || [],
-    emotionalWaveform: movie.emotionalWaveform || fallback.emotionalWaveform || [20, 40, 60, 50, 80, 65, 75, 85, 90, 95, 60, 30],
+    tags: movie.tags || fallback.tags || [],
     raw: movie
   };
 };

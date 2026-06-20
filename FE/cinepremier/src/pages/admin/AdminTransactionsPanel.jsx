@@ -11,12 +11,6 @@ export default function AdminTransactionsPanel({ ctx }) {
   const {
     activeTab,
     setActiveTab,
-    selectedAnalysisMovieId,
-    setSelectedAnalysisMovieId,
-    isReanalyzing,
-    setIsReanalyzing,
-    analysisScrambleOffset,
-    setAnalysisScrambleOffset,
     activeChartPoint,
     setActiveChartPoint,
     searchQuery,

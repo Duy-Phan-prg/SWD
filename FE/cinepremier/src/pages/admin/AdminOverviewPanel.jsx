@@ -11,12 +11,6 @@ export default function AdminOverviewPanel({ ctx }) {
   const {
     activeTab,
     setActiveTab,
-    selectedAnalysisMovieId,
-    setSelectedAnalysisMovieId,
-    isReanalyzing,
-    setIsReanalyzing,
-    analysisScrambleOffset,
-    setAnalysisScrambleOffset,
     activeChartPoint,
     setActiveChartPoint,
     searchQuery,
@@ -324,7 +318,7 @@ export default function AdminOverviewPanel({ ctx }) {
                         <div className="flex flex-col justify-center bg-amber-950/5 border border-amber-500/10 p-3 text-[11px] leading-relaxed text-neutral-300">
                           <div className="flex items-center space-x-1 mb-1 font-bold text-amber-400">
                             <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                            <span>KIỂM TOÁN TƯ VẤN CỦA TRÍ TUỆ AI</span>
+                            <span>GỢI Ý VẬN HÀNH RẠP</span>
                           </div>
                           Điểm trũng doanh thu rơi vào <span className="underline font-bold text-white">Thứ Hai đầu tuần</span>. Khuyến nghị thiết lập suất chiếu ưu đãi <b>"Cinephile Night" sau 21h</b> để khai thác hạ tầng nhàn rỗi thu lợi nhuận rạp tối đa.
                         </div>

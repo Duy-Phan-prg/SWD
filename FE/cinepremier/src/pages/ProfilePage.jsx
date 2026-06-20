@@ -690,7 +690,7 @@ export default function ProfileView() {
                     🔍 Sở thích
                   </span>
                   <span className="text-[8px] uppercase tracking-wider text-neutral-600 bg-neutral-950 border border-white/5 px-2 py-0.5">
-                    Xông Chiếu AI
+                    Gu xem phim
                   </span>
                 </div>
 

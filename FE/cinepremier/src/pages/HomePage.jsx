@@ -49,8 +49,8 @@ const loadYoutubeIframeApi = () => {
 export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [] }) {
   const [selectedMood, setSelectedMood] = useState('#Đỉnh_Cao_Thị_Giác');
   const [userPrompt, setUserPrompt] = useState('');
-  const [aiResponse, setAiResponse] = useState(null);
-  const [loadingAI, setLoadingAI] = useState(false);
+  const [suggestionResponse, setSuggestionResponse] = useState(null);
+  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
 
   // Filter movies for "Now Playing" and "Upcoming"
   const sourceMovies = Array.isArray(moviesList) ? moviesList : [];
@@ -164,7 +164,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
     setCurrentHeroIndex((prev) => (prev === heroMovies.length - 1 ? 0 : prev + 1));
   };
 
-  // AI Mood analysis tags
+  // Mood tags
   const moodTags = [
     { tag: '#Đỉnh_Cao_Thị_Giác', desc: 'Mãn nhãn hình ảnh, hiệu ứng đỉnh cao kịch liệt' },
     { tag: '#Căng_Não', desc: 'Tình tiết hack não, giải mật mã lượng tử bất ngờ' },
@@ -178,16 +178,16 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
   const findRecommendedMovie = () => recommendedMovie || publicMovies[0] || null;
 
-  const handleAISuggest = (e) => {
+  const handleSuggest = (e) => {
     e.preventDefault();
     if (!userPrompt.trim()) return;
 
-    setLoadingAI(true);
-    setAiResponse(null);
+    setLoadingSuggestion(true);
+    setSuggestionResponse(null);
 
     setTimeout(() => {
       const liveRecommendedMovie = findRecommendedMovie();
-      setAiResponse({
+      setSuggestionResponse({
         reply: liveRecommendedMovie
           ? `Dựa trên mô tả của bạn, CinePremier gợi ý "${liveRecommendedMovie.title}" từ danh sách phim hiện có trong hệ thống.`
           : 'Chưa có phim khả dụng từ hệ thống để gợi ý. Vui lòng kiểm tra lại dữ liệu phim trong backend.',
@@ -195,7 +195,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
         recommendedMovie: liveRecommendedMovie,
         matchRate: liveRecommendedMovie ? 96 : 0
       });
-      setLoadingAI(false);
+      setLoadingSuggestion(false);
     }, 500);
   };
 
@@ -367,7 +367,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
                 <div className="absolute right-3 top-3 bg-black border border-white/20 text-white font-sans text-[10px] uppercase tracking-wider px-2 py-1">
-                  ⭐ {heroMovie.ratings?.aiOverall || '--'} AI Rating
+                  ⭐ {heroMovie.ratings?.overall || '--'} Rating
                 </div>
 
                 {/* Micro animation to indicate background video control */}
@@ -419,27 +419,27 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
         </div>
       </section>
 
-      {/* 3. AI SPECIAL HIGHLIGHTS & DYNAMIC ANALYSIS */}
-      <section className="bg-[#0A0A0A] border-y border-white/5 py-16 px-4 sm:px-6 lg:px-8" id="ai-highlights-section">
+      {/* 3. PERSONALIZED HIGHLIGHTS */}
+      <section className="bg-[#0A0A0A] border-y border-white/5 py-16 px-4 sm:px-6 lg:px-8" id="personalized-highlights-section">
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
-            {/* Left Box: Mood Selectors & AI Analysis Display */}
+            {/* Left Box: Mood Selectors & Recommendations */}
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center space-x-1.5 border border-white/10 bg-black px-3 py-1 text-[9px] text-neutral-400 tracking-[0.2em] uppercase font-sans">
                 <Sparkles className="h-3 w-3 text-white" />
-                <span>AI SUGGESTED CHIPS</span>
+                <span>GỢI Ý THEO TÂM TRẠNG</span>
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-serif font-light text-white tracking-wide leading-tight">
-                Thuật Toán Khớp Nhịp Tim <br />
+                Gợi Ý Khớp Nhịp Tim <br />
                 <span className="font-serif italic text-neutral-400">
-                  CinePremier AI Selector
+                  CinePremier Mood Selector
                 </span>
               </h2>
 
               <p className="text-sm text-neutral-400 leading-relaxed max-w-xl font-sans">
-                Lưu chuyển tâm trạng nghệ thuật hoặc nhập dữ kiện điện ảnh mong muốn. Không gian trí tuệ rạp chiếu sẽ thiết lập tần phổ nhạy bén và đề xuất tấm vé hoàn mỹ nhất.
+                Chọn tâm trạng nghệ thuật hoặc nhập cảm giác xem phim mong muốn. CinePremier sẽ đề xuất một lựa chọn phù hợp từ danh sách phim hiện có.
               </p>
 
               {/* Mood Filter chips */}
@@ -449,9 +449,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                     key={mt.tag}
                     onClick={() => {
                       setSelectedMood(mt.tag);
-                      setAiResponse(null);
+                      setSuggestionResponse(null);
                     }}
-                    className={`px-4 py-2 text-[10px] font-sans tracking-[0.1em] uppercase transition-all duration-300 ${selectedMood === mt.tag && !aiResponse
+                    className={`px-4 py-2 text-[10px] font-sans tracking-[0.1em] uppercase transition-all duration-300 ${selectedMood === mt.tag && !suggestionResponse
                       ? 'bg-white text-black border border-white'
                       : 'bg-black border border-white/10 text-neutral-500 hover:text-white hover:border-white/30'
                       }`}
@@ -462,7 +462,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
               </div>
 
               {/* Dynamic recommendation card */}
-              {!aiResponse && recommendedMovie && (
+              {!suggestionResponse && recommendedMovie && (
                 <div className="relative bg-black border border-white/10 p-6 flex flex-col md:flex-row gap-6 hover:border-white/20 transition-all duration-300">
                   <div className="w-full md:w-32 aspect-[2/3] overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
                     <img
@@ -508,49 +508,49 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 </div>
               )}
 
-              {/* AI response box after custom typing */}
-              {aiResponse && (
+              {/* Suggestion response box after custom typing */}
+              {suggestionResponse && (
                 <div className="bg-black border border-white/25 p-6 space-y-4 transition-all duration-300">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-white font-sans text-[10px] uppercase tracking-[0.2em]">
                       <Sparkles className="h-3.5 w-3.5 text-white" />
-                      <span>Ý THỨC NHÂN TẠO CINEPHILE</span>
+                      <span>GỢI Ý CINEPHILE</span>
                     </div>
                     <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/20 px-2 py-0.5 border border-emerald-500/20 flex items-center gap-1">
-                      ✓ KHỚP {aiResponse.matchRate}%
+                      ✓ KHỚP {suggestionResponse.matchRate}%
                     </span>
                   </div>
 
                   <p className="text-xs text-neutral-300 leading-relaxed italic border-l border-white/30 pl-3.5 font-sans">
-                    "{aiResponse.reply}"
+                    "{suggestionResponse.reply}"
                   </p>
 
                   {/* recommended detailed card from custom prompt */}
-                  {aiResponse.recommendedMovie && (
+                  {suggestionResponse.recommendedMovie && (
                     <div className="flex items-center space-x-4 bg-neutral-950 p-4 border border-white/5">
                       <img
-                        src={aiResponse.recommendedMovie.posterUrl}
+                        src={suggestionResponse.recommendedMovie.posterUrl}
                         alt="Recom"
                         className="h-16 w-11 object-cover border border-white/5"
                         referrerPolicy="no-referrer"
                       />
                       <div className="flex-1 min-w-0">
                         <h5 className="text-xs font-serif text-white truncate italic">
-                          {aiResponse.recommendedMovie.title}
+                          {suggestionResponse.recommendedMovie.title}
                         </h5>
                         <p className="text-[9px] text-neutral-500 uppercase tracking-widest truncate">
-                          {aiResponse.recommendedMovie.englishTitle}
+                          {suggestionResponse.recommendedMovie.englishTitle}
                         </p>
                         <button
-                          onClick={() => onSelectMovie(aiResponse.recommendedMovie.id)}
+                          onClick={() => onSelectMovie(suggestionResponse.recommendedMovie.id)}
                           className="text-[9px] uppercase tracking-widest text-neutral-400 hover:text-white font-sans mt-2 block hover:underline"
                         >
-                          XEM CHI TIẾT AI →
+                          XEM CHI TIẾT →
                         </button>
                       </div>
                       <button
                         onClick={() => {
-                          if (aiResponse.recommendedMovie) onBookMovie(aiResponse.recommendedMovie);
+                          if (suggestionResponse.recommendedMovie) onBookMovie(suggestionResponse.recommendedMovie);
                         }}
                         className="bg-white text-black px-4 py-2 text-[9px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition"
                       >
@@ -569,38 +569,38 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 <div className="flex items-center space-x-2 border-b border-white/5 pb-3">
                   <MessageSquare className="h-4 w-4 text-white" />
                   <h3 className="text-[10px] font-sans uppercase tracking-[0.2em] text-neutral-400">
-                    Phân Tích Cảm Xúc Phim
+                    Gợi Ý Theo Cảm Xúc
                   </h3>
                 </div>
 
                 <p className="text-xs text-neutral-500 leading-relaxed font-sans">
-                  Điền tần sóng tâm trạng của bạn đêm nay, ví dụ: <i>"Tôi đang mỏi mệt, cần tìm sự thảnh thơi nhẹ lòng"</i> hoặc <i>"Thèm rượt đuổi giật gân bùng nổ rạp"</i>.
+                  Điền tâm trạng của bạn đêm nay, ví dụ: <i>"Tôi đang mỏi mệt, cần tìm sự thảnh thơi nhẹ lòng"</i> hoặc <i>"Thèm rượt đuổi giật gân bùng nổ rạp"</i>.
                 </p>
 
-                <form onSubmit={handleAISuggest} className="space-y-4">
+                <form onSubmit={handleSuggest} className="space-y-4">
                   <textarea
                     rows={4}
                     value={userPrompt}
                     onChange={(e) => setUserPrompt(e.target.value)}
                     placeholder="Mô tả tâm trạng mong muốn của bạn..."
                     className="w-full border border-white/10 bg-neutral-950 p-3 text-xs text-white placeholder-neutral-700 font-sans focus:border-white focus:outline-none"
-                    id="ai-mood-textarea"
+                    id="mood-textarea"
                   />
 
                   <button
                     type="submit"
-                    disabled={loadingAI || !userPrompt.trim()}
+                    disabled={loadingSuggestion || !userPrompt.trim()}
                     className="w-full flex items-center justify-center space-x-2 bg-white text-black py-3.5 text-[10px] uppercase tracking-[0.2em] font-sans font-bold hover:bg-black hover:text-white border border-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black transition-all"
-                    id="ai-analyze-submit"
+                    id="mood-suggest-submit"
                   >
-                    <Sparkles className={`h-3.5 w-3.5 ${loadingAI ? 'animate-spin' : ''}`} />
-                    <span>{loadingAI ? 'AI ĐANG PHÂN TÍCH...' : 'PHÂN TÍCH KHỚP VÉ'}</span>
+                    <Sparkles className={`h-3.5 w-3.5 ${loadingSuggestion ? 'animate-spin' : ''}`} />
+                    <span>{loadingSuggestion ? 'ĐANG GỢI Ý...' : 'GỢI Ý KHỚP VÉ'}</span>
                   </button>
                 </form>
 
                 <div className="text-[9px] text-neutral-600 flex items-center gap-1.5 justify-center font-sans uppercase tracking-wider">
                   <HelpCircle className="h-3 w-3" />
-                  <span>Interactive Neural Cinematic Engine</span>
+                  <span>CinePremier Mood Recommendation</span>
                 </div>
               </div>
             </div>
@@ -647,7 +647,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 </div>
 
                 <div className="flex items-center justify-between text-[9px] uppercase tracking-wide text-neutral-500 pt-3 border-t border-white/5 mt-3">
-                  <span>AI DESIRE: 96%</span>
+                  <span>MỨC QUAN TÂM: 96%</span>
                   <span className="text-white hover:underline underline-offset-4">XEM TÓM TẮT →</span>
                 </div>
               </div>

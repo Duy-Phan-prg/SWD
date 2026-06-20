@@ -13,12 +13,6 @@ export default function AdminFoodsPanel({ ctx }) {
   const {
     activeTab,
     setActiveTab,
-    selectedAnalysisMovieId,
-    setSelectedAnalysisMovieId,
-    isReanalyzing,
-    setIsReanalyzing,
-    analysisScrambleOffset,
-    setAnalysisScrambleOffset,
     activeChartPoint,
     setActiveChartPoint,
     searchQuery,
