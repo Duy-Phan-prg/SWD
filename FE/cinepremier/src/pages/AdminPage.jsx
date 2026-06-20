@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Tags
+  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags
 } from 'lucide-react';
 import { authApi, expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../services/authApi';
 import AdminOverviewPanel from './admin/AdminOverviewPanel';
@@ -14,7 +14,6 @@ import AdminActorsPanel from './admin/AdminActorsPanel';
 import AdminFoodsPanel from './admin/AdminFoodsPanel';
 import AdminShowtimesPanel from './admin/AdminShowtimesPanel';
 import AdminTransactionsPanel from './admin/AdminTransactionsPanel';
-import AdminAiAnalysisPanel from './admin/AdminAiAnalysisPanel';
 import AdminUsersPanel from './admin/AdminUsersPanel';
 import AdminCinemaPanel from './admin/AdminCinemaPanel';
 import AdminRoomsPanel from './admin/AdminRoomsPanel';
@@ -22,7 +21,7 @@ import AdminRoomsPanel from './admin/AdminRoomsPanel';
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies', 'foods'].includes(section)) return 'movies';
   if (['rooms', 'showtimes', 'transactions'].includes(section)) return 'cinema';
-  if (['users', 'ai-analysis'].includes(section)) return 'system';
+  if (['users'].includes(section)) return 'system';
   return null;
 };
 
@@ -36,8 +35,7 @@ const ADMIN_SECTIONS = new Set([
   'showtimes',
   'transactions',
   'users',
-  'cinema',
-  'ai-analysis'
+  'cinema'
 ]);
 
 const normalizeAdminSection = (section) => (ADMIN_SECTIONS.has(section) ? section : 'overview');
@@ -57,17 +55,8 @@ export default function AdminDashboard({
   isAdmin = false,
   currentUser = null
 }) {
-  const [activeTab, setActiveTab] = useState(normalizeAdminSection(initialSection)); // 'overview' | 'movies' | 'genres' | 'foods' | 'showtimes' | 'transactions' | 'users' | 'ai-analysis'
+  const [activeTab, setActiveTab] = useState(normalizeAdminSection(initialSection)); // 'overview' | 'movies' | 'genres' | 'foods' | 'showtimes' | 'transactions' | 'users'
   const [openNavGroup, setOpenNavGroup] = useState(getNavGroup(normalizeAdminSection(initialSection)));
-  const [selectedAnalysisMovieId, setSelectedAnalysisMovieId] = useState(moviesList[0]?.id || '');
-  const [isReanalyzing, setIsReanalyzing] = useState(false);
-  const [analysisScrambleOffset, setAnalysisScrambleOffset] = useState({
-    overall: 0,
-    story: 0,
-    acting: 0,
-    visual: 0,
-    audio: 0
-  });
   const [activeChartPoint, setActiveChartPoint] = useState(6);
 
   // Create state for movies so the dashboard can add/update them
@@ -1071,16 +1060,15 @@ export default function AdminDashboard({
       releaseDate: formData.releaseDate,
       director: formData.director || 'Chưa rõ',
       ratings: {
-        aiOverall: 9.0,
-        aiStory: 9.0,
-        aiActing: 9.0,
-        aiVisual: 9.0,
-        aiAudio: 9.0
+        overall: 9.0,
+        story: 9.0,
+        acting: 9.0,
+        visual: 9.0,
+        audio: 9.0
       },
-      aiAnalysisTags: ['Được_Đề_Xuất', 'Phát_Hành_Mới'],
+      tags: ['Được_Đề_Xuất', 'Phát_Hành_Mới'],
       isHot: formData.isHot,
-      isUpcoming: formData.isUpcoming,
-      emotionalWaveform: [30, 45, 60, 40, 80, 90, 50, 70, 85, 95]
+      isUpcoming: formData.isUpcoming
     };
 
     setMoviesList([newMovieObj, ...moviesList]);
@@ -1225,12 +1213,6 @@ export default function AdminDashboard({
   const adminCtx = {
     activeTab,
     setActiveTab,
-    selectedAnalysisMovieId,
-    setSelectedAnalysisMovieId,
-    isReanalyzing,
-    setIsReanalyzing,
-    analysisScrambleOffset,
-    setAnalysisScrambleOffset,
     activeChartPoint,
     setActiveChartPoint,
     searchQuery,
@@ -1382,8 +1364,7 @@ export default function AdminDashboard({
     transactions: AdminTransactionsPanel,
     users: AdminUsersPanel,
     cinema: AdminCinemaPanel,
-    rooms: AdminRoomsPanel,
-    'ai-analysis': AdminAiAnalysisPanel
+    rooms: AdminRoomsPanel
   };
 
   const ActiveAdminPanel = adminPanels[activeTab] || AdminOverviewPanel;
@@ -1635,19 +1616,6 @@ export default function AdminDashboard({
                     {activeTab === 'users' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
-                  <button
-                    onClick={() => { playPulseSound(520, 'sine', 0.07); changeAdminSection('ai-analysis'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'ai-analysis'
-                      ? 'border-purple-500/35 bg-purple-500/10 text-purple-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
-                      }`}
-                  >
-                    <span className="flex items-center space-x-2.5">
-                      <Sparkles className="h-4 w-4 shrink-0 text-purple-400" />
-                      <span>PHÂN TÍCH AI PHIM</span>
-                    </span>
-                    {activeTab === 'ai-analysis' && <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-pulse"></span>}
-                  </button>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -1195,7 +1195,7 @@ export default function AuthModal({
                     {/* Favorite Genre Selection */}
                     <div className="space-y-1.5">
                       <span className="block text-[10px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
-                        Gu phim yêu thích áp dụng tổ hợp Gợi ý AI
+                        Gu phim yêu thích để nhận gợi ý phù hợp
                       </span>
                       <div className="flex flex-wrap gap-1.5" id="genre-box">
                         {GENRE_PRESETS.map((genre) => (

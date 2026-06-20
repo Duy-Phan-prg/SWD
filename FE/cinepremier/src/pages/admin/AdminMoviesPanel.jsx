@@ -12,12 +12,6 @@ export default function AdminMoviesPanel({ ctx }) {
   const {
     activeTab,
     setActiveTab,
-    selectedAnalysisMovieId,
-    setSelectedAnalysisMovieId,
-    isReanalyzing,
-    setIsReanalyzing,
-    analysisScrambleOffset,
-    setAnalysisScrambleOffset,
     activeChartPoint,
     setActiveChartPoint,
     searchQuery,

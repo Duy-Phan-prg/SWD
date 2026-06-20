@@ -82,7 +82,7 @@ CinemaAI / CinePremier là hệ thống web đặt vé xem phim trực tuyến c
 | **GUEST** | Xem phim, thể loại, diễn viên, rạp, suất chiếu, ghế, đồ ăn công khai | **ĐÃ HOÀN THÀNH** |
 | **CUSTOMER** | Quản lý hồ sơ, wishlist, booking, thanh toán, vé, loyalty, recommendation | **HOÀN THÀNH MỘT PHẦN** |
 | **STAFF** | Check-in vé tại rạp | **HOÀN THÀNH MỘT PHẦN** |
-| **ADMIN** | Quản lý phim, diễn viên, thể loại, rạp, phòng, ghế, suất chiếu, tài khoản, booking và AI | **HOÀN THÀNH MỘT PHẦN** |
+| **ADMIN** | Quản lý phim, diễn viên, thể loại, rạp, phòng, ghế, suất chiếu, tài khoản và booking | **HOÀN THÀNH MỘT PHẦN** |
 | **SYSTEM** | Tự động giải phóng hold hết hạn, cập nhật trạng thái nền, cộng/hoàn điểm loyalty, tạo notification theo sự kiện | **HOÀN THÀNH MỘT PHẦN** |
 
 Quy tắc RBAC nghiệp vụ:
@@ -136,10 +136,7 @@ PENDING_PAYMENT
 
 PAID
   |-- staff check-in -------------> USED
-  |-- yêu cầu hoàn tiền ----------> REFUND_REQUESTED
-
-REFUND_REQUESTED
-  |-- admin xác nhận -------------> REFUNDED
+  |-- admin hủy suất do sự cố ----> REFUNDED
 ```
 
 **Suất chiếu**
@@ -175,7 +172,6 @@ PENDING --> SUCCESS
 | Cinema | `Cinema`, `Room`, `SeatRow`, `Seat`, `Showtime` |
 | Commerce | `Booking`, `BookingSeat`, `BookingTicket`, `BookingFoodItem`, `Payment` |
 | Loyalty/engagement | `LoyaltyPoint`, `Notification`, `TrailerInteraction`, `UserPreferenceProfile` |
-| AI | `AIAnalysis`, `AIEmotionSegment` |
 | Operations | `StaffProfile`, `StaffShift`, `UploadedFile` |
 
 ---
@@ -196,7 +192,7 @@ PENDING --> SUCCESS
 
 | ID | Yêu cầu | Trạng thái | Ghi chú |
 |---|---|---|---|
-| DB-01 | Có schema cho các module chính | **ĐÃ HOÀN THÀNH** | Entity bao phủ auth, movie, cinema, booking, payment, loyalty, review, notification và AI. |
+| DB-01 | Có schema cho các module chính | **ĐÃ HOÀN THÀNH** | Entity bao phủ auth, movie, cinema, booking, payment, loyalty, review và notification. |
 | DB-02 | Migration có version | **HOÀN THÀNH MỘT PHẦN** | Có `V1` đến `V5`, nhưng Flyway đang tắt. |
 | DB-03 | Migration tương thích database runtime | **CHƯA THỰC HIỆN** | Runtime dùng PostgreSQL nhưng migration nền dùng cú pháp SQL Server như `dbo`, `IDENTITY`, `NVARCHAR`. |
 | DB-04 | Seed role, admin và cấu hình rạp cơ bản | **ĐÃ HOÀN THÀNH** | Không seed phim hoặc suất chiếu mẫu vào dữ liệu runtime. |
@@ -262,12 +258,12 @@ Lưu ý nghiệp vụ quản lý phim: Nếu phim đã qua ngày phát hành, AD
 | SHOW-03 | Admin tạo suất chiếu đơn                                                                         | Có | Có | **ĐÃ HOÀN THÀNH** |
 | SHOW-04 | Admin tạo bulk suất chiếu                                                                        | Có | Có | **ĐÃ HOÀN THÀNH** |
 | SHOW-05 | Kiểm tra xung đột phòng và thời gian                                                             | Có | Hiển thị kết quả từ BE | **ĐÃ HOÀN THÀNH** |
-| SHOW-06 | Admin cập nhật trạng thái và hủy suất khi chưa có booking | Có | Có | **ĐÃ HOÀN THÀNH** |
-| SHOW-07 | Chặn hủy suất nếu đã có bất kỳ booking nào | Có kiểm tra nghiệp vụ | Hiển thị lỗi từ BE | **ĐÃ HOÀN THÀNH** |
+| SHOW-06 | Admin cập nhật trạng thái và hủy suất do sự cố rạp | Cần đồng bộ để cho phép hủy suất đã bán vé | Cần hiển thị cảnh báo refund wallet tự động | **HOÀN THÀNH MỘT PHẦN** |
+| SHOW-07 | Khi admin hủy suất đã bán vé, hệ thống tự notification, hoàn tiền vào wallet và thu hồi loyalty | Chưa có luồng tự động đầy đủ | Chưa có UI xác nhận đầy đủ | **CHƯA THỰC HIỆN** |
 | SHOW-08 | Scheduler tự chuyển `SCHEDULED -> OPEN -> COMPLETED`                                             | Chưa có | Chưa có | **CHƯA THỰC HIỆN** |
 
 Lưu ý: code hiện dùng trạng thái suất chiếu `SCHEDULED`, `OPEN`, `CANCELLED`, `COMPLETED`; không dùng `NOW_SHOWING`.
-Lưu ý nghiệp vụ: Admin chỉ được hủy suất chiếu khi suất đó chưa có booking. Nếu đã phát sinh booking ở bất kỳ trạng thái nào cần xử lý thủ công booking trước, sau đó mới xem xét hủy theo quy định vận hành.
+Lưu ý nghiệp vụ: CUSTOMER không được yêu cầu hoàn tiền sau khi đã mua vé. Admin chỉ hủy suất chiếu đã bán vé khi có sự cố từ rạp; khi admin xác nhận hủy, hệ thống tự động gửi notification, hoàn tiền vào wallet của CUSTOMER và thu hồi/trừ loyalty đã cộng từ booking đó.
 
 ## 5.7 Giá vé
 
@@ -294,7 +290,7 @@ Lưu ý nghiệp vụ: Admin chỉ được hủy suất chiếu khi suất đó
 | ID | Yêu cầu | BE | FE | Tổng thể |
 |---|---|---|---|---|
 | BOOK-01 | Chọn suất chiếu và tải seat map | Có | Có | **ĐÃ HOÀN THÀNH** |
-| BOOK-02 | Hold nhiều ghế trong 10 phút | Có | Có | **ĐÃ HOÀN THÀNH** |
+| BOOK-02 | Hold nhiều ghế trong 2 phút | Có | Có | **ĐÃ HOÀN THÀNH** |
 | BOOK-03 | Chặn ghế đã HOLDING/BOOKED/CHECKED_IN | Có kiểm tra | Có phản hồi lỗi | **ĐÃ HOÀN THÀNH** |
 | BOOK-04 | Database lock chống hai request giữ cùng ghế | Chưa thấy pessimistic lock/unique active constraint | Không áp dụng | **CHƯA THỰC HIỆN** |
 | BOOK-05 | Tạo booking từ hold | Có | Có | **ĐÃ HOÀN THÀNH** |
@@ -305,8 +301,8 @@ Lưu ý nghiệp vụ: Admin chỉ được hủy suất chiếu khi suất đó
 | BOOK-10 | Realtime cập nhật trạng thái ghế | Chưa có | Chưa có | **CHƯA THỰC HIỆN** |
 
 Rủi ro hiện tại: quy trình hold chạy trong transaction nhưng chưa có database row lock hoặc ràng buộc duy nhất đảm bảo tuyệt đối khi hai request đồng thời giữ cùng một ghế.
-Quy tắc ranh giới GUEST/CUSTOMER: GUEST được xem phim, suất chiếu và seat map; CUSTOMER bắt buộc đăng nhập trước khi hold ghế, tạo booking, thanh toán, xem vé hoặc gửi yêu cầu refund.
-Quy tắc hủy/refund: booking `HOLDING` hoặc `PENDING_PAYMENT` có thể hủy nếu còn hợp lệ; booking `PAID` không hủy trực tiếp mà chuyển sang yêu cầu refund; booking `USED`, `REFUNDED`, `CANCELLED`, `EXPIRED` không được hủy hoặc yêu cầu refund lại.
+Quy tắc ranh giới GUEST/CUSTOMER: GUEST được xem phim, suất chiếu và seat map; CUSTOMER bắt buộc đăng nhập trước khi hold ghế, tạo booking, thanh toán hoặc xem vé.
+Quy tắc hủy/hoàn tiền: booking `HOLDING` hoặc `PENDING_PAYMENT` có thể hủy nếu còn hợp lệ; booking `PAID` là vé đã bán ra và CUSTOMER không được yêu cầu hoàn tiền. Chỉ khi ADMIN hủy suất do sự cố từ rạp, hệ thống mới chuyển booking đã thanh toán sang `REFUNDED`, hoàn tiền vào wallet của CUSTOMER, gửi notification và thu hồi/trừ loyalty.
 
 ## 5.10 Wishlist
 
@@ -317,7 +313,7 @@ Quy tắc hủy/refund: booking `HOLDING` hoặc `PENDING_PAYMENT` có thể h�
 
 Lưu ý phạm vi: Promotion/khuyến mãi đã được loại khỏi nghiệp vụ hiện tại, không bổ sung luồng áp dụng mã giảm giá trong tài liệu này.
 
-## 5.11 Thanh toán và hoàn tiền
+## 5.11 Thanh toán và hoàn tiền do hủy suất
 
 | ID | Yêu cầu | BE | FE | Tổng thể |
 |---|---|---|---|---|
@@ -327,12 +323,12 @@ Lưu ý phạm vi: Promotion/khuyến mãi đã được loại khỏi nghiệp 
 | PAY-04 | Idempotency khi callback lặp | Có kiểm tra payment success | Không áp dụng | **ĐÃ HOÀN THÀNH** |
 | PAY-05 | Mock payment cho môi trường dev/demo | Có | Có, tự fallback khi VNPay lỗi | **ĐÃ HOÀN THÀNH** |
 | PAY-06 | Tra cứu payment theo booking | Có | Chưa thấy UI dùng | **HOÀN THÀNH MỘT PHẦN** |
-| PAY-07 | CUSTOMER gửi yêu cầu refund | Có | Chưa có UI hoàn chỉnh | **HOÀN THÀNH MỘT PHẦN** |
-| PAY-08 | Admin duyệt/đánh dấu đã refund thủ công | Có | Panel giao dịch hiện chủ yếu dùng state/mock | **HOÀN THÀNH MỘT PHẦN** |
-| PAY-09 | Gọi VNPay Refund API tự động | Chưa có | Chưa có | **CHƯA THỰC HIỆN** |
+| PAY-07 | Không cho CUSTOMER yêu cầu refund sau khi đã mua vé | Cần chặn/loại luồng refund customer nếu còn tồn tại | Cần loại UI refund customer nếu còn tồn tại | **CHƯA ĐỒNG BỘ ĐẦY ĐỦ** |
+| PAY-08 | Admin hủy suất do sự cố rạp để kích hoạt hoàn tiền tự động | Cần đồng bộ với showtime cancellation mới | Cần UI xác nhận lý do hủy suất | **CHƯA THỰC HIỆN** |
+| PAY-09 | Hoàn tiền vào wallet CUSTOMER khi suất bị admin hủy | Chưa có wallet/ledger refund đầy đủ | Chưa có UI wallet rõ ràng | **CHƯA THỰC HIỆN** |
 | PAY-10 | Đối soát và báo cáo giao dịch | Chưa có | Chưa có tích hợp thật | **CHƯA THỰC HIỆN** |
 
-Quy tắc refund: CUSTOMER chỉ được gửi yêu cầu refund cho booking `PAID`, chưa check-in và còn trước giờ chiếu tối thiểu theo chính sách vận hành. Vé đã check-in (`USED`) không được refund. Khi refund thành công, hệ thống hoàn lại điểm loyalty đã cộng từ booking đó.
+Quy tắc hoàn tiền: hệ thống không cho CUSTOMER gửi yêu cầu refund sau khi booking đã thanh toán. Hoàn tiền chỉ phát sinh khi ADMIN hủy suất chiếu vì sự cố từ rạp; hệ thống tự chuyển booking đã thanh toán của suất đó sang `REFUNDED`, hoàn tiền vào wallet của CUSTOMER, gửi notification và thu hồi/trừ loyalty đã cộng từ booking đó. Không dùng VNPay Refund API cho luồng khách tự hủy vé.
 
 ## 5.12 Vé QR và check-in staff
 
@@ -355,11 +351,11 @@ Lưu ý phạm vi check-in: QR hiện gắn với booking, nên một lần qué
 |---|-------------------------------------------------------------------------------------------------------------|---|---|---|
 | LOY-01 | Tự cộng điểm khi thanh toán thành công theo số ghế/vé trong booking | Có | Chưa hiển thị tích hợp rõ ràng | **HOÀN THÀNH MỘT PHẦN** |
 | LOY-02 | CUSTOMER xem điểm hiện tại | Có API | Profile hiện chủ yếu hiển thị mockup điểm | **HOÀN THÀNH MỘT PHẦN** |
-| LOY-03 | Hoàn lại điểm đã cộng khi booking được refund | Chưa rõ ledger hoàn điểm | Chưa có | **CHƯA THỰC HIỆN** |
+| LOY-03 | Thu hồi/trừ điểm đã cộng khi booking được hoàn tiền do admin hủy suất | Chưa rõ ledger hoàn điểm | Chưa có | **CHƯA THỰC HIỆN** |
 | LOY-04 | Lịch sử giao dịch điểm chi tiết | Model hiện lưu tổng điểm, chưa đáp ứng ledger đầy đủ | Chưa có | **CHƯA THỰC HIỆN** |
 | LOY-05 | Đổi điểm khi thanh toán với tỷ lệ 1000 điểm = 1.000 VND | Chưa có | Chưa có | **CHƯA THỰC HIỆN** |
 
-Quy tắc loyalty: điểm tồn tại vĩnh viễn. Mỗi phim cấu hình số điểm cộng trên một ghế/vé; booking có nhiều ghế thì tổng điểm cộng bằng điểm của phim nhân với số ghế hợp lệ. Khi booking được refund, SYSTEM hoàn lại/trừ phần điểm đã cộng từ booking đó theo ledger.
+Quy tắc loyalty: điểm tồn tại vĩnh viễn. Mỗi phim cấu hình số điểm cộng trên một ghế/vé; booking có nhiều ghế thì tổng điểm cộng bằng điểm của phim nhân với số ghế hợp lệ. Khi booking được hoàn tiền do ADMIN hủy suất, SYSTEM thu hồi/trừ phần điểm đã cộng từ booking đó theo ledger.
 
 ## 5.14 Notification
 
@@ -367,7 +363,7 @@ Quy tắc loyalty: điểm tồn tại vĩnh viễn. Mỗi phim cấu hình số
 |---|---|---|---|---|
 | NOTI-01 | Tạo notification cho CUSTOMER | Có API/service thủ công | Chưa có UI | **HOÀN THÀNH MỘT PHẦN** |
 | NOTI-02 | Xem tất cả/chưa đọc và đánh dấu đã đọc | Có API | Chưa có UI | **HOÀN THÀNH MỘT PHẦN** |
-| NOTI-03 | Tự tạo notification từ booking/payment/refund/showtime | Chưa thấy tích hợp service vào các luồng | Chưa có | **CHƯA THỰC HIỆN** |
+| NOTI-03 | Tự tạo notification từ booking/payment/hủy suất/showtime | Chưa thấy tích hợp service vào các luồng | Chưa có | **CHƯA THỰC HIỆN** |
 | NOTI-04 | Đánh dấu tất cả đã đọc | Chưa có API | Chưa có | **CHƯA THỰC HIỆN** |
 | NOTI-05 | WebSocket notification realtime | Chỉ có dependency WebSocket | Chưa có | **CHƯA THỰC HIỆN** |
 
@@ -376,12 +372,12 @@ Quy tắc loyalty: điểm tồn tại vĩnh viễn. Mỗi phim cấu hình số
 | ID | Yêu cầu | Trạng thái | Ghi chú |
 |---|---|---|---|
 | REV-01 | CUSTOMER tạo/sửa review sau khi xem | **CHƯA THỰC HIỆN** | Có entity/repository nhưng chưa có controller/service. Chỉ cho phép review khi CUSTOMER có booking `USED` của phim đó. |
-| REV-02 | Public xem review đã duyệt | **CHƯA THỰC HIỆN** | FE không seed mock review nhưng chưa có API thật. |
-| REV-03 | Admin duyệt/ẩn review | **CHƯA THỰC HIỆN** | Chưa có API và UI. |
+| REV-02 | Public xem review công khai | **CHƯA THỰC HIỆN** | Review mới của CUSTOMER được auto accept/hiển thị ngay; FE không seed mock review nhưng chưa có API thật. |
+| REV-03 | Admin ẩn/xóa review | **CHƯA THỰC HIỆN** | Không cần admin duyệt trước; admin chỉ ẩn hoặc xóa review vi phạm. Chưa có API và UI. |
 | REV-04 | Tính điểm trung bình phim từ review | **CHƯA THỰC HIỆN** | Chưa có service tổng hợp. |
 | REV-05 | Dùng review làm tín hiệu recommendation | **CHƯA THỰC HIỆN** | Recommendation service có cấu trúc liên quan nhưng chưa có review flow đầu vào. |
 
-Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phim sau khi đã check-in/xem phim thành công. Review mới mặc định chờ duyệt; chỉ review đã duyệt mới hiển thị công khai và được tính vào điểm trung bình.
+Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phim sau khi đã check-in/xem phim thành công. Review mới được auto accept/hiển thị công khai ngay và được tính vào điểm trung bình; admin chỉ ẩn hoặc xóa review vi phạm.
 
 ## 5.16 Recommendation cá nhân hóa
 
@@ -393,16 +389,7 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 | REC-04 | Gợi ý theo diễn viên yêu thích | Có | Chưa có UI | **HOÀN THÀNH MỘT PHẦN** |
 | REC-05 | Admin debug recommendation | Có | Chưa có panel debug recommendation riêng | **HOÀN THÀNH MỘT PHẦN** |
 
-## 5.17 AI phân tích nội dung phim
-
-| ID | Yêu cầu | BE | FE | Tổng thể |
-|---|---|---|---|---|
-| AI-01 | Tạo, xem, regenerate phân tích phim | Có | Có panel admin | **ĐÃ HOÀN THÀNH** |
-| AI-02 | Admin approve/reject/delete phân tích | Có | Có panel admin | **ĐÃ HOÀN THÀNH** |
-| AI-03 | Public xem phân tích đã duyệt | Có | Có thể hiển thị theo dữ liệu phim | **HOÀN THÀNH MỘT PHẦN** |
-| AI-04 | Provider AI thật OpenAI/Gemini | Chưa bật, đang dùng mock-first | Không áp dụng | **CHƯA THỰC HIỆN** |
-
-## 5.18 Upload và lưu trữ
+## 5.17 Upload và lưu trữ
 
 | ID | Yêu cầu | BE | FE | Tổng thể |
 |---|---|---|---|---|
@@ -411,7 +398,7 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 | UP-03 | Admin list file đã upload | Chưa có API | Chưa có | **CHƯA THỰC HIỆN** |
 | UP-04 | Xóa file và xóa trên Cloudinary | Chưa có API/service | Chưa có | **CHƯA THỰC HIỆN** |
 
-## 5.19 Staff operations và báo cáo
+## 5.18 Staff operations và báo cáo
 
 | ID | Yêu cầu                                                    | Trạng thái | Ghi chú |
 |---|------------------------------------------------------------|---|---|
@@ -455,14 +442,14 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 | Phase 1 | Database Migration | **HOÀN THÀNH MỘT PHẦN** | Có file migration nhưng Flyway tắt và sai dialect runtime. |
 | Phase 2 | Auth, Customer & Security | **ĐÃ HOÀN THÀNH** | Luồng CUSTOMER chính đã tích hợp FE-BE. |
 | Phase 3 | Movie, Genre & Actor | **ĐÃ HOÀN THÀNH** | CRUD và public catalog đã tích hợp. |
-| Phase 4 | Cinema, Room, Seat & Showtime | **HOÀN THÀNH MỘT PHẦN** | Quản lý rạp đúng phạm vi GET/UPDATE/PATCH status, không có CREATE/DELETE; FE đã chỉ dùng một địa điểm từ API, scheduler trạng thái suất còn thiếu. |
+| Phase 4 | Cinema, Room, Seat & Showtime | **HOÀN THÀNH MỘT PHẦN** | Quản lý rạp đúng phạm vi GET/UPDATE/PATCH status, không có CREATE/DELETE; FE đã chỉ dùng một địa điểm từ API, scheduler trạng thái suất còn thiếu; cần cho phép admin hủy suất do sự cố và kích hoạt refund wallet tự động. |
 | Phase 5 | Booking, Seat Locking, F&B & QR | **HOÀN THÀNH MỘT PHẦN** | Booking và staff check-in hoạt động với API thật; còn thiếu lock đồng thời. |
-| Phase 6 | Payment & Refund | **HOÀN THÀNH MỘT PHẦN** | VNPay/payment có; refund provider và UI vận hành chưa hoàn chỉnh. |
-| Phase 7 | Loyalty & Notification | **HOÀN THÀNH MỘT PHẦN** | Có API nền, FE và event integration còn thiếu; loyalty cần ledger để hoàn điểm khi refund. |
+| Phase 6 | Payment & Wallet Refund | **HOÀN THÀNH MỘT PHẦN** | VNPay/payment có; cần bỏ luồng customer refund và bổ sung hoàn tiền vào wallet khi admin hủy suất do sự cố rạp. |
+| Phase 7 | Loyalty & Notification | **HOÀN THÀNH MỘT PHẦN** | Có API nền, FE và event integration còn thiếu; loyalty cần ledger để thu hồi/trừ điểm khi booking được hoàn tiền do hủy suất. |
 | Phase 8 | Review | **CHƯA THỰC HIỆN** | Chỉ có entity/repository. |
 | Phase 9 | Staff Operations & Reports | **HOÀN THÀNH MỘT PHẦN** | Staff check-in, danh sách booking theo suất chiếu và staff profile cơ bản đã dùng API thật; report API chưa có. |
 | Phase 10 | Storage, Email, WebSocket & Scheduler | **HOÀN THÀNH MỘT PHẦN** | Upload và OTP mail có; ticket email/WebSocket/showtime scheduler thiếu. |
-| Phase 11 | Recommendation & AI Analysis | **HOÀN THÀNH MỘT PHẦN** | AI analysis admin tốt; recommendation chưa tích hợp FE và provider thật chưa bật. |
+| Phase 11 | Recommendation | **HOÀN THÀNH MỘT PHẦN** | Recommendation backend có nền tảng rule-based; FE chưa tích hợp rõ ràng. |
 | Phase 12 | Integration & QA | **HOÀN THÀNH MỘT PHẦN** | Backend test tốt; thiếu FE/E2E và kiểm thử tích hợp dịch vụ thật. |
 
 ---
@@ -478,7 +465,6 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 - VNPay sandbox, callback/IPN, mock payment và sinh QR sau thanh toán.
 - Wishlist cho CUSTOMER.
 - Upload ảnh Cloudinary.
-- Admin AI analysis workflow.
 - 52 backend tests đang pass và frontend production build thành công.
 
 ---
@@ -497,23 +483,22 @@ Quy tắc review: mỗi CUSTOMER chỉ được tạo một review cho mỗi phi
 ### 9.2 Ưu tiên P1 - Hoàn thiện nghiệp vụ bàn giao
 
 1. Xây dựng ReviewController, ReviewService, moderation và điểm trung bình phim.
-2. Hoàn thiện refund UI và tích hợp VNPay Refund API.
+2. Bỏ luồng CUSTOMER yêu cầu refund sau khi mua vé; bổ sung wallet refund tự động khi ADMIN hủy suất do sự cố rạp.
 3. Tạo report API cho doanh thu, vé bán, phim bán chạy và tỷ lệ lấp đầy.
 4. Tích hợp loyalty và notification vào frontend.
-5. Tự tạo notification từ payment, cancel, refund và showtime.
+5. Tự tạo notification từ payment, cancel trước thanh toán, hủy suất và hoàn tiền wallet.
 6. Gửi email xác nhận booking và vé QR.
 7. Thêm scheduler tự động chuyển trạng thái suất chiếu.
-8. Hoàn thiện admin panel booking/refund.
+8. Hoàn thiện admin flow hủy suất do sự cố, xác nhận lý do hủy và theo dõi refund wallet.
 
 ### 9.3 Ưu tiên P2 - Nâng cao trải nghiệm
 
 1. WebSocket cho seat map và notification realtime.
 2. Tích hợp recommendation vào trang người dùng.
-3. Bật provider AI thật thay cho mock strategy.
-4. Quản lý file upload, xóa Cloudinary và quản lý storage.
-5. Quản lý staff profile và ca làm.
-6. Thêm frontend unit test, component test và E2E test.
-7. Code splitting frontend để giảm bundle hiện gần 1 MB.
+3. Quản lý file upload, xóa Cloudinary và quản lý storage.
+4. Quản lý staff profile và ca làm.
+5. Thêm frontend unit test, component test và E2E test.
+6. Code splitting frontend để giảm bundle hiện gần 1 MB.
 
 ---
 
@@ -524,11 +509,11 @@ Hệ thống được xem là sẵn sàng bàn giao production khi:
 - Toàn bộ yêu cầu P0 được hoàn thành.
 - Không thể giữ hoặc thanh toán trùng một ghế trong cùng suất chiếu khi có request đồng thời.
 - Mọi API admin/staff/customer/system-facing được kiểm tra đúng RBAC.
-- VNPay callback, refund và payment reconciliation được kiểm thử trên sandbox.
+- VNPay callback và payment reconciliation được kiểm thử trên sandbox; refund wallet do admin hủy suất được kiểm thử bằng ledger nội bộ.
 - QR không thể tự tạo hợp lệ nếu không có secret của hệ thống.
 - Staff check-in sử dụng API và dữ liệu thật.
 - Migration có thể dựng database PostgreSQL mới từ đầu.
-- Có E2E test cho auth, booking, payment, check-in, cancel và refund.
+- Có E2E test cho auth, booking, payment, check-in, cancel trước thanh toán và refund wallet do admin hủy suất.
 - Secret production chỉ được cấp qua biến môi trường hoặc secret manager.
 - Không còn dữ liệu mock xuất hiện trong luồng nghiệp vụ production.
 - Rạp duy nhất được cấu hình sẵn; API và frontend quản trị rạp chỉ cho phép GET, UPDATE và PATCH trạng thái.
@@ -553,6 +538,6 @@ Hệ thống được xem là sẵn sàng bàn giao production khi:
 
 ## 12. Kết luận
 
-Hệ thống hiện đã hoàn thành tốt phần lõi của website đặt vé cho một rạp duy nhất: auth, catalog, cập nhật và vô hiệu hóa/kích hoạt lại rạp, quản trị phòng, ghế, suất chiếu, booking, tính giá, F&B, payment, staff check-in và AI analysis. Quản lý rạp hiện đúng phạm vi: có GET, UPDATE và PATCH trạng thái; không có API/UI tạo mới hoặc xóa rạp. Frontend đã loại bỏ nội dung mock nhiều địa điểm và lấy thông tin rạp duy nhất từ API; hệ thống chưa nên được xem là hoàn chỉnh ở mức production do còn thiếu cơ chế chống double booking ở database, migration đúng chuẩn PostgreSQL, bảo mật QR/secret, review, báo cáo, notification event-driven và refund provider.
+Hệ thống hiện đã hoàn thành tốt phần lõi của website đặt vé cho một rạp duy nhất: auth, catalog, cập nhật và vô hiệu hóa/kích hoạt lại rạp, quản trị phòng, ghế, suất chiếu, booking, tính giá, F&B, payment và staff check-in. Quản lý rạp hiện đúng phạm vi: có GET, UPDATE và PATCH trạng thái; không có API/UI tạo mới hoặc xóa rạp. Frontend đã loại bỏ nội dung mock nhiều địa điểm và lấy thông tin rạp duy nhất từ API; hệ thống chưa nên được xem là hoàn chỉnh ở mức production do còn thiếu cơ chế chống double booking ở database, migration đúng chuẩn PostgreSQL, bảo mật QR/secret, review, báo cáo, notification event-driven và wallet refund tự động khi admin hủy suất do sự cố rạp.
 
 Tài liệu này là baseline SRS và trạng thái triển khai để tiếp tục phát triển, kiểm thử và nghiệm thu dự án.

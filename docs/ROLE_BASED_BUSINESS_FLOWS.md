@@ -19,10 +19,9 @@
 | `STAFF` | Nhân viên rạp | Chỉ vận hành check-in vé. |
 | `ADMIN` | Quản trị viên | Quản trị danh mục, vận hành, tài khoản và cấu hình hệ thống. Không có quyền check-in theo nghiệp vụ. |
 | `SYSTEM` | Tác vụ nền | Scheduler, callback, cộng/hoàn điểm, notification tự động. |
-| `VNPAY` | Cổng thanh toán ngoài | Xử lý return/IPN/refund sandbox hoặc thật. |
+| `VNPAY` | Cổng thanh toán ngoài | Xử lý thanh toán return/IPN sandbox hoặc thật. |
 | `SMTP` | Dịch vụ email | Gửi OTP, reset password, email vé khi triển khai. |
 | `CLOUDINARY` | Dịch vụ lưu ảnh | Lưu ảnh upload của admin/customer. |
-| `AI_PROVIDER` | OpenAI/Gemini hoặc mock strategy | Phân tích nội dung phim. |
 
 ### 1.2 Ranh giới GUEST/CUSTOMER
 
@@ -34,7 +33,6 @@ CUSTOMER bắt buộc đăng nhập trước khi:
 - Tạo booking.
 - Thanh toán.
 - Xem vé cá nhân.
-- Gửi yêu cầu refund.
 - Thêm/xóa wishlist.
 - Xem điểm loyalty.
 - Gửi review.
@@ -61,7 +59,7 @@ CUSTOMER bắt buộc đăng nhập trước khi:
 | Check-in QR | Không | Không | Có | Không | Không |
 | Wishlist | Không | Có | Không | Không | Sự kiện thông báo chưa có |
 | Loyalty | Không | Có | Không | Quản trị trực tiếp chưa có | Cộng/hoàn điểm |
-| Review | Xem review đã duyệt | Tạo/sửa review sau khi xem | Không | Duyệt/ẩn | Tính điểm khi có service |
+| Review | Xem review công khai | Tạo/sửa review sau khi xem | Không | Ẩn/xóa review vi phạm | Tính điểm khi có service |
 | Quản lý catalog | Không | Không | Không | Có | Không |
 | Quản lý rạp/phòng/ghế/suất | Không | Không | Không | Có | Scheduler trạng thái suất chưa có |
 | Quản lý tài khoản | Không | Hồ sơ cá nhân | Không | Có | Không |
@@ -74,7 +72,7 @@ CUSTOMER bắt buộc đăng nhập trước khi:
 
 ### GUEST-01: Xem danh mục phim
 
-Liên quan SRS: `MOV-01`, `MOV-02`, `MOV-05`, `MOV-07`, `AI-03`.
+Liên quan SRS: `MOV-01`, `MOV-02`, `MOV-05`, `MOV-07`.
 
 Tiền điều kiện: không cần đăng nhập.
 
@@ -84,7 +82,7 @@ Luồng chính:
 2. Hệ thống tải danh sách phim công khai.
 3. GUEST lọc/tìm kiếm theo từ khóa, thể loại hoặc trạng thái phim.
 4. GUEST mở chi tiết phim.
-5. Hệ thống hiển thị thông tin phim, diễn viên, thể loại, trailer và AI analysis đã duyệt nếu có.
+5. Hệ thống hiển thị thông tin phim, diễn viên, thể loại và trailer nếu có.
 
 Ngoại lệ:
 
@@ -174,7 +172,7 @@ Luồng chính:
 1. CUSTOMER chọn phim và suất chiếu.
 2. Hệ thống tải seat map.
 3. CUSTOMER chọn một hoặc nhiều ghế.
-4. Hệ thống hold ghế trong 10 phút.
+4. Hệ thống hold ghế trong 2 phút.
 5. CUSTOMER chọn loại vé, nhập tuổi người xem nếu cần.
 6. Hệ thống kiểm tra age rating và loại vé.
 7. CUSTOMER chọn đồ ăn/combo nếu muốn.
@@ -233,13 +231,13 @@ Luồng chính:
 Ngoại lệ:
 
 - Booking chưa thanh toán: không sinh QR hợp lệ.
-- Booking đã refund/cancel/expire: hiển thị trạng thái tương ứng.
+- Booking đã được hoàn tiền do hủy suất/cancel/expire: hiển thị trạng thái tương ứng.
 
 Trạng thái: đã hoàn thành.
 
-### CUSTOMER-05: Hủy booking và yêu cầu refund
+### CUSTOMER-05: Hủy booking trước thanh toán
 
-Liên quan SRS: `BOOK-08`, `PAY-07`, `PAY-08`, `PAY-09`.
+Liên quan SRS: `BOOK-08`.
 
 Tiền điều kiện: CUSTOMER sở hữu booking.
 
@@ -248,21 +246,13 @@ Luồng hủy booking:
 1. Nếu booking ở `HOLDING` hoặc `PENDING_PAYMENT`, CUSTOMER có thể hủy khi còn hợp lệ.
 2. Hệ thống chuyển booking sang `CANCELLED` và giải phóng ghế.
 
-Luồng refund:
-
-1. Nếu booking ở `PAID`, CUSTOMER gửi yêu cầu refund.
-2. Hệ thống kiểm tra vé chưa check-in, chưa refund và còn trước giờ chiếu tối thiểu theo chính sách vận hành.
-3. Booking chuyển `REFUND_REQUESTED`.
-4. ADMIN duyệt/đánh dấu refund thủ công hoặc hệ thống gọi VNPay Refund API khi được triển khai.
-5. Khi refund thành công, booking chuyển `REFUNDED`.
-6. SYSTEM hoàn lại/trừ điểm loyalty đã cộng từ booking đó.
-
 Không hợp lệ:
 
-- Booking `USED`, `REFUNDED`, `CANCELLED`, `EXPIRED` không được hủy hoặc refund lại.
-- Vé đã check-in không được refund.
+- Booking `PAID` không được hủy hoặc yêu cầu hoàn tiền từ phía CUSTOMER.
+- Booking `USED`, `REFUNDED`, `CANCELLED`, `EXPIRED` không được hủy lại.
+- Vé đã thanh toán là vé đã bán ra; hệ thống không hỗ trợ hoàn tiền theo yêu cầu khách hàng sau khi mua vé.
 
-Trạng thái: hoàn thành một phần; UI refund và VNPay Refund API chưa hoàn chỉnh.
+Trạng thái: hoàn thành một phần; chưa cần UI customer refund vì nghiệp vụ không cho phép khách tự hoàn tiền sau thanh toán.
 
 ### CUSTOMER-06: Wishlist
 
@@ -301,9 +291,9 @@ Luồng đổi điểm:
 2. Tỷ lệ đổi là `1000 điểm = 1.000 VND`.
 3. Hệ thống trừ điểm và giảm số tiền thanh toán tương ứng.
 
-Luồng hoàn điểm:
+Luồng thu hồi/hoàn điểm khi rạp hủy suất:
 
-1. Khi booking được refund, SYSTEM hoàn lại/trừ phần điểm đã cộng hoặc đã sử dụng theo ledger.
+1. Khi booking được hoàn tiền do ADMIN hủy suất, SYSTEM hoàn lại/trừ phần điểm đã cộng hoặc đã sử dụng theo ledger.
 2. Cần lịch sử giao dịch điểm chi tiết để xử lý chính xác.
 
 Trạng thái: hoàn thành một phần; đổi điểm và ledger hoàn điểm chưa hoàn chỉnh.
@@ -321,9 +311,9 @@ Luồng chính:
 
 1. CUSTOMER mở phim đã xem.
 2. CUSTOMER nhập rating và nội dung review.
-3. Hệ thống lưu review ở trạng thái chờ duyệt.
-4. ADMIN duyệt hoặc ẩn review.
-5. Review đã duyệt được hiển thị công khai và tính vào điểm trung bình phim.
+3. Hệ thống lưu review ở trạng thái công khai/đã chấp nhận tự động.
+4. Review được hiển thị công khai ngay và tính vào điểm trung bình phim.
+5. ADMIN có thể ẩn hoặc xóa review vi phạm sau khi review đã được đăng.
 
 Trạng thái: chưa thực hiện.
 
@@ -384,7 +374,7 @@ Luồng chính:
 1. STAFF mở màn hình check-in.
 2. STAFF quét hoặc nhập QR booking.
 3. Hệ thống xác thực QR.
-4. Hệ thống kiểm tra booking đã thanh toán, chưa check-in và chưa refund/cancel.
+4. Hệ thống kiểm tra booking đã thanh toán, chưa check-in và chưa bị hoàn tiền do hủy suất/cancel.
 5. Hệ thống chuyển booking sang `USED`.
 6. Hệ thống ghi nhận thời điểm check-in.
 
@@ -393,7 +383,7 @@ Không hợp lệ:
 - QR sai hoặc không tồn tại.
 - Booking chưa thanh toán.
 - Booking đã check-in.
-- Booking đã cancel/refund/expire.
+- Booking đã cancel/được hoàn tiền do hủy suất/expire.
 
 Phạm vi hiện tại:
 
@@ -518,19 +508,20 @@ Luồng tạo/cập nhật:
 3. Hệ thống tạo suất chiếu đơn hoặc bulk.
 4. ADMIN cập nhật suất chiếu khi cần.
 
-Luồng hủy suất theo code/nghiệp vụ hiện tại:
+Luồng hủy suất do sự cố rạp:
 
 1. ADMIN yêu cầu hủy suất.
-2. Hệ thống kiểm tra suất chiếu có booking hay không.
-3. Nếu không có booking, hệ thống chuyển suất sang `CANCELLED`.
-4. Nếu đã có bất kỳ booking nào, hệ thống từ chối hủy suất và trả lỗi.
+2. ADMIN nhập lý do sự cố vận hành, ví dụ lỗi kỹ thuật, mất điện, sự cố phòng chiếu hoặc lịch chiếu bắt buộc phải dừng.
+3. Hệ thống chuyển suất sang `CANCELLED`.
+4. Nếu suất đã bán vé, hệ thống tự động chuyển các booking hợp lệ sang `REFUNDED`, hoàn tiền vào wallet của CUSTOMER, thu hồi/trừ loyalty đã cộng từ booking đó và gửi notification cho khách.
+5. Nếu suất chưa bán vé, hệ thống chỉ chuyển trạng thái suất và không phát sinh refund.
 
 Không thuộc STAFF:
 
 - STAFF không xử lý hủy suất.
-- STAFF không xử lý refund do hủy suất.
+- STAFF không xử lý hoàn tiền do hủy suất.
 
-Trạng thái: hủy suất khi không có booking đã hoàn thành; scheduler tự chuyển trạng thái suất chưa có.
+Trạng thái: cần đồng bộ code để hủy suất có booking tự động refund vào wallet, thu hồi loyalty và gửi notification.
 
 ### ADMIN-06: Quản lý đồ ăn và combo
 
@@ -548,52 +539,40 @@ Chưa có:
 
 Trạng thái: CRUD đã hoàn thành.
 
-### ADMIN-07: Quản lý booking/refund
+### ADMIN-07: Quản lý booking và hoàn tiền do hủy suất
 
-Liên quan SRS: `BOOK-08`, `PAY-07`, `PAY-08`, `PAY-09`, `PAY-10`.
+Liên quan SRS: `BOOK-08`, `PAY-07`, `PAY-08`, `PAY-10`, `SHOW-06`, `SHOW-07`.
 
 Luồng chính:
 
 1. ADMIN xem booking/giao dịch.
-2. ADMIN xử lý yêu cầu refund.
-3. ADMIN đánh dấu booking đã refund thủ công.
-4. SYSTEM hoàn/trừ điểm loyalty liên quan.
+2. CUSTOMER không có luồng gửi yêu cầu refund sau khi đã thanh toán.
+3. Khi rạp có sự cố, ADMIN hủy suất chiếu từ màn hình quản lý suất.
+4. SYSTEM tự động hoàn tiền vào wallet của CUSTOMER cho các booking đã thanh toán của suất bị hủy.
+5. SYSTEM thu hồi/trừ loyalty đã cộng từ booking và gửi notification cho CUSTOMER.
 
 Chưa có:
 
-- VNPay Refund API tự động.
 - Đối soát thanh toán đầy đủ.
-- UI vận hành refund hoàn chỉnh.
+- Wallet/ledger hoàn tiền do hủy suất.
+- Notification tự động cho khách khi suất bị hủy.
 
-Trạng thái: hoàn thành một phần.
+Trạng thái: cần đồng bộ code/UI theo nghiệp vụ mới.
 
-### ADMIN-08: AI analysis nội dung phim
-
-Liên quan SRS: `AI-01` đến `AI-04`.
-
-Luồng chính:
-
-1. ADMIN tạo phân tích AI cho phim.
-2. Hệ thống dùng mock strategy hoặc provider được cấu hình.
-3. ADMIN xem, regenerate, approve, reject hoặc delete phân tích.
-4. Phân tích đã duyệt có thể hiển thị public.
-
-Trạng thái: admin workflow đã hoàn thành; provider AI thật chưa bật mặc định.
-
-### ADMIN-09: Review moderation
+### ADMIN-08: Review moderation
 
 Liên quan SRS: `REV-03`.
 
 Luồng mong muốn:
 
-1. ADMIN xem danh sách review chờ duyệt.
-2. ADMIN duyệt review hợp lệ hoặc ẩn/từ chối review vi phạm.
-3. Hệ thống chỉ hiển thị review đã duyệt.
-4. Hệ thống tính lại điểm trung bình phim.
+1. ADMIN xem danh sách review đã được user đăng.
+2. ADMIN ẩn hoặc xóa review vi phạm nội quy.
+3. Hệ thống không yêu cầu ADMIN duyệt review trước khi hiển thị.
+4. Hệ thống chỉ hiển thị review chưa bị ẩn/xóa và tính lại điểm trung bình phim theo các review công khai.
 
 Trạng thái: chưa thực hiện.
 
-### ADMIN-10: Báo cáo
+### ADMIN-09: Báo cáo
 
 Liên quan SRS: `RPT-01` đến `RPT-05`.
 
@@ -660,7 +639,7 @@ Luồng mong muốn:
 
 1. Khi booking `PAID`, SYSTEM cộng điểm theo phim và số ghế.
 2. Khi CUSTOMER đổi điểm, SYSTEM ghi ledger trừ điểm.
-3. Khi booking refund, SYSTEM hoàn/trừ điểm đã phát sinh từ booking đó.
+3. Khi booking được hoàn tiền do ADMIN hủy suất chiếu, SYSTEM thu hồi/trừ điểm đã phát sinh từ booking đó.
 4. Điểm không hết hạn.
 
 Trạng thái: cần ledger chi tiết.
@@ -672,7 +651,7 @@ Liên quan SRS: `NOTI-03`, `WISH-02`.
 Luồng mong muốn:
 
 1. Khi thanh toán thành công, SYSTEM tạo notification vé.
-2. Khi booking bị hủy/refund, SYSTEM tạo notification trạng thái.
+2. Khi booking bị hủy trước thanh toán hoặc được hoàn tiền do suất chiếu bị ADMIN hủy, SYSTEM tạo notification trạng thái.
 3. Khi phim trong wishlist có suất mới, SYSTEM thông báo cho CUSTOMER.
 4. Nếu WebSocket được triển khai, thông báo được đẩy realtime.
 
@@ -693,16 +672,16 @@ Actor: `VNPAY`, `SYSTEM`, `CUSTOMER`.
 
 Trạng thái: đã hoàn thành sandbox/core.
 
-### VNPAY-02: Refund
+### WALLET-01: Hoàn tiền do hủy suất
 
-Actor: `VNPAY`, `SYSTEM`, `ADMIN`.
+Actor: `SYSTEM`, `ADMIN`, `CUSTOMER`.
 
-1. ADMIN duyệt refund.
-2. SYSTEM gọi VNPay Refund API.
-3. VNPAY trả kết quả.
-4. SYSTEM cập nhật booking `REFUNDED` và hoàn/trừ điểm.
+1. ADMIN hủy suất chiếu do sự cố từ rạp.
+2. SYSTEM xác định các booking đã thanh toán của suất bị hủy.
+3. SYSTEM hoàn tiền vào wallet của CUSTOMER theo số tiền booking đã thanh toán.
+4. SYSTEM cập nhật booking `REFUNDED`, thu hồi/trừ loyalty đã cộng và gửi notification cho khách.
 
-Trạng thái: chưa thực hiện tự động.
+Trạng thái: cần triển khai wallet/ledger và notification tự động.
 
 ### SMTP-01: Email xác thực và vé
 
@@ -731,23 +710,10 @@ Chưa có:
 - UI quản lý file upload.
 - Xóa file và xóa trên Cloudinary.
 
-### AI_PROVIDER-01: Phân tích phim
-
-Actor: `AI_PROVIDER`, `ADMIN`, `SYSTEM`.
-
-1. ADMIN yêu cầu phân tích phim.
-2. SYSTEM gửi prompt tới provider hoặc mock strategy.
-3. Provider trả kết quả.
-4. ADMIN duyệt hoặc từ chối.
-
-Trạng thái: workflow admin đã có; provider thật chưa bật mặc định.
-
----
-
 ## 9. Điểm cần đồng bộ code với nghiệp vụ
 
-1. **Refund:** cần UI đầy đủ, chính sách thời hạn refund và VNPay Refund API tự động.
-2. **Loyalty:** cần ledger để cộng điểm theo ghế, đổi điểm, và hoàn/trừ điểm khi refund.
+1. **Refund:** bỏ luồng CUSTOMER yêu cầu refund sau khi mua vé; chỉ hoàn tiền tự động vào wallet khi ADMIN hủy suất do sự cố rạp.
+2. **Loyalty:** cần ledger để cộng điểm theo ghế, đổi điểm, và thu hồi/trừ điểm khi booking được hoàn tiền do hủy suất.
 3. **Review:** cần controller/service, điều kiện booking `USED`, một review mỗi CUSTOMER mỗi phim, và moderation.
 4. **Promotion:** đã loại khỏi phạm vi nghiệp vụ hiện tại; nếu code còn API promotion thì không đưa vào luồng bàn giao.
-5. **Hủy suất:** giữ đúng code hiện tại: chỉ hủy suất khi chưa có booking; nếu có booking thì từ chối.
+5. **Hủy suất:** cần cho phép ADMIN hủy suất do sự cố kể cả khi đã bán vé; hệ thống tự notification, hoàn tiền vào wallet và thu hồi loyalty.

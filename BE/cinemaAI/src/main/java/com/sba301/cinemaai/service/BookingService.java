@@ -50,7 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BookingService {
 
-    private static final int HOLD_MINUTES = 10;
+    private static final int HOLD_MINUTES = 2;
     private static final List<SeatRuntimeStatus> BLOCKING_SEAT_STATUSES = List.of(
             SeatRuntimeStatus.HOLDING,
             SeatRuntimeStatus.BOOKED,

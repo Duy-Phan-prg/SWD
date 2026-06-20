@@ -1,6 +1,6 @@
 {
   "name": "CINEPREMIER",
-  "description": "Premium AI-powered cinema platform with real-time emotional analysis, smart seat mapping, and cyber-noir styling.",
+  "description": "Premium cinema platform with smart seat mapping and cyber-noir styling.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
