@@ -309,42 +309,6 @@ CREATE TABLE dbo.ticket_combos (
     updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
-IF OBJECT_ID('dbo.ai_analyses', 'U') IS NULL
-CREATE TABLE dbo.ai_analyses (
-    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    movie_id BIGINT NOT NULL,
-    status NVARCHAR(30) NOT NULL,
-    overall_score DECIMAL(5,2),
-    violence_score DECIMAL(5,2),
-    romance_score DECIMAL(5,2),
-    humor_score DECIMAL(5,2),
-    content_label NVARCHAR(50),
-    target_audience NVARCHAR(50),
-    summary NVARCHAR(MAX),
-    provider_raw_response NVARCHAR(MAX),
-    approved_at DATETIME2,
-    approved_by_user_id BIGINT,
-    decision_reason NVARCHAR(500),
-    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT fk_ai_analyses_movie FOREIGN KEY (movie_id) REFERENCES dbo.movies(id),
-    CONSTRAINT fk_ai_analyses_approved_by FOREIGN KEY (approved_by_user_id) REFERENCES dbo.users(id)
-);
-
-IF OBJECT_ID('dbo.ai_emotion_segments', 'U') IS NULL
-CREATE TABLE dbo.ai_emotion_segments (
-    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    analysis_id BIGINT NOT NULL,
-    start_minute INT NOT NULL,
-    end_minute INT NOT NULL,
-    emotion_type NVARCHAR(30) NOT NULL,
-    intensity INT NOT NULL,
-    description NVARCHAR(500),
-    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT fk_ai_emotion_segments_analysis FOREIGN KEY (analysis_id) REFERENCES dbo.ai_analyses(id)
-);
-
 IF OBJECT_ID('dbo.bookings', 'U') IS NULL
 CREATE TABLE dbo.bookings (
     id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -435,37 +399,6 @@ CREATE TABLE dbo.booking_food_items (
     CONSTRAINT fk_booking_food_items_booking FOREIGN KEY (booking_id) REFERENCES dbo.bookings(id),
     CONSTRAINT fk_booking_food_items_food_item FOREIGN KEY (food_item_id) REFERENCES dbo.food_items(id),
     CONSTRAINT fk_booking_food_items_food_combo FOREIGN KEY (food_combo_id) REFERENCES dbo.food_combos(id)
-);
-
-IF OBJECT_ID('dbo.promotions', 'U') IS NULL
-CREATE TABLE dbo.promotions (
-    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    code NVARCHAR(50) NOT NULL UNIQUE,
-    name NVARCHAR(255) NOT NULL,
-    type NVARCHAR(30) NOT NULL,
-    promotion_value DECIMAL(12,2) NOT NULL,
-    min_order_amount DECIMAL(12,2),
-    max_discount_amount DECIMAL(12,2),
-    usage_limit INT,
-    used_count INT NOT NULL DEFAULT 0,
-    starts_at DATETIME2 NOT NULL,
-    ends_at DATETIME2 NOT NULL,
-    status NVARCHAR(30) NOT NULL,
-    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
-);
-
-IF OBJECT_ID('dbo.booking_promotions', 'U') IS NULL
-CREATE TABLE dbo.booking_promotions (
-    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    booking_id BIGINT NOT NULL,
-    promotion_id BIGINT NOT NULL,
-    discount_amount DECIMAL(12,2) NOT NULL,
-    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT fk_booking_promotions_booking FOREIGN KEY (booking_id) REFERENCES dbo.bookings(id),
-    CONSTRAINT fk_booking_promotions_promotion FOREIGN KEY (promotion_id) REFERENCES dbo.promotions(id),
-    CONSTRAINT uk_booking_promotions_booking_promotion UNIQUE (booking_id, promotion_id)
 );
 
 IF OBJECT_ID('dbo.payments', 'U') IS NULL
@@ -620,12 +553,6 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_showtimes_start_time'
 CREATE INDEX idx_showtimes_start_time ON dbo.showtimes(start_time);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ticket_pricing_rules_lookup' AND object_id = OBJECT_ID('dbo.ticket_pricing_rules'))
 CREATE INDEX idx_ticket_pricing_rules_lookup ON dbo.ticket_pricing_rules(ticket_type, room_type, weekend, holiday, active);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_analyses_movie' AND object_id = OBJECT_ID('dbo.ai_analyses'))
-CREATE INDEX idx_ai_analyses_movie ON dbo.ai_analyses(movie_id);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_analyses_status' AND object_id = OBJECT_ID('dbo.ai_analyses'))
-CREATE INDEX idx_ai_analyses_status ON dbo.ai_analyses(status);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_ai_emotion_segments_analysis' AND object_id = OBJECT_ID('dbo.ai_emotion_segments'))
-CREATE INDEX idx_ai_emotion_segments_analysis ON dbo.ai_emotion_segments(analysis_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_bookings_user' AND object_id = OBJECT_ID('dbo.bookings'))
 CREATE INDEX idx_bookings_user ON dbo.bookings(user_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_bookings_showtime' AND object_id = OBJECT_ID('dbo.bookings'))

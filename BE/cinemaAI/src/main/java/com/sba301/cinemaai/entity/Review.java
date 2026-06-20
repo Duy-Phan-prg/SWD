@@ -17,8 +17,10 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @Entity
 @Table(
         name = "reviews",
@@ -63,14 +65,5 @@ public class Review extends BaseEntity {
         this.booking = booking;
         this.rating = rating;
         this.comment = comment;
-    }
-
-    public void update(int rating, String comment) {
-        this.rating = rating;
-        this.comment = comment;
-    }
-
-    public void changeStatus(ReviewStatus status) {
-        this.status = status;
     }
 }

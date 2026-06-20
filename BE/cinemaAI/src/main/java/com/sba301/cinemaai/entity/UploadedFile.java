@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -50,6 +51,7 @@ public class UploadedFile extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Setter
     private UploadedFileStatus status = UploadedFileStatus.ACTIVE;
 
     public UploadedFile(
@@ -70,7 +72,4 @@ public class UploadedFile extends BaseEntity {
         this.uploadedBy = uploadedBy;
     }
 
-    public void markDeleted() {
-        this.status = UploadedFileStatus.DELETED;
-    }
 }

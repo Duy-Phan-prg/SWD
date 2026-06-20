@@ -9,8 +9,10 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @Entity
 @Table(name = "genres")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -31,8 +33,4 @@ public class Genre extends BaseEntity {
         this.description = description;
     }
 
-    public void update(String name, String description) {
-        this.name = name;
-        this.description = description;
-    }
 }

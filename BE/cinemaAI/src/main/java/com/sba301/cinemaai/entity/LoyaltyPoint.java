@@ -16,6 +16,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * One row per user — stores the user's current loyalty balance.
@@ -40,13 +41,16 @@ public class LoyaltyPoint extends BaseEntity {
     private User user;
 
     @Column(nullable = false)
+    @Setter
     private int points = 0;
 
     @Column(name = "total_points", nullable = false)
+    @Setter
     private int totalPoints = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Setter
     private LoyaltyStatus status = LoyaltyStatus.ACTIVE;
 
     public LoyaltyPoint(User user) {
@@ -56,16 +60,4 @@ public class LoyaltyPoint extends BaseEntity {
         this.status = LoyaltyStatus.ACTIVE;
     }
 
-    public void addPoints(int pts) {
-        this.points += pts;
-        this.totalPoints += pts;
-    }
-
-    public void redeemPoints(int pts) {
-        this.points -= pts;
-    }
-
-    public void changeStatus(LoyaltyStatus status) {
-        this.status = status;
-    }
 }

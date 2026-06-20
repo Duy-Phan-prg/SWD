@@ -2,6 +2,7 @@ package com.sba301.cinemaai.seeder;
 
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.MovieGenre;
+import com.sba301.cinemaai.enums.AgeRating;
 import com.sba301.cinemaai.enums.MovieStatus;
 import com.sba301.cinemaai.repository.GenreRepository;
 import com.sba301.cinemaai.repository.MovieGenreRepository;
@@ -65,8 +66,16 @@ public class MovieSeeder implements Seeder {
     private void seedMovie(MovieSeed seed) {
         Movie movie = movieRepository.findByTitle(seed.title())
                 .orElseGet(() -> movieRepository.save(new Movie(seed.title(), seed.durationMinutes(), seed.status())));
-        movie.updateDetails(seed.title(), seed.description(), seed.durationMinutes(), seed.releaseDate());
-        movie.updateMetadata(seed.language(), seed.subtitleLanguage(), seed.ageRating(), seed.director(), "Sample lead actors", "Sample cast");
+        movie.setTitle(seed.title());
+        movie.setDescription(seed.description());
+        movie.setDurationMinutes(seed.durationMinutes());
+        movie.setReleaseDate(seed.releaseDate());
+        movie.setLanguage(seed.language());
+        movie.setSubtitleLanguage(seed.subtitleLanguage());
+        movie.setAgeRating(AgeRating.from(seed.ageRating()));
+        movie.setDirector(seed.director());
+        movie.setMainActors("Sample lead actors");
+        movie.setCastList("Sample cast");
         movie.changeStatus(seed.status());
 
         for (String genreName : seed.genreNames().split(",")) {

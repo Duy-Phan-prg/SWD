@@ -4,11 +4,11 @@ import com.sba301.cinemaai.dto.response.booking.BookingResponse;
 import com.sba301.cinemaai.dto.request.booking.CheckInRequest;
 import com.sba301.cinemaai.dto.request.booking.RefundRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.service.BookingService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,10 +28,12 @@ public class AdminBookingController {
     private final BookingService bookingService;
 
     @GetMapping
-    public ApiResponse<List<BookingResponse>> getBookings(
-            @RequestParam(required = false) BookingStatus status
+    public ApiResponse<PageResponse<BookingResponse>> getBookings(
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(bookingService.getAdminBookings(status));
+        return ApiResponse.success(bookingService.getAdminBookings(status, page, size));
     }
 
     @GetMapping("/{bookingId}")

@@ -4,12 +4,10 @@ import com.sba301.cinemaai.entity.Notification;
 import com.sba301.cinemaai.enums.NotificationType;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class NotificationResponse {
@@ -23,14 +21,14 @@ public class NotificationResponse {
     private LocalDateTime updatedAt;
 
     public static NotificationResponse from(Notification notification) {
-        return NotificationResponse.builder()
-                .id(notification.getId())
-                .title(notification.getTitle())
-                .message(notification.getMessage())
-                .type(notification.getType())
-                .isRead(notification.getIsRead())
-                .createdAt(notification.getCreatedAt())
-                .updatedAt(notification.getUpdatedAt())
-                .build();
+        return new NotificationResponse(
+                notification.getId(),
+                notification.getTitle(),
+                notification.getMessage(),
+                notification.getType(),
+                notification.getIsRead(),
+                notification.getCreatedAt(),
+                notification.getUpdatedAt()
+        );
     }
 }

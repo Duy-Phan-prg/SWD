@@ -28,7 +28,7 @@ class PaymentEndpointInventoryTests {
 
     @Test
     void paymentServiceShouldPreservePaymentStateMachineAndVnpaySafetyChecks() throws IOException {
-        String service = readSource("service/PaymentService.java");
+        String service = readSource("service/impl/PaymentServiceImpl.java");
 
         for (String rule : List.of(
                 "bookingstatus.holding",
@@ -50,7 +50,7 @@ class PaymentEndpointInventoryTests {
 
     @Test
     void vnpayServiceShouldSignAndVerifyCallbacks() throws IOException {
-        String service = readSource("service/VNPayService.java");
+        String service = readSource("service/impl/VNPayServiceImpl.java");
         assertTrue(service.contains("vnp_version"));
         assertTrue(service.contains("vnp_command"));
         assertTrue(service.contains("vnp_amount"));

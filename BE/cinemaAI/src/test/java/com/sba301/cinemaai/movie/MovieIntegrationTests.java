@@ -67,11 +67,11 @@ class MovieIntegrationTests {
 
         mockMvc.perform(get("/api/v1/admin/actors")
                         .header("Authorization", "Bearer " + token)
-                        .param("keyword", "Actor T")
-                        .param("limit", "5"))
+                .param("keyword", "Actor T")
+                .param("limit", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].name").value("Actor Three"))
-                .andExpect(jsonPath("$.data[1].name").value("Actor Two"));
+                .andExpect(jsonPath("$.data.items[0].name").value("Actor Three"))
+                .andExpect(jsonPath("$.data.items[1].name").value("Actor Two"));
 
         String createMovieResponse = mockMvc.perform(post("/api/v1/admin/movies")
                         .header("Authorization", "Bearer " + token)

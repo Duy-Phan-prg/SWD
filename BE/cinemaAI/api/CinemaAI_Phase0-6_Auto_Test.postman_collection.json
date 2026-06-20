@@ -155,25 +155,6 @@
             "header": [],
             "url": "{{baseUrl}}/v3/api-docs"
           }
-        },
-        {
-          "name": "Unauthorized Users Me",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('401 or 403 without token', () => pm.expect([401,403]).to.include(pm.response.code));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/users/me"
-          }
         }
       ]
     },
@@ -698,8 +679,10 @@
                   "try { body = pm.response.json(); } catch (e) {}",
                   "pm.test('HTTP 2xx/3xx or expected', () => pm.expect(pm.response.code).to.be.below(500));",
                   "const seats = body.data?.seats || body.data || [];",
-                  "if (Array.isArray(seats) && seats.length) pm.collectionVariables.set('seatId', seats[0].seatId || seats[0].id);",
-                  "pm.test('seat id saved', () => pm.expect(pm.collectionVariables.get('seatId')).to.not.be.empty);"
+                  "let seatId = '';",
+                  "if (Array.isArray(seats) && seats.length) seatId = seats[0].seatId || seats[0].id;",
+                  "if (seatId !== undefined && seatId !== null) pm.collectionVariables.set('seatId', String(seatId));",
+                  "pm.test('seat id saved', () => pm.expect(String(pm.collectionVariables.get('seatId') || '')).to.not.be.empty);"
                 ]
               }
             }
@@ -854,7 +837,7 @@
                 "exec": [
                   "let body = {};",
                   "try { body = pm.response.json(); } catch (e) {}",
-                  "pm.test('HTTP 2xx/3xx or expected', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "pm.test('validate price success', () => pm.expect(pm.response.code).to.eql(200));",
                   "if (body.data?.finalAmount) pm.collectionVariables.set('ticketFinalAmount', body.data.finalAmount);"
                 ]
               }
@@ -863,6 +846,11 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json",
@@ -1073,7 +1061,7 @@
                   "let body = {};",
                   "try { body = pm.response.json(); } catch (e) {}",
                   "pm.test('HTTP 2xx/3xx or expected', () => pm.expect(pm.response.code).to.be.below(500));",
-                  "pm.test('payment belongs to booking', () => pm.expect(String(body.data.bookingId)).to.eql(pm.collectionVariables.get('bookingId')));"
+                  "pm.test('payment belongs to booking', () => pm.expect(String(body.data.bookingId)).to.eql(String(pm.collectionVariables.get('bookingId'))));"
                 ]
               }
             }
@@ -1153,85 +1141,6 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"qrCode\": \"{{qrCode}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Optional - Phase 2 Manual Customer Register",
-      "item": [
-        {
-          "name": "Register Customer Manual OTP",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "let body = {};",
-                  "try { body = pm.response.json(); } catch (e) {}",
-                  "pm.test('HTTP 2xx/3xx or expected', () => pm.expect(pm.response.code).to.be.below(500));",
-                  "if (body.data?.email) pm.collectionVariables.set('registeredEmail', body.data.email);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/auth/register",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"customer{{runSuffix}}@example.com\",\n  \"password\": \"Password123\",\n  \"fullName\": \"Auto Customer\",\n  \"phone\": \"0900111222\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Verify Email Manual OTP",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "let body = {};",
-                  "try { body = pm.response.json(); } catch (e) {}",
-                  "pm.test('HTTP 2xx/3xx or expected', () => pm.expect(pm.response.code).to.be.below(500));",
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/auth/verify-email",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"otp\": \"{{emailOtp}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

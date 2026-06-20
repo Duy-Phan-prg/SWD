@@ -22,6 +22,7 @@ import com.sba301.cinemaai.entity.SeatRow;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;
+import com.sba301.cinemaai.enums.AgeRating;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.FoodItemStatus;
 import com.sba301.cinemaai.enums.MovieStatus;
@@ -189,10 +190,10 @@ class BookingIntegrationTests {
         String qrCode = objectMapper.readTree(paidAdminBookingResponse).at("/data/qrCode").asText();
 
         mockMvc.perform(get("/api/v1/admin/bookings")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .param("status", "PAID"))
+                .header("Authorization", "Bearer " + adminToken)
+                .param("status", "PAID"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].status").value("PAID"));
+                .andExpect(jsonPath("$.data.items[0].status").value("PAID"));
 
         mockMvc.perform(get("/api/v1/showtimes/{showtimeId}/seat-map", showtime.getId()))
                 .andExpect(status().isOk())
@@ -208,7 +209,7 @@ class BookingIntegrationTests {
 
         mockMvc.perform(get("/api/v1/foods/items"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].status").value("ACTIVE"));
+                .andExpect(jsonPath("$.data.items[0].status").value("ACTIVE"));
 
         mockMvc.perform(delete("/api/v1/admin/foods/items/{itemId}", foodItemId)
                         .header("Authorization", "Bearer " + adminToken))
@@ -342,8 +343,14 @@ class BookingIntegrationTests {
     private Showtime createShowtimeFixture() {
         String suffix = Long.toString(System.nanoTime());
         Movie movie = new Movie("Phase 6 Movie " + suffix, 110, MovieStatus.NOW_SHOWING);
-        movie.updateDetails(movie.getTitle(), "Booking flow movie.", 110, LocalDate.of(2026, 5, 19));
-        movie.updateMetadata("English", "Vietnamese", "13+", "Phase Six Director", "Phase Six Lead", "Cast");
+        movie.setDescription("Booking flow movie.");
+        movie.setReleaseDate(LocalDate.of(2026, 5, 19));
+        movie.setLanguage("English");
+        movie.setSubtitleLanguage("Vietnamese");
+        movie.setAgeRating(AgeRating.from("13+"));
+        movie.setDirector("Phase Six Director");
+        movie.setMainActors("Phase Six Lead");
+        movie.setCastList("Cast");
         Movie savedMovie = movieRepository.save(movie);
 
         Cinema cinema = cinemaRepository.save(new Cinema("Phase 6 Cinema " + suffix, "1 Booking Street", "HCMC", "0900666777"));

@@ -17,6 +17,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -50,10 +51,12 @@ public class Seat extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "seat_type", nullable = false, length = 30)
+    @Setter
     private SeatType seatType = SeatType.STANDARD;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Setter
     private SeatStatus status = SeatStatus.AVAILABLE;
 
     public Seat(Room room, SeatRow seatRow, int seatNumber, int displayColumn, SeatType seatType) {
@@ -65,11 +68,4 @@ public class Seat extends BaseEntity {
         this.seatType = seatType;
     }
 
-    public void changeType(SeatType seatType) {
-        this.seatType = seatType;
-    }
-
-    public void changeStatus(SeatStatus status) {
-        this.status = status;
-    }
 }

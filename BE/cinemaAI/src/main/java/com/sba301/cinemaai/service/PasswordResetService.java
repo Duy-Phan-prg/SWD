@@ -13,51 +13,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
-public class PasswordResetService {
+public interface PasswordResetService {
 
-    private static final int PASSWORD_RESET_OTP_EXPIRES_IN_MINUTES = 5;
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+        public PasswordResetToken request(String email);
 
-    private final UserRepository userRepository;
-    private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final MailService mailService;
-
-    @Transactional
-    public PasswordResetToken request(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("User not found"));
-        PasswordResetToken resetToken = passwordResetTokenRepository.save(
-                new PasswordResetToken(
-                        user,
-                        generateOtp(),
-                        LocalDateTime.now().plusMinutes(PASSWORD_RESET_OTP_EXPIRES_IN_MINUTES)
-                )
-        );
-        mailService.sendOtp(user.getEmail(), resetToken.getToken(), "Đặt lại mật khẩu");
-        return resetToken;
-    }
-
-    @Transactional
-    public void confirm(String email, String otp, String newPassword, String confirmPassword) {
-        if (!newPassword.equals(confirmPassword)) {
-            throw new BadRequestException("Confirm password does not match");
-        }
-
-        PasswordResetToken resetToken = passwordResetTokenRepository
-                .findFirstByUserEmailAndTokenAndUsedFalseOrderByCreatedAtDesc(email, otp)
-                .orElseThrow(() -> new BadRequestException("Invalid password reset OTP"));
-        if (resetToken.isUsed() || resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Password reset OTP is expired or already used");
-        }
-
-        resetToken.getUser().changePassword(passwordEncoder.encode(newPassword));
-        resetToken.markUsed();
-    }
-
-    private String generateOtp() {
-        return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
-    }
+        public void confirm(String email, String otp, String newPassword, String confirmPassword);
 }

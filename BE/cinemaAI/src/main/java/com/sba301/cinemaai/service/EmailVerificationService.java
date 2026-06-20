@@ -13,103 +13,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
-public class EmailVerificationService {
+public interface EmailVerificationService {
 
-    private static final int EMAIL_VERIFICATION_EXPIRES_IN_SECONDS = 90;
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+        public EmailVerificationToken create(User user);
 
-    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
-    private final UserRepository userRepository;
-    private final MailService mailService;
+        public EmailVerificationToken createGoogleLoginOtp(User user);
 
-    @Transactional
-    public EmailVerificationToken create(User user) {
-        EmailVerificationToken verificationToken = emailVerificationTokenRepository.save(
-                new EmailVerificationToken(
-                        user,
-                        generateOtp(),
-                        EmailOtpPurpose.EMAIL_VERIFICATION,
-                        LocalDateTime.now().plusSeconds(EMAIL_VERIFICATION_EXPIRES_IN_SECONDS)
-                )
-        );
-        mailService.sendOtp(user.getEmail(), verificationToken.getToken(), "Email verification");
-        return verificationToken;
-    }
+        public void resendVerificationOtp(String email);
 
-    @Transactional
-    public EmailVerificationToken createGoogleLoginOtp(User user) {
-        EmailVerificationToken verificationToken = emailVerificationTokenRepository.save(
-                new EmailVerificationToken(
-                        user,
-                        generateOtp(),
-                        EmailOtpPurpose.GOOGLE_LOGIN,
-                        LocalDateTime.now().plusMinutes(5)
-                )
-        );
-        mailService.sendOtp(user.getEmail(), verificationToken.getToken(), "Google login");
-        return verificationToken;
-    }
+        public void verifyEmail(String email, String otp);
 
-    @Transactional
-    public void resendVerificationOtp(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("User not found"));
-        if (user.isEmailVerified()) {
-            throw new BadRequestException("Email is already verified");
-        }
-        create(user);
-    }
+        public User verifyGoogleLogin(String email, String otp);
 
-    @Transactional
-    public void verifyEmail(String email, String otp) {
-        EmailVerificationToken verificationToken = findValidOtp(email, otp, EmailOtpPurpose.EMAIL_VERIFICATION);
-        verificationToken.getUser().activateEmail();
-        verificationToken.markUsed();
-    }
-
-    @Transactional
-    public User verifyGoogleLogin(String email, String otp) {
-        EmailVerificationToken verificationToken = findValidOtp(email, otp, EmailOtpPurpose.GOOGLE_LOGIN);
-        verificationToken.getUser().activateEmail();
-        verificationToken.markUsed();
-        return verificationToken.getUser();
-    }
-
-    @Transactional
-    public void verify(String token) {
-        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new BadRequestException("Invalid OTP"));
-        if (verificationToken.isUsed() || verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP is expired or already used");
-        }
-        verificationToken.getUser().activateEmail();
-        verificationToken.markUsed();
-    }
-
-    private EmailVerificationToken findValidOtp(String email, String otp, EmailOtpPurpose purpose) {
-        if (email == null || email.isBlank()) {
-            EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(otp)
-                    .filter(token -> token.getPurpose() == purpose)
-                    .filter(token -> !token.isUsed())
-                    .orElseThrow(() -> new BadRequestException("Invalid OTP"));
-            if (verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-                throw new BadRequestException("OTP is expired or already used");
-            }
-            return verificationToken;
-        }
-
-        EmailVerificationToken verificationToken = emailVerificationTokenRepository
-                .findFirstByUserEmailAndTokenAndPurposeAndUsedFalseOrderByCreatedAtDesc(email, otp, purpose)
-                .orElseThrow(() -> new BadRequestException("Invalid OTP"));
-        if (verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP is expired or already used");
-        }
-        return verificationToken;
-    }
-
-    private String generateOtp() {
-        return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
-    }
+        public void verify(String token);
 }

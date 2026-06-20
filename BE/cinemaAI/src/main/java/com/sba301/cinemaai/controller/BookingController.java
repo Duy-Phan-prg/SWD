@@ -5,10 +5,10 @@ import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
 import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
 import com.sba301.cinemaai.dto.request.booking.RefundRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
 import com.sba301.cinemaai.service.BookingService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -47,8 +48,12 @@ public class BookingController {
     }
 
     @GetMapping
-    public ApiResponse<List<BookingResponse>> getMyBookings(@AuthenticationPrincipal AuthenticatedUser user) {
-        return ApiResponse.success(bookingService.getMyBookings(user.getUsername()));
+    public ApiResponse<PageResponse<BookingResponse>> getMyBookings(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(bookingService.getMyBookings(user.getUsername(), page, size));
     }
 
     @GetMapping("/{bookingId}")

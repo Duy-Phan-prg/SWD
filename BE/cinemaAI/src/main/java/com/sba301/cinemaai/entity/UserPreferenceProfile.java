@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -31,31 +32,29 @@ public class UserPreferenceProfile extends BaseEntity {
 
     @Lob
     @Column(name = "genre_scores")
+    @Setter
     private String genreScores;
 
     @Lob
     @Column(name = "actor_scores")
+    @Setter
     private String actorScores;
 
     @Lob
     @Column(name = "director_scores")
+    @Setter
     private String directorScores;
 
     @Column(name = "cohort_key", length = 100)
+    @Setter
     private String cohortKey;
 
     @Column(name = "last_refreshed_at")
+    @Setter
     private LocalDateTime lastRefreshedAt;
 
     public UserPreferenceProfile(User user) {
         this.user = user;
     }
 
-    public void refresh(String genreScores, String actorScores, String directorScores, String cohortKey) {
-        this.genreScores = genreScores;
-        this.actorScores = actorScores;
-        this.directorScores = directorScores;
-        this.cohortKey = cohortKey;
-        this.lastRefreshedAt = LocalDateTime.now();
-    }
 }

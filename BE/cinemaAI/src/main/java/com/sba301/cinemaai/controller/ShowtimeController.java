@@ -1,11 +1,11 @@
 package com.sba301.cinemaai.controller;
 
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.ShowtimeService;
 import java.time.LocalDate;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,12 +22,14 @@ public class ShowtimeController {
     private final ShowtimeService showtimeService;
 
     @GetMapping
-    public ApiResponse<List<ShowtimeResponse>> searchShowtimes(
+    public ApiResponse<PageResponse<ShowtimeResponse>> searchShowtimes(
             @RequestParam(required = false) Long movieId,
             @RequestParam(required = false) Long roomId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(showtimeService.searchPublic(movieId, roomId, date));
+        return ApiResponse.success(showtimeService.searchPublic(movieId, roomId, date, page, size));
     }
 
     @GetMapping("/{showtimeId}")

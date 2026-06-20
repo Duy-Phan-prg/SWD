@@ -21,6 +21,6 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("CineAI API")
                         .version("v1")
-                        .description("Cinema booking platform with AI movie analysis"));
+                        .description("Cinema booking platform"));
     }
 }

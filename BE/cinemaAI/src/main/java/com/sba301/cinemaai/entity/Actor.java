@@ -9,8 +9,10 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @Entity
 @Table(name = "actors")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -35,9 +37,4 @@ public class Actor extends BaseEntity {
         this.avatarUrl = avatarUrl;
     }
 
-    public void update(String name, String biography, String avatarUrl) {
-        this.name = name;
-        this.biography = biography;
-        this.avatarUrl = avatarUrl;
-    }
 }

@@ -15,118 +15,26 @@ import com.sba301.cinemaai.mapper.UserMapper;
 import com.sba301.cinemaai.repository.UserProfileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
-public class UserService {
+public interface UserService {
 
-    private final UserRepository userRepository;
-    private final UserProfileRepository userProfileRepository;
-    private final UserRoleService userRoleService;
-    private final UserMapper userMapper;
-    private final PasswordEncoder passwordEncoder;
+        public User getByEmail(String email);
 
-    @Transactional(readOnly = true)
-    public User getByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("User not found"));
-    }
+        public UserProfileResponse getProfile(String email);
 
-    @Transactional(readOnly = true)
-    public UserProfileResponse getProfile(String email) {
-        User user = getByEmail(email);
-        return toProfile(user);
-    }
+        public UserProfileResponse updateProfile(String email, UserProfileUpdateRequest request);
 
-    @Transactional
-    public UserProfileResponse updateProfile(String email, UserProfileUpdateRequest request) {
-        User user = getByEmail(email);
-        user.updateProfile(request.fullName(), request.phone(), request.birthYear());
-        return toProfile(user);
-    }
+        public UserProfileResponse updateAvatar(String email, String avatarUrl);
 
-    @Transactional
-    public UserProfileResponse updateAvatar(String email, String avatarUrl) {
-        User user = getByEmail(email);
-        user.getProfile().updateAvatar(avatarUrl);
-        return toProfile(user);
-    }
+        public void changePassword(String email, ChangePasswordRequest request);
 
-    @Transactional
-    public void changePassword(String email, ChangePasswordRequest request) {
-        if (!request.newPassword().equals(request.confirmPassword())) {
-            throw new BadRequestException("Confirm password does not match");
-        }
+        public List<UserProfileResponse> getAllUsers();
 
-        User user = getByEmail(email);
-        if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("Old password is incorrect");
-        }
-        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("New password must be different from old password");
-        }
+        public UserProfileResponse getById(Long id);
 
-        user.changePassword(passwordEncoder.encode(request.newPassword()));
-    }
+        public UserProfileResponse createStaff(AdminStaffCreateRequest request);
 
-    @Transactional(readOnly = true)
-    public List<UserProfileResponse> getAllUsers() {
-        return userRepository.findAll()
-                .stream()
-                .map(this::toProfile)
-                .toList();
-    }
+        public UserProfileResponse updateStatus(Long id, AdminUserStatusUpdateRequest request);
 
-    @Transactional(readOnly = true)
-    public UserProfileResponse getById(Long id) {
-        return toProfile(findById(id));
-    }
-
-    @Transactional
-    public UserProfileResponse createStaff(AdminStaffCreateRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new ConflictException("Email already exists");
-        }
-        if (request.phone() != null && !request.phone().isBlank()
-                && userProfileRepository.existsByPhone(request.phone())) {
-            throw new ConflictException("Phone already exists");
-        }
-
-        User staff = userRepository.save(new User(
-                request.email(),
-                passwordEncoder.encode(request.password()),
-                request.fullName(),
-                request.phone(),
-                request.birthYear()
-        ));
-        staff.activateEmail();
-        userRoleService.assignRole(staff, RoleName.STAFF);
-        return toProfile(staff);
-    }
-
-    @Transactional
-    public UserProfileResponse updateStatus(Long id, AdminUserStatusUpdateRequest request) {
-        User user = findById(id);
-        if (request.status() == UserStatus.DISABLED) {
-            user.disable();
-        } else if (request.status() == UserStatus.ACTIVE) {
-            user.activateEmail();
-        } else if (request.status() == UserStatus.PENDING_VERIFICATION) {
-            throw new BadRequestException("Cannot move user back to pending verification");
-        }
-        return toProfile(user);
-    }
-
-    public UserProfileResponse toProfile(User user) {
-        return userMapper.toProfile(user, userRoleService.getRoleNames(user.getId()));
-    }
-
-    private User findById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found"));
-    }
+        public UserProfileResponse toProfile(User user);
 }

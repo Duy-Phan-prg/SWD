@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -47,10 +48,12 @@ public class BookingSeat extends BaseEntity {
     private Seat seat;
 
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
+    @Setter
     private BigDecimal unitPrice;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Setter
     private SeatRuntimeStatus status = SeatRuntimeStatus.HOLDING;
 
     public BookingSeat(Booking booking, Showtime showtime, Seat seat, BigDecimal unitPrice) {
@@ -60,11 +63,4 @@ public class BookingSeat extends BaseEntity {
         this.unitPrice = unitPrice;
     }
 
-    public void changeStatus(SeatRuntimeStatus status) {
-        this.status = status;
-    }
-
-    public void changeUnitPrice(BigDecimal unitPrice) {
-        this.unitPrice = unitPrice;
-    }
 }

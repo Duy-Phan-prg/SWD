@@ -5,13 +5,13 @@ import com.sba301.cinemaai.dto.response.food.FoodComboResponse;
 import com.sba301.cinemaai.dto.request.food.FoodItemRequest;
 import com.sba301.cinemaai.dto.response.food.FoodItemResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.service.FoodService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.HttpStatus;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -40,8 +41,11 @@ public class AdminFoodController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role")
     })
-    public ApiResponse<List<FoodItemResponse>> getItems() {
-        return ApiResponse.success(foodService.getAllItems());
+    public ApiResponse<PageResponse<FoodItemResponse>> getItems(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(foodService.getAllItems(page, size));
     }
 
     @GetMapping("/combos")
@@ -51,8 +55,11 @@ public class AdminFoodController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role")
     })
-    public ApiResponse<List<FoodComboResponse>> getCombos() {
-        return ApiResponse.success(foodService.getAllCombos());
+    public ApiResponse<PageResponse<FoodComboResponse>> getCombos(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(foodService.getAllCombos(page, size));
     }
 
     @PostMapping("/items")

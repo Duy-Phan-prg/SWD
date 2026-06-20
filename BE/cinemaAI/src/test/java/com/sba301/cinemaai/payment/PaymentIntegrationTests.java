@@ -12,6 +12,7 @@ import com.sba301.cinemaai.entity.SeatRow;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;
+import com.sba301.cinemaai.enums.AgeRating;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.MovieStatus;
 import com.sba301.cinemaai.enums.PaymentStatus;
@@ -183,7 +184,9 @@ class PaymentIntegrationTests {
     private Booking createPendingBooking(User customer) {
         Showtime showtime = createShowtimeFixture();
         Booking booking = new Booking("BKPAY" + System.nanoTime(), customer, showtime, LocalDateTime.now().plusMinutes(10));
-        booking.updateAmounts(BigDecimal.valueOf(125000), BigDecimal.ZERO, BigDecimal.valueOf(125000));
+        booking.setSubtotal(BigDecimal.valueOf(125000));
+        booking.setDiscountAmount(BigDecimal.ZERO);
+        booking.setTotalAmount(BigDecimal.valueOf(125000));
         booking.markPendingPayment();
         Booking savedBooking = bookingRepository.save(booking);
 
@@ -200,8 +203,14 @@ class PaymentIntegrationTests {
     private Showtime createShowtimeFixture() {
         String suffix = Long.toString(System.nanoTime());
         Movie movie = new Movie("Phase 6 Payment Movie " + suffix, 110, MovieStatus.NOW_SHOWING);
-        movie.updateDetails(movie.getTitle(), "Payment flow movie.", 110, LocalDate.of(2026, 5, 19));
-        movie.updateMetadata("English", "Vietnamese", "13+", "Payment Director", "Payment Lead", "Cast");
+        movie.setDescription("Payment flow movie.");
+        movie.setReleaseDate(LocalDate.of(2026, 5, 19));
+        movie.setLanguage("English");
+        movie.setSubtitleLanguage("Vietnamese");
+        movie.setAgeRating(AgeRating.from("13+"));
+        movie.setDirector("Payment Director");
+        movie.setMainActors("Payment Lead");
+        movie.setCastList("Cast");
         Movie savedMovie = movieRepository.save(movie);
 
         Cinema cinema = cinemaRepository.save(new Cinema("Phase 6 Payment Cinema " + suffix, "1 Payment Street", "HCMC", "0900666777"));

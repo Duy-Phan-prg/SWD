@@ -19,6 +19,7 @@ import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;
+import com.sba301.cinemaai.enums.AgeRating;
 import com.sba301.cinemaai.enums.CinemaStatus;
 import com.sba301.cinemaai.enums.MovieStatus;
 import com.sba301.cinemaai.enums.RoleName;
@@ -345,7 +346,7 @@ class CinemaShowtimeIntegrationTests {
                         .param("movieId", movie.getId().toString())
                         .param("date", startTime.toLocalDate().toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value(showtimeId));
+                .andExpect(jsonPath("$.data.items[0].id").value(showtimeId));
 
         mockMvc.perform(get("/api/v1/showtimes/{showtimeId}/seat-map", showtimeId))
                 .andExpect(status().isOk())
@@ -563,8 +564,14 @@ class CinemaShowtimeIntegrationTests {
     private Movie createMovie() {
         String title = "Phase 5 Movie " + System.nanoTime();
         Movie movie = new Movie(title, 110, MovieStatus.NOW_SHOWING);
-        movie.updateDetails(title, "Scheduling test movie.", 110, LocalDate.of(2026, 5, 19));
-        movie.updateMetadata("English", "Vietnamese", "13+", "Phase Five Director", "Phase Five Lead", "Cast");
+        movie.setDescription("Scheduling test movie.");
+        movie.setReleaseDate(LocalDate.of(2026, 5, 19));
+        movie.setLanguage("English");
+        movie.setSubtitleLanguage("Vietnamese");
+        movie.setAgeRating(AgeRating.from("13+"));
+        movie.setDirector("Phase Five Director");
+        movie.setMainActors("Phase Five Lead");
+        movie.setCastList("Cast");
         return movieRepository.save(movie);
     }
 

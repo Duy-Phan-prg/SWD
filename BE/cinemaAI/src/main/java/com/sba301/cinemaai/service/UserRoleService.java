@@ -12,33 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
-public class UserRoleService {
+public interface UserRoleService {
 
-    private final RoleRepository roleRepository;
-    private final UserRoleRepository userRoleRepository;
+        public void assignRole(User user, RoleName roleName);
 
-    @Transactional
-    public void assignRole(User user, RoleName roleName) {
-        Role role = roleRepository.findByName(roleName)
-                .orElseGet(() -> roleRepository.save(new Role(roleName)));
-        if (!userRoleRepository.existsByUserIdAndRoleId(user.getId(), role.getId())) {
-            userRoleRepository.save(new UserRole(user, role));
-        }
-    }
+        public List<String> getRoleNames(Long userId);
 
-    @Transactional(readOnly = true)
-    public List<String> getRoleNames(Long userId) {
-        return userRoleRepository.findByUserId(userId)
-                .stream()
-                .map(userRole -> userRole.getRole().getName().name())
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public Role getRole(RoleName roleName) {
-        return roleRepository.findByName(roleName)
-                .orElseThrow(() -> new NotFoundException("Role not found"));
-    }
+        public Role getRole(RoleName roleName);
 }

@@ -3,6 +3,7 @@ package com.sba301.cinemaai.controller;
 import com.sba301.cinemaai.dto.response.movie.ActorResponse;
 import com.sba301.cinemaai.dto.response.movie.MovieResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.service.ActorService;
 import com.sba301.cinemaai.service.MovieService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,11 +27,12 @@ public class ActorController {
 
     @GetMapping
     @Operation(summary = "List or search actors", description = "List actors with movie count, optionally filtered by actor name")
-    public ApiResponse<List<ActorResponse>> getActors(
+    public ApiResponse<PageResponse<ActorResponse>> getActors(
             @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "20") int limit
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(actorService.searchPublicActors(keyword, limit));
+        return ApiResponse.success(actorService.searchPublicActors(keyword, page, size));
     }
 
     @GetMapping("/{actorId}")

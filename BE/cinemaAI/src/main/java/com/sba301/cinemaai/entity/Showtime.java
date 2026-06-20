@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -47,55 +48,72 @@ public class Showtime extends BaseEntity {
     private Room room;
 
     @Column(name = "start_time", nullable = false)
+    @Setter
     private LocalDateTime startTime;
 
     @Column(name = "end_time", nullable = false)
+    @Setter
     private LocalDateTime endTime;
 
     @Column(name = "base_price", nullable = false, precision = 12, scale = 2)
+    @Setter
     private BigDecimal basePrice;
 
     @Column(name = "vip_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal vipPrice;
 
     @Column(name = "couple_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal couplePrice;
 
     @Column(name = "adult_standard_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal adultStandardPrice;
 
     @Column(name = "child_standard_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal childStandardPrice;
 
     @Column(name = "student_standard_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal studentStandardPrice;
 
     @Column(name = "adult_vip_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal adultVipPrice;
 
     @Column(name = "child_vip_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal childVipPrice;
 
     @Column(name = "student_vip_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal studentVipPrice;
 
     @Column(name = "adult_couple_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal adultCouplePrice;
 
     @Column(name = "child_couple_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal childCouplePrice;
 
     @Column(name = "student_couple_price", precision = 12, scale = 2)
+    @Setter
     private BigDecimal studentCouplePrice;
 
     @Column(name = "weekend_surcharge", nullable = false)
+    @Setter
     private boolean weekendSurcharge;
 
     @Column(name = "holiday_surcharge", nullable = false)
+    @Setter
     private boolean holidaySurcharge;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Setter
     private ShowtimeStatus status = ShowtimeStatus.SCHEDULED;
 
     public Showtime(Movie movie, Room room, LocalDateTime startTime, LocalDateTime endTime, BigDecimal basePrice) {
@@ -106,55 +124,8 @@ public class Showtime extends BaseEntity {
         this.basePrice = basePrice;
     }
 
-    public void reschedule(LocalDateTime startTime, LocalDateTime endTime) {
-        this.startTime = startTime;
-        this.endTime = endTime;
-    }
-
-    public void changeBasePrice(BigDecimal basePrice) {
-        this.basePrice = basePrice;
-    }
-
-    public void changePrices(BigDecimal basePrice, BigDecimal vipPrice, BigDecimal couplePrice) {
-        this.basePrice = basePrice;
-        this.vipPrice = vipPrice;
-        this.couplePrice = couplePrice;
-        this.adultStandardPrice = basePrice;
-        this.adultVipPrice = vipPrice != null ? vipPrice : basePrice.add(BigDecimal.valueOf(20_000));
-        this.adultCouplePrice = couplePrice != null ? couplePrice : basePrice.add(BigDecimal.valueOf(30_000));
-    }
-
     public BigDecimal getPriceForSeatType(SeatType seatType) {
         return getPriceForTicketAndSeatType(TicketType.ADULT, seatType);
-    }
-
-    public void changeTicketPrices(
-            BigDecimal adultStandardPrice,
-            BigDecimal childStandardPrice,
-            BigDecimal studentStandardPrice,
-            BigDecimal adultVipPrice,
-            BigDecimal childVipPrice,
-            BigDecimal studentVipPrice,
-            BigDecimal adultCouplePrice,
-            BigDecimal childCouplePrice,
-            BigDecimal studentCouplePrice,
-            boolean weekendSurcharge,
-            boolean holidaySurcharge
-    ) {
-        this.adultStandardPrice = defaultMoney(adultStandardPrice, basePrice);
-        this.childStandardPrice = defaultMoney(childStandardPrice, this.adultStandardPrice);
-        this.studentStandardPrice = defaultMoney(studentStandardPrice, this.adultStandardPrice);
-        this.adultVipPrice = defaultMoney(adultVipPrice, this.adultStandardPrice.add(BigDecimal.valueOf(20_000)));
-        this.childVipPrice = defaultMoney(childVipPrice, this.childStandardPrice.add(BigDecimal.valueOf(20_000)));
-        this.studentVipPrice = defaultMoney(studentVipPrice, this.studentStandardPrice.add(BigDecimal.valueOf(20_000)));
-        this.adultCouplePrice = defaultMoney(adultCouplePrice, this.adultStandardPrice.add(BigDecimal.valueOf(30_000)));
-        this.childCouplePrice = defaultMoney(childCouplePrice, this.childStandardPrice.add(BigDecimal.valueOf(30_000)));
-        this.studentCouplePrice = defaultMoney(studentCouplePrice, this.studentStandardPrice.add(BigDecimal.valueOf(30_000)));
-        this.weekendSurcharge = weekendSurcharge;
-        this.holidaySurcharge = holidaySurcharge;
-        this.basePrice = this.adultStandardPrice;
-        this.vipPrice = this.adultVipPrice;
-        this.couplePrice = this.adultCouplePrice;
     }
 
     public BigDecimal getPriceForTicketAndSeatType(TicketType ticketType, SeatType seatType) {
@@ -208,9 +179,5 @@ public class Showtime extends BaseEntity {
 
     private BigDecimal defaultMoney(BigDecimal value, BigDecimal fallback) {
         return value != null ? value : fallback;
-    }
-
-    public void changeStatus(ShowtimeStatus status) {
-        this.status = status;
     }
 }

@@ -52,6 +52,22 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     );
 
     @Query("""
+            select s from Showtime s
+            where (:movieId is null or s.movie.id = :movieId)
+              and (:roomId is null or s.room.id = :roomId)
+              and s.status = com.sba301.cinemaai.enums.ShowtimeStatus.OPEN
+              and s.startTime >= :from
+              and s.startTime < :to
+            """)
+    Page<Showtime> searchPublic(
+            @Param("movieId") Long movieId,
+            @Param("roomId") Long roomId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable
+    );
+
+    @Query("""
             select count(showtime) > 0
             from Showtime showtime
             where showtime.room = :room

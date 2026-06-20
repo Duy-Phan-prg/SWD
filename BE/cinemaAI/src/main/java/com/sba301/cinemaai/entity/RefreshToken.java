@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -35,6 +36,7 @@ public class RefreshToken extends BaseEntity {
     private LocalDateTime expiresAt;
 
     @Column(nullable = false)
+    @Setter
     private boolean revoked;
 
     public RefreshToken(User user, String token, LocalDateTime expiresAt) {
@@ -43,7 +45,4 @@ public class RefreshToken extends BaseEntity {
         this.expiresAt = expiresAt;
     }
 
-    public void revoke() {
-        this.revoked = true;
-    }
 }

@@ -11,40 +11,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-@RequiredArgsConstructor
-public class RefreshTokenService {
+public interface RefreshTokenService {
 
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtProperties jwtProperties;
+        public RefreshToken create(User user);
 
-    @Transactional
-    public RefreshToken create(User user) {
-        LocalDateTime expiresAt = LocalDateTime.now().plusNanos(jwtProperties.refreshExpirationMs() * 1_000_000);
-        return refreshTokenRepository.save(new RefreshToken(user, UUID.randomUUID().toString(), expiresAt));
-    }
+        public RefreshToken validate(String token);
 
-    @Transactional(readOnly = true)
-    public RefreshToken validate(String token) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
-        if (refreshToken.isRevoked() || refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new UnauthorizedException("Refresh token is expired or revoked");
-        }
-        return refreshToken;
-    }
+        public void revoke(String token);
 
-    @Transactional
-    public void revoke(String token) {
-        refreshTokenRepository.findByToken(token).ifPresent(refreshToken -> {
-            refreshToken.revoke();
-            refreshTokenRepository.save(refreshToken);
-        });
-    }
-
-    @Transactional
-    public void revokeAll(User user) {
-        refreshTokenRepository.findByUserAndRevokedFalse(user)
-                .forEach(RefreshToken::revoke);
-    }
+        public void revokeAll(User user);
 }

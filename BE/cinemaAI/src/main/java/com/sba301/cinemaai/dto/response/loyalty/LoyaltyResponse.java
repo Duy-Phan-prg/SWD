@@ -2,11 +2,11 @@ package com.sba301.cinemaai.dto.response.loyalty;
 
 import com.sba301.cinemaai.entity.LoyaltyPoint;
 import com.sba301.cinemaai.enums.LoyaltyStatus;
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
-@Builder
+@AllArgsConstructor
 public class LoyaltyResponse {
 
     private Long userId;
@@ -16,12 +16,12 @@ public class LoyaltyResponse {
     private LoyaltyStatus status;
 
     public static LoyaltyResponse from(LoyaltyPoint lp) {
-        return LoyaltyResponse.builder()
-                .userId(lp.getUser().getId())
-                .userEmail(lp.getUser().getEmail())
-                .points(lp.getPoints())
-                .totalPoints(lp.getTotalPoints())
-                .status(lp.getStatus())
-                .build();
+        return new LoyaltyResponse(
+                lp.getUser().getId(),
+                lp.getUser().getEmail(),
+                lp.getPoints(),
+                lp.getTotalPoints(),
+                lp.getStatus()
+        );
     }
 }

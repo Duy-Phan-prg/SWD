@@ -74,12 +74,12 @@ class ActorIntegrationTests {
                         .header("Authorization", "Bearer " + token)
                         .param("keyword", suffix))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(2));
+                .andExpect(jsonPath("$.data.items.length()").value(2));
 
         mockMvc.perform(get("/api/v1/actors")
                         .param("keyword", suffix))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(0));
+                .andExpect(jsonPath("$.data.items.length()").value(0));
 
         mockMvc.perform(post("/api/v1/admin/movies")
                         .header("Authorization", "Bearer " + token)
@@ -109,9 +109,9 @@ class ActorIntegrationTests {
         mockMvc.perform(get("/api/v1/actors")
                         .param("keyword", suffix))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].id").value(linkedActorId))
-                .andExpect(jsonPath("$.data[0].movieCount").value(1));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(linkedActorId))
+                .andExpect(jsonPath("$.data.items[0].movieCount").value(1));
 
         mockMvc.perform(get("/api/v1/actors/{actorId}", linkedActorId))
                 .andExpect(status().isOk())

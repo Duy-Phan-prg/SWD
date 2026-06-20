@@ -7,6 +7,7 @@ import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.repository.UploadedFileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
+import com.sba301.cinemaai.service.impl.CloudinaryUploadServiceImpl;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class CloudinaryUploadServiceTest {
 
     @BeforeEach
     void setUp() {
-        cloudinaryUploadService = new CloudinaryUploadService(
+        cloudinaryUploadService = new CloudinaryUploadServiceImpl(
                 cloudinary,
                 new CloudinaryCredentials("dmcodhbcc", "api-key", "api-secret"),
                 uploadedFileRepository,
@@ -75,7 +76,7 @@ class CloudinaryUploadServiceTest {
 
     @Test
     void shouldRejectMissingCloudinaryConfigurationBeforeUpload() {
-        cloudinaryUploadService = new CloudinaryUploadService(
+        cloudinaryUploadService = new CloudinaryUploadServiceImpl(
                 cloudinary,
                 new CloudinaryCredentials("", "api-key", "api-secret"),
                 uploadedFileRepository,

@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -26,22 +27,20 @@ public class UserCohortPreference extends BaseEntity {
 
     @Lob
     @Column(name = "genre_scores")
+    @Setter
     private String genreScores;
 
     @Lob
     @Column(name = "actor_scores")
+    @Setter
     private String actorScores;
 
     @Column(name = "sample_size", nullable = false)
+    @Setter
     private int sampleSize;
 
     public UserCohortPreference(String cohortKey) {
         this.cohortKey = cohortKey;
     }
 
-    public void refresh(String genreScores, String actorScores, int sampleSize) {
-        this.genreScores = genreScores;
-        this.actorScores = actorScores;
-        this.sampleSize = sampleSize;
-    }
 }

@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -42,6 +43,7 @@ public class StaffProfile extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Setter
     private StaffStatus status = StaffStatus.ACTIVE;
 
     public StaffProfile(User user, Cinema cinema, String employeeCode, String position) {
@@ -51,7 +53,4 @@ public class StaffProfile extends BaseEntity {
         this.position = position;
     }
 
-    public void changeStatus(StaffStatus status) {
-        this.status = status;
-    }
 }
