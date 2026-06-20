@@ -296,7 +296,7 @@ Lưu ý nghiệp vụ: CUSTOMER không được yêu cầu hoàn tiền sau khi 
 | BOOK-05 | Tạo booking từ hold | Có | Có | **ĐÃ HOÀN THÀNH** |
 | BOOK-06 | Chọn loại vé, tuổi và F&B | Có | Có | **ĐÃ HOÀN THÀNH** |
 | BOOK-07 | Xem danh sách/chi tiết booking cá nhân | Có | Có | **ĐÃ HOÀN THÀNH** |
-| BOOK-08 | Hủy booking hợp lệ | Có | FE chưa có luồng rõ ràng | **HOÀN THÀNH MỘT PHẦN** |
+| BOOK-08 | Hủy booking hợp lệ | Có, chỉ cho `HOLDING`/`PENDING_PAYMENT` còn hạn | Có nút hủy trước thanh toán trong Vé của tôi | **ĐÃ HOÀN THÀNH** |
 | BOOK-09 | Scheduler giải phóng hold hết hạn | Có | Không áp dụng | **ĐÃ HOÀN THÀNH** |
 | BOOK-10 | Realtime cập nhật trạng thái ghế | Chưa có | Chưa có | **CHƯA THỰC HIỆN** |
 

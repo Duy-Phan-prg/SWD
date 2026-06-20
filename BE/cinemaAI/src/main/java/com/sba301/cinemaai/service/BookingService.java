@@ -208,10 +208,7 @@ public class BookingService {
         User user = userService.getByEmail(email);
         Booking booking = findBooking(bookingId);
         validateOwner(booking, user);
-        validateRefundable(booking);
-        booking.requestRefund(reason);
-        releaseSeats(booking);
-        return toResponse(booking);
+        throw new BadRequestException("Customer refund request is not supported after ticket purchase");
     }
 
     @Transactional
@@ -239,12 +236,15 @@ public class BookingService {
     }
 
     private BookingResponse cancelBooking(Booking booking) {
-        if (booking.getStatus() == BookingStatus.USED) {
-            throw new BadRequestException("Checked-in booking cannot be cancelled");
+        if (booking.getStatus() != BookingStatus.HOLDING && booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new BadRequestException("Only holding or pending payment booking can be cancelled before payment");
         }
-        if (booking.getStatus() == BookingStatus.HOLDING || booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
-            releaseFoodStockReservation(booking);
+        if (booking.getHoldExpiresAt() != null && booking.getHoldExpiresAt().isBefore(LocalDateTime.now())) {
+            expireBooking(booking);
+            throw new BadRequestException("Booking hold has expired");
         }
+
+        releaseFoodStockReservation(booking);
         releaseSeats(booking);
         booking.cancel();
         return toResponse(booking);

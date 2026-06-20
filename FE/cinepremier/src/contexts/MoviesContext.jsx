@@ -119,7 +119,13 @@ export function MoviesProvider({ children }) {
           const hasMainActorIds = Array.isArray(movie.mainActorIds) && movie.mainActorIds.length > 0;
           const hasDetailText = movie.raw?.description || movie.raw?.synopsis || movie.raw?.overview || movie.raw?.content;
           const hasDirector = movie.raw?.director || movie.raw?.directorName;
-          const hasTrailer = movie.raw?.trailerUrl || movie.raw?.trailer;
+          const hasTrailer = movie.raw?.trailerUrl
+            || movie.raw?.trailerURL
+            || movie.raw?.trailer_url
+            || movie.raw?.trailer
+            || movie.raw?.videoUrl
+            || movie.raw?.videoURL
+            || movie.raw?.video_url;
 
           return {
             ...existing,

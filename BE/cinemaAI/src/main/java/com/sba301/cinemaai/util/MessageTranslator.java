@@ -124,6 +124,8 @@ public final class MessageTranslator {
             entry("Ticket selection is not eligible for this movie/showtime", "Lựa chọn vé không phù hợp với phim hoặc suất chiếu này"),
             entry("Only refund requested booking can be marked as refunded", "Chỉ đặt vé đã yêu cầu hoàn tiền mới có thể đánh dấu đã hoàn tiền"),
             entry("Checked-in booking cannot be cancelled", "Không thể hủy đặt vé đã check-in"),
+            entry("Only holding or pending payment booking can be cancelled before payment", "Chỉ đặt vé đang giữ chỗ hoặc đang chờ thanh toán mới có thể hủy trước thanh toán"),
+            entry("Booking hold has expired", "Thời gian giữ booking đã hết hạn"),
             entry("Only paid booking can be checked in", "Chỉ đặt vé đã thanh toán mới có thể check-in"),
             entry("QR code does not match booking", "Mã QR không khớp với đặt vé"),
             entry("Choose exactly one food item or combo", "Chỉ được chọn một món ăn hoặc một combo"),
@@ -134,6 +136,7 @@ public final class MessageTranslator {
             entry("Seat is not available", "Ghế không khả dụng"),
             entry("Seat is already held or booked", "Ghế đã được giữ hoặc đã được đặt"),
             entry("Only paid or cancelled booking can request refund", "Chỉ đặt vé đã thanh toán hoặc đã hủy mới có thể yêu cầu hoàn tiền"),
+            entry("Customer refund request is not supported after ticket purchase", "Khách hàng không thể yêu cầu hoàn tiền sau khi vé đã thanh toán"),
             entry("Booking not found", "Không tìm thấy đặt vé"),
 
             entry("System is limited to one cinema", "Hệ thống chỉ cho phép một rạp phim"),

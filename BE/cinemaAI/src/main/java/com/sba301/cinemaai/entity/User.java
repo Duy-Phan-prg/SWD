@@ -45,6 +45,12 @@ public class User extends BaseEntity {
     @Column(name = "birth_year")
     private Integer birthYear;
 
+    @Column(name = "password_change_required", nullable = false, columnDefinition = "boolean default false")
+    private boolean passwordChangeRequired;
+
+    @Column(name = "password_setup_provider", length = 30)
+    private String passwordSetupProvider;
+
     public User(String email, String passwordHash, String fullName, String phone) {
         this(email, passwordHash, fullName, phone, null);
     }
@@ -77,6 +83,14 @@ public class User extends BaseEntity {
 
     public void changePassword(String passwordHash) {
         this.passwordHash = passwordHash;
+        this.passwordChangeRequired = false;
+        this.passwordSetupProvider = null;
+    }
+
+    public void requirePasswordChange(String passwordHash, String setupProvider) {
+        this.passwordHash = passwordHash;
+        this.passwordChangeRequired = true;
+        this.passwordSetupProvider = setupProvider;
     }
 
     public String getFullName() {

@@ -252,7 +252,8 @@ Không hợp lệ:
 - Booking `USED`, `REFUNDED`, `CANCELLED`, `EXPIRED` không được hủy lại.
 - Vé đã thanh toán là vé đã bán ra; hệ thống không hỗ trợ hoàn tiền theo yêu cầu khách hàng sau khi mua vé.
 
-Trạng thái: hoàn thành một phần; chưa cần UI customer refund vì nghiệp vụ không cho phép khách tự hoàn tiền sau thanh toán.
+Trạng thái: đã hoàn thành BE rule + FE nút hủy trước thanh toán trong Vé của tôi.
+
 
 ### CUSTOMER-06: Wishlist
 
@@ -266,9 +267,6 @@ Luồng chính:
 2. Hệ thống lưu phim yêu thích.
 3. CUSTOMER xem hoặc xóa phim khỏi wishlist.
 
-Chưa thực hiện:
-
-- Tự thông báo khi phim trong wishlist có suất mới.
 
 Trạng thái: thêm/xóa/xem đã hoàn thành.
 

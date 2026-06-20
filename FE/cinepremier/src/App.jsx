@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminPage';
 import PoliciesPage from './pages/PoliciesPage';
 import PaymentCallbackPage from './pages/PaymentCallbackPage';
 import StaffCheckInPage from './pages/StaffCheckInPage';
+import GooglePasswordSetupPage from './pages/GooglePasswordSetupPage';
 import AdminRoute from './components/AdminRoute';
 import StaffRoute from './components/StaffRoute';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -90,8 +91,13 @@ function AdminRouteView() {
 }
 
 function AppRoutes() {
+  const { currentUser } = useAuth();
+  const mustSetupPassword = currentUser?.passwordChangeRequired;
+
   return (
     <Routes>
+      <Route path="/setup-password" element={<GooglePasswordSetupPage />} />
+      {mustSetupPassword && <Route path="*" element={<Navigate to="/setup-password" replace />} />}
       <Route path="/payment-callback" element={<PaymentCallbackPage />} />
       <Route path="/staff" element={<AppShell><StaffRoute><StaffCheckInPage /></StaffRoute></AppShell>} />
       <Route path="/" element={<AppShell><HomeRoute /></AppShell>} />

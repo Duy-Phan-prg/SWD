@@ -113,6 +113,10 @@ export function AuthProvider({ children }) {
       setCurrentRole(userData.role || 'user');
       const redirectPath = sessionStorage.getItem('cinepremier_post_login_redirect');
       sessionStorage.removeItem('cinepremier_post_login_redirect');
+      if (userData.passwordChangeRequired) {
+        navigate('/setup-password');
+        return;
+      }
       navigate(userData.role === 'admin' ? '/admin/overview' : redirectPath || '/');
     }
   };

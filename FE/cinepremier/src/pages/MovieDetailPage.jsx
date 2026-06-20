@@ -5,10 +5,54 @@ import { useMovies } from '../contexts/MoviesContext';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi, getStoredAuth } from '../services/authApi';
 
+const extractYoutubeId = (url = '') => {
+  const trimmed = url.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.replace(/^www\./, '');
+    const parts = parsed.pathname.split('/').filter(Boolean);
+
+    if (host === 'youtu.be') return parts[0] || '';
+    if (host.endsWith('youtube.com')) {
+      const videoId = parsed.searchParams.get('v');
+      if (videoId) return videoId;
+      if (['embed', 'shorts', 'live'].includes(parts[0])) return parts[1] || '';
+    }
+  } catch {
+    // Fall back to regex parsing for partially pasted URLs.
+  }
+
+  const patterns = [
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/live\/([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})/
+  ];
+
+  return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || '';
+};
+
+const isDirectVideoUrl = (url = '') => {
+  const value = url.trim().toLowerCase();
+  return /\.(mp4|webm|mov)(\?|#|$)/.test(value) || value.includes('/video/upload/');
+};
+
+const getTrailerEmbedSrc = (url = '') => {
+  const youtubeId = extractYoutubeId(url);
+  if (youtubeId) {
+    return `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=1&rel=0&modestbranding=1&playsinline=1`;
+  }
+  return url;
+};
+
 export default function DetailView() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { moviesList, setMoviesList } = useMovies();
+  const { moviesList, setMoviesList, watchlist = [], handleToggleWatchlist } = useMovies();
   const { currentRole } = useAuth();
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
   const onBack = () => navigate(-1);
@@ -51,6 +95,12 @@ export default function DetailView() {
   const [newContent, setNewContent] = useState('');
   const [likedReviews, setLikedReviews] = useState({});
   const isBookable = movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
+  const isWatchlisted = movie && watchlist.some((item) => (
+    String(item.backendId || item.movieId || item.id) === String(movie.backendId || movie.movieId || movie.id)
+  ));
+  const trailerUrl = movie?.trailerUrl?.trim() || '';
+  const trailerEmbedSrc = getTrailerEmbedSrc(trailerUrl);
+  const hasDirectTrailerVideo = isDirectVideoUrl(trailerUrl);
 
   // Reviews are user-generated; do not seed frontend mock reviews.
   useEffect(() => {
@@ -190,11 +240,26 @@ export default function DetailView() {
 
               <button
                 onClick={() => setShowTrailer(true)}
-                className="border border-white/10 bg-black/40 hover:bg-neutral-900 hover:border-white/35 text-white px-6 py-3.5 text-xs font-sans uppercase tracking-[0.15em] flex items-center gap-2 transition duration-300"
+                disabled={!trailerUrl}
+                className="border border-white/10 bg-black/40 hover:bg-neutral-900 hover:border-white/35 text-white px-6 py-3.5 text-xs font-sans uppercase tracking-[0.15em] flex items-center gap-2 transition duration-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black/40 disabled:hover:border-white/10"
                 id="detail-trailer-button"
               >
                 <Play className="h-4 w-4 fill-white text-white" />
                 XEM TRAILER
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleToggleWatchlist(movie)}
+                className={`border px-5 py-3.5 text-xs font-sans uppercase tracking-[0.15em] flex items-center gap-2 transition duration-300 ${
+                  isWatchlisted
+                    ? 'border-rose-400/70 bg-rose-500 text-white hover:bg-black'
+                    : 'border-white/10 bg-black/40 text-white hover:bg-white hover:text-black'
+                }`}
+                id="detail-watchlist-button"
+              >
+                <Heart className={`h-4 w-4 ${isWatchlisted ? 'fill-current' : ''}`} />
+                {isWatchlisted ? 'ĐÃ LƯU' : 'LƯU PHIM'}
               </button>
 
             </div>
@@ -394,7 +459,7 @@ export default function DetailView() {
       </section>
 
       {/* 3. VIDEO TRAILER DIALOG COMPONENT MODAL */}
-      {showTrailer && (
+      {showTrailer && trailerUrl && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 transition duration-300"
           id="trailer-modal"
@@ -410,13 +475,23 @@ export default function DetailView() {
 
             {/* Aspect box iframe */}
             <div className="aspect-video w-full bg-black">
-              <iframe
-                title={`${movie.title} Trailer`}
-                src={movie.trailerUrl}
-                className="h-full w-full border-none"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {hasDirectTrailerVideo ? (
+                <video
+                  src={trailerUrl}
+                  className="h-full w-full"
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              ) : (
+                <iframe
+                  title={`${movie.title} Trailer`}
+                  src={trailerEmbedSrc}
+                  className="h-full w-full border-none"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
             </div>
             
             <div className="p-4 bg-neutral-950 border-t border-white/10">

@@ -14,6 +14,8 @@ public record UserProfileResponse(
         UserStatus status,
         boolean emailVerified,
         boolean phoneVerified,
+        boolean passwordChangeRequired,
+        String passwordSetupProvider,
         List<String> roles,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
