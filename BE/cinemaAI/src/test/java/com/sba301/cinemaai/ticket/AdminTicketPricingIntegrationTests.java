@@ -232,7 +232,8 @@ class AdminTicketPricingIntegrationTests {
                 .orElseGet(() -> roleRepository.save(new Role(RoleName.ADMIN)));
 
         User user = new User(email, passwordEncoder.encode(password), "Ticket Admin", "0900123456");
-        user.activateEmail();
+        user.setEmailVerified(true);
+        user.setStatus(com.sba301.cinemaai.enums.UserStatus.ACTIVE);
         User savedUser = userRepository.save(user);
         userRoleRepository.save(new UserRole(savedUser, role));
         return savedUser;

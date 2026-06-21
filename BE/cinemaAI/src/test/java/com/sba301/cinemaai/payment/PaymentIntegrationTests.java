@@ -187,7 +187,7 @@ class PaymentIntegrationTests {
         booking.setSubtotal(BigDecimal.valueOf(125000));
         booking.setDiscountAmount(BigDecimal.ZERO);
         booking.setTotalAmount(BigDecimal.valueOf(125000));
-        booking.markPendingPayment();
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
         Booking savedBooking = bookingRepository.save(booking);
 
         Seat firstSeat = seatRepository.findByRoom(showtime.getRoom()).get(0);
@@ -226,7 +226,7 @@ class PaymentIntegrationTests {
                 LocalDateTime.of(2026, 5, 21, 21, 5),
                 BigDecimal.valueOf(95000)
         );
-        showtime.changeStatus(ShowtimeStatus.OPEN);
+        showtime.setStatus(ShowtimeStatus.OPEN);
         return showtimeRepository.save(showtime);
     }
 
@@ -251,7 +251,8 @@ class PaymentIntegrationTests {
                 .orElseGet(() -> roleRepository.save(new Role(roleName)));
 
         User user = new User(email, passwordEncoder.encode(password), "Phase Six Payment User", "0900666888");
-        user.activateEmail();
+        user.setEmailVerified(true);
+        user.setStatus(com.sba301.cinemaai.enums.UserStatus.ACTIVE);
         User savedUser = userRepository.save(user);
         userRoleRepository.save(new UserRole(savedUser, role));
         return savedUser;

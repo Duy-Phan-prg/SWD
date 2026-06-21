@@ -4,6 +4,7 @@ import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;
 import com.sba301.cinemaai.enums.RoleName;
+import com.sba301.cinemaai.enums.UserStatus;
 import com.sba301.cinemaai.repository.RoleRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import com.sba301.cinemaai.repository.UserRoleRepository;
@@ -40,12 +41,14 @@ public class AdminAccountSeeder implements Seeder {
                             "CinemaAI Admin",
                             "0900000001"
                     );
-                    user.activateEmail();
+                    user.setEmailVerified(true);
+                    user.setStatus(UserStatus.ACTIVE);
                     return userRepository.save(user);
                 });
 
         if (!admin.isEmailVerified()) {
-            admin.activateEmail();
+            admin.setEmailVerified(true);
+            admin.setStatus(UserStatus.ACTIVE);
         }
 
         if (!userRoleRepository.existsByUserIdAndRoleId(admin.getId(), adminRole.getId())) {

@@ -102,7 +102,7 @@ public class TicketPricingServiceImpl implements TicketPricingService {
 
     @Transactional
     public void deleteRule(Long id) {
-        findRule(id).deactivate();
+        findRule(id).setActive(false);
     }
 
     @Transactional(readOnly = true)
@@ -170,7 +170,7 @@ public class TicketPricingServiceImpl implements TicketPricingService {
 
     @Transactional
     public void deleteCombo(Long id) {
-        findCombo(id).deactivate();
+        findCombo(id).setActive(false);
     }
 
     @Transactional(readOnly = true)

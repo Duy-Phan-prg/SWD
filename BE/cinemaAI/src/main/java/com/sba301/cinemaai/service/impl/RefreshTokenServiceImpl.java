@@ -38,7 +38,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Transactional
     public void revoke(String token) {
         refreshTokenRepository.findByToken(token).ifPresent(refreshToken -> {
-            refreshToken.revoke();
+            refreshToken.setRevoked(true);
             refreshTokenRepository.save(refreshToken);
         });
     }
@@ -46,6 +46,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Transactional
     public void revokeAll(User user) {
         refreshTokenRepository.findByUserAndRevokedFalse(user)
-                .forEach(RefreshToken::revoke);
+                .forEach(refreshToken -> refreshToken.setRevoked(true));
     }
 }

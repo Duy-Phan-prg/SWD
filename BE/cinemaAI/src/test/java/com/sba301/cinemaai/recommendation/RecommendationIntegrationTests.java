@@ -162,7 +162,8 @@ class RecommendationIntegrationTests {
                 .orElseGet(() -> roleRepository.save(new Role(roleName)));
 
         User user = new User(email, passwordEncoder.encode(password), "Phase Four User", "0900555666");
-        user.activateEmail();
+        user.setEmailVerified(true);
+        user.setStatus(com.sba301.cinemaai.enums.UserStatus.ACTIVE);
         User savedUser = userRepository.save(user);
         userRoleRepository.save(new UserRole(savedUser, role));
 

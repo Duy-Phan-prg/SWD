@@ -39,7 +39,7 @@ class PaymentEndpointInventoryTests {
                 "paymentprovider.mock",
                 "a pending payment already exists for this booking",
                 "only holding or pending_payment bookings can be paid",
-                "booking.markpaid(qrticketservice.generate(booking))",
+                "markpaid(booking, qrticketservice.generate(booking))",
                 "loyaltypointservice.addpointsfrombooking",
                 "return \"{\\\"rspcode\\\":\\\"02\\\",\\\"message\\\":\\\"order already confirmed\\\"}\"",
                 "return \"{\\\"rspcode\\\":\\\"04\\\",\\\"message\\\":\\\"invalid amount\\\"}\""

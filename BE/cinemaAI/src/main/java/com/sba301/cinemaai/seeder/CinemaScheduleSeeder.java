@@ -89,7 +89,7 @@ public class CinemaScheduleSeeder implements Seeder {
 
         LocalDateTime endTime = startTime.plusMinutes(movie.getDurationMinutes()).plusMinutes(15);
         Showtime showtime = new Showtime(movie, room, startTime, endTime, BigDecimal.valueOf(90000));
-        showtime.changeStatus(ShowtimeStatus.OPEN);
+        showtime.setStatus(ShowtimeStatus.OPEN);
         showtimeRepository.save(showtime);
     }
 }

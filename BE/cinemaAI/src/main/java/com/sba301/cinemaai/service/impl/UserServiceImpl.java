@@ -80,7 +80,7 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("New password must be different from old password");
         }
 
-        user.changePassword(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
     }
 
     @Transactional(readOnly = true)
@@ -113,7 +113,7 @@ public class UserServiceImpl implements UserService {
                 request.phone(),
                 request.birthYear()
         ));
-        staff.activateEmail();
+        activateEmail(staff);
         userRoleService.assignRole(staff, RoleName.STAFF);
         return toProfile(staff);
     }
@@ -122,9 +122,9 @@ public class UserServiceImpl implements UserService {
     public UserProfileResponse updateStatus(Long id, AdminUserStatusUpdateRequest request) {
         User user = findById(id);
         if (request.status() == UserStatus.DISABLED) {
-            user.disable();
+            user.setStatus(UserStatus.DISABLED);
         } else if (request.status() == UserStatus.ACTIVE) {
-            user.activateEmail();
+            activateEmail(user);
         } else if (request.status() == UserStatus.PENDING_VERIFICATION) {
             throw new BadRequestException("Cannot move user back to pending verification");
         }
@@ -138,5 +138,10 @@ public class UserServiceImpl implements UserService {
     private User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found"));
+    }
+
+    private void activateEmail(User user) {
+        user.setEmailVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
     }
 }

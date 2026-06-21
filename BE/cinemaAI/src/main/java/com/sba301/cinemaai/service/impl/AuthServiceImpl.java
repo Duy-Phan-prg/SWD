@@ -81,7 +81,8 @@ public class AuthServiceImpl implements AuthService {
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(EMAIL_VERIFICATION_EXPIRES_IN_SECONDS);
         PendingRegistration pendingRegistration = pendingRegistrationRepository.findByEmail(request.email())
                 .map(existing -> {
-                    existing.refresh(
+                    refreshPendingRegistration(
+                            existing,
                             passwordEncoder.encode(request.password()),
                             request.fullName(),
                             request.phone(),
@@ -116,7 +117,8 @@ public class AuthServiceImpl implements AuthService {
             return;
         }
 
-        pendingRegistration.refresh(
+        refreshPendingRegistration(
+                pendingRegistration,
                 pendingRegistration.getPasswordHash(),
                 pendingRegistration.getFullName(),
                 pendingRegistration.getPhone(),
@@ -154,7 +156,7 @@ public class AuthServiceImpl implements AuthService {
                 pendingRegistration.getPhone(),
                 pendingRegistration.getBirthYear()
         ));
-        user.activateEmail();
+        activateEmail(user);
         userRoleService.assignRole(user, RoleName.CUSTOMER);
         pendingRegistrationRepository.delete(pendingRegistration);
     }
@@ -185,7 +187,7 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("User is disabled");
         }
         if (!user.isEmailVerified()) {
-            user.activateEmail();
+            activateEmail(user);
         }
 
         return createAuthResponse(user);
@@ -223,9 +225,31 @@ public class AuthServiceImpl implements AuthService {
                 fullName,
                 null
         ));
-        user.activateEmail();
+        activateEmail(user);
         userRoleService.assignRole(user, RoleName.CUSTOMER);
         return user;
+    }
+
+    private void refreshPendingRegistration(
+            PendingRegistration pendingRegistration,
+            String passwordHash,
+            String fullName,
+            String phone,
+            Integer birthYear,
+            String otp,
+            LocalDateTime expiresAt
+    ) {
+        pendingRegistration.setPasswordHash(passwordHash);
+        pendingRegistration.setFullName(fullName);
+        pendingRegistration.setPhone(phone);
+        pendingRegistration.setBirthYear(birthYear);
+        pendingRegistration.setOtp(otp);
+        pendingRegistration.setExpiresAt(expiresAt);
+    }
+
+    private void activateEmail(User user) {
+        user.setEmailVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
     }
 
     private AuthResponse createAuthResponse(User user) {

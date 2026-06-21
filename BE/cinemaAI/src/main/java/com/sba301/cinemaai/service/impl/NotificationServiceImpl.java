@@ -61,7 +61,7 @@ public class NotificationServiceImpl implements NotificationService {
             return NotificationResponse.from(notification);
         }
 
-        notification.markRead();
+        notification.setIsRead(true);
         return NotificationResponse.from(notificationRepository.save(notification));
     }
 }

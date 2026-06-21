@@ -444,6 +444,71 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         );
     }
 
+    private void changePrices(Showtime showtime, java.math.BigDecimal basePrice,
+                              java.math.BigDecimal vipPrice, java.math.BigDecimal couplePrice) {
+        showtime.setBasePrice(basePrice);
+        showtime.setVipPrice(vipPrice);
+        showtime.setCouplePrice(couplePrice);
+        showtime.setAdultStandardPrice(basePrice);
+        showtime.setAdultVipPrice(vipPrice != null ? vipPrice : basePrice.add(java.math.BigDecimal.valueOf(20_000)));
+        showtime.setAdultCouplePrice(couplePrice != null ? couplePrice : basePrice.add(java.math.BigDecimal.valueOf(30_000)));
+    }
+
+    private void changeTicketPrices(
+            Showtime showtime,
+            java.math.BigDecimal adultStandardPrice,
+            java.math.BigDecimal childStandardPrice,
+            java.math.BigDecimal studentStandardPrice,
+            java.math.BigDecimal adultVipPrice,
+            java.math.BigDecimal childVipPrice,
+            java.math.BigDecimal studentVipPrice,
+            java.math.BigDecimal adultCouplePrice,
+            java.math.BigDecimal childCouplePrice,
+            java.math.BigDecimal studentCouplePrice,
+            boolean weekendSurcharge,
+            boolean holidaySurcharge
+    ) {
+        java.math.BigDecimal adultStandard = defaultMoney(adultStandardPrice, showtime.getBasePrice());
+        java.math.BigDecimal childStandard = defaultMoney(childStandardPrice, adultStandard);
+        java.math.BigDecimal studentStandard = defaultMoney(studentStandardPrice, adultStandard);
+        java.math.BigDecimal adultVip = defaultMoney(adultVipPrice, adultStandard.add(java.math.BigDecimal.valueOf(20_000)));
+        java.math.BigDecimal childVip = defaultMoney(childVipPrice, childStandard.add(java.math.BigDecimal.valueOf(20_000)));
+        java.math.BigDecimal studentVip = defaultMoney(studentVipPrice, studentStandard.add(java.math.BigDecimal.valueOf(20_000)));
+        java.math.BigDecimal adultCouple = defaultMoney(adultCouplePrice, adultStandard.add(java.math.BigDecimal.valueOf(30_000)));
+        java.math.BigDecimal childCouple = defaultMoney(childCouplePrice, childStandard.add(java.math.BigDecimal.valueOf(30_000)));
+        java.math.BigDecimal studentCouple = defaultMoney(studentCouplePrice, studentStandard.add(java.math.BigDecimal.valueOf(30_000)));
+
+        showtime.setAdultStandardPrice(adultStandard);
+        showtime.setChildStandardPrice(childStandard);
+        showtime.setStudentStandardPrice(studentStandard);
+        showtime.setAdultVipPrice(adultVip);
+        showtime.setChildVipPrice(childVip);
+        showtime.setStudentVipPrice(studentVip);
+        showtime.setAdultCouplePrice(adultCouple);
+        showtime.setChildCouplePrice(childCouple);
+        showtime.setStudentCouplePrice(studentCouple);
+        showtime.setWeekendSurcharge(weekendSurcharge);
+        showtime.setHolidaySurcharge(holidaySurcharge);
+        showtime.setBasePrice(adultStandard);
+        showtime.setVipPrice(adultVip);
+        showtime.setCouplePrice(adultCouple);
+    }
+
+    private java.math.BigDecimal defaultMoney(java.math.BigDecimal value, java.math.BigDecimal fallback) {
+        return value != null ? value : fallback;
+    }
+
+    private void cancelBooking(com.sba301.cinemaai.entity.Booking booking) {
+        booking.setCancelledAt(LocalDateTime.now());
+        booking.setStatus(BookingStatus.CANCELLED);
+    }
+
+    private void requestRefund(com.sba301.cinemaai.entity.Booking booking, String reason) {
+        booking.setRefundRequestedAt(LocalDateTime.now());
+        booking.setRefundReason(reason);
+        booking.setStatus(BookingStatus.REFUND_REQUESTED);
+    }
+
     private String resolveRuntimeStatus(Seat seat, Map<Long, BookingSeat> runtimeSeats) {
         if (seat.getStatus() != SeatStatus.AVAILABLE) {
             return "UNAVAILABLE";

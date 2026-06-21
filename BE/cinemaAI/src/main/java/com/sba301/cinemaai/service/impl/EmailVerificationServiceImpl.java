@@ -3,6 +3,7 @@ package com.sba301.cinemaai.service.impl;
 import com.sba301.cinemaai.entity.EmailVerificationToken;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.EmailOtpPurpose;
+import com.sba301.cinemaai.enums.UserStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.repository.EmailVerificationTokenRepository;
@@ -67,15 +68,15 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     @Transactional
     public void verifyEmail(String email, String otp) {
         EmailVerificationToken verificationToken = findValidOtp(email, otp, EmailOtpPurpose.EMAIL_VERIFICATION);
-        verificationToken.getUser().activateEmail();
-        verificationToken.markUsed();
+        activateEmail(verificationToken.getUser());
+        verificationToken.setUsed(true);
     }
 
     @Transactional
     public User verifyGoogleLogin(String email, String otp) {
         EmailVerificationToken verificationToken = findValidOtp(email, otp, EmailOtpPurpose.GOOGLE_LOGIN);
-        verificationToken.getUser().activateEmail();
-        verificationToken.markUsed();
+        activateEmail(verificationToken.getUser());
+        verificationToken.setUsed(true);
         return verificationToken.getUser();
     }
 
@@ -86,8 +87,8 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         if (verificationToken.isUsed() || verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("OTP is expired or already used");
         }
-        verificationToken.getUser().activateEmail();
-        verificationToken.markUsed();
+        activateEmail(verificationToken.getUser());
+        verificationToken.setUsed(true);
     }
 
     private EmailVerificationToken findValidOtp(String email, String otp, EmailOtpPurpose purpose) {
@@ -113,5 +114,10 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     private String generateOtp() {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+    }
+
+    private void activateEmail(User user) {
+        user.setEmailVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
     }
 }

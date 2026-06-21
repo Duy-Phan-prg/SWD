@@ -38,7 +38,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         User user = resolveUserById(request.getUserId());
         LoyaltyPoint lp = getOrCreate(user);
 
-        lp.addPoints(request.getPoints());
+        addPoints(lp, request.getPoints());
         loyaltyPointRepository.save(lp);
 
         log.info("Added {} points to user {} — reason: {}",
@@ -61,7 +61,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
                     "Insufficient points. Available: " + lp.getPoints() + ", requested: " + points);
         }
 
-        lp.redeemPoints(points);
+        redeemPoints(lp, points);
         loyaltyPointRepository.save(lp);
 
         log.info("Redeemed {} points from user {}", points, user.getEmail());
@@ -74,7 +74,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         if (earned <= 0) return;
 
         LoyaltyPoint lp = getOrCreate(user);
-        lp.addPoints(earned);
+        addPoints(lp, earned);
         loyaltyPointRepository.save(lp);
 
         log.info("Booking {} — awarded {} loyalty points to user {}",
@@ -94,5 +94,14 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
     private User resolveUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found: " + userId));
+    }
+
+    private void addPoints(LoyaltyPoint loyaltyPoint, int points) {
+        loyaltyPoint.setPoints(loyaltyPoint.getPoints() + points);
+        loyaltyPoint.setTotalPoints(loyaltyPoint.getTotalPoints() + points);
+    }
+
+    private void redeemPoints(LoyaltyPoint loyaltyPoint, int points) {
+        loyaltyPoint.setPoints(loyaltyPoint.getPoints() - points);
     }
 }

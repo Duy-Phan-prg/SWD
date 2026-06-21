@@ -275,7 +275,7 @@ class CinemaShowtimeIntegrationTests {
 
         Long inactiveRoomId = createCustomRoom(token);
         Room inactiveRoom = roomRepository.findById(inactiveRoomId).orElseThrow();
-        inactiveRoom.changeStatus(RoomStatus.INACTIVE);
+        inactiveRoom.setStatus(RoomStatus.INACTIVE);
         roomRepository.save(inactiveRoom);
 
         mockMvc.perform(post("/api/v1/admin/showtimes")
@@ -371,7 +371,8 @@ class CinemaShowtimeIntegrationTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Không thể cập nhật suất chiếu vì đang có đặt vé hoạt động"));
 
-        activeBooking.cancel();
+        activeBooking.setCancelledAt(java.time.LocalDateTime.now());
+        activeBooking.setStatus(com.sba301.cinemaai.enums.BookingStatus.CANCELLED);
         bookingRepository.save(activeBooking);
 
         Long customRoomId = createCustomRoom(token);
@@ -548,7 +549,8 @@ class CinemaShowtimeIntegrationTests {
                 "Showtime Customer",
                 "0900555888"
         );
-        customer.activateEmail();
+        customer.setEmailVerified(true);
+        customer.setStatus(com.sba301.cinemaai.enums.UserStatus.ACTIVE);
         User savedCustomer = userRepository.save(customer);
 
         Booking booking = new Booking(
@@ -557,7 +559,7 @@ class CinemaShowtimeIntegrationTests {
                 showtime,
                 LocalDateTime.now().plusMinutes(15)
         );
-        booking.markPendingPayment();
+        booking.setStatus(com.sba301.cinemaai.enums.BookingStatus.PENDING_PAYMENT);
         return bookingRepository.save(booking);
     }
 
@@ -582,7 +584,8 @@ class CinemaShowtimeIntegrationTests {
                 .orElseGet(() -> roleRepository.save(new Role(RoleName.ADMIN)));
 
         User admin = new User(email, passwordEncoder.encode(password), "Phase Five Admin", "0900555777");
-        admin.activateEmail();
+        admin.setEmailVerified(true);
+        admin.setStatus(com.sba301.cinemaai.enums.UserStatus.ACTIVE);
         User savedAdmin = userRepository.save(admin);
         userRoleRepository.save(new UserRole(savedAdmin, adminRole));
 

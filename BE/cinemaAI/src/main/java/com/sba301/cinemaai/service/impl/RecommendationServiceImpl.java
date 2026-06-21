@@ -36,6 +36,7 @@ import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.TrailerInteractionRepository;
 import com.sba301.cinemaai.repository.UserPreferenceProfileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -149,12 +150,11 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         UserPreferenceProfile profile = preferenceProfileRepository.findByUser(user)
                 .orElseGet(() -> preferenceProfileRepository.save(new UserPreferenceProfile(user)));
-        profile.refresh(
-                serializeLongScores(scores.genreScores),
-                serializeLongScores(scores.actorScores),
-                serializeStringScores(scores.directorScores),
-                "general"
-        );
+        profile.setGenreScores(serializeLongScores(scores.genreScores));
+        profile.setActorScores(serializeLongScores(scores.actorScores));
+        profile.setDirectorScores(serializeStringScores(scores.directorScores));
+        profile.setCohortKey("general");
+        profile.setLastRefreshedAt(LocalDateTime.now());
         return profile;
     }
 

@@ -366,7 +366,7 @@ class BookingIntegrationTests {
                 LocalDateTime.of(2026, 5, 21, 21, 5),
                 BigDecimal.valueOf(95000)
         );
-        showtime.changeStatus(ShowtimeStatus.OPEN);
+        showtime.setStatus(ShowtimeStatus.OPEN);
         return showtimeRepository.save(showtime);
     }
 
@@ -395,7 +395,8 @@ class BookingIntegrationTests {
                 .orElseGet(() -> roleRepository.save(new Role(roleName)));
 
         User user = new User(email, passwordEncoder.encode(password), "Phase Six User", "0900666888");
-        user.activateEmail();
+        user.setEmailVerified(true);
+        user.setStatus(com.sba301.cinemaai.enums.UserStatus.ACTIVE);
         User savedUser = userRepository.save(user);
         userRoleRepository.save(new UserRole(savedUser, role));
         return savedUser;

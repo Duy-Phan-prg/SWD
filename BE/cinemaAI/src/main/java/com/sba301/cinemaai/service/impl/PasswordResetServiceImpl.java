@@ -55,8 +55,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             throw new BadRequestException("Password reset OTP is expired or already used");
         }
 
-        resetToken.getUser().changePassword(passwordEncoder.encode(newPassword));
-        resetToken.markUsed();
+        resetToken.getUser().setPasswordHash(passwordEncoder.encode(newPassword));
+        resetToken.setUsed(true);
     }
 
     private String generateOtp() {

@@ -244,7 +244,8 @@ class ActorIntegrationTests {
                 .orElseGet(() -> roleRepository.save(new Role(RoleName.ADMIN)));
 
         User admin = new User(email, passwordEncoder.encode(password), "Actor Admin", "0900111222");
-        admin.activateEmail();
+        admin.setEmailVerified(true);
+        admin.setStatus(com.sba301.cinemaai.enums.UserStatus.ACTIVE);
         User savedAdmin = userRepository.save(admin);
         userRoleRepository.save(new UserRole(savedAdmin, adminRole));
 

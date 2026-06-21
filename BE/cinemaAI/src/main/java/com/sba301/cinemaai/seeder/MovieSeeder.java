@@ -76,7 +76,7 @@ public class MovieSeeder implements Seeder {
         movie.setDirector(seed.director());
         movie.setMainActors("Sample lead actors");
         movie.setCastList("Sample cast");
-        movie.changeStatus(seed.status());
+        movie.setStatus(seed.status());
 
         for (String genreName : seed.genreNames().split(",")) {
             genreRepository.findByName(genreName.trim()).ifPresent(genre -> {
