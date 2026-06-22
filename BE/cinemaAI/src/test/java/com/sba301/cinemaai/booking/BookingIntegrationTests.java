@@ -343,14 +343,18 @@ class BookingIntegrationTests {
     private Showtime createShowtimeFixture() {
         String suffix = Long.toString(System.nanoTime());
         Movie movie = new Movie("Phase 6 Movie " + suffix, 110, MovieStatus.NOW_SHOWING);
-        movie.setDescription("Booking flow movie.");
-        movie.setReleaseDate(LocalDate.of(2026, 5, 19));
-        movie.setLanguage("English");
-        movie.setSubtitleLanguage("Vietnamese");
-        movie.setAgeRating(AgeRating.from("13+"));
-        movie.setDirector("Phase Six Director");
-        movie.setMainActors("Phase Six Lead");
-        movie.setCastList("Cast");
+        movie.updateContent(
+                "Booking flow movie.",
+                LocalDate.of(2026, 5, 19),
+                null,
+                null,
+                null,
+                "English",
+                "Vietnamese",
+                AgeRating.from("13+"),
+                "Phase Six Director"
+        );
+        movie.updateCastMetadata("Phase Six Lead", "Cast");
         Movie savedMovie = movieRepository.save(movie);
 
         Cinema cinema = cinemaRepository.save(new Cinema("Phase 6 Cinema " + suffix, "1 Booking Street", "HCMC", "0900666777"));

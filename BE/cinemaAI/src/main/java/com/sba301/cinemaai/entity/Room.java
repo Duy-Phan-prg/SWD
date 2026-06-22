@@ -16,10 +16,8 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @Entity
 @Table(name = "rooms")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -52,9 +50,17 @@ public class Room extends BaseEntity {
 
     public Room(Cinema cinema, String name, RoomType roomType, int rowCount, int columnCount) {
         this.cinema = cinema;
+        updateDetails(name, roomType, rowCount, columnCount);
+    }
+
+    public void updateDetails(String name, RoomType roomType, int rowCount, int columnCount) {
         this.name = name;
         this.roomType = roomType;
         this.rowCount = rowCount;
         this.columnCount = columnCount;
+    }
+
+    public void changeStatus(RoomStatus status) {
+        this.status = status;
     }
 }

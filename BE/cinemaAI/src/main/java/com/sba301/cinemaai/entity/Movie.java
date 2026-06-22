@@ -18,10 +18,8 @@ import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @Entity
 @Table(
         name = "movies",
@@ -81,8 +79,43 @@ public class Movie extends BaseEntity {
     private String castList;
 
     public Movie(String title, int durationMinutes, MovieStatus status) {
+        updateBasicInfo(title, durationMinutes);
+        this.status = status;
+    }
+
+    public void updateBasicInfo(String title, int durationMinutes) {
         this.title = title;
         this.durationMinutes = durationMinutes;
+    }
+
+    public void updateContent(
+            String description,
+            LocalDate releaseDate,
+            String trailerUrl,
+            String posterUrl,
+            String avatarUrl,
+            String language,
+            String subtitleLanguage,
+            AgeRating ageRating,
+            String director
+    ) {
+        this.description = description;
+        this.releaseDate = releaseDate;
+        this.trailerUrl = trailerUrl;
+        this.posterUrl = posterUrl;
+        this.avatarUrl = avatarUrl;
+        this.language = language;
+        this.subtitleLanguage = subtitleLanguage;
+        this.ageRating = ageRating;
+        this.director = director;
+    }
+
+    public void updateCastMetadata(String mainActors, String castList) {
+        this.mainActors = mainActors;
+        this.castList = castList;
+    }
+
+    public void changeStatus(MovieStatus status) {
         this.status = status;
     }
 }

@@ -13,18 +13,14 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @Entity
 @Table(
         name = "reviews",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "movie_id"}),
         indexes = {
                 @Index(name = "idx_reviews_movie", columnList = "movie_id"),
                 @Index(name = "idx_reviews_status", columnList = "status")

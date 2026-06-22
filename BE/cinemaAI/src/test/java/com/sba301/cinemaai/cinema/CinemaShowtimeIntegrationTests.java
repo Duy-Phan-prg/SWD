@@ -275,7 +275,7 @@ class CinemaShowtimeIntegrationTests {
 
         Long inactiveRoomId = createCustomRoom(token);
         Room inactiveRoom = roomRepository.findById(inactiveRoomId).orElseThrow();
-        inactiveRoom.setStatus(RoomStatus.INACTIVE);
+        inactiveRoom.changeStatus(RoomStatus.INACTIVE);
         roomRepository.save(inactiveRoom);
 
         mockMvc.perform(post("/api/v1/admin/showtimes")
@@ -566,14 +566,18 @@ class CinemaShowtimeIntegrationTests {
     private Movie createMovie() {
         String title = "Phase 5 Movie " + System.nanoTime();
         Movie movie = new Movie(title, 110, MovieStatus.NOW_SHOWING);
-        movie.setDescription("Scheduling test movie.");
-        movie.setReleaseDate(LocalDate.of(2026, 5, 19));
-        movie.setLanguage("English");
-        movie.setSubtitleLanguage("Vietnamese");
-        movie.setAgeRating(AgeRating.from("13+"));
-        movie.setDirector("Phase Five Director");
-        movie.setMainActors("Phase Five Lead");
-        movie.setCastList("Cast");
+        movie.updateContent(
+                "Scheduling test movie.",
+                LocalDate.of(2026, 5, 19),
+                null,
+                null,
+                null,
+                "English",
+                "Vietnamese",
+                AgeRating.from("13+"),
+                "Phase Five Director"
+        );
+        movie.updateCastMetadata("Phase Five Lead", "Cast");
         return movieRepository.save(movie);
     }
 

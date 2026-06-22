@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
 @Entity
@@ -46,7 +45,6 @@ public class PhoneVerificationToken extends BaseEntity {
     private LocalDateTime expiresAt;
 
     @Column(nullable = false)
-    @Setter
     private boolean used;
 
     public PhoneVerificationToken(User user, String otp, String phone, OtpPurpose purpose, LocalDateTime expiresAt) {
@@ -57,4 +55,7 @@ public class PhoneVerificationToken extends BaseEntity {
         this.expiresAt = expiresAt;
     }
 
+    public void markUsed() {
+        used = true;
+    }
 }

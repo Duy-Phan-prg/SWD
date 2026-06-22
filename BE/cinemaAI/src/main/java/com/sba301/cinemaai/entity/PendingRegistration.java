@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
 @Entity
@@ -26,27 +25,21 @@ public class PendingRegistration extends BaseEntity {
     private String email;
 
     @Column(name = "password_hash", nullable = false)
-    @Setter
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false)
-    @Setter
     private String fullName;
 
     @Column(length = 20)
-    @Setter
     private String phone;
 
     @Column(name = "birth_year")
-    @Setter
     private Integer birthYear;
 
     @Column(nullable = false, length = 6)
-    @Setter
     private String otp;
 
     @Column(name = "expires_at", nullable = false)
-    @Setter
     private LocalDateTime expiresAt;
 
     public PendingRegistration(
@@ -59,6 +52,17 @@ public class PendingRegistration extends BaseEntity {
             LocalDateTime expiresAt
     ) {
         this.email = email;
+        refresh(passwordHash, fullName, phone, birthYear, otp, expiresAt);
+    }
+
+    public void refresh(
+            String passwordHash,
+            String fullName,
+            String phone,
+            Integer birthYear,
+            String otp,
+            LocalDateTime expiresAt
+    ) {
         this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.phone = phone;
@@ -66,5 +70,4 @@ public class PendingRegistration extends BaseEntity {
         this.otp = otp;
         this.expiresAt = expiresAt;
     }
-
 }

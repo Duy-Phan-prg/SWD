@@ -59,8 +59,7 @@ public class GenreServiceImpl implements GenreService {
                 .ifPresent(existing -> {
                     throw new ConflictException("Genre name already exists");
                 });
-        genre.setName(request.name());
-        genre.setDescription(request.description());
+        genre.updateDetails(request.name(), request.description());
         return movieMapper.toGenreResponse(genre);
     }
 

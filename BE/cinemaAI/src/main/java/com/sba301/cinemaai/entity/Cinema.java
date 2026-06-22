@@ -12,10 +12,8 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @Entity
 @Table(name = "cinemas")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -42,9 +40,17 @@ public class Cinema extends BaseEntity {
     private CinemaStatus status = CinemaStatus.ACTIVE;
 
     public Cinema(String name, String address, String city, String phone) {
+        updateDetails(name, address, city, phone);
+    }
+
+    public void updateDetails(String name, String address, String city, String phone) {
         this.name = name;
         this.address = address;
         this.city = city;
         this.phone = phone;
+    }
+
+    public void changeStatus(CinemaStatus status) {
+        this.status = status;
     }
 }

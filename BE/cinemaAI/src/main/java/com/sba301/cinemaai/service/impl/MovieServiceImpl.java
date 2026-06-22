@@ -136,8 +136,7 @@ public class MovieServiceImpl implements MovieService {
         applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
                 request.director(), mainActorNames, actorNames, request.status());
-        movie.setTitle(request.title());
-        movie.setDurationMinutes(request.durationMinutes());
+        movie.updateBasicInfo(request.title(), request.durationMinutes());
         replaceGenres(movie, request.genreIds());
         replaceActors(movie, actors, mainActorIds);
         return toResponse(movie);
@@ -172,14 +171,14 @@ public class MovieServiceImpl implements MovieService {
     @Transactional
     public MovieResponse updateStatus(Long id, MovieStatusUpdateRequest request) {
         Movie movie = findById(id);
-        movie.setStatus(request.status());
+        movie.changeStatus(request.status());
         return toResponse(movie);
     }
 
     @Transactional
     public void delete(Long id) {
         Movie movie = findById(id);
-        movie.setStatus(MovieStatus.INACTIVE);
+        movie.changeStatus(MovieStatus.INACTIVE);
     }
 
     private void applyMovieFields(
@@ -197,18 +196,19 @@ public class MovieServiceImpl implements MovieService {
             String castList,
             MovieStatus status
     ) {
-        movie.setDescription(description);
-        movie.setReleaseDate(releaseDate);
-        movie.setTrailerUrl(trailerUrl);
-        movie.setPosterUrl(posterUrl);
-        movie.setAvatarUrl(avatarUrl);
-        movie.setLanguage(language);
-        movie.setSubtitleLanguage(subtitleLanguage);
-        movie.setAgeRating(AgeRating.from(ageRating));
-        movie.setDirector(director);
-        movie.setMainActors(mainActors);
-        movie.setCastList(castList);
-        movie.setStatus(status);
+        movie.updateContent(
+                description,
+                releaseDate,
+                trailerUrl,
+                posterUrl,
+                avatarUrl,
+                language,
+                subtitleLanguage,
+                AgeRating.from(ageRating),
+                director
+        );
+        movie.updateCastMetadata(mainActors, castList);
+        movie.changeStatus(status);
     }
 
     private void replaceActors(Movie movie, List<Actor> actors, Set<Long> mainActorIds) {

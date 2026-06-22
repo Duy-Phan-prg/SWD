@@ -203,14 +203,18 @@ class PaymentIntegrationTests {
     private Showtime createShowtimeFixture() {
         String suffix = Long.toString(System.nanoTime());
         Movie movie = new Movie("Phase 6 Payment Movie " + suffix, 110, MovieStatus.NOW_SHOWING);
-        movie.setDescription("Payment flow movie.");
-        movie.setReleaseDate(LocalDate.of(2026, 5, 19));
-        movie.setLanguage("English");
-        movie.setSubtitleLanguage("Vietnamese");
-        movie.setAgeRating(AgeRating.from("13+"));
-        movie.setDirector("Payment Director");
-        movie.setMainActors("Payment Lead");
-        movie.setCastList("Cast");
+        movie.updateContent(
+                "Payment flow movie.",
+                LocalDate.of(2026, 5, 19),
+                null,
+                null,
+                null,
+                "English",
+                "Vietnamese",
+                AgeRating.from("13+"),
+                "Payment Director"
+        );
+        movie.updateCastMetadata("Payment Lead", "Cast");
         Movie savedMovie = movieRepository.save(movie);
 
         Cinema cinema = cinemaRepository.save(new Cinema("Phase 6 Payment Cinema " + suffix, "1 Payment Street", "HCMC", "0900666777"));

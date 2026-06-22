@@ -13,10 +13,8 @@ import java.math.BigDecimal;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
-@Setter
 @Entity
 @Table(name = "food_items")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -43,8 +41,17 @@ public class FoodItem extends BaseEntity {
     private FoodItemStatus status = FoodItemStatus.ACTIVE;
 
     public FoodItem(String name, String description, BigDecimal price) {
+        updateDetails(name, description, price, null);
+    }
+
+    public void updateDetails(String name, String description, BigDecimal price, String imageUrl) {
         this.name = name;
         this.description = description;
         this.price = price;
+        this.imageUrl = imageUrl;
+    }
+
+    public void changeStatus(FoodItemStatus status) {
+        this.status = status;
     }
 }

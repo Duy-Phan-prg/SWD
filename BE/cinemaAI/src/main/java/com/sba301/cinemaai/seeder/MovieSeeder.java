@@ -66,17 +66,20 @@ public class MovieSeeder implements Seeder {
     private void seedMovie(MovieSeed seed) {
         Movie movie = movieRepository.findByTitle(seed.title())
                 .orElseGet(() -> movieRepository.save(new Movie(seed.title(), seed.durationMinutes(), seed.status())));
-        movie.setTitle(seed.title());
-        movie.setDescription(seed.description());
-        movie.setDurationMinutes(seed.durationMinutes());
-        movie.setReleaseDate(seed.releaseDate());
-        movie.setLanguage(seed.language());
-        movie.setSubtitleLanguage(seed.subtitleLanguage());
-        movie.setAgeRating(AgeRating.from(seed.ageRating()));
-        movie.setDirector(seed.director());
-        movie.setMainActors("Sample lead actors");
-        movie.setCastList("Sample cast");
-        movie.setStatus(seed.status());
+        movie.updateBasicInfo(seed.title(), seed.durationMinutes());
+        movie.updateContent(
+                seed.description(),
+                seed.releaseDate(),
+                movie.getTrailerUrl(),
+                movie.getPosterUrl(),
+                movie.getAvatarUrl(),
+                seed.language(),
+                seed.subtitleLanguage(),
+                AgeRating.from(seed.ageRating()),
+                seed.director()
+        );
+        movie.updateCastMetadata("Sample lead actors", "Sample cast");
+        movie.changeStatus(seed.status());
 
         for (String genreName : seed.genreNames().split(",")) {
             genreRepository.findByName(genreName.trim()).ifPresent(genre -> {

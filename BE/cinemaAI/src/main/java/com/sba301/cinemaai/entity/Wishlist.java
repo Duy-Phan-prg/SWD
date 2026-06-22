@@ -9,7 +9,6 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +17,6 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
         name = "wishlists",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "movie_id"}),
         indexes = {
                 @Index(name = "idx_wishlists_user", columnList = "user_id"),
                 @Index(name = "idx_wishlists_movie", columnList = "movie_id")
