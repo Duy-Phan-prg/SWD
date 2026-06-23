@@ -2,15 +2,26 @@ package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.dto.request.notification.NotificationCreateRequest;
 import com.sba301.cinemaai.dto.response.notification.NotificationResponse;
+import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.Showtime;
+import com.sba301.cinemaai.entity.User;
 import java.util.List;
 
 public interface NotificationService {
 
-        public NotificationResponse createForUser(NotificationCreateRequest request);
+        NotificationResponse createForUser(NotificationCreateRequest request);
 
-        public List<NotificationResponse> getMyNotifications(Long userId);
+        List<NotificationResponse> getMyNotifications(Long userId);
 
-        public List<NotificationResponse> getMyUnread(Long userId);
+        List<NotificationResponse> getMyUnread(Long userId);
 
-        public NotificationResponse markRead(Long userId, Long notificationId);
+        NotificationResponse markRead(Long userId, Long notificationId);
+
+        int markAllRead(Long userId);
+
+        void notifyBookingPaid(Booking booking);
+
+        void notifyBookingCancelled(Booking booking);
+
+        void notifyShowtimeCancelled(User user, Booking booking, Showtime showtime);
 }

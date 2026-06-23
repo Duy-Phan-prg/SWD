@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,5 +39,25 @@ public class LoyaltyPointController {
             @AuthenticationPrincipal AuthenticatedUser currentUser
     ) {
         return ApiResponse.success(loyaltyPointService.getMyPoints(currentUser.getUsername()));
+    }
+
+    @PostMapping("/me/redeem")
+    @Operation(
+            summary = "Redeem loyalty points",
+            description = "Customer redeems loyalty points. Rate: 1000 points = 1,000 VND discount."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Points redeemed"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Insufficient points or invalid amount"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated")
+    })
+    public ApiResponse<LoyaltyResponse> redeemMyPoints(
+            @AuthenticationPrincipal AuthenticatedUser currentUser,
+            @RequestParam int points
+    ) {
+        return ApiResponse.success(
+                loyaltyPointService.redeemMyPoints(currentUser.getUsername(), points),
+                "Points redeemed successfully"
+        );
     }
 }

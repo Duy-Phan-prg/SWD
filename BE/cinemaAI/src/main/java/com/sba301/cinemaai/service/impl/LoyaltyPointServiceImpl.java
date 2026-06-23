@@ -69,6 +69,11 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
     }
 
     @Transactional
+    public LoyaltyResponse redeemMyPoints(String email, int points) {
+        return redeemPoints(resolveUserByEmail(email).getId(), points);
+    }
+
+    @Transactional
     public void addPointsFromBooking(User user, Booking booking) {
         int earned = booking.getTotalAmount().intValue() / POINTS_PER_UNIT;
         if (earned <= 0) return;
@@ -79,6 +84,23 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
 
         log.info("Booking {} — awarded {} loyalty points to user {}",
                 booking.getBookingCode(), earned, user.getEmail());
+    }
+
+    @Transactional
+    public void revokePointsFromBooking(User user, Booking booking) {
+        int earned = booking.getTotalAmount().intValue() / POINTS_PER_UNIT;
+        if (earned <= 0) return;
+
+        LoyaltyPoint lp = loyaltyPointRepository.findByUser(user).orElse(null);
+        if (lp == null) return;
+
+        int toRevoke = Math.min(earned, lp.getPoints());
+        if (toRevoke > 0) {
+            lp.setPoints(lp.getPoints() - toRevoke);
+            loyaltyPointRepository.save(lp);
+            log.info("Booking {} — revoked {} loyalty points from user {}",
+                    booking.getBookingCode(), toRevoke, user.getEmail());
+        }
     }
 
     private LoyaltyPoint getOrCreate(User user) {

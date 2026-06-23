@@ -83,4 +83,9 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             @Param("excludeId") Long excludeId
     );
 
+    @Query("SELECT s FROM Showtime s WHERE s.status = 'SCHEDULED' AND s.startTime <= :now")
+    List<Showtime> findScheduledReadyToOpen(@Param("now") LocalDateTime now);
+
+    @Query("SELECT s FROM Showtime s WHERE s.status = 'OPEN' AND s.endTime <= :now")
+    List<Showtime> findOpenReadyToComplete(@Param("now") LocalDateTime now);
 }

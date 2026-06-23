@@ -7,11 +7,17 @@ import com.sba301.cinemaai.entity.User;
 
 public interface LoyaltyPointService {
 
-        public LoyaltyResponse getMyPoints(String email);
+        LoyaltyResponse getMyPoints(String email);
 
-        public LoyaltyResponse addPoints(LoyaltyAddRequest request);
+        LoyaltyResponse addPoints(LoyaltyAddRequest request);
 
-        public LoyaltyResponse redeemPoints(Long userId, int points);
+        LoyaltyResponse redeemPoints(Long userId, int points);
 
-        public void addPointsFromBooking(User user, Booking booking);
+        /** Redeem points by authenticated customer (1000 points = 1000 VND discount). */
+        LoyaltyResponse redeemMyPoints(String email, int points);
+
+        void addPointsFromBooking(User user, Booking booking);
+
+        /** Revoke points that were previously earned from a booking (e.g. when showtime is cancelled). */
+        void revokePointsFromBooking(User user, Booking booking);
 }

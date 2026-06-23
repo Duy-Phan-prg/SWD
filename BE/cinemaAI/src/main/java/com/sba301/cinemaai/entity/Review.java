@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -45,12 +46,15 @@ public class Review extends BaseEntity {
     @JoinColumn(name = "booking_id")
     private Booking booking;
 
+    @Setter
     @Column(nullable = false)
     private int rating;
 
+    @Setter
     @Column(length = 2000)
     private String comment;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ReviewStatus status = ReviewStatus.VISIBLE;
