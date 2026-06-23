@@ -16,6 +16,7 @@ import com.sba301.cinemaai.dto.response.auth.TokenResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.AuthService;
 import com.sba301.cinemaai.service.PasswordResetService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Authentication")
 @RequiredArgsConstructor
 public class AuthController {
 

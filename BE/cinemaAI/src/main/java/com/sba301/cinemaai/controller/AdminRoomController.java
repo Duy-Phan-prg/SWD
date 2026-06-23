@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/rooms")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Rooms", description = "Admin room management endpoints - requires ADMIN role")
+@Tag(name = "Admin - Rooms", description = "Admin room management endpoints - requires ADMIN role")
 public class AdminRoomController {
 
     private final RoomService roomService;

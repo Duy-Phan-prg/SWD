@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/foods")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Foods", description = "Admin food management endpoints - requires ADMIN role")
+@Tag(name = "Admin - Food & Combo", description = "Admin food management endpoints - requires ADMIN role")
 public class AdminFoodController {
 
     private final FoodService foodService;

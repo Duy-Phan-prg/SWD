@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/admin/cinema")
 @RequiredArgsConstructor
-@Tag(name = "Admin Cinema", description = "GET is public for displaying cinema information; write operations require ADMIN role")
+@Tag(name = "Admin - Cinema", description = "GET is public for displaying cinema information; write operations require ADMIN role")
 public class AdminCinemaController {
 
     private final CinemaService cinemaService;

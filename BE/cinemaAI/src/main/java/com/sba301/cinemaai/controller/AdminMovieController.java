@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/movies")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Movies", description = "Admin movie management endpoints - requires ADMIN role")
+@Tag(name = "Admin - Movies", description = "Admin movie management endpoints - requires ADMIN role")
 public class AdminMovieController {
 
     private final MovieService movieService;

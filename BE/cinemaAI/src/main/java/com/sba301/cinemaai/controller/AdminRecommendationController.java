@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/recommendations")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Recommendations", description = "Admin recommendation debug endpoints")
+@Tag(name = "Admin - Recommendations", description = "Admin recommendation debug endpoints")
 public class AdminRecommendationController {
 
     private final RecommendationService recommendationService;

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/reviews")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
-@Tag(name = "Admin — Review Moderation", description = "Admin review moderation: list, hide, delete")
+@Tag(name = "Admin - Review Moderation", description = "Admin review moderation: list, hide, delete")
 public class AdminReviewController {
 
     private final ReviewService reviewService;

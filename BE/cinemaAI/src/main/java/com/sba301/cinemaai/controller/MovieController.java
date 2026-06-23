@@ -5,6 +5,7 @@ import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.enums.MovieStatus;
 import com.sba301.cinemaai.service.MovieService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/movies")
+@Tag(name = "Movies")
 @RequiredArgsConstructor
 public class MovieController {
 

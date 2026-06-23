@@ -21,7 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/admin/uploads")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Uploads", description = "Admin Cloudinary upload endpoints")
+@Tag(name = "Admin - Uploads", description = "Admin Cloudinary upload endpoints")
 public class AdminUploadController {
 
     private final CloudinaryUploadService cloudinaryUploadService;

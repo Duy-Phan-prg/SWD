@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/actors")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Actors", description = "Admin actor management endpoints - requires ADMIN role")
+@Tag(name = "Admin - Actors", description = "Admin actor management endpoints - requires ADMIN role")
 public class AdminActorController {
 
     private final ActorService actorService;

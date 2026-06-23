@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/genres")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Genres", description = "Admin genre management endpoints - requires ADMIN role")
+@Tag(name = "Admin - Genres", description = "Admin genre management endpoints - requires ADMIN role")
 public class AdminGenreController {
 
     private final GenreService genreService;

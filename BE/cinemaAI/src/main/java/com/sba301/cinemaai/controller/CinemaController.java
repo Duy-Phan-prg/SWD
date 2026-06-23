@@ -5,6 +5,7 @@ import com.sba301.cinemaai.dto.response.cinema.RoomResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.CinemaService;
 import com.sba301.cinemaai.service.RoomService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "Cinema")
 @RequiredArgsConstructor
 public class CinemaController {
 

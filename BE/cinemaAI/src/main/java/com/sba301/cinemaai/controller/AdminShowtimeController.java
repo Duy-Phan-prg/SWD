@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/showtimes")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
-@Tag(name = "Admin Showtimes", description = "Admin showtime management endpoints - requires ADMIN role")
+@Tag(name = "Admin - Showtimes", description = "Admin showtime management endpoints - requires ADMIN role")
 public class AdminShowtimeController {
 
     private final ShowtimeService showtimeService;

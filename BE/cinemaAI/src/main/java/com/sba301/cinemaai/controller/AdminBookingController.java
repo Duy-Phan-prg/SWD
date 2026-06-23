@@ -8,6 +8,7 @@ import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.service.BookingService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/admin/bookings")
+@Tag(name = "Admin - Bookings")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
 public class AdminBookingController {

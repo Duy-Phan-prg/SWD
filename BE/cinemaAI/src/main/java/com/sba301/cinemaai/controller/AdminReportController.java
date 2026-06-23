@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/reports")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
-@Tag(name = "Admin — Reports", description = "Revenue, ticket sales, top movies and room occupancy reports")
+@Tag(name = "Admin - Reports", description = "Revenue, ticket sales, top movies and room occupancy reports")
 public class AdminReportController {
 
     private final ReportService reportService;
