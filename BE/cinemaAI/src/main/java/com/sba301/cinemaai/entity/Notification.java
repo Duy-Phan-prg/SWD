@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -47,6 +48,7 @@ public class Notification extends BaseEntity {
     @Column(nullable = false, length = 30)
     private NotificationType type;
 
+    @Setter
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
@@ -56,9 +58,5 @@ public class Notification extends BaseEntity {
         this.message = message;
         this.type = type;
         this.isRead = false;
-    }
-
-    public void markRead() {
-        isRead = true;
     }
 }

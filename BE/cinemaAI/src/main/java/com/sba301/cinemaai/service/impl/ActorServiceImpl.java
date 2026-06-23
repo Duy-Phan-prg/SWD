@@ -72,7 +72,9 @@ public class ActorServiceImpl implements ActorService {
                 .ifPresent(existing -> {
                     throw new ConflictException("Actor name already exists");
         });
-        actor.updateDetails(name, request.biography(), request.avatarUrl());
+        actor.setName(name);
+        actor.setBiography(request.biography());
+        actor.setAvatarUrl(request.avatarUrl());
         refreshMovieActorMetadata(actor);
         return toResponse(actor);
     }
@@ -112,7 +114,8 @@ public class ActorServiceImpl implements ActorService {
         String mainActors = joinActorNames(actorLinks.stream()
                 .filter(MovieActor::isMainActor)
                 .toList());
-        movie.updateCastMetadata(mainActors, castList);
+        movie.setMainActors(mainActors);
+        movie.setCastList(castList);
     }
 
     private String joinActorNames(List<MovieActor> actorLinks) {

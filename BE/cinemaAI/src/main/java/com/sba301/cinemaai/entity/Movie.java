@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -35,87 +36,66 @@ public class Movie extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
     @Column(nullable = false, unique = true)
     private String title;
 
+    @Setter
     @Lob
     private String description;
 
+    @Setter
     @Column(name = "trailer_url", length = 500)
     private String trailerUrl;
 
+    @Setter
     @Column(name = "poster_url", length = 500)
     private String posterUrl;
 
+    @Setter
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Setter
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
+    @Setter
     @Column(name = "release_date")
     private LocalDate releaseDate;
 
+    @Setter
     @Column(length = 50)
     private String language;
 
+    @Setter
     @Column(name = "subtitle_language", length = 50)
     private String subtitleLanguage;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private MovieStatus status = MovieStatus.UPCOMING;
 
+    @Setter
     @Convert(converter = AgeRatingConverter.class)
     @Column(name = "age_rating", length = 20)
     private AgeRating ageRating;
 
+    @Setter
     private String director;
 
+    @Setter
     @Column(name = "main_actors", length = 1000)
     private String mainActors;
 
+    @Setter
     @Column(name = "cast_list", columnDefinition = "TEXT")
     private String castList;
 
     public Movie(String title, int durationMinutes, MovieStatus status) {
-        updateBasicInfo(title, durationMinutes);
-        this.status = status;
-    }
-
-    public void updateBasicInfo(String title, int durationMinutes) {
         this.title = title;
         this.durationMinutes = durationMinutes;
-    }
-
-    public void updateContent(
-            String description,
-            LocalDate releaseDate,
-            String trailerUrl,
-            String posterUrl,
-            String avatarUrl,
-            String language,
-            String subtitleLanguage,
-            AgeRating ageRating,
-            String director
-    ) {
-        this.description = description;
-        this.releaseDate = releaseDate;
-        this.trailerUrl = trailerUrl;
-        this.posterUrl = posterUrl;
-        this.avatarUrl = avatarUrl;
-        this.language = language;
-        this.subtitleLanguage = subtitleLanguage;
-        this.ageRating = ageRating;
-        this.director = director;
-    }
-
-    public void updateCastMetadata(String mainActors, String castList) {
-        this.mainActors = mainActors;
-        this.castList = castList;
-    }
-
-    public void changeStatus(MovieStatus status) {
         this.status = status;
     }
 }

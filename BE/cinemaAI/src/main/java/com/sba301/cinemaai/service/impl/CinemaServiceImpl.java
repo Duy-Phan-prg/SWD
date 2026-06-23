@@ -47,7 +47,7 @@ public class CinemaServiceImpl implements CinemaService {
             throw new ConflictException("Cinema name already exists");
         });
         Cinema cinema = new Cinema(request.name(), request.address(), request.city(), request.phone());
-        cinema.changeStatus(request.status() == null ? CinemaStatus.ACTIVE : request.status());
+        cinema.setStatus(request.status() == null ? CinemaStatus.ACTIVE : request.status());
         return cinemaMapper.toCinemaResponse(cinemaRepository.save(cinema));
     }
 
@@ -64,8 +64,11 @@ public class CinemaServiceImpl implements CinemaService {
                 .ifPresent(existing -> {
                     throw new ConflictException("Cinema name already exists");
                 });
-        cinema.updateDetails(request.name(), request.address(), request.city(), request.phone());
-        cinema.changeStatus(request.status() == null ? cinema.getStatus() : request.status());
+        cinema.setName(request.name());
+        cinema.setAddress(request.address());
+        cinema.setCity(request.city());
+        cinema.setPhone(request.phone());
+        cinema.setStatus(request.status() == null ? cinema.getStatus() : request.status());
         return cinemaMapper.toCinemaResponse(cinema);
     }
 
@@ -77,7 +80,7 @@ public class CinemaServiceImpl implements CinemaService {
     @Transactional
     public CinemaResponse updateStatus(Long id, CinemaStatus status) {
         Cinema cinema = findById(id);
-        cinema.changeStatus(status);
+        cinema.setStatus(status);
         return cinemaMapper.toCinemaResponse(cinema);
     }
 
@@ -88,7 +91,7 @@ public class CinemaServiceImpl implements CinemaService {
 
     @Transactional
     public void delete(Long id) {
-        findById(id).changeStatus(CinemaStatus.INACTIVE);
+        findById(id).setStatus(CinemaStatus.INACTIVE);
     }
 
     public Cinema findById(Long id) {

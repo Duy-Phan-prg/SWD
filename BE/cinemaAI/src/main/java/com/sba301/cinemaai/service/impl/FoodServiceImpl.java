@@ -86,7 +86,7 @@ public class FoodServiceImpl implements FoodService {
     public FoodItemResponse createItem(FoodItemRequest request) {
         FoodItem foodItem = new FoodItem(request.name(), request.description(), request.price());
         applyItemFields(foodItem, request);
-        foodItem.changeStatus(request.status() == null ? FoodItemStatus.ACTIVE : request.status());
+        foodItem.setStatus(request.status() == null ? FoodItemStatus.ACTIVE : request.status());
         return foodMapper.toFoodItemResponse(foodItemRepository.save(foodItem));
     }
 
@@ -94,7 +94,7 @@ public class FoodServiceImpl implements FoodService {
     public FoodComboResponse createCombo(FoodComboRequest request) {
         FoodCombo foodCombo = new FoodCombo(request.name(), request.description(), request.price());
         applyComboFields(foodCombo, request);
-        foodCombo.changeStatus(request.status() == null ? FoodItemStatus.ACTIVE : request.status());
+        foodCombo.setStatus(request.status() == null ? FoodItemStatus.ACTIVE : request.status());
         return foodMapper.toFoodComboResponse(foodComboRepository.save(foodCombo));
     }
 
@@ -102,7 +102,7 @@ public class FoodServiceImpl implements FoodService {
     public FoodItemResponse updateItem(Long id, FoodItemRequest request) {
         FoodItem foodItem = findItem(id);
         applyItemFields(foodItem, request);
-        foodItem.changeStatus(request.status() == null ? foodItem.getStatus() : request.status());
+        foodItem.setStatus(request.status() == null ? foodItem.getStatus() : request.status());
         return foodMapper.toFoodItemResponse(foodItem);
     }
 
@@ -110,21 +110,21 @@ public class FoodServiceImpl implements FoodService {
     public FoodComboResponse updateCombo(Long id, FoodComboRequest request) {
         FoodCombo foodCombo = findCombo(id);
         applyComboFields(foodCombo, request);
-        foodCombo.changeStatus(request.status() == null ? foodCombo.getStatus() : request.status());
+        foodCombo.setStatus(request.status() == null ? foodCombo.getStatus() : request.status());
         return foodMapper.toFoodComboResponse(foodCombo);
     }
 
     @Transactional
     public FoodItemResponse deleteItem(Long id) {
         FoodItem foodItem = findItem(id);
-        foodItem.changeStatus(FoodItemStatus.INACTIVE);
+        foodItem.setStatus(FoodItemStatus.INACTIVE);
         return foodMapper.toFoodItemResponse(foodItem);
     }
 
     @Transactional
     public FoodComboResponse deleteCombo(Long id) {
         FoodCombo foodCombo = findCombo(id);
-        foodCombo.changeStatus(FoodItemStatus.INACTIVE);
+        foodCombo.setStatus(FoodItemStatus.INACTIVE);
         return foodMapper.toFoodComboResponse(foodCombo);
     }
 
@@ -139,11 +139,17 @@ public class FoodServiceImpl implements FoodService {
     }
 
     private void applyItemFields(FoodItem foodItem, FoodItemRequest request) {
-        foodItem.updateDetails(request.name(), request.description(), request.price(), request.imageUrl());
+        foodItem.setName(request.name());
+        foodItem.setDescription(request.description());
+        foodItem.setPrice(request.price());
+        foodItem.setImageUrl(request.imageUrl());
     }
 
     private void applyComboFields(FoodCombo foodCombo, FoodComboRequest request) {
-        foodCombo.updateDetails(request.name(), request.description(), request.price(), request.imageUrl());
+        foodCombo.setName(request.name());
+        foodCombo.setDescription(request.description());
+        foodCombo.setPrice(request.price());
+        foodCombo.setImageUrl(request.imageUrl());
     }
 
     private PageRequest pageable(int page, int size) {

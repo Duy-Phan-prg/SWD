@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -24,34 +25,30 @@ public class FoodItem extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
     @Column(nullable = false)
     private String name;
 
+    @Setter
     @Column(length = 500)
     private String description;
 
+    @Setter
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
+    @Setter
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private FoodItemStatus status = FoodItemStatus.ACTIVE;
 
     public FoodItem(String name, String description, BigDecimal price) {
-        updateDetails(name, description, price, null);
-    }
-
-    public void updateDetails(String name, String description, BigDecimal price, String imageUrl) {
         this.name = name;
         this.description = description;
         this.price = price;
-        this.imageUrl = imageUrl;
-    }
-
-    public void changeStatus(FoodItemStatus status) {
-        this.status = status;
     }
 }

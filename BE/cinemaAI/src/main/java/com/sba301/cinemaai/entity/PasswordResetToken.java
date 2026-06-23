@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -34,6 +35,7 @@ public class PasswordResetToken extends BaseEntity {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Setter
     @Column(nullable = false)
     private boolean used;
 
@@ -41,9 +43,5 @@ public class PasswordResetToken extends BaseEntity {
         this.user = user;
         this.token = token;
         this.expiresAt = expiresAt;
-    }
-
-    public void markUsed() {
-        used = true;
     }
 }

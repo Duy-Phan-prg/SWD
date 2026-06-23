@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -20,17 +21,15 @@ public class Genre extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
+    @Setter
     @Column(length = 1000)
     private String description;
 
     public Genre(String name, String description) {
-        updateDetails(name, description);
-    }
-
-    public void updateDetails(String name, String description) {
         this.name = name;
         this.description = description;
     }

@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -38,19 +39,24 @@ public class Payment extends BaseEntity {
     @Column(nullable = false, length = 30)
     private PaymentProvider provider;
 
+    @Setter
     @Column(name = "transaction_id", length = 100)
     private String transactionId;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private PaymentStatus status = PaymentStatus.PENDING;
 
+    @Setter
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    @Setter
+    @Lob
     @Column(name = "callback_payload", columnDefinition = "TEXT")
     private String callbackPayload;
 
@@ -58,21 +64,5 @@ public class Payment extends BaseEntity {
         this.booking = booking;
         this.provider = provider;
         this.amount = amount;
-    }
-
-    public void markSuccessful(
-            String transactionId,
-            String callbackPayload,
-            LocalDateTime paidAt
-    ) {
-        this.transactionId = transactionId;
-        this.callbackPayload = callbackPayload;
-        this.paidAt = paidAt;
-        status = PaymentStatus.SUCCESS;
-    }
-
-    public void markFailed(String callbackPayload) {
-        this.callbackPayload = callbackPayload;
-        status = PaymentStatus.FAILED;
     }
 }

@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -41,6 +42,7 @@ public class EmailVerificationToken extends BaseEntity {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Setter
     @Column(nullable = false)
     private boolean used;
 
@@ -55,9 +57,5 @@ public class EmailVerificationToken extends BaseEntity {
         this.token = token;
         this.purpose = purpose;
         this.expiresAt = expiresAt;
-    }
-
-    public void markUsed() {
-        used = true;
     }
 }

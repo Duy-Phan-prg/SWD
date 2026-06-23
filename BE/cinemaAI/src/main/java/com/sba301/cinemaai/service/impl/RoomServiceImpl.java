@@ -72,7 +72,7 @@ public class RoomServiceImpl implements RoomService {
             throw new ConflictException("Room name already exists in this cinema");
         });
         Room room = new Room(cinema, roomName, request.roomType(), request.rowCount(), request.columnCount());
-        room.changeStatus(request.status() == null ? RoomStatus.ACTIVE : request.status());
+        room.setStatus(request.status() == null ? RoomStatus.ACTIVE : request.status());
         return cinemaMapper.toRoomResponse(roomRepository.save(room));
     }
 
@@ -86,15 +86,18 @@ public class RoomServiceImpl implements RoomService {
                 .ifPresent(existing -> {
                     throw new ConflictException("Room name already exists in this cinema");
                 });
-        room.updateDetails(roomName, request.roomType(), request.rowCount(), request.columnCount());
-        room.changeStatus(request.status() == null ? room.getStatus() : request.status());
+        room.setName(roomName);
+        room.setRoomType(request.roomType());
+        room.setRowCount(request.rowCount());
+        room.setColumnCount(request.columnCount());
+        room.setStatus(request.status() == null ? room.getStatus() : request.status());
         return cinemaMapper.toRoomResponse(room);
     }
 
     @Transactional
     public RoomResponse updateStatus(Long id, RoomStatus status) {
         Room room = findById(id);
-        room.changeStatus(status);
+        room.setStatus(status);
         return cinemaMapper.toRoomResponse(room);
     }
 
