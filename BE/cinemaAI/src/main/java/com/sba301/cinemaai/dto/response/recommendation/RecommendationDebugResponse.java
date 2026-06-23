@@ -8,6 +8,7 @@ public record RecommendationDebugResponse(
         int trailerInteractionCount,
         int bookingHistoryCount,
         int reviewCount,
+        int wishlistCount,
         List<MovieRecommendationResponse> recommendations
 ) {
 }

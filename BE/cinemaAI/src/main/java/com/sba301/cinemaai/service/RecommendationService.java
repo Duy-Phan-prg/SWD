@@ -10,15 +10,21 @@ import java.util.List;
 
 public interface RecommendationService {
 
-        public TrailerInteractionResponse recordTrailerInteraction(String email, TrailerInteractionRequest request);
+        TrailerInteractionResponse recordTrailerInteraction(String email, TrailerInteractionRequest request);
 
-        public UserPreferenceProfileResponse refreshProfile(String email);
+        UserPreferenceProfileResponse refreshProfile(String email);
 
-        public UserPreferenceProfileResponse getProfile(String email);
+        /**
+         * Làm mới profile bất đồng bộ (dùng khi trigger từ service khác, ví dụ ReviewService).
+         * Không throw exception – lỗi chỉ được log.
+         */
+        void refreshProfileAsync(String email);
 
-        public List<MovieRecommendationResponse> recommendMovies(String email, int limit);
+        UserPreferenceProfileResponse getProfile(String email);
 
-        public List<FavoriteActorRecommendationResponse> recommendByFavoriteActors(String email, int limit);
+        List<MovieRecommendationResponse> recommendMovies(String email, int limit);
 
-        public RecommendationDebugResponse debugUser(Long userId, int limit);
+        List<FavoriteActorRecommendationResponse> recommendByFavoriteActors(String email, int limit);
+
+        RecommendationDebugResponse debugUser(Long userId, int limit);
 }

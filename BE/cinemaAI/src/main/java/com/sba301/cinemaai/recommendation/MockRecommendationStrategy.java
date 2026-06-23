@@ -8,10 +8,8 @@ import com.sba301.cinemaai.repository.MovieGenreRepository;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-@Component
 @RequiredArgsConstructor
 public class MockRecommendationStrategy implements RecommendationStrategy {
 
