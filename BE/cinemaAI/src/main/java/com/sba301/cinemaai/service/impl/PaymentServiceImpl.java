@@ -16,6 +16,7 @@ import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.service.LoyaltyPointService;
+import com.sba301.cinemaai.service.NotificationService;
 import com.sba301.cinemaai.service.PaymentService;
 import com.sba301.cinemaai.service.QrTicketService;
 import com.sba301.cinemaai.service.VNPayService;
@@ -38,6 +39,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final VNPayService vnpayService;
     private final QrTicketService qrTicketService;
     private final LoyaltyPointService loyaltyPointService;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -164,6 +166,7 @@ public class PaymentServiceImpl implements PaymentService {
         booking.setTotalAmount(booking.getTotalAmount());
         markPaid(booking, qrTicketService.generate(booking));
         loyaltyPointService.addPointsFromBooking(booking.getUser(), booking);
+        notificationService.notifyBookingPaid(booking);
         log.info("Payment {} confirmed for booking {}", payment.getId(), booking.getBookingCode());
     }
 

@@ -39,4 +39,24 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b WHERE b.showtime = :showtime AND b.status = :status")
     List<Booking> findByShowtimeAndStatus(@Param("showtime") Showtime showtime, @Param("status") BookingStatus status);
+
+    @Query("SELECT COUNT(bs) FROM BookingSeat bs JOIN bs.booking b WHERE b.status IN ('PAID','USED') AND b.paidAt BETWEEN :from AND :to")
+    long countTicketsSold(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT b.showtime.movie.id, b.showtime.movie.title, COUNT(bs), SUM(b.totalAmount)
+            FROM BookingSeat bs JOIN bs.booking b
+            WHERE b.status IN ('PAID','USED') AND b.paidAt BETWEEN :from AND :to
+            GROUP BY b.showtime.movie.id, b.showtime.movie.title
+            ORDER BY COUNT(bs) DESC
+            """)
+    List<Object[]> topMoviesByTickets(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT s.room.id, s.room.name, COUNT(bs), (s.room.rowCount * s.room.columnCount)
+            FROM BookingSeat bs JOIN bs.booking b JOIN b.showtime s
+            WHERE b.status IN ('PAID','USED') AND b.paidAt BETWEEN :from AND :to
+            GROUP BY s.room.id, s.room.name, s.room.rowCount, s.room.columnCount
+            """)
+    List<Object[]> occupancyByRoom(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

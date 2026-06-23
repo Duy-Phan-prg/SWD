@@ -6,6 +6,7 @@ import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
+import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Room;
@@ -26,8 +27,11 @@ import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
+import com.sba301.cinemaai.service.LoyaltyPointService;
+import com.sba301.cinemaai.service.NotificationService;
 import com.sba301.cinemaai.service.RoomService;
 import com.sba301.cinemaai.service.ShowtimeService;
+import com.sba301.cinemaai.service.WalletService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -63,6 +67,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final BookingSeatRepository bookingSeatRepository;
     private final RoomService roomService;
     private final CinemaMapper cinemaMapper;
+    private final WalletService walletService;
+    private final LoyaltyPointService loyaltyPointService;
+    private final NotificationService notificationService;
 
     // -------------------------------------------------------------------------
     // PUBLIC (customer-facing)
@@ -386,22 +393,34 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     }
 
     /**
-     * Cascade-cancels all non-terminal bookings when a showtime is cancelled by admin.
+     * Cascade-cancels all non-terminal bookings when admin cancels a showtime due to incident.
      * <ul>
      *   <li>HOLDING / PENDING_PAYMENT  → CANCELLED  (no money collected)</li>
-     *   <li>PAID                       → REFUND_REQUESTED (money must be returned)</li>
-     *   <li>REFUND_REQUESTED           → unchanged  (already in refund queue)</li>
+     *   <li>PAID  → REFUNDED: refund to wallet, revoke loyalty, send notification</li>
+     *   <li>REFUND_REQUESTED → REFUNDED: complete the pending refund</li>
      *   <li>USED / CANCELLED / REFUNDED / EXPIRED → skipped (terminal)</li>
      * </ul>
      */
     private void cancelShowtimeBookings(Showtime showtime) {
         bookingRepository.findByShowtime(showtime).forEach(booking -> {
             switch (booking.getStatus()) {
-                case HOLDING, PENDING_PAYMENT -> cancelBooking(booking);
-                case PAID -> requestRefund(booking, "Showtime cancelled by admin");
+                case HOLDING, PENDING_PAYMENT -> {
+                    cancelBooking(booking);
+                    notificationService.notifyBookingCancelled(booking);
+                }
+                case PAID, REFUND_REQUESTED -> processShowtimeRefund(booking, showtime);
                 default -> { /* already terminal — no action */ }
             }
         });
+    }
+
+    private void processShowtimeRefund(Booking booking, Showtime showtime) {
+        booking.setStatus(BookingStatus.REFUNDED);
+        booking.setRefundedAt(java.time.LocalDateTime.now());
+        booking.setRefundReason("Showtime cancelled by admin due to operational incident");
+        walletService.credit(booking.getUser(), booking.getTotalAmount());
+        loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
+        notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
     }
 
     private LocalDateTime calculateEndTime(Movie movie, LocalDateTime startTime) {

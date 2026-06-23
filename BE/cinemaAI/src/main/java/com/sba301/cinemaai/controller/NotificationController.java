@@ -101,4 +101,16 @@ public class NotificationController {
                 "Notification marked as read"
         );
     }
+
+    @PatchMapping("/me/read-all")
+    @Operation(
+            summary = "Mark all notifications as read",
+            description = "Marks all unread notifications for the authenticated user as read."
+    )
+    public ApiResponse<Integer> markAllRead(
+            @AuthenticationPrincipal AuthenticatedUser currentUser
+    ) {
+        int updated = notificationService.markAllRead(currentUser.id());
+        return ApiResponse.success(updated, updated + " notification(s) marked as read");
+    }
 }
