@@ -48,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -307,9 +309,9 @@ public class BookingServiceImpl implements BookingService {
         bookingTicketRepository.findByBooking(booking).forEach(bookingTicketRepository::delete);
         Map<Long, BookingSeat> seatsById = bookingSeatRepository.findByBooking(booking)
                 .stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         bookingSeat -> bookingSeat.getSeat().getId(),
-                        java.util.function.Function.identity()
+                        Function.identity()
                 ));
         for (int i = 0; i < validation.tickets().size(); i++) {
             TicketLinePriceResponse ticket = validation.tickets().get(i);
@@ -346,7 +348,7 @@ public class BookingServiceImpl implements BookingService {
         if (allTicketsHaveSeatId) {
             Set<Long> heldSeatIds = heldSeats.stream()
                     .map(bookingSeat -> bookingSeat.getSeat().getId())
-                    .collect(java.util.stream.Collectors.toSet());
+                    .collect(Collectors.toSet());
             Set<Long> ticketSeatIds = new HashSet<>();
             for (TicketSelectionRequest ticket : tickets) {
                 if (ticket.quantity() != 1) {

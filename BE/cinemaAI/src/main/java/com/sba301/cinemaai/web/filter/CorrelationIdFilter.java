@@ -1,4 +1,4 @@
-package com.sba301.cinemaai.config;
+package com.sba301.cinemaai.web.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

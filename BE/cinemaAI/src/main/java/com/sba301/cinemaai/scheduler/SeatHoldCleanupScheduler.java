@@ -1,4 +1,4 @@
-package com.sba301.cinemaai.config;
+package com.sba301.cinemaai.scheduler;
 
 import com.sba301.cinemaai.service.BookingService;
 import lombok.RequiredArgsConstructor;

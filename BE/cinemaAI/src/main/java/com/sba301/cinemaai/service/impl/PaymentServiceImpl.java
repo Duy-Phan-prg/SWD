@@ -4,6 +4,7 @@ package com.sba301.cinemaai.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.response.payment.PaymentResponse;
 import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.PaymentProvider;
@@ -161,9 +162,6 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = payment.getBooking();
         bookingSeatRepository.findByBooking(booking)
                 .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.BOOKED));
-        booking.setSubtotal(booking.getSubtotal());
-        booking.setDiscountAmount(booking.getDiscountAmount());
-        booking.setTotalAmount(booking.getTotalAmount());
         markPaid(booking, qrTicketService.generate(booking));
         loyaltyPointService.addPointsFromBooking(booking.getUser(), booking);
         notificationService.notifyBookingPaid(booking);
@@ -194,7 +192,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(PaymentStatus.FAILED);
     }
 
-    private void changeBookingSeatStatus(com.sba301.cinemaai.entity.BookingSeat bookingSeat, SeatRuntimeStatus status) {
+    private void changeBookingSeatStatus(BookingSeat bookingSeat, SeatRuntimeStatus status) {
         if (status == null) {
             throw new BadRequestException("Seat runtime status is required");
         }

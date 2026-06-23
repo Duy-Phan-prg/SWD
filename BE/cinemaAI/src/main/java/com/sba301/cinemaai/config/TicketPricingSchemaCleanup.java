@@ -18,10 +18,27 @@ public class TicketPricingSchemaCleanup {
     @EventListener(ApplicationReadyEvent.class)
     public void removeSeniorTicketSupport() {
         execute("delete from ticket_pricing_rules where ticket_type = 'SENIOR'");
-        execute("alter table ticket_pricing_rules add column if not exists seat_type varchar(30)");
+        if (!columnExists("ticket_pricing_rules", "seat_type")) {
+            execute("alter table ticket_pricing_rules add column seat_type varchar(30)");
+        }
         execute("update ticket_pricing_rules set seat_type = 'STANDARD' where seat_type is null");
         execute("delete from ticket_pricing_rules where seat_type = 'COUPLE' and ticket_type <> 'ADULT'");
-        execute("alter table ticket_combos drop column if exists senior_count");
+        if (columnExists("ticket_combos", "senior_count")) {
+            execute("alter table ticket_combos drop column senior_count");
+        }
+    }
+
+    private boolean columnExists(String table, String column) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "select count(*) from information_schema.columns " +
+                            "where table_schema = database() and table_name = ? and column_name = ?",
+                    Integer.class, table, column);
+            return count != null && count > 0;
+        } catch (DataAccessException ex) {
+            log.warn("Could not check existence of column {}.{}", table, column, ex);
+            return false;
+        }
     }
 
     private void execute(String sql) {

@@ -18,18 +18,20 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/api/v1/admin/cinema")
 @RequiredArgsConstructor
 @Tag(name = "Admin Cinema", description = "GET is public for displaying cinema information; write operations require ADMIN role")
 public class AdminCinemaController {
 
     private final CinemaService cinemaService;
 
-    @GetMapping("/api/v1/admin/cinema")
+    @GetMapping
     @Operation(summary = "Get configured cinema", description = "Public endpoint available to every role for displaying cinema name and address")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema retrieved successfully"),
@@ -39,7 +41,7 @@ public class AdminCinemaController {
         return ApiResponse.success(cinemaService.getAdminCinema());
     }
 
-    @PostMapping("/api/v1/admin/cinema")
+    @PostMapping
     @SecurityRequirement(name = "Bearer Authentication")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create configured cinema (Admin)", description = "Create the cinema if missing. The system is limited to one cinema (Admin only)")
@@ -53,7 +55,7 @@ public class AdminCinemaController {
         return ApiResponse.success(cinemaService.create(request), "Cinema saved successfully");
     }
 
-    @PutMapping("/api/v1/admin/cinema")
+    @PutMapping
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Update configured cinema (Admin)", description = "Update the single configured cinema (Admin only)")
     @ApiResponses(value = {
@@ -67,7 +69,7 @@ public class AdminCinemaController {
         return ApiResponse.success(cinemaService.update(request), "Cinema updated successfully");
     }
 
-    @PatchMapping("/api/v1/admin/cinema/status")
+    @PatchMapping("/status")
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Update configured cinema status (Admin)", description = "Update the status of the single configured cinema (Admin only)")
     @ApiResponses(value = {
@@ -80,7 +82,7 @@ public class AdminCinemaController {
         return ApiResponse.success(cinemaService.updateStatus(status), "Cinema status updated successfully");
     }
 
-    @DeleteMapping("/api/v1/admin/cinema")
+    @DeleteMapping
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Deactivate configured cinema (Admin)", description = "Deactivate the single configured cinema (Admin only)")
     @ApiResponses(value = {

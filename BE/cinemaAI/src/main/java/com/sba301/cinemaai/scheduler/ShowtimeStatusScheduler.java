@@ -1,4 +1,4 @@
-package com.sba301.cinemaai.config;
+package com.sba301.cinemaai.scheduler;
 
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.enums.ShowtimeStatus;

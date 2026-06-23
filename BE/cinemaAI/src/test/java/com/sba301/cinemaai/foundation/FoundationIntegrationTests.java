@@ -1,6 +1,6 @@
 package com.sba301.cinemaai.foundation;
 
-import com.sba301.cinemaai.config.CorrelationIdFilter;
+import com.sba301.cinemaai.web.filter.CorrelationIdFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
