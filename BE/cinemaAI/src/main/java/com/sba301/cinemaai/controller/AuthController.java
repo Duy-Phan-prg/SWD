@@ -1,6 +1,5 @@
 package com.sba301.cinemaai.controller;
 
-import com.sba301.cinemaai.dto.response.auth.AuthResponse;
 import com.sba301.cinemaai.dto.request.auth.EmailOtpRequest;
 import com.sba301.cinemaai.dto.request.auth.EmailVerificationRequest;
 import com.sba301.cinemaai.dto.request.auth.GoogleLoginRequest;
@@ -11,21 +10,26 @@ import com.sba301.cinemaai.dto.request.auth.PasswordResetConfirmRequest;
 import com.sba301.cinemaai.dto.request.auth.PasswordResetRequest;
 import com.sba301.cinemaai.dto.request.auth.RefreshTokenRequest;
 import com.sba301.cinemaai.dto.request.auth.RegisterRequest;
+import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.auth.AuthResponse;
 import com.sba301.cinemaai.dto.response.auth.RegisterResponse;
 import com.sba301.cinemaai.dto.response.auth.TokenResponse;
-import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.service.AuthService;
 import com.sba301.cinemaai.service.PasswordResetService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Authentication")
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "Register, login, token and password-reset endpoints")
 public class AuthController {
 
     private final AuthService authService;

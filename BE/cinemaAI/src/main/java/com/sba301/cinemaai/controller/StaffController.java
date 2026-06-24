@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Bearer Authentication")
 @Tag(name = "Check-In", description = "Check-in endpoints - requires ADMIN or STAFF role")
-public class StaffCheckInController {
+public class StaffController {
 
     private final BookingService bookingService;
 
