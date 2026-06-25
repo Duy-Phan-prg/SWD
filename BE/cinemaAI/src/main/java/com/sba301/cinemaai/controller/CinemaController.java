@@ -22,7 +22,7 @@ public class CinemaController {
     private final CinemaService cinemaService;
     private final RoomService roomService;
 
-    @GetMapping({"/cinema", "/cinemas"})
+    @GetMapping("/cinema")
     public ApiResponse<CinemaResponse> getCinema() {
         return ApiResponse.success(cinemaService.getPublicCinema());
     }

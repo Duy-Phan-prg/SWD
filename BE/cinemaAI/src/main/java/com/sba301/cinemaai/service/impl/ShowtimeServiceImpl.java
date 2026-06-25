@@ -31,7 +31,6 @@ import com.sba301.cinemaai.service.LoyaltyPointService;
 import com.sba301.cinemaai.service.NotificationService;
 import com.sba301.cinemaai.service.RoomService;
 import com.sba301.cinemaai.service.ShowtimeService;
-import com.sba301.cinemaai.service.WalletService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -67,7 +66,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final BookingSeatRepository bookingSeatRepository;
     private final RoomService roomService;
     private final CinemaMapper cinemaMapper;
-    private final WalletService walletService;
     private final LoyaltyPointService loyaltyPointService;
     private final NotificationService notificationService;
 
@@ -396,7 +394,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
      * Cascade-cancels all non-terminal bookings when admin cancels a showtime due to incident.
      * <ul>
      *   <li>HOLDING / PENDING_PAYMENT  → CANCELLED  (no money collected)</li>
-     *   <li>PAID  → REFUNDED: refund to wallet, revoke loyalty, send notification</li>
+     *   <li>PAID  → REFUNDED: mark refunded, revoke loyalty, send notification</li>
      *   <li>REFUND_REQUESTED → REFUNDED: complete the pending refund</li>
      *   <li>USED / CANCELLED / REFUNDED / EXPIRED → skipped (terminal)</li>
      * </ul>
@@ -418,7 +416,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         booking.setStatus(BookingStatus.REFUNDED);
         booking.setRefundedAt(java.time.LocalDateTime.now());
         booking.setRefundReason("Showtime cancelled by admin due to operational incident");
-        walletService.credit(booking.getUser(), booking.getTotalAmount());
         loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
         notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
     }
