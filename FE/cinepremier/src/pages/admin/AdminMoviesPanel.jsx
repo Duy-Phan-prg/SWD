@@ -6,7 +6,7 @@ import {
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
   BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ImageUp, Video
 } from 'lucide-react';
-import { authApi } from '../../services/authApi';
+import { adminService } from '../../services/adminService';
 
 export default function AdminMoviesPanel({ ctx }) {
   const {
@@ -200,7 +200,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
     setIsActorSaving(true);
     try {
-      const actor = await authApi.createAdminActor(token, {
+      const actor = await adminService.createAdminActor(token, {
         name: actorForm.name.trim(),
         biography: actorForm.biography.trim(),
         avatarUrl: actorForm.avatarUrl.trim()
@@ -232,7 +232,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
     setIsActorImageUploading(true);
     try {
-      const uploaded = await authApi.uploadAdminImage(token, file, 'actors');
+      const uploaded = await adminService.uploadAdminImage(token, file, 'actors');
       setActorForm((prev) => ({ ...prev, avatarUrl: uploaded.url }));
       showToast('Đã tải ảnh diễn viên lên Cloudinary.');
     } catch (error) {
@@ -252,7 +252,7 @@ export default function AdminMoviesPanel({ ctx }) {
     const setUploading = field === 'posterUrl' ? setIsPosterUploading : setIsBannerUploading;
     setUploading(true);
     try {
-      const uploaded = await authApi.uploadAdminImage(token, file, folder);
+      const uploaded = await adminService.uploadAdminImage(token, file, folder);
       setFormData((prev) => ({ ...prev, [field]: uploaded.url }));
       showToast(field === 'posterUrl' ? 'Đã tải poster lên Cloudinary.' : 'Đã tải banner lên Cloudinary.');
     } catch (error) {
@@ -271,7 +271,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
     setIsTrailerUploading(true);
     try {
-      const uploaded = await authApi.uploadAdminVideo(token, file, 'movies/trailers');
+      const uploaded = await adminService.uploadAdminVideo(token, file, 'movies/trailers');
       setFormData((prev) => ({ ...prev, trailerUrl: uploaded.url }));
       showToast('Đã tải trailer lên Cloudinary.');
     } catch (error) {

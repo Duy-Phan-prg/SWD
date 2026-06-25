@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { authApi, getStoredAuth } from '../../services/authApi';
+import { getStoredAuth } from '../../services/authService';
+import { adminService } from '../../services/adminService';
 import {
   BadgeCheck,
   Clock,
@@ -106,7 +107,7 @@ export default function AdminUsersPanel({ ctx }) {
       if (!accessToken) return;
       setIsProfileLoading(true);
       try {
-        const profiles = await authApi.getAdminStaffProfiles(accessToken);
+        const profiles = await adminService.getAdminStaffProfiles(accessToken);
         if (!cancelled) setStaffProfiles(Array.isArray(profiles) ? profiles : []);
       } catch (error) {
         if (!cancelled) setProfileError(error.message || 'Khong the tai staff profile.');
@@ -172,12 +173,12 @@ export default function AdminUsersPanel({ ctx }) {
         status: profileForm.status || 'ACTIVE'
       };
       const savedProfile = selectedStaffProfile
-        ? await authApi.updateAdminStaffProfile(accessToken, selectedStaffProfile.id, {
+        ? await adminService.updateAdminStaffProfile(accessToken, selectedStaffProfile.id, {
           employeeCode,
           position,
           status: payload.status
         })
-        : await authApi.createAdminStaffProfile(accessToken, payload);
+        : await adminService.createAdminStaffProfile(accessToken, payload);
       setStaffProfiles((prev) => [
         savedProfile,
         ...prev.filter((profile) => String(profile.id) !== String(savedProfile.id))
