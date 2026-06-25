@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, SlidersHorizontal, Bell, Ticket, Mail, Check, Trash2 } from 'lucide-react';
+import { Film, SlidersHorizontal, Bell, Ticket, Check, Trash2 } from 'lucide-react';
 import { useMovies } from '../contexts/MoviesContext';
 import { useUI } from '../contexts/UIContext';
 
@@ -128,8 +128,26 @@ export default function WishlistView() {
       </div>
 
       {/* ITEMS DECK CARDS GRID SCREENSHOT 3 STYLE */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="watchlist-deck-grid">
-        {filteredItems.map((item, index) => (
+      {filteredItems.length === 0 ? (
+        <div className="border border-dashed border-white/10 bg-black px-6 py-14 text-center">
+          <Film className="mx-auto h-9 w-9 text-neutral-600" />
+          <h2 className="mt-5 text-xl font-serif italic tracking-wider text-white">
+            Danh sách yêu thích đang trống
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-xs leading-6 text-neutral-500">
+            Hãy mở trang khám phá phim và bấm biểu tượng trái tim trên poster hoặc trong trang chi tiết để lưu phim vào wishlist.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/movies')}
+            className="mt-6 border border-white bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-black transition hover:bg-black hover:text-white"
+          >
+            Khám phá phim
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="watchlist-deck-grid">
+          {filteredItems.map((item, index) => (
           <div 
             key={`${item.id}-${index}`}
             className="group border border-white/5 bg-[#050505] overflow-hidden flex flex-col justify-between relative transition duration-300 hover:border-white/15"
@@ -221,8 +239,9 @@ export default function WishlistView() {
             </div>
 
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* FOOTER NEWSLETTER BANNER SCREENSHOT 3 PROMO MOCKUP */}
       <div 

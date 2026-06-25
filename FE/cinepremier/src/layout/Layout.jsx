@@ -12,12 +12,13 @@ import { useMovies } from '../contexts/MoviesContext';
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast, setToast, showOTP, setShowOTP, showWatchlist, setShowWatchlist } = useUI();
+  const { toast, setToast, showOTP, setShowOTP, authMode, setAuthMode, showWatchlist, setShowWatchlist } = useUI();
   const { isLoggedIn, currentUser, currentRole, setCurrentRole, handleLoginSuccess } = useAuth();
-  const { searchQuery, setSearchQuery, setMoviePagination, selectedCity, setSelectedCity, cinemaLocations, publicCinema, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
+  const { searchQuery, setSearchQuery, setMoviePagination, publicCinema, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
 
   const activeTab = (() => {
     const p = location.pathname;
+    if (p.startsWith('/staff')) return 'staff';
     if (p.startsWith('/admin')) return 'admin';
     if (p.startsWith('/movies')) return 'explore';
     if (p === '/tickets') return 'my-tickets';
@@ -28,7 +29,7 @@ export default function Layout({ children }) {
 
   const handleTabChange = (tab) => {
     if (tab === 'my-tickets' && !isLoggedIn) return;
-    const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', admin: '/admin/overview' };
+    const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
     navigate(paths[tab] || '/');
   };
 
@@ -40,7 +41,7 @@ export default function Layout({ children }) {
     : toastDurationMs;
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-black text-white selection:bg-white selection:text-black">
       {/* Toast */}
       <AnimatePresence>
         {toast && (
@@ -95,26 +96,23 @@ export default function Layout({ children }) {
       </div>
 
       {/* Main */}
-      <div className="md:pl-[60px] min-h-screen flex flex-col justify-between">
+      <div className="min-h-screen w-full max-w-full overflow-x-clip md:pl-[60px] flex flex-col justify-between">
         <div>
           <Header
             activeTab={activeTab}
             onTabChange={handleTabChange}
             searchQuery={searchQuery}
             onSearchChange={(q) => { setSearchQuery(q); setMoviePagination(prev => ({ ...prev, page: 0 })); if (location.pathname !== '/movies') navigate('/movies'); }}
-            selectedCity={selectedCity}
-            cinemaLocations={cinemaLocations}
             cinema={publicCinema}
-            onCityChange={setSelectedCity}
             onManageCinema={() => navigate('/admin/cinema')}
             onOpenWatchlist={() => setShowWatchlist(true)}
-            onOpenOTP={() => setShowOTP(true)}
+            onOpenOTP={() => { setAuthMode('login'); setShowOTP(true); }}
             isLoggedIn={isLoggedIn}
             currentUser={currentUser}
             currentRole={currentRole}
             onRoleChange={setCurrentRole}
           />
-          <main className="relative z-0 overflow-x-hidden">{children}</main>
+          <main className="relative z-0 min-w-0 max-w-full overflow-x-clip">{children}</main>
         </div>
         <Footer onTabChange={handleTabChange} cinema={publicCinema} />
       </div>
@@ -181,6 +179,7 @@ export default function Layout({ children }) {
       <AuthModal
         isOpen={showOTP}
         onClose={() => setShowOTP(false)}
+        initialTab={authMode}
         isLoggedIn={isLoggedIn}
         setIsLoggedIn={(v) => { }}
         currentRole={currentRole}

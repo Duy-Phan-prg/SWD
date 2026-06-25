@@ -160,7 +160,8 @@ const getAgeRatingMinimum = (ageRating) => {
   return match ? Number(match[0]) : 0;
 };
 
-const allowsChildTicketsForMovie = (movie) => getAgeRatingMinimum(movie?.ageRating) < 16;
+const CHILD_TICKET_MAX_AGE = 12;
+const allowsChildTicketsForMovie = (movie) => getAgeRatingMinimum(movie?.ageRating) <= CHILD_TICKET_MAX_AGE;
 
 const clearChildPrices = (state) => ({
   ...state,
@@ -557,6 +558,8 @@ export default function AdminShowtimesPanel({ ctx }) {
     const movieId = copySource.movieId ?? copySource.movie?.id;
     const roomId = copySource.roomId ?? copySource.room?.id;
     const nextStartTime = buildDateTimeOnDate(copySource.startTime, copyDate);
+    const copyMovie = findUiMovie(movieId) || copySource.movie;
+    const allowChildTickets = allowsChildTicketsForMovie(copyMovie);
     if (!movieId || !roomId || !nextStartTime) {
       showToast?.('Không đủ dữ liệu phim/phòng/giờ để copy suất chiếu.', 'error');
       return;
@@ -570,13 +573,13 @@ export default function AdminShowtimesPanel({ ctx }) {
       vipPrice: copySource.vipPrice ?? copySource.adultVipPrice ?? null,
       couplePrice: copySource.couplePrice ?? copySource.adultCouplePrice ?? null,
       adultStandardPrice: copySource.adultStandardPrice ?? copySource.basePrice ?? 0,
-      childStandardPrice: copySource.childStandardPrice ?? null,
+      childStandardPrice: allowChildTickets ? copySource.childStandardPrice ?? null : null,
       studentStandardPrice: copySource.studentStandardPrice ?? copySource.basePrice ?? 0,
       adultVipPrice: copySource.adultVipPrice ?? copySource.vipPrice ?? null,
-      childVipPrice: copySource.childVipPrice ?? null,
+      childVipPrice: allowChildTickets ? copySource.childVipPrice ?? null : null,
       studentVipPrice: copySource.studentVipPrice ?? null,
       adultCouplePrice: copySource.adultCouplePrice ?? copySource.couplePrice ?? null,
-      childCouplePrice: copySource.childCouplePrice ?? null,
+      childCouplePrice: allowChildTickets ? copySource.childCouplePrice ?? null : null,
       studentCouplePrice: copySource.studentCouplePrice ?? null,
       weekendSurcharge: Boolean(copySource.weekendSurcharge),
       holidaySurcharge: Boolean(copySource.holidaySurcharge),
@@ -632,7 +635,7 @@ export default function AdminShowtimesPanel({ ctx }) {
   const activeMovies = (moviesList || []).filter(m => m.status === 'ACTIVE' || m.status === 'NOW_SHOWING' || m.status === 'UPCOMING');
   const formMovie = findUiMovie(form.movieId);
   const formAllowsChildTickets = allowsChildTicketsForMovie(formMovie);
-  const bulkMovie = (moviesList || []).find(m => String(m.backendId ?? m.id) === String(bulkForm.movieId));
+  const bulkMovie = findUiMovie(bulkForm.movieId);
   const bulkAllowsChildTickets = allowsChildTicketsForMovie(bulkMovie);
   const bulkMovieDuration = Number(bulkMovie?.durationMinutes ?? bulkMovie?.duration ?? 0);
   const bulkStepMinutes = bulkMovieDuration ? bulkMovieDuration + 15 : 0;

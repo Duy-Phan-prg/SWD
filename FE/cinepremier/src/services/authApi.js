@@ -34,6 +34,22 @@ export const hasBackendAdminAccess = (accessToken, user = null) => {
   return roleValues.includes('ADMIN') || roleValues.includes('ROLE_ADMIN');
 };
 
+export const hasBackendStaffAccess = (accessToken, user = null) => {
+  const tokenPayload = parseJwtPayload(accessToken);
+  const isTokenExpired = tokenPayload?.exp ? tokenPayload.exp * 1000 <= Date.now() : false;
+  if (!accessToken || isTokenExpired) return false;
+
+  const roleValues = [
+    user?.role,
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    ...(Array.isArray(tokenPayload?.roles) ? tokenPayload.roles : []),
+    ...(Array.isArray(tokenPayload?.authorities) ? tokenPayload.authorities : []),
+    ...(Array.isArray(tokenPayload?.scope) ? tokenPayload.scope : String(tokenPayload?.scope || '').split(' '))
+  ].map((role) => String(role).toUpperCase()).filter(Boolean);
+
+  return roleValues.includes('STAFF') || roleValues.includes('ROLE_STAFF');
+};
+
 const resolveRole = (roles = []) => {
   const normalized = roles.map((role) => String(role).toUpperCase());
   if (ADMIN_ACCESS_OVERRIDE || normalized.includes('ADMIN') || normalized.includes('ROLE_ADMIN')) return 'admin';
@@ -50,7 +66,8 @@ export const normalizeUser = (user, roles = user?.roles || []) => {
     roles: resolvedRoles,
     name: user.fullName || user.name || user.email,
     role: resolveRole(resolvedRoles),
-    emailVerified: Boolean(user.emailVerified)
+    emailVerified: Boolean(user.emailVerified),
+    passwordChangeRequired: Boolean(user.passwordChangeRequired)
   };
 };
 
@@ -92,7 +109,11 @@ const tryRefreshToken = async () => {
   return null;
 };
 
-const request = async (path, { method = 'GET', body, token } = {}) => {
+const inflightGetRequests = new Map();
+
+const getDedupeKey = (path, token) => `${token ? `auth:${token}` : 'public'}:${path}`;
+
+const performRequest = async (path, { method = 'GET', body, token } = {}) => {
   const isFormData = body instanceof FormData;
   const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -125,6 +146,24 @@ const request = async (path, { method = 'GET', body, token } = {}) => {
   }
 
   return parseResponse(response);
+};
+
+const request = (path, { method = 'GET', body, token } = {}) => {
+  const normalizedMethod = String(method || 'GET').toUpperCase();
+  const shouldDedupe = normalizedMethod === 'GET' && body === undefined;
+
+  if (!shouldDedupe) {
+    return performRequest(path, { method: normalizedMethod, body, token });
+  }
+
+  const dedupeKey = getDedupeKey(path, token);
+  const existingRequest = inflightGetRequests.get(dedupeKey);
+  if (existingRequest) return existingRequest;
+
+  const promise = performRequest(path, { method: normalizedMethod, body, token })
+    .finally(() => inflightGetRequests.delete(dedupeKey));
+  inflightGetRequests.set(dedupeKey, promise);
+  return promise;
 };
 
 const buildQueryString = (params = {}) => {
@@ -169,11 +208,23 @@ const normalizeGenres = (movie = {}) => {
 
 const normalizeMovieStatus = (movie = {}) => String(movie.status || movie.movieStatus || '').toUpperCase();
 
+const getMovieTrailerUrl = (movie = {}, fallback = {}) => (
+  movie.trailerUrl
+  || movie.trailerURL
+  || movie.trailer_url
+  || movie.trailer
+  || movie.videoUrl
+  || movie.videoURL
+  || movie.video_url
+  || fallback.trailerUrl
+  || ''
+);
+
 export const normalizeMovie = (movie = {}, fallback = {}) => {
   const status = normalizeMovieStatus(movie) || normalizeMovieStatus(fallback);
   const id = movie.id ?? movie.movieId ?? movie.slug ?? movie.code ?? fallback.id;
   const ratings = movie.ratings || {};
-  const aiOverall = Number(movie.aiOverall ?? movie.rating ?? movie.averageRating ?? ratings.aiOverall ?? fallback.ratings?.aiOverall ?? 8.8);
+  const overall = Number(movie.rating ?? movie.averageRating ?? ratings.overall ?? fallback.ratings?.overall ?? 8.8);
   const statusFromFlags = (movie.isUpcoming ?? fallback.isUpcoming) ? 'UPCOMING' : 'NOW_SHOWING';
   const effectiveStatus = status || statusFromFlags;
   const isUpcoming = ['UPCOMING', 'COMING_SOON', 'SCHEDULED', 'DRAFT'].includes(effectiveStatus);
@@ -193,7 +244,7 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     posterUrl: movie.posterUrl || movie.poster || movie.posterImageUrl || movie.imageUrl || movie.thumbnailUrl || fallback.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=600&auto=format&fit=crop',
     bannerUrl: movie.bannerUrl || movie.avatarUrl || movie.backdropUrl || movie.coverUrl || movie.bannerImageUrl || fallback.bannerUrl || movie.posterUrl || fallback.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200&auto=format&fit=crop',
     releaseDate: movie.releaseDate || movie.premiereDate || movie.startDate || fallback.releaseDate || 'Đang cập nhật',
-    trailerUrl: movie.trailerUrl || movie.trailer || fallback.trailerUrl || '',
+    trailerUrl: getMovieTrailerUrl(movie, fallback),
     director: movie.director || movie.directorName || fallback.director || 'Đang cập nhật',
     mainActors: movie.mainActors || fallback.mainActors || movie.castList || fallback.castList || '',
     castList: movie.castList || fallback.castList || movie.mainActors || fallback.mainActors || '',
@@ -213,14 +264,13 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     ratings: {
       ...fallback.ratings,
       ...ratings,
-      aiOverall,
-      aiStory: Number(movie.aiStory ?? ratings.aiStory ?? fallback.ratings?.aiStory ?? Math.max(0, aiOverall - 0.2)),
-      aiActing: Number(movie.aiActing ?? ratings.aiActing ?? fallback.ratings?.aiActing ?? Math.max(0, aiOverall - 0.3)),
-      aiVisual: Number(movie.aiVisual ?? ratings.aiVisual ?? fallback.ratings?.aiVisual ?? aiOverall),
-      aiAudio: Number(movie.aiAudio ?? ratings.aiAudio ?? fallback.ratings?.aiAudio ?? Math.max(0, aiOverall - 0.1))
+      overall,
+      story: Number(ratings.story ?? fallback.ratings?.story ?? Math.max(0, overall - 0.2)),
+      acting: Number(ratings.acting ?? fallback.ratings?.acting ?? Math.max(0, overall - 0.3)),
+      visual: Number(ratings.visual ?? fallback.ratings?.visual ?? overall),
+      audio: Number(ratings.audio ?? fallback.ratings?.audio ?? Math.max(0, overall - 0.1))
     },
-    aiAnalysisTags: movie.aiAnalysisTags || movie.tags || fallback.aiAnalysisTags || [],
-    emotionalWaveform: movie.emotionalWaveform || fallback.emotionalWaveform || [20, 40, 60, 50, 80, 65, 75, 85, 90, 95, 60, 30],
+    tags: movie.tags || fallback.tags || [],
     raw: movie
   };
 };
@@ -386,6 +436,16 @@ export const authApi = {
       body: formData
     });
   },
+  uploadAdminVideo: (token, file, folder = 'videos') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    return request('/api/v1/admin/uploads/videos', {
+      method: 'POST',
+      token,
+      body: formData
+    });
+  },
   createAdminActor: (token, payload) => request('/api/v1/admin/actors', {
     method: 'POST',
     token,
@@ -402,10 +462,30 @@ export const authApi = {
   }),
   getAdminUsers: (token) => request('/api/v1/admin/users', { token }),
   getAdminUserDetail: (token, userId) => request(`/api/v1/admin/users/${encodeURIComponent(userId)}`, { token }),
+  createAdminStaff: (token, payload) => request('/api/v1/admin/users/staff', {
+    method: 'POST',
+    token,
+    body: payload
+  }),
   updateAdminUserStatus: (token, userId, status) => request(`/api/v1/admin/users/${encodeURIComponent(userId)}/status`, {
     method: 'PATCH',
     token,
     body: { status }
+  }),
+  getAdminStaffProfiles: (token, params = {}) => request(`/api/v1/admin/staff-profiles${buildQueryString(params)}`, { token }),
+  createAdminStaffProfile: (token, payload) => request('/api/v1/admin/staff-profiles', {
+    method: 'POST',
+    token,
+    body: payload
+  }),
+  updateAdminStaffProfile: (token, profileId, payload) => request(`/api/v1/admin/staff-profiles/${encodeURIComponent(profileId)}`, {
+    method: 'PUT',
+    token,
+    body: payload
+  }),
+  updateAdminStaffProfileStatus: (token, profileId, status) => request(`/api/v1/admin/staff-profiles/${encodeURIComponent(profileId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
   }),
   getGenres: () => request('/api/v1/genres'),
   getAdminGenres: () => request('/api/v1/genres'),
@@ -427,11 +507,6 @@ export const authApi = {
   getFoodCombos: () => request('/api/v1/foods/combos'),
   getPublicCinema: () => request('/api/v1/cinema'),
   getAdminCinema: (token) => request('/api/v1/admin/cinema', { token }),
-  createAdminCinema: (token, payload) => request('/api/v1/admin/cinema', {
-    method: 'POST',
-    token,
-    body: payload
-  }),
   updateAdminCinema: (token, payload) => request('/api/v1/admin/cinema', {
     method: 'PUT',
     token,
@@ -439,10 +514,6 @@ export const authApi = {
   }),
   updateAdminCinemaStatus: (token, status) => request(`/api/v1/admin/cinema/status?status=${encodeURIComponent(status)}`, {
     method: 'PATCH',
-    token
-  }),
-  deactivateAdminCinema: (token) => request('/api/v1/admin/cinema', {
-    method: 'DELETE',
     token
   }),
   getAdminRooms: (token) => request('/api/v1/admin/rooms', { token }),
@@ -535,6 +606,30 @@ export const authApi = {
   createVnpayPayment: (token, bookingId) => request(`/api/v1/payments/vnpay/create?bookingId=${bookingId}`, { method: 'POST', token }),
   mockPayment: (token, bookingId) => request(`/api/v1/payments/mock?bookingId=${bookingId}`, { method: 'POST', token }),
   getPaymentByBooking: (token, bookingId) => request(`/api/v1/payments/booking/${bookingId}`, { token }),
+
+  // Staff check-in
+  lookupStaffCheckInBooking: (token, { bookingCode, qrCode }) => {
+    const params = new URLSearchParams();
+    if (bookingCode) params.set('bookingCode', bookingCode);
+    if (qrCode) params.set('qrCode', qrCode);
+    return request(`/api/v1/staff/check-in/lookup?${params.toString()}`, { token });
+  },
+  getStaffShowtimeBookings: (token, showtimeId) => request(`/api/v1/staff/check-in/showtimes/${encodeURIComponent(showtimeId)}/bookings`, { token }),
+  checkInStaffBooking: (token, qrCode) => request('/api/v1/staff/check-in', {
+    method: 'POST',
+    token,
+    body: { qrCode }
+  }),
+  getStaffFoodItems: (token) => request('/api/v1/staff/foods/items', { token }),
+  getStaffFoodCombos: (token) => request('/api/v1/staff/foods/combos', { token }),
+  updateStaffFoodItemStatus: (token, itemId, status) => request(`/api/v1/staff/foods/items/${encodeURIComponent(itemId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  }),
+  updateStaffFoodComboStatus: (token, comboId, status) => request(`/api/v1/staff/foods/combos/${encodeURIComponent(comboId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  }),
 
   getAdminFoodItems: (token) => request('/api/v1/admin/foods/items', { token }),
   getAdminFoodCombos: (token) => request('/api/v1/admin/foods/combos', { token }),

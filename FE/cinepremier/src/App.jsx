@@ -11,7 +11,10 @@ import WishlistView from './pages/WishlistPage';
 import AdminDashboard from './pages/AdminPage';
 import PoliciesPage from './pages/PoliciesPage';
 import PaymentCallbackPage from './pages/PaymentCallbackPage';
+import StaffCheckInPage from './pages/StaffCheckInPage';
+import GooglePasswordSetupPage from './pages/GooglePasswordSetupPage';
 import AdminRoute from './components/AdminRoute';
+import StaffRoute from './components/StaffRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UIProvider, useUI } from './contexts/UIContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -23,19 +26,29 @@ function AppShell({ children }) {
 
 function HomeRoute() {
   const navigate = useNavigate();
-  const { moviesList, homepageVideoUrl } = useMovies();
+  const { moviesList } = useMovies();
+  const { showToast } = useUI();
 
   const goToTab = (tab) => {
     const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies' };
     navigate(paths[tab] || '/');
   };
 
+  const handleBookMovie = (movie) => {
+    const isBookable = movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
+    if (!isBookable) {
+      showToast('Phim sắp chiếu chưa mở bán vé.');
+      navigate(`/movies/${movie.id}`);
+      return;
+    }
+    navigate(`/movies/${movie.id}/book`);
+  };
+
   return (
     <HomeView
       moviesList={moviesList}
-      homepageVideoUrl={homepageVideoUrl}
       onSelectMovie={(id) => navigate(`/movies/${id}`)}
-      onBookMovie={(movie) => navigate(`/movies/${movie.id}/book`)}
+      onBookMovie={handleBookMovie}
       onTabChange={goToTab}
     />
   );
@@ -51,10 +64,8 @@ function AdminRouteView() {
     setMoviesList,
     bookedTickets,
     setBookedTickets,
-    homepageVideoUrl,
-    handleHomepageVideoUrlChange,
     fetchPublicFoodCatalog,
-    cinemaLocations,
+    publicCinema,
     fetchPublicCinema,
   } = useMovies();
 
@@ -65,15 +76,13 @@ function AdminRouteView() {
         setMoviesList={setMoviesList}
         bookedTickets={bookedTickets}
         setBookedTickets={setBookedTickets}
-        cinemaLocations={cinemaLocations}
+        publicCinema={publicCinema}
         onCinemaChanged={fetchPublicCinema}
         onSelectMovie={(id) => navigate(`/movies/${id}`)}
         showToast={showToast}
         initialSection={section}
         onSectionChange={(nextSection) => navigate(`/admin/${nextSection}`)}
-        homepageVideoUrl={homepageVideoUrl}
-        onHomepageVideoUrlChange={handleHomepageVideoUrlChange}
-        onFoodCatalogChanged={fetchPublicFoodCatalog}
+        onFoodCatalogChanged={() => fetchPublicFoodCatalog({ force: true })}
         isAdmin={currentRole === 'admin'}
         currentUser={currentUser}
       />
@@ -82,9 +91,15 @@ function AdminRouteView() {
 }
 
 function AppRoutes() {
+  const { currentUser } = useAuth();
+  const mustSetupPassword = currentUser?.passwordChangeRequired;
+
   return (
     <Routes>
+      <Route path="/setup-password" element={<GooglePasswordSetupPage />} />
+      {mustSetupPassword && <Route path="*" element={<Navigate to="/setup-password" replace />} />}
       <Route path="/payment-callback" element={<PaymentCallbackPage />} />
+      <Route path="/staff" element={<AppShell><StaffRoute><StaffCheckInPage /></StaffRoute></AppShell>} />
       <Route path="/" element={<AppShell><HomeRoute /></AppShell>} />
       <Route path="/movies" element={<AppShell><ExploreView /></AppShell>} />
       <Route path="/movies/:id" element={<AppShell><DetailView /></AppShell>} />

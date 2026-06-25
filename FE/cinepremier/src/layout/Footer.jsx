@@ -31,7 +31,7 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
               </span>
             </div>
             <p className="max-w-sm text-sm leading-7 text-neutral-300 font-sans font-normal">
-              Trải nghiệm chiếu bóng chuẩn mực, tích hợp tối tân bộ đánh giá xung động cảm tính AI Rating cùng hệ thống phòng chiếu IMAX tinh thuần bộc phát từng sát-na giác cảm.
+              Trải nghiệm chiếu bóng chuẩn mực với hệ thống đặt vé, phòng chiếu IMAX và lịch chiếu được tối ưu cho từng suất phim.
             </p>
             {cinema && (
               <div className="space-y-2 border-l border-amber-400/40 pl-3 text-xs text-neutral-300">
@@ -144,7 +144,7 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
         <div className="mt-16 border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between text-[15px] uppercase tracking-[0.16em] text-neutral-500">
           <p>© 2026 CINEPREMIER STUDIOS. ALL RIGHTS RESERVED.</p>
           <div className="mt-4 md:mt-0 flex space-x-4">
-            <span>Powered by Smart AI Rating Engine</span>
+            <span>Powered by CinePremier Booking Engine</span>
             <span>•</span>
             <span>Thế Điện Ảnh Tinh Hoa</span>
           </div>

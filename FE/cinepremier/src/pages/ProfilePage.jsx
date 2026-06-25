@@ -4,7 +4,7 @@ import {
   Camera, CreditCard, Lock, LogOut, Settings, User,
   ChevronRight, Award, Flame, Eye, Film, Sparkles,
   ChevronDown, Check, Shield, Volume2, VolumeX, EyeOff,
-  Save, Trash2, Sliders, Smartphone, Mail, Phone, Cake, BadgeCheck, Loader2, Ticket
+  Save, Trash2, Sliders, Smartphone, Mail, Phone, Cake, BadgeCheck, Loader2, Ticket, ScanLine
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { authApi, expireAuthSession, getStoredAuth, normalizeUser } from '../services/authApi';
@@ -22,7 +22,7 @@ import { useMovies } from '../contexts/MoviesContext';
 
 export default function ProfileView() {
   const navigate = useNavigate();
-  const { isLoggedIn, currentUser, setCurrentUser, setCurrentRole, handleLogout: onLogout } = useAuth();
+  const { isLoggedIn, currentUser, currentRole, setCurrentUser, setCurrentRole, handleLogout: onLogout } = useAuth();
   const { showToast } = useUI();
   const { moviesList } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
@@ -82,7 +82,6 @@ export default function ProfileView() {
       if (currentUser.avatarUrl) setProfileImg(currentUser.avatarUrl);
     }
   }, [currentUser]);
-
   React.useEffect(() => {
     if (!isLoggedIn) return;
     const { accessToken } = getStoredAuth();
@@ -357,901 +356,959 @@ export default function ProfileView() {
       )}
 
       {isLoggedIn && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-
-          {/* LEFT SECTION: MAIN PROFILE SUMMARY INFO & BOOKINGS */}
-          <div className="lg:col-span-8 space-y-8">
-
-            {/* HERO PROFILE BOX BACKGROUND */}
-            <div className="relative border border-white/10 bg-[#070707] p-6 md:p-8 overflow-hidden">
-
-              <div className="absolute right-0 top-0 text-[100px] font-bold text-neutral-900/10 italic select-none font-serif leading-none -mr-10 -mt-8 pointer-events-none uppercase">
-                VIP
+        <>
+          {currentRole === 'admin' && (
+            <div className="border border-amber-500/25 bg-[#090806] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-500">Tài khoản quản trị viên</p>
+                  <h2 className="mt-1 text-sm font-bold uppercase tracking-wider text-white">Chọn khu vực làm việc</h2>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    className="flex items-center justify-center gap-2 border border-white bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-black"
+                  >
+                    <User className="h-4 w-4" />
+                    Thông tin cá nhân
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/admin/overview')}
+                    className="flex items-center justify-center gap-2 border border-amber-500/50 bg-amber-500/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Quản trị viên
+                  </button>
+                </div>
               </div>
+            </div>
+          )}
 
-              <div className="flex flex-col md:flex-row md:items-start items-center gap-6 relative z-10">
+          {currentRole === 'staff' && (
+            <div className="border border-emerald-400/25 bg-[#050b08] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-400">Tài khoản nhân viên</p>
+                  <h2 className="mt-1 text-sm font-bold uppercase tracking-wider text-white">Khu vực làm việc tại quầy</h2>
+                  <p className="mt-1 text-xs text-neutral-500">Check-in vé bằng QR và đổi trạng thái bắp nước khi hết hàng đột ngột.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    className="flex items-center justify-center gap-2 border border-white bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-black"
+                  >
+                    <User className="h-4 w-4" />
+                    Thông tin cá nhân
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/staff')}
+                    className="flex items-center justify-center gap-2 border border-emerald-400/50 bg-emerald-400/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-300 transition hover:bg-emerald-400 hover:text-black"
+                  >
+                    <ScanLine className="h-4 w-4" />
+                    Check-in vé
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
-                {/* Profile circular avatar with editor button */}
-                <div className="relative group md:translate-y-[65px]">
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleProfileImageChange}
-                    className="hidden"
-                  />
-                  <div className="h-24 w-24 overflow-hidden rounded-md border border-white/15 bg-neutral-950 flex-shrink-0 shadow-2xl">
-                    <img
-                      src={profileImg}
-                      alt={name}
-                      className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
-                      referrerPolicy="no-referrer"
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+
+            {/* LEFT SECTION: MAIN PROFILE SUMMARY INFO & BOOKINGS */}
+            <div className="lg:col-span-8 space-y-8">
+
+              {/* HERO PROFILE BOX BACKGROUND */}
+              <div className="relative border border-white/10 bg-[#070707] p-6 md:p-8 overflow-hidden">
+
+                <div className="absolute right-0 top-0 text-[100px] font-bold text-neutral-900/10 italic select-none font-serif leading-none -mr-10 -mt-8 pointer-events-none uppercase">
+                  VIP
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-start items-center gap-6 relative z-10">
+
+                  {/* Profile circular avatar with editor button */}
+                  <div className="relative group md:translate-y-[65px]">
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleProfileImageChange}
+                      className="hidden"
                     />
-                  </div>
-                  <button
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={isUploadingAvatar}
-                    className="absolute -bottom-2 -right-2 bg-black border border-white/20 hover:border-white p-2 text-white shadow-xl hover:scale-110 transition shrink-0"
-                    title="Tải ảnh đại diện từ máy tính"
-                  >
-                    {isUploadingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
-
-                {/* Name and metrics progress */}
-                <div className="flex-1 space-y-4 text-center md:text-left min-w-0">
-                  <div className="space-y-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-center md:justify-start">
-                      {isEditingName ? (
-                        <input
-                          type="text"
-                          maxLength={MAX_NAME_LENGTH}
-                          value={name}
-                          onChange={(e) => setName(normalizeNameInput(e.target.value))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleTriggerEditName();
-                            if (e.key === 'Escape') {
-                              setName(currentUser?.name || currentUser?.fullName || '');
-                              setIsEditingName(false);
-                            }
-                          }}
-                          className="bg-black border border-amber-400/50 text-white text-xl px-2 py-0.5 focus:outline-none focus:border-amber-300 font-sans max-w-[260px]"
-                          autoFocus
-                        />
-                      ) : (
-                        <h2 className="text-2xl font-serif text-white uppercase italic tracking-wide truncate max-w-[300px]">
-                          {name}
-                        </h2>
-                      )}
-
-                      <span className="inline-flex self-center items-center h-5 px-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-[8px] font-black tracking-widest uppercase rounded-sm border border-yellow-300">
-                        VIP GOLD
-                      </span>
+                    <div className="h-24 w-24 overflow-hidden rounded-md border border-white/15 bg-neutral-950 flex-shrink-0 shadow-2xl">
+                      <img
+                        src={profileImg}
+                        alt={name}
+                        className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
-                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-sans flex items-center justify-center md:justify-start gap-1">
-                      Thành viên từ {memberSince} • {currentUser?.status === 'ACTIVE' ? 'Tài khoản đang hoạt động' : currentUser?.status || 'Đang cập nhật'}
-                    </p>
-                  </div>
-
-                  {/* Live personal information from /api/v1/users/me */}
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {[
-                      { icon: Mail, label: 'Email tài khoản', value: currentUser?.email || 'Đang cập nhật' },
-                      { icon: Phone, label: 'Số điện thoại', value: currentUser?.phone || 'Chưa cập nhật' },
-                      { icon: Cake, label: 'Năm sinh', value: currentUser?.birthYear || 'Chưa cập nhật' },
-                      { icon: BadgeCheck, label: 'Xác thực', value: currentUser?.emailVerified ? 'Email đã xác thực' : 'Chưa xác thực email' }
-                    ].map(({ icon: InfoIcon, label, value }) => (
-                      <div key={label} className="flex min-w-0 items-center gap-2.5 border border-white/5 bg-black/50 px-3 py-2 text-left">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-amber-500/20 bg-amber-500/5 text-amber-400">
-                          <InfoIcon className="h-3.5 w-3.5" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-[7px] font-black uppercase tracking-[0.16em] text-neutral-600">{label}</span>
-                          <span className="mt-0.5 block truncate text-[9px] font-bold text-neutral-300">{value}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Level progress info bar matching screenshot */}
-                  <div className="space-y-1.5 max-w-sm mx-auto md:mx-0">
-                    <div className="flex justify-between text-[8px] uppercase tracking-widest text-neutral-400 font-bold">
-                      <span>TIẾN TRÌNH HẠNG TIẾP THEO</span>
-                      <span className="text-yellow-400 animate-pulse">85%</span>
-                    </div>
-                    <div className="h-[3px] w-full bg-neutral-900 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-300" style={{ width: '85%' }}></div>
-                    </div>
-                  </div>
-
-                  {/* Cinepoints & Watched points metrics cards mockup */}
-                  <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto md:mx-0 pointer-events-none">
-
-                    <div className="border border-white/5 bg-black/60 p-3 flex flex-col justify-center items-start">
-                      <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
-                        <Flame className="h-3 w-3 text-neutral-500" /> CinePoints
-                      </span>
-                      <span className="text-lg font-mono font-bold text-white mt-1">2,450</span>
-                    </div>
-
-                    <div className="border border-white/5 bg-black/60 p-3 flex flex-col justify-center items-start">
-                      <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
-                        <Film className="h-3 w-3 text-neutral-500" /> Phim đã xem
-                      </span>
-                      <span className="text-lg font-mono font-bold text-white mt-1">
-                        {watchedCount}
-                      </span>
-                    </div>
-
-                  </div>
-
-                </div>
-
-                {/* Edit Button right-aligned for PC size */}
-                <div className="hidden md:block">
-                  <button
-                    onClick={handleTriggerEditName}
-                    disabled={isSavingName}
-                    className="border border-white/10 hover:border-white/50 bg-black text-[9px] uppercase tracking-widest px-4 py-2 text-white font-sans transition disabled:opacity-50"
-                  >
-                    {isSavingName ? 'ĐANG LƯU...' : isEditingName ? 'LƯU TÊN' : 'SỬA TÊN'}
-                  </button>
-                  {isEditingName && (
                     <button
-                      onClick={() => {
-                        setName(currentUser?.name || currentUser?.fullName || '');
-                        setIsEditingName(false);
-                      }}
-                      className="ml-2 border border-white/5 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500 transition hover:text-white"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="absolute -bottom-2 -right-2 bg-black border border-white/20 hover:border-white p-2 text-white shadow-xl hover:scale-110 transition shrink-0"
+                      title="Tải ảnh đại diện từ máy tính"
                     >
-                      Hủy
+                      {isUploadingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                     </button>
-                  )}
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* RECENT BOOKINGS WIDGET */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <span className="text-[10px] uppercase font-sans font-black tracking-widest text-neutral-400">
-                  ĐẶT VÉ GẦN ĐÂY
-                </span>
-                <button
-                  onClick={() => onTabChange('my-tickets')}
-                  className="text-[10px] uppercase font-sans tracking-widest text-neutral-500 hover:text-white font-semibold transition"
-                >
-                  TẤT CẢ
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {isProfileLoading && (
-                  <div className="flex items-center justify-center gap-2 border border-white/10 bg-[#080808] py-10 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                    <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
-                    Đang tải đặt vé từ hệ thống
                   </div>
-                )}
 
-                {!isProfileLoading && recentApiBookings.map((booking) => {
-                  const statusMeta = bookingStatusMeta[booking.status] || {
-                    label: booking.status || 'Đang cập nhật',
-                    className: 'border-white/10 bg-neutral-900 text-neutral-400'
-                  };
-                  const showtimeLabel = booking.showtimeStart
-                    ? new Date(booking.showtimeStart).toLocaleString('vi-VN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric'
-                    })
-                    : 'Chưa có lịch chiếu';
-                  const seats = booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || 'Chưa chọn ghế';
+                  {/* Name and metrics progress */}
+                  <div className="flex-1 space-y-4 text-center md:text-left min-w-0">
+                    <div className="space-y-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-center md:justify-start">
+                        {isEditingName ? (
+                          <input
+                            type="text"
+                            maxLength={MAX_NAME_LENGTH}
+                            value={name}
+                            onChange={(e) => setName(normalizeNameInput(e.target.value))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleTriggerEditName();
+                              if (e.key === 'Escape') {
+                                setName(currentUser?.name || currentUser?.fullName || '');
+                                setIsEditingName(false);
+                              }
+                            }}
+                            className="bg-black border border-amber-400/50 text-white text-xl px-2 py-0.5 focus:outline-none focus:border-amber-300 font-sans max-w-[260px]"
+                            autoFocus
+                          />
+                        ) : (
+                          <h2 className="text-2xl font-serif text-white uppercase italic tracking-wide truncate max-w-[300px]">
+                            {name}
+                          </h2>
+                        )}
 
-                  return (
-                    <div
-                      key={booking.id}
-                      className="border border-white/10 hover:border-white/20 bg-[#0A0A0A] p-4 flex gap-4 transition items-center"
-                    >
-                      <div className="h-16 w-12 overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
-                        <img
-                          src={getBookingPoster(booking)}
-                          alt={booking.movieTitle}
-                          className="h-full w-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
+                        <span className="inline-flex self-center items-center h-5 px-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-[8px] font-black tracking-widest uppercase rounded-sm border border-yellow-300">
+                          VIP GOLD
+                        </span>
                       </div>
+                      <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-sans flex items-center justify-center md:justify-start gap-1">
+                        Thành viên từ {memberSince} • {currentUser?.status === 'ACTIVE' ? 'Tài khoản đang hoạt động' : currentUser?.status || 'Đang cập nhật'}
+                      </p>
+                    </div>
 
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-bold text-white uppercase italic tracking-wide font-serif truncate">
-                          {booking.movieTitle}
-                        </h4>
-                        <p className="text-[10px] text-neutral-400 font-sans mt-0.5 truncate uppercase">
-                          {showtimeLabel} • {booking.roomName} • {booking.cinemaName}
-                        </p>
-
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className={`border px-1.5 text-[8px] font-bold uppercase ${statusMeta.className}`}>
-                            {statusMeta.label}
+                    {/* Live personal information from /api/v1/users/me */}
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {[
+                        { icon: Mail, label: 'Email tài khoản', value: currentUser?.email || 'Đang cập nhật' },
+                        { icon: Phone, label: 'Số điện thoại', value: currentUser?.phone || 'Chưa cập nhật' },
+                        { icon: Cake, label: 'Năm sinh', value: currentUser?.birthYear || 'Chưa cập nhật' },
+                        { icon: BadgeCheck, label: 'Xác thực', value: currentUser?.emailVerified ? 'Email đã xác thực' : 'Chưa xác thực email' }
+                      ].map(({ icon: InfoIcon, label, value }) => (
+                        <div key={label} className="flex min-w-0 items-center gap-2.5 border border-white/5 bg-black/50 px-3 py-2 text-left">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-amber-500/20 bg-amber-500/5 text-amber-400">
+                            <InfoIcon className="h-3.5 w-3.5" />
                           </span>
-                          <span className="text-[9px] font-mono text-neutral-500 uppercase">
-                            GHẾ: {seats}
-                          </span>
-                          <span className="hidden text-[9px] font-mono text-amber-500 sm:inline">
-                            {Number(booking.totalAmount || 0).toLocaleString('vi-VN')}đ
+                          <span className="min-w-0">
+                            <span className="block text-[7px] font-black uppercase tracking-[0.16em] text-neutral-600">{label}</span>
+                            <span className="mt-0.5 block truncate text-[9px] font-bold text-neutral-300">{value}</span>
                           </span>
                         </div>
+                      ))}
+                    </div>
+
+                    {/* Level progress info bar matching screenshot */}
+                    <div className="space-y-1.5 max-w-sm mx-auto md:mx-0">
+                      <div className="flex justify-between text-[8px] uppercase tracking-widest text-neutral-400 font-bold">
+                        <span>TIẾN TRÌNH HẠNG TIẾP THEO</span>
+                        <span className="text-yellow-400 animate-pulse">85%</span>
                       </div>
-
-                      <div className="flex items-center gap-3">
-                        {/* Barcode line mock matching screen */}
-                        <div className="hidden sm:flex gap-0.5 items-center px-1 py-1 bg-white/5 h-8">
-                          <div className="w-[1.5px] bg-neutral-500 h-6"></div>
-                          <div className="w-[2.5px] bg-neutral-200 h-6"></div>
-                          <div className="w-[1px] bg-neutral-500 h-6"></div>
-                          <div className="w-[4px] bg-white h-6"></div>
-                          <div className="w-[1.5px] bg-neutral-400 h-6"></div>
-                          <div className="w-[2px] bg-neutral-500 h-6"></div>
-                        </div>
-
-                        <button
-                          onClick={() => onTabChange('my-tickets')}
-                          className="bg-white hover:bg-neutral-200 text-black px-4 py-2 text-[9px] font-sans tracking-widest font-bold uppercase transition"
-                        >
-                          Chi Tiết
-                        </button>
+                      <div className="h-[3px] w-full bg-neutral-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-300" style={{ width: '85%' }}></div>
                       </div>
                     </div>
-                  );
-                })}
 
-                {!isProfileLoading && recentApiBookings.length === 0 && (
-                  <div className="border border-dashed border-white/10 bg-[#080808] py-10 text-center">
-                    <Ticket className="mx-auto h-6 w-6 text-neutral-700" />
-                    <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Bạn chưa có đặt vé nào</p>
-                    <button onClick={() => onTabChange('explore')} className="mt-4 border border-white/15 px-4 py-2 text-[9px] font-black uppercase tracking-widest text-white transition hover:bg-white hover:text-black">
-                      Khám phá phim
-                    </button>
+                    {/* Cinepoints & Watched points metrics cards mockup */}
+                    <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto md:mx-0 pointer-events-none">
+
+                      <div className="border border-white/5 bg-black/60 p-3 flex flex-col justify-center items-start">
+                        <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
+                          <Flame className="h-3 w-3 text-neutral-500" /> CinePoints
+                        </span>
+                        <span className="text-lg font-mono font-bold text-white mt-1">2,450</span>
+                      </div>
+
+                      <div className="border border-white/5 bg-black/60 p-3 flex flex-col justify-center items-start">
+                        <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
+                          <Film className="h-3 w-3 text-neutral-500" /> Phim đã xem
+                        </span>
+                        <span className="text-lg font-mono font-bold text-white mt-1">
+                          {watchedCount}
+                        </span>
+                      </div>
+
+                    </div>
+
                   </div>
-                )}
-              </div>
-            </div>
 
-          </div>
-
-          {/* RIGHT SECTION: PERSONALIZED PREFERENCES & SETTINGS */}
-          <div className="lg:col-span-4 space-y-6">
-
-            {/* RADAR CHART BLOCK matching the screenshot */}
-            <div className="border border-white/10 bg-[#090909] p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-[10px] font-sans font-bold uppercase tracking-[0.15em] text-neutral-400">
-                  🔍 Sở thích
-                </span>
-                <span className="text-[8px] uppercase tracking-wider text-neutral-600 bg-neutral-950 border border-white/5 px-2 py-0.5">
-                  Xông Chiếu AI
-                </span>
-              </div>
-
-              {/* Elegant Graphic Area */}
-              <div className="relative flex justify-center items-center py-2 h-44 bg-neutral-950 border border-white/5 rounded-sm">
-
-                {/* SVG Radar Chart Representation */}
-                <svg className="w-full h-full max-w-[180px] max-h-[180px]" viewBox="0 0 200 200">
-                  {/* Concentric pentagon lines */}
-                  <polygon points={outerWebPoints} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
-                  <polygon points={innerWebPoints1} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
-                  <polygon points={innerWebPoints2} fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-                  <polygon points={innerWebPoints3} fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-
-                  {/* Axes lines */}
-                  {categories.map((_, i) => {
-                    const outerCoords = getCoordinates(i, 1.0).split(',');
-                    return (
-                      <line
-                        key={i}
-                        x1="100"
-                        y1="100"
-                        x2={outerCoords[0]}
-                        y2={outerCoords[1]}
-                        stroke="rgba(255, 255, 255, 0.06)"
-                        strokeWidth="1"
-                      />
-                    );
-                  })}
-
-                  {/* Dynamic Value Polygon matching Minh Hong preference style */}
-                  <polygon
-                    points={polyPoints}
-                    fill="rgba(255, 255, 255, 0.12)"
-                    stroke="rgba(255, 255, 255, 0.8)"
-                    strokeWidth="1.5"
-                  />
-
-                  {/* Core level circular grid points */}
-                  {categories.map((_, i) => {
-                    const coords = getCoordinates(i, values[i]).split(',');
-                    return (
-                      <circle
-                        key={i}
-                        cx={coords[0]}
-                        cy={coords[1]}
-                        r="2.5"
-                        fill="#FFFFFF"
-                      />
-                    );
-                  })}
-
-                  {/* Categories labels rendering */}
-                  {labelPositions.map((lbl, i) => (
-                    <text
-                      key={i}
-                      x={lbl.x}
-                      y={lbl.y}
-                      fill="#888888"
-                      fontSize="7.5"
-                      fontFamily="sans-serif"
-                      fontWeight="bold"
-                      letterSpacing="0.05em"
-                      textAnchor={lbl.textAnchor}
+                  {/* Edit Button right-aligned for PC size */}
+                  <div className="hidden md:block">
+                    <button
+                      onClick={handleTriggerEditName}
+                      disabled={isSavingName}
+                      className="border border-white/10 hover:border-white/50 bg-black text-[9px] uppercase tracking-widest px-4 py-2 text-white font-sans transition disabled:opacity-50"
                     >
-                      {lbl.name}
-                    </text>
-                  ))}
-                </svg>
-              </div>
-
-              {/* Preference Tags */}
-              <div className="flex flex-wrap gap-1.5 justify-center pt-1" id="profile-pref-tags">
-                <span className="bg-[#1A0B0B] text-rose-400 border border-rose-500/20 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
-                  KHOA HỌC VIỄN TƯỞNG
-                </span>
-                <span className="bg-[#0B1A0F] text-emerald-400 border border-emerald-500/20 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
-                  HÀNH ĐỘNG
-                </span>
-                <span className="bg-[#101015] text-[#90A4AE] border border-white/5 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
-                  KINH DỊ NOIR
-                </span>
-              </div>
-
-            </div>
-
-            {/* SETTINGS OPTIONS WIDGETS SECTION */}
-            <div className={`border bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-5.5 space-y-5 font-sans transition-all duration-300 relative overflow-hidden rounded-none ${glowColor === 'gold' ? 'border-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.08)]' :
-              glowColor === 'neon' ? 'border-cyan-500/20 shadow-[0_0_25px_rgba(6,182,212,0.08)]' :
-                glowColor === 'ruby' ? 'border-rose-500/20 shadow-[0_0_25px_rgba(244,63,94,0.08)]' :
-                  'border-emerald-500/20 shadow-[0_0_25px_rgba(16,185,129,0.08)]'
-              }`} id="settings-interactive-box">
-
-              {/* Audio controller and Glow selector Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
-                <div className="flex items-center space-x-2 text-neutral-400">
-                  <Settings className={`h-4.5 w-4.5 animate-spin-slow ${glowColor === 'gold' ? 'text-amber-400' :
-                    glowColor === 'neon' ? 'text-cyan-400' :
-                      glowColor === 'ruby' ? 'text-rose-400' : 'text-emerald-400'
-                    }`} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">TRUNG TÂM KIỂM SOÁT VIP</span>
-                </div>
-
-                {/* Micro Controllers */}
-                <div className="flex items-center space-x-3 self-end sm:self-auto">
-                  {/* Sound Toggle */}
-                  <button
-                    onClick={() => {
-                      const ns = !soundOn;
-                      setSoundOn(ns);
-                      if (ns) {
-                        // test ping
-                        try {
-                          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                          const ctx = new AudioCtx();
-                          const osc = ctx.createOscillator();
-                          const gain = ctx.createGain();
-                          osc.frequency.value = 600;
-                          gain.gain.setValueAtTime(0.03, ctx.currentTime);
-                          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-                          osc.connect(gain);
-                          gain.connect(ctx.destination);
-                          osc.start();
-                          osc.stop(ctx.currentTime + 0.15);
-                        } catch (e) { }
-                      }
-                    }}
-                    className="p-1.5 border border-neutral-900 bg-black text-neutral-400 hover:text-white hover:border-neutral-800 transition"
-                    title={soundOn ? "Tắt âm phản hồi" : "Bật âm phản hồi"}
-                  >
-                    {soundOn ? <Volume2 className="h-3.5 w-3.5 text-amber-500 animate-pulse" /> : <VolumeX className="h-3.5 w-3.5 text-neutral-600" />}
-                  </button>
-
-                  {/* Vibe Theme Selector with dynamic frequencies on hover/click */}
-                  <div className="flex items-center space-x-1 border border-neutral-900 bg-black p-0.5" id="theme-accent-dots">
-                    {[
-                      { id: 'gold', class: 'bg-amber-400', freq: 554.37 },
-                      { id: 'neon', class: 'bg-cyan-400', freq: 659.25 },
-                      { id: 'ruby', class: 'bg-rose-500', freq: 783.99 },
-                      { id: 'emerald', class: 'bg-emerald-400', freq: 880.00 }
-                    ].map((dot) => (
+                      {isSavingName ? 'ĐANG LƯU...' : isEditingName ? 'LƯU TÊN' : 'SỬA TÊN'}
+                    </button>
+                    {isEditingName && (
                       <button
-                        key={dot.id}
                         onClick={() => {
-                          setGlowColor(dot.id);
-                          playPing(dot.freq, 'sine', 0.2);
+                          setName(currentUser?.name || currentUser?.fullName || '');
+                          setIsEditingName(false);
                         }}
-                        className={`h-3 w-3 rounded-full transition-all duration-300 ${dot.class} ${glowColor === dot.id ? 'scale-125 ring-2 ring-white/60' : 'opacity-40 hover:opacity-100'
-                          }`}
-                        title={`Chủ đề ${dot.id.toUpperCase()}`}
-                      />
-                    ))}
+                        className="ml-2 border border-white/5 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500 transition hover:text-white"
+                      >
+                        Hủy
+                      </button>
+                    )}
                   </div>
 
                 </div>
+
               </div>
 
-              {/* Options Accumulators */}
-              <div className="space-y-2">
-
-                {/* 1. CHỈNH SỬA HỒ SƠ */}
-                <div className="border border-white/5 bg-black/40 overflow-hidden text-neutral-400">
+              {/* RECENT BOOKINGS WIDGET */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <span className="text-[10px] uppercase font-sans font-black tracking-widest text-neutral-400">
+                    ĐẶT VÉ GẦN ĐÂY
+                  </span>
                   <button
-                    onClick={() => {
-                      playPing(activePanel === 'profile' ? 380 : 450, 'sine', 0.1);
-                      setActivePanel(activePanel === 'profile' ? null : 'profile');
-                    }}
-                    className={`w-full flex items-center justify-between p-3.5 text-xs text-neutral-400 hover:text-white transition duration-200 text-left ${activePanel === 'profile' ? 'bg-neutral-950/60 pb-2 text-white border-b border-white/5' : ''
-                      }`}
+                    onClick={() => onTabChange('my-tickets')}
+                    className="text-[10px] uppercase font-sans tracking-widest text-neutral-500 hover:text-white font-semibold transition"
                   >
-                    <span className="flex items-center gap-2.5 font-bold uppercase tracking-wider">
-                      <User className={`h-4 w-4 ${activePanel === 'profile' ? 'text-amber-400' : 'text-neutral-500'}`} />
-                      Chỉnh sửa hồ sơ VIP
-                    </span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform duration-300 ${activePanel === 'profile' ? 'rotate-180 text-white' : ''
-                      }`} />
+                    TẤT CẢ
                   </button>
-
-                  <AnimatePresence initial={false}>
-                    {activePanel === 'profile' && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="p-4 space-y-4 text-xs">
-                          {/* Profile settings fields form */}
-                          <div className="space-y-3.5">
-                            <div className="space-y-1">
-                              <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Tên Thượng Khách</label>
-                              <input
-                                type="text"
-                                maxLength={MAX_NAME_LENGTH}
-                                value={profileNameInput}
-                                onChange={(e) => setProfileNameInput(normalizeNameInput(e.target.value))}
-                                className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-bold"
-                              />
-                              <p className="text-[9px] text-neutral-600 font-mono text-right">{profileNameInput.length}/{MAX_NAME_LENGTH}</p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Tiểu sử Điện ảnh</label>
-                              <textarea
-                                value={profileBioInput}
-                                onChange={(e) => setProfileBioInput(e.target.value)}
-                                rows={2}
-                                className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none leading-relaxed"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Địa chỉ Email Liên hệ</label>
-                              <input
-                                type="email"
-                                value={profileEmailInput}
-                                disabled
-                                className="w-full bg-black border border-neutral-850 text-neutral-500 p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-mono cursor-not-allowed"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Số điện thoại</label>
-                              <input
-                                type="tel"
-                                inputMode="numeric"
-                                pattern="(03|05|08|09)[0-9]{8}"
-                                maxLength={10}
-                                placeholder="0912345678"
-                                value={profilePhoneInput}
-                                onChange={(e) => setProfilePhoneInput(normalizePhoneInput(e.target.value))}
-                                className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-mono"
-                              />
-                              <p className="text-[9px] text-neutral-600 font-mono">10 số, bắt đầu 03/05/08/09</p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Năm sinh</label>
-                              <input
-                                type="number"
-                                min={1900}
-                                max={new Date().getFullYear() - 5}
-                                placeholder="VD: 2000"
-                                value={profileDateOfBirth}
-                                onChange={(e) => setProfileDateOfBirth(e.target.value)}
-                                className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-mono"
-                              />
-                              <p className="text-[9px] text-neutral-600 font-mono">Dùng để xác minh độ tuổi xem phim</p>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={handleSaveProfile}
-                            disabled={isSavingProfile}
-                            className="w-full py-2.5 bg-white text-black font-sans font-black tracking-widest uppercase text-[10px] hover:bg-neutral-250 transition flex items-center justify-center gap-1.5"
-                          >
-                            {isSavingProfile ? (
-                              <span className="h-3.5 w-3.5 border-2 border-black border-t-transparent animate-spin rounded-full inline-block"></span>
-                            ) : (
-                              <><Save className="h-3.5 w-3.5" /> LƯU THAY ĐỔI HỒ SƠ</>
-                            )}
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
 
-                {/* 2. PHƯƠNG THỨC THANH TOÁN (Visa / Master Card VIP golden linkage) */}
-                <div className="border border-white/5 bg-black/40 overflow-hidden text-neutral-400">
-                  <button
-                    onClick={() => {
-                      playPing(activePanel === 'payment' ? 380 : 450, 'sine', 0.1);
-                      setActivePanel(activePanel === 'payment' ? null : 'payment');
-                      setLinkingSuccess(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-3.5 text-xs text-neutral-400 hover:text-white transition duration-200 text-left ${activePanel === 'payment' ? 'bg-neutral-950/60 pb-2 text-white border-b border-white/5' : ''
-                      }`}
-                  >
-                    <span className="flex items-center gap-2.5 font-bold uppercase tracking-wider">
-                      <CreditCard className={`h-4 w-4 ${activePanel === 'payment' ? 'text-amber-400' : 'text-neutral-500'}`} />
-                      Phương thức thanh toán VIP
-                    </span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform duration-300 ${activePanel === 'payment' ? 'rotate-180 text-white' : ''
-                      }`} />
-                  </button>
+                <div className="space-y-4">
+                  {isProfileLoading && (
+                    <div className="flex items-center justify-center gap-2 border border-white/10 bg-[#080808] py-10 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                      <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                      Đang tải đặt vé từ hệ thống
+                    </div>
+                  )}
 
-                  <AnimatePresence initial={false}>
-                    {activePanel === 'payment' && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
+                  {!isProfileLoading && recentApiBookings.map((booking) => {
+                    const statusMeta = bookingStatusMeta[booking.status] || {
+                      label: booking.status || 'Đang cập nhật',
+                      className: 'border-white/10 bg-neutral-900 text-neutral-400'
+                    };
+                    const showtimeLabel = booking.showtimeStart
+                      ? new Date(booking.showtimeStart).toLocaleString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })
+                      : 'Chưa có lịch chiếu';
+                    const seats = booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || 'Chưa chọn ghế';
+
+                    return (
+                      <div
+                        key={booking.id}
+                        className="border border-white/10 hover:border-white/20 bg-[#0A0A0A] p-4 flex gap-4 transition items-center"
                       >
-                        <div className="p-4 space-y-4 text-xs">
-
-                          {/* Interactive Credit Card Widget Representation */}
-                          <div
-                            className="relative w-full aspect-[1.58/1] rounded-lg p-5 overflow-hidden text-white flex flex-col justify-between cursor-pointer border shadow-2xl transition-all duration-500 hover:scale-102"
-                            style={{
-                              background: glowColor === 'gold' ? 'linear-gradient(135deg, #161208 0%, #0e0a03 50%, #1e1505 100%)' :
-                                glowColor === 'neon' ? 'linear-gradient(135deg, #091a1e 0%, #040d10 50%, #0a252d 100%)' :
-                                  glowColor === 'ruby' ? 'linear-gradient(135deg, #1e090c 0%, #0e0304 50%, #2e0d13 100%)' :
-                                    'linear-gradient(135deg, #091e11 0%, #030d06 50%, #112d1b 100%)',
-                              borderColor: glowColor === 'gold' ? 'rgba(234, 179, 8, 0.4)' :
-                                glowColor === 'neon' ? 'rgba(6, 182, 212, 0.4)' :
-                                  glowColor === 'ruby' ? 'rgba(244, 63, 94, 0.4)' :
-                                    'rgba(16, 185, 129, 0.4)'
-                            }}
-                            onClick={() => {
-                              playPing(600, 'sine', 0.15);
-                              setIsCardFlipped(!isCardFlipped);
-                            }}
-                            title="Nhấp để xoay lật mặt thẻ bảo mật"
-                          >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/2 rounded-full -mr-10 -mt-10 pointer-events-none blur-lg"></div>
-
-                            {/* Card state wrapper with nice motion flip */}
-                            <AnimatePresence mode="wait">
-                              {!isCardFlipped ? (
-                                <motion.div
-                                  key="front"
-                                  initial={{ opacity: 0, rotateY: 90 }}
-                                  animate={{ opacity: 1, rotateY: 0 }}
-                                  exit={{ opacity: 0, rotateY: -90 }}
-                                  className="h-full flex flex-col justify-between"
-                                >
-                                  {/* Top chip and logo */}
-                                  <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                      <span className="text-[8px] tracking-[0.2em] font-black uppercase text-neutral-400">
-                                        CINEPREMIER
-                                      </span>
-                                      {/* Golden Chip */}
-                                      <div className="h-5 w-7 bg-amber-500/30 border border-amber-300/30 rounded-[3px] shadow"></div>
-                                    </div>
-                                    <span className="text-sm font-serif italic font-black uppercase tracking-wider">
-                                      {cardType === 'visa' ? 'VISA PREMIUM' : 'MASTER CARD'}
-                                    </span>
-                                  </div>
-
-                                  {/* Middle number with secure layout */}
-                                  <div className="text-base sm:text-lg font-mono tracking-widest font-bold py-1 select-all text-center">
-                                    {cardNumber || '•••• •••• •••• ••••'}
-                                  </div>
-
-                                  {/* Lowerholder info */}
-                                  <div className="flex justify-between items-end text-[9px] font-mono">
-                                    <div>
-                                      <span className="block text-[7px] text-neutral-500 font-extrabold">CHỦ THẺ</span>
-                                      <span className="uppercase text-neutral-300 font-black tracking-wide">{cardHolder || 'MINH HONG'}</span>
-                                    </div>
-                                    <div className="text-right">
-                                      <span className="block text-[7px] text-neutral-500 font-extrabold">HẾT HẠN</span>
-                                      <span className="text-neutral-300 font-black">{cardExpiry || '12/29'}</span>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              ) : (
-                                <motion.div
-                                  key="back"
-                                  initial={{ opacity: 0, rotateY: -90 }}
-                                  animate={{ opacity: 1, rotateY: 0 }}
-                                  exit={{ opacity: 0, rotateY: 90 }}
-                                  className="h-full flex flex-col justify-between py-2"
-                                >
-                                  {/* Back design magnetic strip */}
-                                  <div className="w-full h-7 bg-neutral-900 -mx-5 mt-1 border-t border-b border-black"></div>
-
-                                  {/* Sign strip */}
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex-1 h-5 bg-neutral-800 text-[8px] font-mono text-neutral-400 flex items-center px-2 select-all font-black">
-                                      Mã bảo an quốc tế:
-                                    </div>
-                                    <div className="bg-amber-100 text-black px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-widest rounded-sm">
-                                      {cardCvv || '***'}
-                                    </div>
-                                  </div>
-
-                                  <div className="text-center text-[7px] text-neutral-500 tracking-wider">
-                                    THÀNH VIÊN ĐẶC QUYỀN ĐỒNG THỂ • CINEPREMIER 2026
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-
-                          <span className="block text-[8px] text-zinc-500 text-center font-mono uppercase tracking-widest">
-                            💡 Nhấp vào hình ảnh thẻ ở trên để xoay lật mặt bảo mật
-                          </span>
-
-                          {/* Inputs with real dynamic visualization */}
-                          <div className="grid grid-cols-2 gap-2.5 pt-1">
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Tên chủ thẻ</label>
-                              <input
-                                type="text"
-                                placeholder="MINH HONG"
-                                value={cardHolder}
-                                onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-                                className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white uppercase font-bold"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Số Thẻ Di Động</label>
-                              <input
-                                type="text"
-                                placeholder="4611 1234 5678 8899"
-                                value={cardNumber}
-                                onChange={(e) => setCardNumber(e.target.value)}
-                                className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white font-mono"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2.5">
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Hạn dùng</label>
-                              <input
-                                type="text"
-                                placeholder="12/29"
-                                maxLength={5}
-                                value={cardExpiry}
-                                onChange={(e) => setCardExpiry(e.target.value)}
-                                className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white font-mono text-center"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Mã CVV</label>
-                              <input
-                                type="password"
-                                placeholder="***"
-                                maxLength={3}
-                                value={cardCvv}
-                                onChange={(e) => setCardCvv(e.target.value)}
-                                onFocus={() => { playPing(400, 'sine', 0.1); setIsCardFlipped(true); }}
-                                onBlur={() => setIsCardFlipped(false)}
-                                className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white font-mono text-center tracking-widest"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Loại thẻ</label>
-                              <select
-                                value={cardType}
-                                onChange={(e) => { playPing(480, 'sine', 0.05); setCardType(e.target.value); }}
-                                className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white"
-                              >
-                                <option value="visa">VISA VIP</option>
-                                <option value="mastercard">MASTER</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => {
-                              playPing(987.77, 'sine', 0.3);
-                              setLinkingSuccess(true);
-                              showToast("Mã hóa liên kết thẻ tín dụng Thượng hạng thành công!");
-                              setActivePanel(null);
-                            }}
-                            className="w-full py-2.5 bg-neutral-900 border border-white/10 text-white font-sans uppercase text-[10px] hover:border-white hover:bg-neutral-950 transition tracking-widest font-black"
-                          >
-                            ✓ XÁC THỰC & LIÊN KẾT AN TOÀN
-                          </button>
-
+                        <div className="h-16 w-12 overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
+                          <img
+                            src={getBookingPoster(booking)}
+                            alt={booking.movieTitle}
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
 
-                {/* 3. MẬT KHẨU & BẢO MẬT */}
-                <div className="border border-white/5 bg-black/40 overflow-hidden text-neutral-400">
-                  <button
-                    onClick={() => {
-                      playPing(activePanel === 'security' ? 380 : 450, 'sine', 0.1);
-                      setActivePanel(activePanel === 'security' ? null : 'security');
-                    }}
-                    className={`w-full flex items-center justify-between p-3.5 text-xs text-neutral-400 hover:text-white transition duration-200 text-left ${activePanel === 'security' ? 'bg-neutral-950/60 pb-2 text-white border-b border-white/5' : ''
-                      }`}
-                  >
-                    <span className="flex items-center gap-2.5 font-bold uppercase tracking-wider">
-                      <Lock className={`h-4 w-4 ${activePanel === 'security' ? 'text-amber-400' : 'text-neutral-500'}`} />
-                      Mật khẩu & Bảo an
-                    </span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform duration-300 ${activePanel === 'security' ? 'rotate-180 text-white' : ''
-                      }`} />
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {activePanel === 'security' && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="p-4 space-y-4 text-xs">
-
-                          <p className="text-[10px] text-neutral-400 leading-relaxed">
-                            Cập nhật khóa bảo vệ cá nhân định kì để giữ vững hạng tài khoản Thẻ VIP và chống thâm nhập mật trái phép.
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-white uppercase italic tracking-wide font-serif truncate">
+                            {booking.movieTitle}
+                          </h4>
+                          <p className="text-[10px] text-neutral-400 font-sans mt-0.5 truncate uppercase">
+                            {showtimeLabel} • {booking.roomName} • {booking.cinemaName}
                           </p>
 
-                          <div className="space-y-3">
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Mật khẩu cũ</label>
-                              <div className="relative">
-                                <input
-                                  type={showOldPass ? "text" : "password"}
-                                  value={oldPassword}
-                                  onChange={(e) => setOldPassword(e.target.value)}
-                                  placeholder="Nhập mật khẩu hiện tại..."
-                                  className="w-full bg-black border border-neutral-850 p-2 text-xs text-white focus:outline-none focus:border-white tracking-widest placeholder-neutral-805"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => { playPing(350, 'sine', 0.05); setShowOldPass(!showOldPass); }}
-                                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-550 hover:text-white"
-                                >
-                                  {showOldPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Mật khẩu mới</label>
-                              <div className="relative">
-                                <input
-                                  type={showNewPass ? "text" : "password"}
-                                  value={newPassword}
-                                  onChange={(e) => setNewPassword(e.target.value)}
-                                  placeholder="Nhập mật khẩu mới..."
-                                  className="w-full bg-black border border-neutral-850 p-2 text-xs text-white focus:outline-none focus:border-white tracking-widest placeholder-neutral-805"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => { playPing(350, 'sine', 0.05); setShowNewPass(!showNewPass); }}
-                                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-550 hover:text-white"
-                                >
-                                  {showNewPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                </button>
-                              </div>
-                            </div>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className={`border px-1.5 text-[8px] font-bold uppercase ${statusMeta.className}`}>
+                              {statusMeta.label}
+                            </span>
+                            <span className="text-[9px] font-mono text-neutral-500 uppercase">
+                              GHẾ: {seats}
+                            </span>
+                            <span className="hidden text-[9px] font-mono text-amber-500 sm:inline">
+                              {Number(booking.totalAmount || 0).toLocaleString('vi-VN')}đ
+                            </span>
                           </div>
+                        </div>
 
-
-
-                          <div className="space-y-3">
-                            <div className="space-y-1">
-                              <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Xác nhận mật khẩu mới</label>
-                              <div className="relative">
-                                <input
-                                  type={showNewPass ? "text" : "password"}
-                                  value={confirmPassword}
-                                  onChange={(e) => setConfirmPassword(e.target.value)}
-                                  placeholder="Nhập lại mật khẩu mới..."
-                                  className="w-full bg-black border border-neutral-850 p-2 text-xs text-white focus:outline-none focus:border-white tracking-widest placeholder-neutral-805"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => { playPing(350, 'sine', 0.05); setShowNewPass(!showNewPass); }}
-                                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-550 hover:text-white"
-                                >
-                                  {showNewPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                </button>
-                              </div>
-                            </div>
+                        <div className="flex items-center gap-3">
+                          {/* Barcode line mock matching screen */}
+                          <div className="hidden sm:flex gap-0.5 items-center px-1 py-1 bg-white/5 h-8">
+                            <div className="w-[1.5px] bg-neutral-500 h-6"></div>
+                            <div className="w-[2.5px] bg-neutral-200 h-6"></div>
+                            <div className="w-[1px] bg-neutral-500 h-6"></div>
+                            <div className="w-[4px] bg-white h-6"></div>
+                            <div className="w-[1.5px] bg-neutral-400 h-6"></div>
+                            <div className="w-[2px] bg-neutral-500 h-6"></div>
                           </div>
-
-                          {passwordNotification && (
-                            <div className={`border p-2 text-[10px] font-semibold leading-relaxed ${passwordNotification.type === 'success'
-                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                              : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
-                              }`}>
-                              {passwordNotification.text}
-                            </div>
-                          )}
 
                           <button
-                            onClick={handleChangePassword}
-                            disabled={isChangingPassword}
-                            className="w-full py-2.5 bg-[#121212] border border-white/10 text-white font-sans uppercase text-[10px] hover:border-white transition tracking-widest font-black disabled:opacity-60"
+                            onClick={() => onTabChange('my-tickets')}
+                            className="bg-white hover:bg-neutral-200 text-black px-4 py-2 text-[9px] font-sans tracking-widest font-bold uppercase transition"
                           >
-                            {isChangingPassword ? 'ĐANG ĐỔI MẬT KHẨU...' : 'XÁC NHẬN ĐỔI MẬT KHẨU'}
+                            Chi Tiết
                           </button>
-
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      </div>
+                    );
+                  })}
+
+                  {!isProfileLoading && recentApiBookings.length === 0 && (
+                    <div className="border border-dashed border-white/10 bg-[#080808] py-10 text-center">
+                      <Ticket className="mx-auto h-6 w-6 text-neutral-700" />
+                      <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Bạn chưa có đặt vé nào</p>
+                      <button onClick={() => onTabChange('explore')} className="mt-4 border border-white/15 px-4 py-2 text-[9px] font-black uppercase tracking-widest text-white transition hover:bg-white hover:text-black">
+                        Khám phá phim
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* RIGHT SECTION: PERSONALIZED PREFERENCES & SETTINGS */}
+            <div className="lg:col-span-4 space-y-6">
+
+              {/* RADAR CHART BLOCK matching the screenshot */}
+              <div className="border border-white/10 bg-[#090909] p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-[10px] font-sans font-bold uppercase tracking-[0.15em] text-neutral-400">
+                    🔍 Sở thích
+                  </span>
+                  <span className="text-[8px] uppercase tracking-wider text-neutral-600 bg-neutral-950 border border-white/5 px-2 py-0.5">
+                    Gu xem phim
+                  </span>
+                </div>
+
+                {/* Elegant Graphic Area */}
+                <div className="relative flex justify-center items-center py-2 h-44 bg-neutral-950 border border-white/5 rounded-sm">
+
+                  {/* SVG Radar Chart Representation */}
+                  <svg className="w-full h-full max-w-[180px] max-h-[180px]" viewBox="0 0 200 200">
+                    {/* Concentric pentagon lines */}
+                    <polygon points={outerWebPoints} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
+                    <polygon points={innerWebPoints1} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
+                    <polygon points={innerWebPoints2} fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+                    <polygon points={innerWebPoints3} fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+
+                    {/* Axes lines */}
+                    {categories.map((_, i) => {
+                      const outerCoords = getCoordinates(i, 1.0).split(',');
+                      return (
+                        <line
+                          key={i}
+                          x1="100"
+                          y1="100"
+                          x2={outerCoords[0]}
+                          y2={outerCoords[1]}
+                          stroke="rgba(255, 255, 255, 0.06)"
+                          strokeWidth="1"
+                        />
+                      );
+                    })}
+
+                    {/* Dynamic Value Polygon matching Minh Hong preference style */}
+                    <polygon
+                      points={polyPoints}
+                      fill="rgba(255, 255, 255, 0.12)"
+                      stroke="rgba(255, 255, 255, 0.8)"
+                      strokeWidth="1.5"
+                    />
+
+                    {/* Core level circular grid points */}
+                    {categories.map((_, i) => {
+                      const coords = getCoordinates(i, values[i]).split(',');
+                      return (
+                        <circle
+                          key={i}
+                          cx={coords[0]}
+                          cy={coords[1]}
+                          r="2.5"
+                          fill="#FFFFFF"
+                        />
+                      );
+                    })}
+
+                    {/* Categories labels rendering */}
+                    {labelPositions.map((lbl, i) => (
+                      <text
+                        key={i}
+                        x={lbl.x}
+                        y={lbl.y}
+                        fill="#888888"
+                        fontSize="7.5"
+                        fontFamily="sans-serif"
+                        fontWeight="bold"
+                        letterSpacing="0.05em"
+                        textAnchor={lbl.textAnchor}
+                      >
+                        {lbl.name}
+                      </text>
+                    ))}
+                  </svg>
+                </div>
+
+                {/* Preference Tags */}
+                <div className="flex flex-wrap gap-1.5 justify-center pt-1" id="profile-pref-tags">
+                  <span className="bg-[#1A0B0B] text-rose-400 border border-rose-500/20 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
+                    KHOA HỌC VIỄN TƯỞNG
+                  </span>
+                  <span className="bg-[#0B1A0F] text-emerald-400 border border-emerald-500/20 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
+                    HÀNH ĐỘNG
+                  </span>
+                  <span className="bg-[#101015] text-[#90A4AE] border border-white/5 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
+                    KINH DỊ NOIR
+                  </span>
                 </div>
 
               </div>
 
-              {/* LOGOUT SECURE ACTION BAR */}
-              <div className="border-t border-white/5 pt-3.5">
-                <button
-                  onClick={() => {
-                    playPing(300, 'sawtooth', 0.3);
-                    onLogout();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 p-3 text-xs font-black text-rose-400 hover:text-white bg-rose-950/5 hover:bg-rose-900/30 border border-rose-950/30 hover:border-rose-500/40 transition duration-300 uppercase tracking-[0.16em] text-center"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  ĐĂNG XUẤT</button>
+              {/* SETTINGS OPTIONS WIDGETS SECTION */}
+              <div className={`border bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-5.5 space-y-5 font-sans transition-all duration-300 relative overflow-hidden rounded-none ${glowColor === 'gold' ? 'border-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.08)]' :
+                glowColor === 'neon' ? 'border-cyan-500/20 shadow-[0_0_25px_rgba(6,182,212,0.08)]' :
+                  glowColor === 'ruby' ? 'border-rose-500/20 shadow-[0_0_25px_rgba(244,63,94,0.08)]' :
+                    'border-emerald-500/20 shadow-[0_0_25px_rgba(16,185,129,0.08)]'
+                }`} id="settings-interactive-box">
+
+                {/* Audio controller and Glow selector Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+                  <div className="flex items-center space-x-2 text-neutral-400">
+                    <Settings className={`h-4.5 w-4.5 animate-spin-slow ${glowColor === 'gold' ? 'text-amber-400' :
+                      glowColor === 'neon' ? 'text-cyan-400' :
+                        glowColor === 'ruby' ? 'text-rose-400' : 'text-emerald-400'
+                      }`} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">TRUNG TÂM KIỂM SOÁT VIP</span>
+                  </div>
+
+                  {/* Micro Controllers */}
+                  <div className="flex items-center space-x-3 self-end sm:self-auto">
+                    {/* Sound Toggle */}
+                    <button
+                      onClick={() => {
+                        const ns = !soundOn;
+                        setSoundOn(ns);
+                        if (ns) {
+                          // test ping
+                          try {
+                            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                            const ctx = new AudioCtx();
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.frequency.value = 600;
+                            gain.gain.setValueAtTime(0.03, ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.start();
+                            osc.stop(ctx.currentTime + 0.15);
+                          } catch (e) { }
+                        }
+                      }}
+                      className="p-1.5 border border-neutral-900 bg-black text-neutral-400 hover:text-white hover:border-neutral-800 transition"
+                      title={soundOn ? "Tắt âm phản hồi" : "Bật âm phản hồi"}
+                    >
+                      {soundOn ? <Volume2 className="h-3.5 w-3.5 text-amber-500 animate-pulse" /> : <VolumeX className="h-3.5 w-3.5 text-neutral-600" />}
+                    </button>
+
+                    {/* Vibe Theme Selector with dynamic frequencies on hover/click */}
+                    <div className="flex items-center space-x-1 border border-neutral-900 bg-black p-0.5" id="theme-accent-dots">
+                      {[
+                        { id: 'gold', class: 'bg-amber-400', freq: 554.37 },
+                        { id: 'neon', class: 'bg-cyan-400', freq: 659.25 },
+                        { id: 'ruby', class: 'bg-rose-500', freq: 783.99 },
+                        { id: 'emerald', class: 'bg-emerald-400', freq: 880.00 }
+                      ].map((dot) => (
+                        <button
+                          key={dot.id}
+                          onClick={() => {
+                            setGlowColor(dot.id);
+                            playPing(dot.freq, 'sine', 0.2);
+                          }}
+                          className={`h-3 w-3 rounded-full transition-all duration-300 ${dot.class} ${glowColor === dot.id ? 'scale-125 ring-2 ring-white/60' : 'opacity-40 hover:opacity-100'
+                            }`}
+                          title={`Chủ đề ${dot.id.toUpperCase()}`}
+                        />
+                      ))}
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Options Accumulators */}
+                <div className="space-y-2">
+
+                  {/* 1. CHỈNH SỬA HỒ SƠ */}
+                  <div className="border border-white/5 bg-black/40 overflow-hidden text-neutral-400">
+                    <button
+                      onClick={() => {
+                        playPing(activePanel === 'profile' ? 380 : 450, 'sine', 0.1);
+                        setActivePanel(activePanel === 'profile' ? null : 'profile');
+                      }}
+                      className={`w-full flex items-center justify-between p-3.5 text-xs text-neutral-400 hover:text-white transition duration-200 text-left ${activePanel === 'profile' ? 'bg-neutral-950/60 pb-2 text-white border-b border-white/5' : ''
+                        }`}
+                    >
+                      <span className="flex items-center gap-2.5 font-bold uppercase tracking-wider">
+                        <User className={`h-4 w-4 ${activePanel === 'profile' ? 'text-amber-400' : 'text-neutral-500'}`} />
+                        Chỉnh sửa hồ sơ VIP
+                      </span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform duration-300 ${activePanel === 'profile' ? 'rotate-180 text-white' : ''
+                        }`} />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {activePanel === 'profile' && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 space-y-4 text-xs">
+                            {/* Profile settings fields form */}
+                            <div className="space-y-3.5">
+                              <div className="space-y-1">
+                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Tên Thượng Khách</label>
+                                <input
+                                  type="text"
+                                  maxLength={MAX_NAME_LENGTH}
+                                  value={profileNameInput}
+                                  onChange={(e) => setProfileNameInput(normalizeNameInput(e.target.value))}
+                                  className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-bold"
+                                />
+                                <p className="text-[9px] text-neutral-600 font-mono text-right">{profileNameInput.length}/{MAX_NAME_LENGTH}</p>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Tiểu sử Điện ảnh</label>
+                                <textarea
+                                  value={profileBioInput}
+                                  onChange={(e) => setProfileBioInput(e.target.value)}
+                                  rows={2}
+                                  className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none leading-relaxed"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Địa chỉ Email Liên hệ</label>
+                                <input
+                                  type="email"
+                                  value={profileEmailInput}
+                                  disabled
+                                  className="w-full bg-black border border-neutral-850 text-neutral-500 p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-mono cursor-not-allowed"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Số điện thoại</label>
+                                <input
+                                  type="tel"
+                                  inputMode="numeric"
+                                  pattern="(03|05|08|09)[0-9]{8}"
+                                  maxLength={10}
+                                  placeholder="0912345678"
+                                  value={profilePhoneInput}
+                                  onChange={(e) => setProfilePhoneInput(normalizePhoneInput(e.target.value))}
+                                  className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-mono"
+                                />
+                                <p className="text-[9px] text-neutral-600 font-mono">10 số, bắt đầu 03/05/08/09</p>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Năm sinh</label>
+                                <input
+                                  type="number"
+                                  min={1900}
+                                  max={new Date().getFullYear() - 5}
+                                  placeholder="VD: 2000"
+                                  value={profileDateOfBirth}
+                                  onChange={(e) => setProfileDateOfBirth(e.target.value)}
+                                  className="w-full bg-black border border-neutral-850 focus:border-amber-400 text-white p-2 text-xs focus:outline-none focus:ring-0 rounded-none font-mono"
+                                />
+                                <p className="text-[9px] text-neutral-600 font-mono">Dùng để xác minh độ tuổi xem phim</p>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={handleSaveProfile}
+                              disabled={isSavingProfile}
+                              className="w-full py-2.5 bg-white text-black font-sans font-black tracking-widest uppercase text-[10px] hover:bg-neutral-250 transition flex items-center justify-center gap-1.5"
+                            >
+                              {isSavingProfile ? (
+                                <span className="h-3.5 w-3.5 border-2 border-black border-t-transparent animate-spin rounded-full inline-block"></span>
+                              ) : (
+                                <><Save className="h-3.5 w-3.5" /> LƯU THAY ĐỔI HỒ SƠ</>
+                              )}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* 2. PHƯƠNG THỨC THANH TOÁN (Visa / Master Card VIP golden linkage) */}
+                  <div className="border border-white/5 bg-black/40 overflow-hidden text-neutral-400">
+                    <button
+                      onClick={() => {
+                        playPing(activePanel === 'payment' ? 380 : 450, 'sine', 0.1);
+                        setActivePanel(activePanel === 'payment' ? null : 'payment');
+                        setLinkingSuccess(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-3.5 text-xs text-neutral-400 hover:text-white transition duration-200 text-left ${activePanel === 'payment' ? 'bg-neutral-950/60 pb-2 text-white border-b border-white/5' : ''
+                        }`}
+                    >
+                      <span className="flex items-center gap-2.5 font-bold uppercase tracking-wider">
+                        <CreditCard className={`h-4 w-4 ${activePanel === 'payment' ? 'text-amber-400' : 'text-neutral-500'}`} />
+                        Phương thức thanh toán VIP
+                      </span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform duration-300 ${activePanel === 'payment' ? 'rotate-180 text-white' : ''
+                        }`} />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {activePanel === 'payment' && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 space-y-4 text-xs">
+
+                            {/* Interactive Credit Card Widget Representation */}
+                            <div
+                              className="relative w-full aspect-[1.58/1] rounded-lg p-5 overflow-hidden text-white flex flex-col justify-between cursor-pointer border shadow-2xl transition-all duration-500 hover:scale-102"
+                              style={{
+                                background: glowColor === 'gold' ? 'linear-gradient(135deg, #161208 0%, #0e0a03 50%, #1e1505 100%)' :
+                                  glowColor === 'neon' ? 'linear-gradient(135deg, #091a1e 0%, #040d10 50%, #0a252d 100%)' :
+                                    glowColor === 'ruby' ? 'linear-gradient(135deg, #1e090c 0%, #0e0304 50%, #2e0d13 100%)' :
+                                      'linear-gradient(135deg, #091e11 0%, #030d06 50%, #112d1b 100%)',
+                                borderColor: glowColor === 'gold' ? 'rgba(234, 179, 8, 0.4)' :
+                                  glowColor === 'neon' ? 'rgba(6, 182, 212, 0.4)' :
+                                    glowColor === 'ruby' ? 'rgba(244, 63, 94, 0.4)' :
+                                      'rgba(16, 185, 129, 0.4)'
+                              }}
+                              onClick={() => {
+                                playPing(600, 'sine', 0.15);
+                                setIsCardFlipped(!isCardFlipped);
+                              }}
+                              title="Nhấp để xoay lật mặt thẻ bảo mật"
+                            >
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-white/2 rounded-full -mr-10 -mt-10 pointer-events-none blur-lg"></div>
+
+                              {/* Card state wrapper with nice motion flip */}
+                              <AnimatePresence mode="wait">
+                                {!isCardFlipped ? (
+                                  <motion.div
+                                    key="front"
+                                    initial={{ opacity: 0, rotateY: 90 }}
+                                    animate={{ opacity: 1, rotateY: 0 }}
+                                    exit={{ opacity: 0, rotateY: -90 }}
+                                    className="h-full flex flex-col justify-between"
+                                  >
+                                    {/* Top chip and logo */}
+                                    <div className="flex justify-between items-start">
+                                      <div className="space-y-1">
+                                        <span className="text-[8px] tracking-[0.2em] font-black uppercase text-neutral-400">
+                                          CINEPREMIER
+                                        </span>
+                                        {/* Golden Chip */}
+                                        <div className="h-5 w-7 bg-amber-500/30 border border-amber-300/30 rounded-[3px] shadow"></div>
+                                      </div>
+                                      <span className="text-sm font-serif italic font-black uppercase tracking-wider">
+                                        {cardType === 'visa' ? 'VISA PREMIUM' : 'MASTER CARD'}
+                                      </span>
+                                    </div>
+
+                                    {/* Middle number with secure layout */}
+                                    <div className="text-base sm:text-lg font-mono tracking-widest font-bold py-1 select-all text-center">
+                                      {cardNumber || '•••• •••• •••• ••••'}
+                                    </div>
+
+                                    {/* Lowerholder info */}
+                                    <div className="flex justify-between items-end text-[9px] font-mono">
+                                      <div>
+                                        <span className="block text-[7px] text-neutral-500 font-extrabold">CHỦ THẺ</span>
+                                        <span className="uppercase text-neutral-300 font-black tracking-wide">{cardHolder || 'MINH HONG'}</span>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="block text-[7px] text-neutral-500 font-extrabold">HẾT HẠN</span>
+                                        <span className="text-neutral-300 font-black">{cardExpiry || '12/29'}</span>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                ) : (
+                                  <motion.div
+                                    key="back"
+                                    initial={{ opacity: 0, rotateY: -90 }}
+                                    animate={{ opacity: 1, rotateY: 0 }}
+                                    exit={{ opacity: 0, rotateY: 90 }}
+                                    className="h-full flex flex-col justify-between py-2"
+                                  >
+                                    {/* Back design magnetic strip */}
+                                    <div className="w-full h-7 bg-neutral-900 -mx-5 mt-1 border-t border-b border-black"></div>
+
+                                    {/* Sign strip */}
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex-1 h-5 bg-neutral-800 text-[8px] font-mono text-neutral-400 flex items-center px-2 select-all font-black">
+                                        Mã bảo an quốc tế:
+                                      </div>
+                                      <div className="bg-amber-100 text-black px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-widest rounded-sm">
+                                        {cardCvv || '***'}
+                                      </div>
+                                    </div>
+
+                                    <div className="text-center text-[7px] text-neutral-500 tracking-wider">
+                                      THÀNH VIÊN ĐẶC QUYỀN ĐỒNG THỂ • CINEPREMIER 2026
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+
+                            <span className="block text-[8px] text-zinc-500 text-center font-mono uppercase tracking-widest">
+                              💡 Nhấp vào hình ảnh thẻ ở trên để xoay lật mặt bảo mật
+                            </span>
+
+                            {/* Inputs with real dynamic visualization */}
+                            <div className="grid grid-cols-2 gap-2.5 pt-1">
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Tên chủ thẻ</label>
+                                <input
+                                  type="text"
+                                  placeholder="MINH HONG"
+                                  value={cardHolder}
+                                  onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+                                  className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white uppercase font-bold"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Số Thẻ Di Động</label>
+                                <input
+                                  type="text"
+                                  placeholder="4611 1234 5678 8899"
+                                  value={cardNumber}
+                                  onChange={(e) => setCardNumber(e.target.value)}
+                                  className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white font-mono"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2.5">
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Hạn dùng</label>
+                                <input
+                                  type="text"
+                                  placeholder="12/29"
+                                  maxLength={5}
+                                  value={cardExpiry}
+                                  onChange={(e) => setCardExpiry(e.target.value)}
+                                  className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white font-mono text-center"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Mã CVV</label>
+                                <input
+                                  type="password"
+                                  placeholder="***"
+                                  maxLength={3}
+                                  value={cardCvv}
+                                  onChange={(e) => setCardCvv(e.target.value)}
+                                  onFocus={() => { playPing(400, 'sine', 0.1); setIsCardFlipped(true); }}
+                                  onBlur={() => setIsCardFlipped(false)}
+                                  className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white font-mono text-center tracking-widest"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Loại thẻ</label>
+                                <select
+                                  value={cardType}
+                                  onChange={(e) => { playPing(480, 'sine', 0.05); setCardType(e.target.value); }}
+                                  className="w-full bg-black border border-neutral-850 p-2 text-[11px] text-white focus:outline-none focus:border-white"
+                                >
+                                  <option value="visa">VISA VIP</option>
+                                  <option value="mastercard">MASTER</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                playPing(987.77, 'sine', 0.3);
+                                setLinkingSuccess(true);
+                                showToast("Mã hóa liên kết thẻ tín dụng Thượng hạng thành công!");
+                                setActivePanel(null);
+                              }}
+                              className="w-full py-2.5 bg-neutral-900 border border-white/10 text-white font-sans uppercase text-[10px] hover:border-white hover:bg-neutral-950 transition tracking-widest font-black"
+                            >
+                              ✓ XÁC THỰC & LIÊN KẾT AN TOÀN
+                            </button>
+
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* 3. MẬT KHẨU & BẢO MẬT */}
+                  <div className="border border-white/5 bg-black/40 overflow-hidden text-neutral-400">
+                    <button
+                      onClick={() => {
+                        playPing(activePanel === 'security' ? 380 : 450, 'sine', 0.1);
+                        setActivePanel(activePanel === 'security' ? null : 'security');
+                      }}
+                      className={`w-full flex items-center justify-between p-3.5 text-xs text-neutral-400 hover:text-white transition duration-200 text-left ${activePanel === 'security' ? 'bg-neutral-950/60 pb-2 text-white border-b border-white/5' : ''
+                        }`}
+                    >
+                      <span className="flex items-center gap-2.5 font-bold uppercase tracking-wider">
+                        <Lock className={`h-4 w-4 ${activePanel === 'security' ? 'text-amber-400' : 'text-neutral-500'}`} />
+                        Mật khẩu & Bảo an
+                      </span>
+                      <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform duration-300 ${activePanel === 'security' ? 'rotate-180 text-white' : ''
+                        }`} />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {activePanel === 'security' && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-4 space-y-4 text-xs">
+
+                            <p className="text-[10px] text-neutral-400 leading-relaxed">
+                              Cập nhật khóa bảo vệ cá nhân định kì để giữ vững hạng tài khoản Thẻ VIP và chống thâm nhập mật trái phép.
+                            </p>
+
+                            <div className="space-y-3">
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Mật khẩu cũ</label>
+                                <div className="relative">
+                                  <input
+                                    type={showOldPass ? "text" : "password"}
+                                    value={oldPassword}
+                                    onChange={(e) => setOldPassword(e.target.value)}
+                                    placeholder="Nhập mật khẩu hiện tại..."
+                                    className="w-full bg-black border border-neutral-850 p-2 text-xs text-white focus:outline-none focus:border-white tracking-widest placeholder-neutral-805"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => { playPing(350, 'sine', 0.05); setShowOldPass(!showOldPass); }}
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-550 hover:text-white"
+                                  >
+                                    {showOldPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Mật khẩu mới</label>
+                                <div className="relative">
+                                  <input
+                                    type={showNewPass ? "text" : "password"}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="Nhập mật khẩu mới..."
+                                    className="w-full bg-black border border-neutral-850 p-2 text-xs text-white focus:outline-none focus:border-white tracking-widest placeholder-neutral-805"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => { playPing(350, 'sine', 0.05); setShowNewPass(!showNewPass); }}
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-550 hover:text-white"
+                                  >
+                                    {showNewPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+
+
+                            <div className="space-y-3">
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Xác nhận mật khẩu mới</label>
+                                <div className="relative">
+                                  <input
+                                    type={showNewPass ? "text" : "password"}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="Nhập lại mật khẩu mới..."
+                                    className="w-full bg-black border border-neutral-850 p-2 text-xs text-white focus:outline-none focus:border-white tracking-widest placeholder-neutral-805"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => { playPing(350, 'sine', 0.05); setShowNewPass(!showNewPass); }}
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-550 hover:text-white"
+                                  >
+                                    {showNewPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {passwordNotification && (
+                              <div className={`border p-2 text-[10px] font-semibold leading-relaxed ${passwordNotification.type === 'success'
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                                }`}>
+                                {passwordNotification.text}
+                              </div>
+                            )}
+
+                            <button
+                              onClick={handleChangePassword}
+                              disabled={isChangingPassword}
+                              className="w-full py-2.5 bg-[#121212] border border-white/10 text-white font-sans uppercase text-[10px] hover:border-white transition tracking-widest font-black disabled:opacity-60"
+                            >
+                              {isChangingPassword ? 'ĐANG ĐỔI MẬT KHẨU...' : 'XÁC NHẬN ĐỔI MẬT KHẨU'}
+                            </button>
+
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                </div>
+
+                {/* LOGOUT SECURE ACTION BAR */}
+                <div className="border-t border-white/5 pt-3.5">
+                  <button
+                    onClick={() => {
+                      playPing(300, 'sawtooth', 0.3);
+                      onLogout();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 p-3 text-xs font-black text-rose-400 hover:text-white bg-rose-950/5 hover:bg-rose-900/30 border border-rose-950/30 hover:border-rose-500/40 transition duration-300 uppercase tracking-[0.16em] text-center"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    ĐĂNG XUẤT</button>
+                </div>
+
               </div>
 
             </div>
 
           </div>
+        </>
+      )}
 
-        </div>
-      )
-      }
-
-    </div >
+    </div>
   );
 }

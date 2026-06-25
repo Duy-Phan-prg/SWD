@@ -7,6 +7,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [currentRole, setCurrentRole] = useState('user');
   const { showToast, setShowOTP } = useUI();
@@ -14,16 +15,16 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const restoreSession = async () => {
-      const { accessToken, refreshToken, user } = getStoredAuth();
-      if (user) {
-        const restoredRole = hasBackendAdminAccess(accessToken, user) ? 'admin' : user.role || 'user';
-        setIsLoggedIn(true);
-        setCurrentUser({ ...user, role: restoredRole });
-        setCurrentRole(restoredRole);
-      }
-      if (!accessToken && !refreshToken) return;
-
       try {
+        const { accessToken, refreshToken, user } = getStoredAuth();
+        if (user) {
+          const restoredRole = hasBackendAdminAccess(accessToken, user) ? 'admin' : user.role || 'user';
+          setIsLoggedIn(true);
+          setCurrentUser({ ...user, role: restoredRole });
+          setCurrentRole(restoredRole);
+        }
+        if (!accessToken && !refreshToken) return;
+
         let token = accessToken;
         if (!token && refreshToken) {
           const refreshed = await authApi.refresh(refreshToken);
@@ -37,6 +38,7 @@ export function AuthProvider({ children }) {
         try {
           profile = await authApi.getMyProfile(token);
         } catch {
+          if (!refreshToken) throw new Error('Cannot refresh session without refresh token.');
           const refreshed = await authApi.refresh(refreshToken);
           const refreshedUser = saveAuthSession(refreshed);
           token = refreshed.accessToken;
@@ -54,6 +56,8 @@ export function AuthProvider({ children }) {
         setIsLoggedIn(false);
         setCurrentUser(null);
         setCurrentRole('user');
+      } finally {
+        setIsAuthReady(true);
       }
     };
     restoreSession();
@@ -65,6 +69,7 @@ export function AuthProvider({ children }) {
       setIsLoggedIn(false);
       setCurrentUser(null);
       setCurrentRole('user');
+      setIsAuthReady(true);
       setShowOTP(true);
     };
     window.addEventListener('auth:session-expired', handleSessionExpired);
@@ -83,6 +88,7 @@ export function AuthProvider({ children }) {
       setIsLoggedIn(false);
       setCurrentUser(null);
       setCurrentRole('user');
+      setIsAuthReady(true);
       navigate('/');
       showToast('Đăng xuất tài khoản thành công.');
     } catch (error) {
@@ -101,16 +107,24 @@ export function AuthProvider({ children }) {
 
   const handleLoginSuccess = (userData) => {
     setIsLoggedIn(true);
+    setIsAuthReady(true);
     if (userData) {
       setCurrentUser(userData);
       setCurrentRole(userData.role || 'user');
-      navigate(userData.role === 'admin' ? '/admin/overview' : '/');
+      const redirectPath = sessionStorage.getItem('cinepremier_post_login_redirect');
+      sessionStorage.removeItem('cinepremier_post_login_redirect');
+      if (userData.passwordChangeRequired) {
+        navigate('/setup-password');
+        return;
+      }
+      navigate(userData.role === 'admin' ? '/admin/overview' : redirectPath || '/');
     }
   };
 
   return (
     <AuthContext.Provider value={{
       isLoggedIn, setIsLoggedIn,
+      isAuthReady,
       currentUser, setCurrentUser,
       currentRole, setCurrentRole,
       handleLogout, handleLoginSuccess,

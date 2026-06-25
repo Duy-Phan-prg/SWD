@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
-  AlertTriangle, Building2, CheckCircle2, CircleOff, Globe2, MapPin,
-  Phone, Power, RefreshCw, Save, ShieldCheck, X
+  Building2, CheckCircle2, Globe2, MapPin,
+  Phone, Power, RefreshCw, Save, ShieldCheck
 } from 'lucide-react';
 import { authApi } from '../../services/authApi';
 
@@ -19,7 +19,6 @@ export default function AdminCinemaPanel({ ctx }) {
   const [form, setForm] = useState(emptyForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
   const syncForm = (data) => {
     setCinema(data);
@@ -39,8 +38,10 @@ export default function AdminCinemaPanel({ ctx }) {
     try {
       syncForm(await authApi.getAdminCinema(token));
     } catch (error) {
-      if (error.status === 404) syncForm(null);
-      else showToast(error.message || 'Không thể tải thông tin rạp.');
+      if (error.status === 404) {
+        syncForm(null);
+        showToast('Rạp chưa được cấu hình trong dữ liệu hệ thống.');
+      } else showToast(error.message || 'Không thể tải thông tin rạp.');
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +55,10 @@ export default function AdminCinemaPanel({ ctx }) {
     event.preventDefault();
     const token = getAdminToken();
     if (!token) return;
+    if (!cinema) {
+      showToast('Rạp chưa được cấu hình. Không thể cập nhật thông tin.');
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -64,12 +69,10 @@ export default function AdminCinemaPanel({ ctx }) {
         phone: form.phone.trim(),
         status: form.status
       };
-      const saved = cinema
-        ? await authApi.updateAdminCinema(token, payload)
-        : await authApi.createAdminCinema(token, payload);
+      const saved = await authApi.updateAdminCinema(token, payload);
       syncForm(saved);
-      addAuditLog(cinema ? 'Cập nhật rạp chiếu' : 'Tạo rạp chiếu', saved.name);
-      showToast(cinema ? 'Đã cập nhật thông tin rạp.' : 'Đã tạo rạp chiếu.');
+      addAuditLog('Cập nhật rạp chiếu', saved.name);
+      showToast('Đã cập nhật thông tin rạp.');
       await onCinemaChanged();
     } catch (error) {
       showToast(error.message || 'Không thể lưu thông tin rạp.');
@@ -90,25 +93,6 @@ export default function AdminCinemaPanel({ ctx }) {
       await onCinemaChanged();
     } catch (error) {
       showToast(error.message || 'Không thể đổi trạng thái rạp.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deactivateCinema = async () => {
-    const token = getAdminToken();
-    if (!token) return;
-    setIsSaving(true);
-    try {
-      await authApi.deactivateAdminCinema(token);
-      const inactiveCinema = cinema ? { ...cinema, status: 'INACTIVE' } : null;
-      syncForm(inactiveCinema);
-      addAuditLog('Ngừng hoạt động rạp', cinema?.name || 'Cinema');
-      showToast('Đã ngừng hoạt động rạp.');
-      setShowDeactivateConfirm(false);
-      await onCinemaChanged();
-    } catch (error) {
-      showToast(error.message || 'Không thể ngừng hoạt động rạp.');
     } finally {
       setIsSaving(false);
     }
@@ -160,7 +144,7 @@ export default function AdminCinemaPanel({ ctx }) {
           <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/10 pb-4">
             <div>
               <div className="text-[9px] font-black uppercase tracking-[0.22em] text-amber-400">Thông tin vận hành</div>
-              <h3 className="mt-1 text-lg font-black uppercase text-white">{cinema ? 'Cập nhật rạp chiếu' : 'Tạo rạp chiếu mới'}</h3>
+              <h3 className="mt-1 text-lg font-black uppercase text-white">Cập nhật rạp chiếu</h3>
             </div>
             <Building2 className="h-6 w-6 text-neutral-700" />
           </div>
@@ -186,10 +170,10 @@ export default function AdminCinemaPanel({ ctx }) {
           </div>
 
           <button
-            disabled={isSaving}
+            disabled={isSaving || !cinema}
             className="mt-6 flex w-full items-center justify-center gap-2 bg-amber-500 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-black transition hover:bg-amber-300 disabled:opacity-50"
           >
-            <Save className="h-4 w-4" /> {cinema ? 'Lưu thay đổi' : 'Tạo rạp chiếu'}
+            <Save className="h-4 w-4" /> Lưu thay đổi
           </button>
         </form>
 
@@ -220,63 +204,10 @@ export default function AdminCinemaPanel({ ctx }) {
                 </span>
                 <Power className="h-4 w-4 text-cyan-300" />
               </button>
-              <button
-                type="button"
-                disabled={isSaving || !isActive}
-                onClick={() => setShowDeactivateConfirm(true)}
-                className="mt-3 flex w-full items-center justify-between border border-rose-500/25 bg-rose-500/[0.06] px-4 py-3 text-left transition hover:border-rose-400 disabled:opacity-35"
-              >
-                <span>
-                  <span className="block text-[9px] font-black uppercase tracking-wider text-rose-300">Ngừng hoạt động rạp</span>
-                  <span className="mt-1 block text-[8px] uppercase text-neutral-500">Ẩn rạp khỏi giao diện khách hàng</span>
-                </span>
-                <CircleOff className="h-4 w-4 text-rose-300" />
-              </button>
             </div>
           )}
         </aside>
       </section>
-
-      {showDeactivateConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md border border-rose-500/30 bg-[#090909] shadow-[0_24px_80px_rgba(0,0,0,0.8)]">
-            <div className="flex items-start justify-between border-b border-white/10 p-5">
-              <div className="flex gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center border border-rose-500/30 bg-rose-500/10 text-rose-300">
-                  <AlertTriangle className="h-5 w-5" />
-                </span>
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-white">Xác nhận ngừng hoạt động</h3>
-                  <p className="mt-2 text-xs leading-relaxed text-neutral-400">
-                    Rạp <strong className="text-white">{cinema?.name}</strong> sẽ không còn hiển thị cho khách hàng. Bạn có chắc muốn tiếp tục?
-                  </p>
-                </div>
-              </div>
-              <button type="button" onClick={() => setShowDeactivateConfirm(false)} className="text-neutral-500 transition hover:text-white">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex flex-col-reverse gap-2 p-5 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={() => setShowDeactivateConfirm(false)}
-                className="border border-white/10 px-4 py-2.5 text-[9px] font-black uppercase tracking-wider text-neutral-300 transition hover:border-white/30 hover:text-white disabled:opacity-40"
-              >
-                Quay lại
-              </button>
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={deactivateCinema}
-                className="bg-rose-500 px-4 py-2.5 text-[9px] font-black uppercase tracking-wider text-white transition hover:bg-rose-400 disabled:opacity-40"
-              >
-                {isSaving ? 'Đang xử lý...' : 'Xác nhận ngừng hoạt động'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

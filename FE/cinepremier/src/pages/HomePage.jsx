@@ -1,26 +1,75 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Sparkles, MessageSquare, Check, HelpCircle, Volume2, VolumeX, ChevronLeft, ChevronRight, Film } from 'lucide-react';
 import MovieCard from '../components/movies/MovieCard';
+import { useMovies } from '../contexts/MoviesContext';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
   const trimmed = url.trim();
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
 
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.replace(/^www\./, '');
+    const parts = parsed.pathname.split('/').filter(Boolean);
+
+    if (host === 'youtu.be') return parts[0] || '';
+    if (host.endsWith('youtube.com')) {
+      const videoId = parsed.searchParams.get('v');
+      if (videoId) return videoId;
+      if (['embed', 'shorts', 'live'].includes(parts[0])) return parts[1] || '';
+    }
+  } catch {
+    // Fall back to regex parsing for partially pasted URLs.
+  }
+
   const patterns = [
     /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
     /youtu\.be\/([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/live\/([a-zA-Z0-9_-]{11})/,
+    /[?&]v=([a-zA-Z0-9_-]{11})/
   ];
 
-  return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || 'k8m0SaGQ_1c';
+  return patterns.map((pattern) => trimmed.match(pattern)?.[1]).find(Boolean) || '';
 };
 
-export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [], homepageVideoUrl = 'https://www.youtube.com/watch?v=k8m0SaGQ_1c' }) {
+const isDirectVideoUrl = (url = '') => {
+  const value = url.trim().toLowerCase();
+  return /\.(mp4|webm|mov)(\?|#|$)/.test(value) || value.includes('/video/upload/');
+};
+
+const loadYoutubeIframeApi = () => {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+
+  if (!window.__cinepremierYoutubeApiPromise) {
+    window.__cinepremierYoutubeApiPromise = new Promise((resolve) => {
+      const previousReady = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previousReady === 'function') previousReady();
+        resolve(window.YT);
+      };
+
+      const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        document.body.appendChild(script);
+      }
+    });
+  }
+
+  return window.__cinepremierYoutubeApiPromise;
+};
+
+export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [] }) {
+  const { watchlist = [], handleToggleWatchlist } = useMovies();
   const [selectedMood, setSelectedMood] = useState('#Đỉnh_Cao_Thị_Giác');
   const [userPrompt, setUserPrompt] = useState('');
-  const [aiResponse, setAiResponse] = useState(null);
-  const [loadingAI, setLoadingAI] = useState(false);
+  const [suggestionResponse, setSuggestionResponse] = useState(null);
+  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
 
   // Filter movies for "Now Playing" and "Upcoming"
   const sourceMovies = Array.isArray(moviesList) ? moviesList : [];
@@ -32,11 +81,97 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
+  const heroVideoRef = useRef(null);
+  const youtubeFrameRef = useRef(null);
+  const youtubePlayerRef = useRef(null);
 
   const heroMovies = nowPlaying.length ? nowPlaying : publicMovies;
   const heroMovie = heroMovies[currentHeroIndex] || heroMovies[0] || null;
-  const heroYoutubeId = extractYoutubeId(homepageVideoUrl);
-  const heroYoutubeSrc = `https://www.youtube.com/embed/${heroYoutubeId}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${heroYoutubeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1`;
+  const heroTrailerUrl = heroMovie?.trailerUrl?.trim() || '';
+  const heroYoutubeId = extractYoutubeId(heroTrailerUrl);
+  const hasDirectHeroVideo = !heroYoutubeId && isDirectVideoUrl(heroTrailerUrl);
+  const youtubeOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const heroYoutubeSrc = heroYoutubeId
+    ? `https://www.youtube.com/embed/${heroYoutubeId}?autoplay=${isPlaying ? 1 : 0}&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${heroYoutubeId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1${youtubeOrigin ? `&origin=${encodeURIComponent(youtubeOrigin)}` : ''}`
+    : '';
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+    if (isPlaying) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isPlaying, isMuted, heroTrailerUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!heroYoutubeId) {
+      if (youtubePlayerRef.current?.destroy) {
+        youtubePlayerRef.current.destroy();
+        youtubePlayerRef.current = null;
+      }
+      return undefined;
+    }
+
+    loadYoutubeIframeApi().then((YT) => {
+      if (cancelled || !YT?.Player || !youtubeFrameRef.current) return;
+
+      if (youtubePlayerRef.current?.destroy) {
+        youtubePlayerRef.current.destroy();
+        youtubePlayerRef.current = null;
+      }
+
+      youtubePlayerRef.current = new YT.Player(youtubeFrameRef.current, {
+        events: {
+          onReady: (event) => {
+            if (isMuted) event.target.mute();
+            else event.target.unMute();
+            if (isPlaying) event.target.playVideo();
+          },
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.ENDED) {
+              event.target.seekTo(0, true);
+              if (isPlaying) event.target.playVideo();
+            }
+          }
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      if (youtubePlayerRef.current?.destroy) {
+        youtubePlayerRef.current.destroy();
+        youtubePlayerRef.current = null;
+      }
+    };
+  }, [heroYoutubeId]);
+
+  useEffect(() => {
+    const player = youtubePlayerRef.current;
+    if (!heroYoutubeId || !player?.playVideo) return;
+
+    try {
+      if (isMuted) player.mute();
+      else player.unMute();
+
+      if (isPlaying) player.playVideo();
+      else player.pauseVideo();
+    } catch {
+      // The iframe API can ignore commands while the player is still booting.
+    }
+  }, [heroYoutubeId, isPlaying, isMuted]);
+
+  const restartHeroVideo = () => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    if (isPlaying) video.play().catch(() => {});
+  };
 
   const handlePrevHero = () => {
     if (!heroMovies.length) return;
@@ -48,7 +183,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
     setCurrentHeroIndex((prev) => (prev === heroMovies.length - 1 ? 0 : prev + 1));
   };
 
-  // AI Mood analysis tags
+  // Mood tags
   const moodTags = [
     { tag: '#Đỉnh_Cao_Thị_Giác', desc: 'Mãn nhãn hình ảnh, hiệu ứng đỉnh cao kịch liệt' },
     { tag: '#Căng_Não', desc: 'Tình tiết hack não, giải mật mã lượng tử bất ngờ' },
@@ -58,19 +193,23 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   ];
 
   const recommendedMovie = nowPlaying[0] || publicMovies[0] || null;
+  const isMovieBookable = (movie) => movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
+  const isMovieWatchlisted = (movie) => watchlist.some((item) => (
+    String(item.backendId || item.movieId || item.id) === String(movie?.backendId || movie?.movieId || movie?.id)
+  ));
 
   const findRecommendedMovie = () => recommendedMovie || publicMovies[0] || null;
 
-  const handleAISuggest = (e) => {
+  const handleSuggest = (e) => {
     e.preventDefault();
     if (!userPrompt.trim()) return;
 
-    setLoadingAI(true);
-    setAiResponse(null);
+    setLoadingSuggestion(true);
+    setSuggestionResponse(null);
 
     setTimeout(() => {
       const liveRecommendedMovie = findRecommendedMovie();
-      setAiResponse({
+      setSuggestionResponse({
         reply: liveRecommendedMovie
           ? `Dựa trên mô tả của bạn, CinePremier gợi ý "${liveRecommendedMovie.title}" từ danh sách phim hiện có trong hệ thống.`
           : 'Chưa có phim khả dụng từ hệ thống để gợi ý. Vui lòng kiểm tra lại dữ liệu phim trong backend.',
@@ -78,7 +217,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
         recommendedMovie: liveRecommendedMovie,
         matchRate: liveRecommendedMovie ? 96 : 0
       });
-      setLoadingAI(false);
+      setLoadingSuggestion(false);
     }, 500);
   };
 
@@ -100,15 +239,32 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       >
         {/* Cinematic background */}
         <div className="absolute inset-0 z-0 select-none pointer-events-none">
-          <iframe
-            key={`${heroYoutubeId}-${isPlaying}-${isMuted}`}
-            className={`absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-80'}`}
-            src={heroYoutubeSrc}
-            title="CinePremier hero trailer"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            referrerPolicy="strict-origin-when-cross-origin"
-            aria-hidden="true"
-          />
+          {heroYoutubeId ? (
+            <iframe
+              key={`${heroMovie?.id || 'hero'}-${heroYoutubeId}`}
+              ref={youtubeFrameRef}
+              className={`absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-80'}`}
+              src={heroYoutubeSrc}
+              title={`${heroMovie?.title || 'CinePremier'} trailer`}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+              aria-hidden="true"
+            />
+          ) : hasDirectHeroVideo ? (
+            <video
+              key={`${heroMovie?.id || 'hero'}-${heroTrailerUrl}`}
+              ref={heroVideoRef}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-80'}`}
+              src={heroTrailerUrl}
+              autoPlay={isPlaying}
+              muted={isMuted}
+              loop
+              playsInline
+              preload="metadata"
+              onEnded={restartHeroVideo}
+              aria-hidden="true"
+            />
+          ) : null}
           {/* Subtle cinematic overlays: dark enough on the left for text readability, clear in center and right for video action */}
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-black/15 z-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/10 z-10" />
@@ -129,7 +285,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
               <div className="inline-flex items-center space-x-1.5 border border-amber-500/30 bg-amber-950/20 px-3 py-1 text-[9px] font-mono tracking-wider uppercase text-amber-400 font-bold rounded-none">
                 <Film className="h-3 w-3 animate-spin duration-1000" />
-                <span>YOUTUBE TRAILER</span>
+                <span>{heroTrailerUrl ? 'TRAILER PHIM' : 'CHƯA CÓ TRAILER'}</span>
               </div>
             </div>
 
@@ -163,7 +319,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             {/* CTA action buttons & Media Controller widgets */}
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <button
-                disabled={!heroMovie}
+                disabled={!heroMovie || !isMovieBookable(heroMovie)}
                 onClick={() => heroMovie && onBookMovie(heroMovie)}
                 className="border border-white bg-white text-black text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-black hover:text-white hover:border-white transition-all duration-300 font-bold disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-black"
                 id="hero-book-now"
@@ -177,7 +333,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 className="border border-white/20 bg-black text-white text-xs font-sans uppercase tracking-[0.2em] px-8 py-3.5 hover:bg-white hover:text-black hover:border-white transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black disabled:hover:text-white"
                 id="hero-details"
               >
-                Xem Chi Tiết & AI Analysis
+                Xem Chi Tiết
               </button>
 
               {/* Media play/pause and sound controller for elegant cinematic interaction */}
@@ -233,7 +389,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
                 <div className="absolute right-3 top-3 bg-black border border-white/20 text-white font-sans text-[10px] uppercase tracking-wider px-2 py-1">
-                  ⭐ {heroMovie.ratings?.aiOverall || '--'} AI Rating
+                  ⭐ {heroMovie.ratings?.overall || '--'} Rating
                 </div>
 
                 {/* Micro animation to indicate background video control */}
@@ -280,32 +436,34 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
               movie={movie}
               onSelect={onSelectMovie}
               onBook={onBookMovie}
+              isWatchlisted={isMovieWatchlisted(movie)}
+              onToggleWatchlist={handleToggleWatchlist}
             />
           ))}
         </div>
       </section>
 
-      {/* 3. AI SPECIAL HIGHLIGHTS & DYNAMIC ANALYSIS */}
-      <section className="bg-[#0A0A0A] border-y border-white/5 py-16 px-4 sm:px-6 lg:px-8" id="ai-highlights-section">
+      {/* 3. PERSONALIZED HIGHLIGHTS */}
+      <section className="bg-[#0A0A0A] border-y border-white/5 py-16 px-4 sm:px-6 lg:px-8" id="personalized-highlights-section">
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
-            {/* Left Box: Mood Selectors & AI Analysis Display */}
+            {/* Left Box: Mood Selectors & Recommendations */}
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center space-x-1.5 border border-white/10 bg-black px-3 py-1 text-[9px] text-neutral-400 tracking-[0.2em] uppercase font-sans">
                 <Sparkles className="h-3 w-3 text-white" />
-                <span>AI SUGGESTED CHIPS</span>
+                <span>GỢI Ý THEO TÂM TRẠNG</span>
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-serif font-light text-white tracking-wide leading-tight">
-                Thuật Toán Khớp Nhịp Tim <br />
+                Gợi Ý Khớp Nhịp Tim <br />
                 <span className="font-serif italic text-neutral-400">
-                  CinePremier AI Selector
+                  CinePremier Mood Selector
                 </span>
               </h2>
 
               <p className="text-sm text-neutral-400 leading-relaxed max-w-xl font-sans">
-                Lưu chuyển tâm trạng nghệ thuật hoặc nhập dữ kiện điện ảnh mong muốn. Không gian trí tuệ rạp chiếu sẽ thiết lập tần phổ nhạy bén và đề xuất tấm vé hoàn mỹ nhất.
+                Chọn tâm trạng nghệ thuật hoặc nhập cảm giác xem phim mong muốn. CinePremier sẽ đề xuất một lựa chọn phù hợp từ danh sách phim hiện có.
               </p>
 
               {/* Mood Filter chips */}
@@ -315,9 +473,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                     key={mt.tag}
                     onClick={() => {
                       setSelectedMood(mt.tag);
-                      setAiResponse(null);
+                      setSuggestionResponse(null);
                     }}
-                    className={`px-4 py-2 text-[10px] font-sans tracking-[0.1em] uppercase transition-all duration-300 ${selectedMood === mt.tag && !aiResponse
+                    className={`px-4 py-2 text-[10px] font-sans tracking-[0.1em] uppercase transition-all duration-300 ${selectedMood === mt.tag && !suggestionResponse
                       ? 'bg-white text-black border border-white'
                       : 'bg-black border border-white/10 text-neutral-500 hover:text-white hover:border-white/30'
                       }`}
@@ -328,7 +486,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
               </div>
 
               {/* Dynamic recommendation card */}
-              {!aiResponse && recommendedMovie && (
+              {!suggestionResponse && recommendedMovie && (
                 <div className="relative bg-black border border-white/10 p-6 flex flex-col md:flex-row gap-6 hover:border-white/20 transition-all duration-300">
                   <div className="w-full md:w-32 aspect-[2/3] overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
                     <img
@@ -363,8 +521,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                         VÌ SAO PHÙ HỢP? →
                       </button>
                       <button
-                        onClick={() => onBookMovie(recommendedMovie)}
-                        className="bg-white text-black px-5 py-2 text-[10px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition-colors"
+                        disabled={!isMovieBookable(recommendedMovie)}
+                        onClick={() => isMovieBookable(recommendedMovie) && onBookMovie(recommendedMovie)}
+                        className="bg-white text-black px-5 py-2 text-[10px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         ĐẶT NGAY
                       </button>
@@ -373,49 +532,49 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 </div>
               )}
 
-              {/* AI response box after custom typing */}
-              {aiResponse && (
+              {/* Suggestion response box after custom typing */}
+              {suggestionResponse && (
                 <div className="bg-black border border-white/25 p-6 space-y-4 transition-all duration-300">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-white font-sans text-[10px] uppercase tracking-[0.2em]">
                       <Sparkles className="h-3.5 w-3.5 text-white" />
-                      <span>Ý THỨC NHÂN TẠO CINEPHILE</span>
+                      <span>GỢI Ý CINEPHILE</span>
                     </div>
                     <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/20 px-2 py-0.5 border border-emerald-500/20 flex items-center gap-1">
-                      ✓ KHỚP {aiResponse.matchRate}%
+                      ✓ KHỚP {suggestionResponse.matchRate}%
                     </span>
                   </div>
 
                   <p className="text-xs text-neutral-300 leading-relaxed italic border-l border-white/30 pl-3.5 font-sans">
-                    "{aiResponse.reply}"
+                    "{suggestionResponse.reply}"
                   </p>
 
                   {/* recommended detailed card from custom prompt */}
-                  {aiResponse.recommendedMovie && (
+                  {suggestionResponse.recommendedMovie && (
                     <div className="flex items-center space-x-4 bg-neutral-950 p-4 border border-white/5">
                       <img
-                        src={aiResponse.recommendedMovie.posterUrl}
+                        src={suggestionResponse.recommendedMovie.posterUrl}
                         alt="Recom"
                         className="h-16 w-11 object-cover border border-white/5"
                         referrerPolicy="no-referrer"
                       />
                       <div className="flex-1 min-w-0">
                         <h5 className="text-xs font-serif text-white truncate italic">
-                          {aiResponse.recommendedMovie.title}
+                          {suggestionResponse.recommendedMovie.title}
                         </h5>
                         <p className="text-[9px] text-neutral-500 uppercase tracking-widest truncate">
-                          {aiResponse.recommendedMovie.englishTitle}
+                          {suggestionResponse.recommendedMovie.englishTitle}
                         </p>
                         <button
-                          onClick={() => onSelectMovie(aiResponse.recommendedMovie.id)}
+                          onClick={() => onSelectMovie(suggestionResponse.recommendedMovie.id)}
                           className="text-[9px] uppercase tracking-widest text-neutral-400 hover:text-white font-sans mt-2 block hover:underline"
                         >
-                          XEM CHI TIẾT AI →
+                          XEM CHI TIẾT →
                         </button>
                       </div>
                       <button
                         onClick={() => {
-                          if (aiResponse.recommendedMovie) onBookMovie(aiResponse.recommendedMovie);
+                          if (suggestionResponse.recommendedMovie) onBookMovie(suggestionResponse.recommendedMovie);
                         }}
                         className="bg-white text-black px-4 py-2 text-[9px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition"
                       >
@@ -434,38 +593,38 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 <div className="flex items-center space-x-2 border-b border-white/5 pb-3">
                   <MessageSquare className="h-4 w-4 text-white" />
                   <h3 className="text-[10px] font-sans uppercase tracking-[0.2em] text-neutral-400">
-                    Phân Tích Cảm Xúc Phim
+                    Gợi Ý Theo Cảm Xúc
                   </h3>
                 </div>
 
                 <p className="text-xs text-neutral-500 leading-relaxed font-sans">
-                  Điền tần sóng tâm trạng của bạn đêm nay, ví dụ: <i>"Tôi đang mỏi mệt, cần tìm sự thảnh thơi nhẹ lòng"</i> hoặc <i>"Thèm rượt đuổi giật gân bùng nổ rạp"</i>.
+                  Điền tâm trạng của bạn đêm nay, ví dụ: <i>"Tôi đang mỏi mệt, cần tìm sự thảnh thơi nhẹ lòng"</i> hoặc <i>"Thèm rượt đuổi giật gân bùng nổ rạp"</i>.
                 </p>
 
-                <form onSubmit={handleAISuggest} className="space-y-4">
+                <form onSubmit={handleSuggest} className="space-y-4">
                   <textarea
                     rows={4}
                     value={userPrompt}
                     onChange={(e) => setUserPrompt(e.target.value)}
                     placeholder="Mô tả tâm trạng mong muốn của bạn..."
                     className="w-full border border-white/10 bg-neutral-950 p-3 text-xs text-white placeholder-neutral-700 font-sans focus:border-white focus:outline-none"
-                    id="ai-mood-textarea"
+                    id="mood-textarea"
                   />
 
                   <button
                     type="submit"
-                    disabled={loadingAI || !userPrompt.trim()}
+                    disabled={loadingSuggestion || !userPrompt.trim()}
                     className="w-full flex items-center justify-center space-x-2 bg-white text-black py-3.5 text-[10px] uppercase tracking-[0.2em] font-sans font-bold hover:bg-black hover:text-white border border-white disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black transition-all"
-                    id="ai-analyze-submit"
+                    id="mood-suggest-submit"
                   >
-                    <Sparkles className={`h-3.5 w-3.5 ${loadingAI ? 'animate-spin' : ''}`} />
-                    <span>{loadingAI ? 'AI ĐANG PHÂN TÍCH...' : 'PHÂN TÍCH KHỚP VÉ'}</span>
+                    <Sparkles className={`h-3.5 w-3.5 ${loadingSuggestion ? 'animate-spin' : ''}`} />
+                    <span>{loadingSuggestion ? 'ĐANG GỢI Ý...' : 'GỢI Ý KHỚP VÉ'}</span>
                   </button>
                 </form>
 
                 <div className="text-[9px] text-neutral-600 flex items-center gap-1.5 justify-center font-sans uppercase tracking-wider">
                   <HelpCircle className="h-3 w-3" />
-                  <span>Interactive Neural Cinematic Engine</span>
+                  <span>CinePremier Mood Recommendation</span>
                 </div>
               </div>
             </div>
@@ -512,7 +671,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 </div>
 
                 <div className="flex items-center justify-between text-[9px] uppercase tracking-wide text-neutral-500 pt-3 border-t border-white/5 mt-3">
-                  <span>AI DESIRE: 96%</span>
+                  <span>MỨC QUAN TÂM: 96%</span>
                   <span className="text-white hover:underline underline-offset-4">XEM TÓM TẮT →</span>
                 </div>
               </div>
