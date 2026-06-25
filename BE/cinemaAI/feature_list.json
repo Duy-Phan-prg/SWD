@@ -1,0 +1,167 @@
+{
+  "project": "CinemaAI",
+  "updatedAt": "2026-06-25T12:15:00+07:00",
+  "statusValues": ["done", "pending", "blocked"],
+  "features": [
+    {
+      "id": "HARNESS-001",
+      "name": "Repository Harness Engineering baseline",
+      "status": "done",
+      "scope": ["AGENTS.md", "architecture.md", "api-contract.md", "domain-rules.md", "init.ps1", "progress.md", "feature_list.json"],
+      "outOfScope": ["Product feature implementation", "Database schema changes"],
+      "verification": [".\\mvnw.cmd -DskipTests package"],
+      "evidence": ["Build passed on 2026-06-25", "Harness files created from current source"],
+      "nextAction": "Keep documents synchronized with code changes"
+    },
+    {
+      "id": "FOUNDATION-001",
+      "name": "Shared API foundation, error envelope, logging and OpenAPI",
+      "status": "done",
+      "scope": ["ApiResponse", "ErrorResponse", "GlobalExceptionHandler", "filters", "OpenAPI"],
+      "outOfScope": ["Production observability backend"],
+      "verification": ["FoundationIntegrationTests", "GlobalExceptionHandlerTests"],
+      "evidence": ["Relevant test suites passed in 2026-06-25 full run"],
+      "nextAction": "Add explicit OpenAPI error schemas and metrics dashboards"
+    },
+    {
+      "id": "AUTH-001",
+      "name": "JWT authentication, registration, verification, refresh and password reset",
+      "status": "done",
+      "scope": ["AuthController", "AuthService", "JWT security", "user self-service"],
+      "outOfScope": ["MFA", "first-login staff password policy"],
+      "verification": ["AuthIntegrationTests"],
+      "evidence": ["AuthIntegrationTests passed on 2026-06-25"],
+      "nextAction": "Unify OTP expiry policy and refresh endpoint inventory tests"
+    },
+    {
+      "id": "CATALOG-001",
+      "name": "Movie, genre and actor catalog",
+      "status": "done",
+      "scope": ["Public search/detail", "Admin CRUD", "movie-actor/genre mapping"],
+      "outOfScope": ["External movie metadata ingestion"],
+      "verification": ["MovieIntegrationTests", "ActorIntegrationTests"],
+      "evidence": ["Integration tests passed on 2026-06-25"],
+      "nextAction": "Fix stale MovieCatalogEndpointInventoryTests"
+    },
+    {
+      "id": "CINEMA-001",
+      "name": "Single cinema, room and seat management",
+      "status": "pending",
+      "scope": ["Cinema", "room", "seat layout", "couple-seat rules"],
+      "outOfScope": ["Multi-cinema support"],
+      "verification": ["CinemaShowtimeIntegrationTests"],
+      "evidence": ["Implementation exists", "CinemaShowtimeIntegrationTests had one failure on 2026-06-25"],
+      "nextAction": "Diagnose and fix the failing cinema/showtime assertion"
+    },
+    {
+      "id": "SHOWTIME-001",
+      "name": "Showtime scheduling, overlap validation and cancellation handling",
+      "status": "pending",
+      "scope": ["Create/update/bulk/status", "seat map", "scheduler", "booking side effects"],
+      "outOfScope": ["Realtime seat WebSocket"],
+      "verification": ["CinemaShowtimeIntegrationTests", "CinemaShowtimeEndpointInventoryTests"],
+      "evidence": ["Implementation exists", "Both verification areas are not fully green"],
+      "nextAction": "Fix integration failure and update inventory tests for consolidated controllers"
+    },
+    {
+      "id": "BOOKING-001",
+      "name": "Seat hold, booking, food selection and ticket QR",
+      "status": "done",
+      "scope": ["10-minute hold", "booking creation", "food", "QR", "expiry cleanup"],
+      "outOfScope": ["Database-level concurrency guarantee", "Realtime broadcast"],
+      "verification": ["BookingIntegrationTests"],
+      "evidence": ["BookingIntegrationTests passed on 2026-06-25"],
+      "nextAction": "Add pessimistic/unique locking and concurrent hold tests"
+    },
+    {
+      "id": "PAYMENT-001",
+      "name": "VNPay and mock payment flow",
+      "status": "done",
+      "scope": ["Payment creation", "return/IPN", "mock payment", "booking payment lookup"],
+      "outOfScope": ["Automated VNPay refund API", "Production mock-payment exposure"],
+      "verification": ["PaymentIntegrationTests"],
+      "evidence": ["PaymentIntegrationTests passed on 2026-06-25"],
+      "nextAction": "Fix stale PaymentEndpointInventoryTests and disable mock payment in production"
+    },
+    {
+      "id": "TICKET-001",
+      "name": "Ticket pricing rules, age validation and ticket combos",
+      "status": "pending",
+      "scope": ["Pricing rule CRUD", "price validation", "ticket combos", "age/rating rules"],
+      "outOfScope": ["Promotion engine"],
+      "verification": ["AdminTicketPricingIntegrationTests", "Full application test startup"],
+      "evidence": ["AdminTicketPricingIntegrationTests passed", "Schema cleanup fails on H2 in other contexts"],
+      "nextAction": "Replace TicketPricingSchemaCleanup with portable/versioned migration"
+    },
+    {
+      "id": "STAFF-001",
+      "name": "Staff/Admin ticket check-in",
+      "status": "done",
+      "scope": ["QR check-in", "booking-id admin check-in", "PAID to USED transition"],
+      "outOfScope": ["Combo pickup confirmation", "Staff shift management"],
+      "verification": ["BookingIntegrationTests", "Staff controller contract"],
+      "evidence": ["Service and endpoints implemented; booking integration passed"],
+      "nextAction": "Add dedicated role/security integration tests"
+    },
+    {
+      "id": "ENGAGEMENT-001",
+      "name": "Wishlist, review, loyalty, wallet and notifications",
+      "status": "pending",
+      "scope": ["Customer engagement APIs", "review moderation", "loyalty/wallet side effects"],
+      "outOfScope": ["Realtime notifications", "Full loyalty refund ledger"],
+      "verification": ["No complete dedicated end-to-end suite identified"],
+      "evidence": ["Controllers/services/entities exist"],
+      "nextAction": "Add end-to-end tests for review eligibility, loyalty redeem and refund ledger"
+    },
+    {
+      "id": "RECOMMENDATION-001",
+      "name": "Hybrid content-based recommendation",
+      "status": "done",
+      "scope": ["Signals", "preference refresh", "movie/favorite actor recommendations", "admin debug"],
+      "outOfScope": ["External ML model serving"],
+      "verification": ["RecommendationIntegrationTests"],
+      "evidence": ["RecommendationIntegrationTests passed on 2026-06-25"],
+      "nextAction": "Add ranking quality fixtures and cold-start tests"
+    },
+    {
+      "id": "REPORT-001",
+      "name": "Revenue, top movies and occupancy reports",
+      "status": "pending",
+      "scope": ["Admin report endpoints and repository projections"],
+      "outOfScope": ["Top combos", "BI export"],
+      "verification": ["No dedicated report integration suite identified"],
+      "evidence": ["Report controller/service/repository queries exist"],
+      "nextAction": "Add date-range and status-filter integration tests"
+    },
+    {
+      "id": "MIGRATION-001",
+      "name": "Executable database migrations as schema source of truth",
+      "status": "blocked",
+      "scope": ["Flyway V1-V5", "MySQL schema", "startup migration"],
+      "outOfScope": ["Production data migration without backup/approval"],
+      "verification": [".\\init.ps1 -Migrate"],
+      "evidence": ["Migration files exist", "flyway-core missing", "spring.flyway.enabled=false", "ddl-auto=update active"],
+      "nextAction": "Add Flyway runtime, reconcile baseline schema, validate on disposable MySQL"
+    },
+    {
+      "id": "QA-001",
+      "name": "Green full automated test suite",
+      "status": "blocked",
+      "scope": ["Integration tests", "endpoint inventory tests", "H2 compatibility"],
+      "outOfScope": ["Ignoring or deleting failing tests"],
+      "verification": [".\\mvnw.cmd test"],
+      "evidence": ["Full suite failed on 2026-06-25 due stale controller paths, one cinema assertion, and MySQL-specific cleanup on H2"],
+      "nextAction": "Update inventory tests, fix H2 cleanup, diagnose cinema failure, rerun full suite"
+    },
+    {
+      "id": "REALTIME-001",
+      "name": "Realtime seat and notification updates",
+      "status": "pending",
+      "scope": ["WebSocket topics", "seat status broadcast", "notification push"],
+      "outOfScope": ["Core REST booking flow"],
+      "verification": ["WebSocket integration tests"],
+      "evidence": ["WebSocket dependency exists but no completed realtime flow identified"],
+      "nextAction": "Define event contract and implement after booking concurrency is safe"
+    }
+  ]
+}
