@@ -129,6 +129,12 @@ export const useAuthStore = create((set, get) => ({
       navigate?.('/setup-password');
       return;
     }
-    navigate?.(userData.role === 'admin' ? '/admin/overview' : redirectPath || '/');
+    if (userData.role === 'admin') {
+      navigate?.('/admin/overview');
+    } else if (userData.role === 'staff') {
+      navigate?.('/staff');
+    } else {
+      navigate?.(redirectPath || '/');
+    }
   }
 }));

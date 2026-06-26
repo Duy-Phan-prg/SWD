@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { expireAuthSession, getStoredAuth, normalizeUser } from '../../services/authService';
 import { userService } from '../../services/userService';
 import { bookingService } from '../../services/bookingService';
+import { loyaltyService } from '../../services/loyaltyService';
 import {
   MAX_NAME_LENGTH,
   NAME_VALIDATION_MESSAGE,
@@ -56,6 +57,7 @@ export default function ProfileView() {
   const [profileDateOfBirth, setProfileDateOfBirth] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [recentBookings, setRecentBookings] = useState([]);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   // Settings - Payment card states
@@ -99,14 +101,17 @@ export default function ProfileView() {
     setIsProfileLoading(true);
     Promise.all([
       userService.getMyProfile(accessToken),
-      bookingService.getMyBookings(accessToken)
+      bookingService.getMyBookings(accessToken),
+      loyaltyService.getMyLoyalty(accessToken).catch(() => null)
     ])
-      .then(([profile, bookings]) => {
+      .then(([profile, bookings, loyalty]) => {
         if (cancelled) return;
         const nextUser = normalizeUser(profile, profile.roles || currentUser?.roles || []);
         localStorage.setItem('cinepremier_auth_user', JSON.stringify(nextUser));
         onProfileUpdated(nextUser);
-        setRecentBookings(Array.isArray(bookings) ? bookings : []);
+        const bookingList = Array.isArray(bookings) ? bookings : (bookings?.items ?? bookings?.content ?? []);
+        setRecentBookings(bookingList);
+        setLoyaltyPoints(Number(loyalty?.points ?? 0));
       })
       .catch((error) => {
         if (!cancelled) showToast(error.message || 'Không thể tải dữ liệu hồ sơ từ hệ thống.');
@@ -536,7 +541,7 @@ export default function ProfileView() {
                         <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
                           <Flame className="h-3 w-3 text-neutral-500" /> CinePoints
                         </span>
-                        <span className="text-lg font-mono font-bold text-white mt-1">2,450</span>
+                        <span className="text-lg font-mono font-bold text-white mt-1">{loyaltyPoints.toLocaleString()}</span>
                       </div>
 
                       <div className="border border-white/5 bg-black/60 p-3 flex flex-col justify-center items-start">

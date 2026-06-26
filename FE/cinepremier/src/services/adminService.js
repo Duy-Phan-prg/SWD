@@ -188,5 +188,23 @@ export const adminService = {
     method: 'PUT',
     token,
     body: payload
+  }),
+
+  // Reports
+  getRevenueReport: (token, params = {}) => request(`/api/v1/admin/reports/revenue${buildQueryString(params)}`, { token }),
+  getTopMovies: (token, params = {}) => request(`/api/v1/admin/reports/top-movies${buildQueryString(params)}`, { token }),
+  getRoomOccupancy: (token, params = {}) => request(`/api/v1/admin/reports/occupancy${buildQueryString(params)}`, { token }),
+
+  // Bookings / giao dịch
+  getAdminBookings: (token, params = {}) => request(`/api/v1/admin/bookings${buildQueryString(params)}`, { token }),
+  getAdminBooking: (token, bookingId) => request(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}`, { token }),
+  markBookingRefunded: (token, bookingId) => request(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}/mark-refunded`, {
+    method: 'POST',
+    token
+  }),
+  requestBookingRefund: (token, bookingId, reason) => request(`/api/v1/admin/bookings/${encodeURIComponent(bookingId)}/refund-request`, {
+    method: 'POST',
+    token,
+    body: { reason }
   })
 };
