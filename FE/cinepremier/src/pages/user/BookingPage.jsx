@@ -171,7 +171,9 @@ export default function BookingView() {
     setIsLoadingShowtimes(true);
     bookingService.getShowtimes({ movieId: Number(movieId) })
       .then(data => {
-        const list = sortShowtimes(Array.isArray(data) ? data : []);
+        // BE trả PageResponse { items, page, ... } — không phải mảng thuần.
+        const rawList = Array.isArray(data) ? data : (data?.items ?? data?.content ?? []);
+        const list = sortShowtimes(rawList);
         setShowtimesList(list);
         if (list.length > 0) {
           const first = list[0];
