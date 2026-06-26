@@ -30,7 +30,7 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
                 Cine<span className="font-serif italic font-light text-purple-300">Premier</span>
               </span>
             </div>
-            <p className="max-w-sm text-sm leading-7 text-neutral-300 font-sans font-normal">
+            <p className="max-w-sm text-[10px] leading-6 text-neutral-300 font-sans font-normal">
               Trải nghiệm chiếu bóng chuẩn mực với hệ thống đặt vé, phòng chiếu IMAX và lịch chiếu được tối ưu cho từng suất phim.
             </p>
             {cinema && (
@@ -112,7 +112,7 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
           {/* Column 4: Newsletter sign-up */}
           <div className="space-y-5">
             <h3 className="border-l-2 border-purple-400 pl-3 text-sm font-sans font-black uppercase tracking-[0.22em] text-white">THƯ CHIÊU ĐÃI VIP</h3>
-            <p className="text-sm text-neutral-300 font-sans font-normal leading-7">Nhập email để nhận thư thông cáo về điện ảnh độc sắc và các đặc quyền voucher rạp mật.</p>
+            <p className="text-[10px] text-neutral-300 font-sans font-normal leading-6">Nhập email để nhận thư thông cáo về điện ảnh độc sắc và các đặc quyền voucher rạp mật.</p>
 
             {subscribed ? (
               <div className="border border-emerald-400/30 bg-emerald-950/20 p-3 text-xs uppercase tracking-wider text-emerald-200">
@@ -141,7 +141,7 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
         </div>
 
         {/* Bottom copyright barrier */}
-        <div className="mt-16 border-t border-purple-500/20 pt-8 flex flex-col md:flex-row items-center justify-between text-[15px] uppercase tracking-[0.16em] text-neutral-500">
+        <div className="mt-16 border-t border-purple-500/20 pt-8 flex flex-col md:flex-row items-center justify-between text-[10px] uppercase tracking-[0.16em] text-neutral-500">
           <p>© 2026 CINEPREMIER STUDIOS. ALL RIGHTS RESERVED.</p>
           <div className="mt-4 md:mt-0 flex space-x-4">
             <span>Powered by CinePremier Booking Engine</span>

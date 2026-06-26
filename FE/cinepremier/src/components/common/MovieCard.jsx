@@ -20,7 +20,7 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
       id={`movie-${movie.id}`}
     >
       {/* Poster Media Box */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 rounded-none">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-950 rounded-none">
         <img
           src={movie.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10'}
           alt={movie.title}
@@ -113,7 +113,7 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
           >
             {movie.title}
           </h3>
-          <p className="mt-1 text-[10px] font-sans text-neutral-300 font-bold uppercase tracking-[0.15em] truncate">
+          <p className="mt-1 text-[10px] font-sans text-white font-bold uppercase tracking-[0.15em] truncate">
             {movie.englishTitle}
           </p>
         </div>
@@ -122,12 +122,12 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
           {/* Genre elements */}
           <div className="flex flex-wrap gap-1">
             {movie.genre.slice(0, 2).map((g) => (
-              <span key={g} className="border border-white/10 px-2 py-0.5 text-[9px] text-neutral-400 font-sans tracking-wide">
+              <span key={g} className="border border-white/30 bg-white/10 px-2 py-0.5 text-[9px] text-white font-sans font-bold tracking-wide">
                 {g}
               </span>
             ))}
           </div>
-          <span className="text-[10px] text-neutral-500 font-sans tracking-tight">
+          <span className="text-[10px] text-white font-sans tracking-tight">
             {movie.duration} min
           </span>
         </div>

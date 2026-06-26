@@ -13,6 +13,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
   max-width: 100%;
   overflow-x: clip;
+  font-size: 18px;
 }
 
 body {

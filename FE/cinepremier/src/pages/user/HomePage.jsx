@@ -263,34 +263,36 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
         <div className="absolute left-1/2 top-1/3 h-[900px] w-[900px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[150px]" />
       </div>
 
-      <section className="relative max-w-5xl mx-auto mt-10 overflow-hidden rounded-lg bg-black">
-        <div className="relative w-full h-[300px]">
-          {banners.map((banner, index) => (
-            <img
-              key={index}
-              src={banner}
-              className={`absolute inset-0 w-full h-full object-fill transition-transform duration-700 ${
-                index === currentIndex 
-                  ? 'translate-x-0' 
-                  : index < currentIndex 
-                    ? '-translate-x-full' 
-                    : 'translate-x-full'
-              }`}
-              alt={`Banner ${index + 1}`}
-            />
-          ))}
-        </div>
-
+      <div className="relative mx-auto max-w-5xl mt-10 mb-4 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
         <button
           onClick={() => {
             setCurrentIndex((prev) =>
               prev === 0 ? banners.length - 1 : prev - 1
             );
           }}
-          className="absolute left-5 top-1/2 -translate-y-1/2 z-10 text-white text-5xl border-none outline-none bg-transparent hover:text-gray-300 focus:outline-none"
+          className="absolute left-0 top-1/2 -translate-y-1/2 -ml-8 sm:-ml-12 z-20 text-white hover:text-gray-300 focus:outline-none"
         >
-          ‹
+          <ChevronLeft className="h-8 w-8" />
         </button>
+
+        <section className="relative w-full overflow-hidden rounded-lg bg-black">
+          <div className="relative w-full h-[300px]">
+            {banners.map((banner, index) => (
+              <img
+                key={index}
+                src={banner}
+                className={`absolute inset-0 w-full h-full object-fill transition-transform duration-700 ${
+                  index === currentIndex 
+                    ? 'translate-x-0' 
+                    : index < currentIndex 
+                      ? '-translate-x-full' 
+                      : 'translate-x-full'
+                }`}
+                alt={`Banner ${index + 1}`}
+              />
+            ))}
+          </div>
+        </section>
 
         <button
           onClick={() => {
@@ -298,37 +300,37 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
               prev === banners.length - 1 ? 0 : prev + 1
             );
           }}
-          className="absolute right-5 top-1/2 -translate-y-1/2 z-10 text-white text-5xl border-none outline-none bg-transparent hover:text-gray-300 focus:outline-none"
+          className="absolute right-0 top-1/2 -translate-y-1/2 -mr-8 sm:-mr-12 z-20 text-white hover:text-gray-300 focus:outline-none"
         >
-          ›
+          <ChevronRight className="h-8 w-8" />
         </button>
-      </section>
+      </div>
 
       {/* Lighting effect between banner and content */}
-      <div className="pointer-events-none relative mx-auto max-w-5xl -mt-40 h-20">
+      <div className="pointer-events-none relative mx-auto max-w-5xl -mt-32 h-20">
         <div className="absolute left-1/2 top-1/2 h-[500px] w-[2000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/40 blur-[600px] -z-10" />
       </div>
 
       {/* 2. NOW PLAYING GRID */}
-      <section className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8" id="now-playing-section">
+      <section className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-0" id="now-playing-section">
         <div className="flex flex-col items-center text-center gap-3 pb-4 mb-10 relative">
           <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
           <div>
-            <h2 className="text-xl sm:text-2xl font-sans uppercase tracking-wider font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent">
+            <h2 className="text-3xl sm:text-4xl font-sans uppercase tracking-wider font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent">
                 Phim Đang Chiếu
               </h2>
-            <p className="text-[11px] text-neutral-200 uppercase tracking-widest mt-1.5">Các tác phẩm độc sắc kích hoạt quang phổ nghệ thuật điện ảnh</p>
+            <p className="text-base text-neutral-200 uppercase tracking-widest mt-1.5">Các tác phẩm độc sắc kích hoạt quang phổ nghệ thuật điện ảnh</p>
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative -mx-4 sm:-mx-6 lg:-mx-8">
           <button
             type="button"
             onClick={() => scrollNowPlaying(-1)}
             aria-label="Phim trước"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 -ml-2 sm:-ml-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white hover:bg-white hover:text-black transition"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 -ml-8 sm:-ml-12 text-white hover:text-gray-300 transition"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-8 w-8" />
           </button>
 
           <div
@@ -337,7 +339,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             id="now-playing-grid"
           >
             {nowPlaying.map((movie) => (
-              <div key={movie.id} className="snap-start shrink-0 w-[180px] sm:w-[220px] lg:w-[260px]">
+              <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[280px]">
                 <MovieCard
                   movie={movie}
                   onSelect={onSelectMovie}
@@ -353,9 +355,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             type="button"
             onClick={() => scrollNowPlaying(1)}
             aria-label="Phim sau"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 -mr-2 sm:-mr-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white hover:bg-white hover:text-black transition"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 -mr-8 sm:-mr-12 text-white hover:text-gray-300 transition"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-8 w-8" />
           </button>
         </div>
 
@@ -370,24 +372,24 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       </section>
 
       {/* 4. UPCOMING RELEASES */}
-      <section className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8" id="upcoming-section">
+      <section className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-0" id="upcoming-section">
         <div className="flex flex-col items-center text-center gap-3 pb-4 mb-10 relative">
           <div>
-            <h2 className="text-xl sm:text-2xl font-sans uppercase tracking-wider font-bold bg-gradient-to-r from-purple-300 via-white to-purple-300 bg-clip-text text-transparent">
+            <h2 className="text-3xl sm:text-4xl font-sans uppercase tracking-wider font-bold bg-gradient-to-r from-purple-300 via-white to-purple-300 bg-clip-text text-transparent">
               Phim Sắp Chiếu VIP
             </h2>
-            <p className="text-[11px] text-neutral-200 uppercase tracking-widest mt-1.5">Lưu trước thời khắc khởi chiếu và đặt chỗ tiên phong</p>
+            <p className="text-base text-neutral-200 uppercase tracking-widest mt-1.5">Lưu trước thời khắc khởi chiếu và đặt chỗ tiên phong</p>
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative -mx-4 sm:-mx-6 lg:-mx-8">
           <button
             type="button"
             onClick={() => scrollUpcoming(-1)}
             aria-label="Phim trước"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 -ml-2 sm:-ml-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white hover:bg-white hover:text-black transition"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 -ml-8 sm:-ml-12 text-white hover:text-gray-300 transition"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-8 w-8" />
           </button>
 
           <div
@@ -396,7 +398,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             id="upcoming-grid"
           >
           {upcoming.map((movie) => (
-            <div key={movie.id} className="snap-start shrink-0 w-[180px] sm:w-[220px] lg:w-[260px]">
+            <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[280px]">
               <MovieCard
                 movie={movie}
                 onSelect={onSelectMovie}
@@ -412,9 +414,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             type="button"
             onClick={() => scrollUpcoming(1)}
             aria-label="Phim sau"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 -mr-2 sm:-mr-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white hover:bg-white hover:text-black transition"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 -mr-8 sm:-mr-12 text-white hover:text-gray-300 transition"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-8 w-8" />
           </button>
         </div>
 
@@ -428,9 +430,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
         </div>
       </section>
       {/* 3. PERSONALIZED HIGHLIGHTS */}
-      <section className="bg-gradient-to-b from-purple-950/20 via-black to-purple-950/20 border-y border-purple-500/20 py-16 px-4 sm:px-6 lg:px-8 relative" id="personalized-highlights-section">
+      <section className="bg-gradient-to-b from-purple-950/20 via-black to-purple-950/20 border-y border-purple-500/20 py-16 relative" id="personalized-highlights-section">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.1),transparent_50%)]" />
-        <div className="mx-auto max-w-6xl relative z-10">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
             {/* Left Box: Mood Selectors & Recommendations */}
@@ -440,14 +442,14 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 <span>GỢI Ý THEO TÂM TRẠNG</span>
               </div>
 
-              <h2 className="text-3xl sm:text-5xl font-serif font-light text-white tracking-wide leading-tight">
+              <h2 className="text-5xl sm:text-6xl font-serif font-light text-white tracking-wide leading-tight">
                 Gợi Ý Khớp Nhịp Tim <br />
                 <span className="font-serif italic text-neutral-200">
                   CinePremier Mood Selector
                 </span>
               </h2>
 
-              <p className="text-sm text-neutral-200 leading-relaxed max-w-xl font-sans">
+              <p className="text-lg text-neutral-200 leading-relaxed max-w-xl font-sans">
                 Chọn tâm trạng nghệ thuật hoặc nhập cảm giác xem phim mong muốn. CinePremier sẽ đề xuất một lựa chọn phù hợp từ danh sách phim hiện có.
               </p>
 
@@ -620,10 +622,10 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
 
       {/* 5. DISCOVER GENRES ARTWORK */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8" id="genres-section">
+      <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8" id="genres-section">
         <div className="relative pb-4 mb-10">
           <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-          <h2 className="text-2xl font-serif uppercase tracking-wider font-light bg-gradient-to-r from-purple-300 via-white to-purple-300 bg-clip-text text-transparent">
+          <h2 className="text-4xl font-serif uppercase tracking-wider font-light bg-gradient-to-r from-purple-300 via-white to-purple-300 bg-clip-text text-transparent">
             Khám Phá Vũ Trụ Thể Loại
           </h2>
         </div>

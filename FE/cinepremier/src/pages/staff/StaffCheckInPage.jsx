@@ -39,7 +39,7 @@ const getBookingStatusMeta = (status = '') => {
   if (normalized === 'PAID') {
     return {
       label: 'Sẵn sàng check-in',
-      className: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
+      className: 'border-purple-400/40 bg-purple-400/10 text-purple-300',
     };
   }
   if (normalized === 'USED') {
@@ -78,7 +78,7 @@ function ResultCard({ result }) {
   }
 
   const Icon = result.type === 'success' ? CheckCircle2 : result.type === 'warning' ? AlertCircle : XCircle;
-  const color = result.type === 'success' ? 'text-emerald-300' : result.type === 'warning' ? 'text-amber-300' : 'text-rose-300';
+  const color = result.type === 'success' ? 'text-emerald-300' : result.type === 'warning' ? 'text-purple-300' : 'text-rose-300';
 
   return (
     <motion.div
@@ -349,7 +349,7 @@ export default function StaffCheckInPage() {
                 <span className="flex items-center gap-1.5 border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-300">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" /> API thật
                 </span>
-                <span className="border border-amber-400/20 bg-amber-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-amber-300">
+                <span className="border border-purple-400/20 bg-purple-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-purple-300">
                   STAFF OPERATIONS
                 </span>
               </div>
@@ -368,7 +368,7 @@ export default function StaffCheckInPage() {
             <p className="mt-1 text-2xl font-black text-white">{stats.checked}/{stats.total}</p>
             <div className="mt-4 grid grid-cols-3 gap-2">
               <div className="border border-emerald-400/20 bg-emerald-400/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã vào</p></div>
-              <div className="border border-amber-400/20 bg-amber-500/10 p-2.5"><p className="text-lg font-black text-amber-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Chờ vào</p></div>
+              <div className="border border-purple-400/20 bg-purple-500/10 p-2.5"><p className="text-lg font-black text-purple-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Chờ vào</p></div>
               <div className="border border-neutral-800 bg-black p-2.5"><p className="text-lg font-black text-white">{stats.total}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã tra</p></div>
             </div>
           </motion.div>
@@ -412,7 +412,7 @@ export default function StaffCheckInPage() {
 
               <div className="space-y-4">
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-amber-400">Tra cứu thủ công</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400">Tra cứu thủ công</p>
                   <h3 className="mt-2 text-xl font-black uppercase text-white">Tìm theo mã booking</h3>
                   <p className="mt-2 text-xs leading-6 text-neutral-500">Dùng khi khách đọc mã booking nhưng chưa mở được QR.</p>
                 </div>
@@ -429,7 +429,7 @@ export default function StaffCheckInPage() {
                   type="button"
                   onClick={() => lookupBooking()}
                   disabled={isLookingUp || !bookingCode.trim()}
-                  className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-amber-400 hover:text-white disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-purple-400 hover:text-white disabled:opacity-50"
                 >
                   {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tra cứu booking
                 </button>
@@ -494,7 +494,7 @@ export default function StaffCheckInPage() {
         <section className="border border-neutral-800 bg-[#070707] p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-400">Quầy bắp nước</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400">Quầy bắp nước</p>
               <h3 className="mt-1 text-lg font-black uppercase text-white">Trạng thái món/combo</h3>
               <p className="mt-2 text-xs leading-6 text-neutral-500">
                 STAFF có thể đổi nhanh trạng thái khi món hết đột ngột. Số lượng tồn sẽ tự giảm khi khách tạo booking có bắp nước.
@@ -504,7 +504,7 @@ export default function StaffCheckInPage() {
               <span className="border border-neutral-700 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300">
                 {foodStats.active}/{foodStats.total} đang bán
               </span>
-              <span className="border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300">
+              <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
                 {foodStats.outOfStock} hết hàng
               </span>
               <button
@@ -533,7 +533,7 @@ export default function StaffCheckInPage() {
                       <p className="truncate text-sm font-black uppercase text-white">{food.name}</p>
                       <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-neutral-500">{food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
                     </div>
-                    <span className={`px-2 py-1 text-[9px] font-black uppercase ${stock === 0 ? 'bg-rose-500/10 text-rose-300' : stock <= 5 ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-400/10 text-emerald-300'}`}>
+                    <span className={`px-2 py-1 text-[9px] font-black uppercase ${stock === 0 ? 'bg-rose-500/10 text-rose-300' : stock <= 5 ? 'bg-purple-500/10 text-purple-300' : 'bg-emerald-400/10 text-emerald-300'}`}>
                       Tồn {stock.toLocaleString('vi-VN')}
                     </span>
                   </div>
@@ -541,7 +541,7 @@ export default function StaffCheckInPage() {
                     value={food.status || 'ACTIVE'}
                     onChange={(event) => updateStaffFoodStatus(food, event.target.value)}
                     disabled={savingStaffFoodKey === foodKey}
-                    className="mt-4 w-full border border-neutral-800 bg-[#070707] px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-emerald-400 disabled:opacity-50"
+                    className="mt-4 w-full border border-neutral-800 bg-[#070707] px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-purple-400 disabled:opacity-50"
                   >
                     <option value="ACTIVE">ACTIVE - Đang bán</option>
                     <option value="OUT_OF_STOCK">OUT_OF_STOCK - Hết hàng</option>
@@ -562,7 +562,7 @@ export default function StaffCheckInPage() {
                 type="button"
                 disabled={safeStaffFoodPage <= 1}
                 onClick={() => setStaffFoodPage((page) => Math.max(1, page - 1))}
-                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
               >
                 <ChevronLeft className="h-3.5 w-3.5" /> Trước
               </button>
@@ -570,7 +570,7 @@ export default function StaffCheckInPage() {
                 type="button"
                 disabled={safeStaffFoodPage >= staffFoodTotalPages}
                 onClick={() => setStaffFoodPage((page) => Math.min(staffFoodTotalPages, page + 1))}
-                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
               >
                 Sau <ChevronRight className="h-3.5 w-3.5" />
               </button>

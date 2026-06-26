@@ -125,7 +125,7 @@ export default function AdminOverviewPanel({ ctx }) {
                     <div className="col-span-1 lg:col-span-2 border border-neutral-850 p-5 bg-gradient-to-b from-[#0a0a0a] to-[#030303] space-y-4">
                       <div className="flex justify-between items-center border-b border-zinc-900 pb-3">
                         <div className="space-y-0.5">
-                          <span className="text-[8px] font-mono tracking-widest text-amber-500 uppercase font-black">DOANH THU</span>
+                          <span className="text-[8px] font-mono tracking-widest text-purple-500 uppercase font-black">DOANH THU</span>
                           <h3 className="text-xs font-sans font-black uppercase tracking-wider text-neutral-300">Tổng quan doanh thu</h3>
                         </div>
                       </div>
@@ -154,7 +154,7 @@ export default function AdminOverviewPanel({ ctx }) {
                   {/* Server Audit logs */}
                   <div className="border border-neutral-850 bg-black p-5 space-y-3 font-mono text-xs">
                     <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
-                      <span className="text-[9.5px] font-black text-amber-500 tracking-widest uppercase">NHẬT KÝ HỆ THỐNG</span>
+                      <span className="text-[9.5px] font-black text-purple-500 tracking-widest uppercase">NHẬT KÝ HỆ THỐNG</span>
                     </div>
                     <div className="flex items-center justify-center py-12 text-neutral-500 text-sm">
                       Nhật ký hệ thống sẽ được hiển thị khi có hoạt động

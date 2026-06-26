@@ -401,21 +401,21 @@ export default function AdminRoomsPanel({ ctx }) {
     );
   };
 
-  const fieldClass = 'w-full border border-white/10 bg-black px-3 py-2.5 text-sm font-bold text-white outline-none transition focus:border-amber-500/60';
+  const fieldClass = 'w-full border border-white/10 bg-black px-3 py-2.5 text-sm font-bold text-white outline-none transition focus:border-purple-500/60';
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 border border-white/10 bg-gradient-to-r from-[#100d04] to-black p-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-500">Quản lý rạp</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-purple-500">Quản lý rạp</p>
           <h2 className="mt-1 text-xl font-black uppercase tracking-wider text-white">Phòng chiếu & ghế</h2>
           <p className="mt-1 text-xs text-neutral-500">Tạo phòng, thiết lập sơ đồ và quản lý tình trạng từng ghế.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => loadRooms()} className="flex items-center gap-2 border border-white/10 px-4 py-2 text-xs font-black uppercase text-neutral-300 hover:border-amber-500/50 hover:text-white">
+          <button onClick={() => loadRooms()} className="flex items-center gap-2 border border-white/10 px-4 py-2 text-xs font-black uppercase text-neutral-300 hover:border-purple-500/50 hover:text-white">
             <RefreshCw className="h-3.5 w-3.5" /> Làm mới
           </button>
-          <button onClick={startCreateRoom} className="flex items-center gap-2 bg-amber-500 px-4 py-2 text-xs font-black uppercase text-black hover:bg-amber-400">
+          <button onClick={startCreateRoom} className="flex items-center gap-2 bg-purple-600 px-4 py-2 text-xs font-black uppercase text-white hover:bg-purple-500">
             <Plus className="h-3.5 w-3.5" /> Tạo phòng mới
           </button>
         </div>
@@ -425,13 +425,13 @@ export default function AdminRoomsPanel({ ctx }) {
         <aside className="border border-white/10 bg-black/60 p-3">
           <div className="mb-3 flex items-center justify-between px-1">
             <span className="text-xs font-black uppercase tracking-widest text-neutral-400">Danh sách phòng</span>
-            <span className="font-mono text-xs text-amber-400">{rooms.length}</span>
+            <span className="font-mono text-xs text-purple-400">{rooms.length}</span>
           </div>
           <div className="space-y-2">
-            {isLoading && <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-amber-500" /></div>}
+            {isLoading && <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-purple-500" /></div>}
             {!isLoading && rooms.length === 0 && <p className="border border-dashed border-white/10 p-5 text-center text-xs text-neutral-500">Chưa có phòng chiếu.</p>}
             {rooms.map((room) => (
-              <button key={room.id} onClick={() => selectRoom(room)} className={`w-full border p-3 text-left transition ${selectedRoomId === room.id ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/10 bg-white/[0.02] hover:border-white/25'}`}>
+              <button key={room.id} onClick={() => selectRoom(room)} className={`w-full border p-3 text-left transition ${selectedRoomId === room.id ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/10 bg-white/[0.02] hover:border-white/25'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-xs font-black uppercase text-white">{room.name}</p>
@@ -452,7 +452,7 @@ export default function AdminRoomsPanel({ ctx }) {
           <section className="border border-white/10 bg-black/60 p-5">
             <div className="mb-5 flex items-center justify-between gap-3 border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
-                <DoorOpen className="h-5 w-5 text-amber-500" />
+                <DoorOpen className="h-5 w-5 text-purple-500" />
                 <div>
                   <h3 className="text-sm font-black uppercase text-white">{selectedRoom ? 'Thông tin phòng chiếu' : 'Tạo phòng chiếu mới'}</h3>
                   <p className="text-xs font-semibold text-neutral-400">Tên phòng được tự động bỏ khoảng trắng thừa và không phân biệt hoa thường khi kiểm tra trùng.</p>
@@ -485,7 +485,7 @@ export default function AdminRoomsPanel({ ctx }) {
               </label>
             </div>
             <div className="mt-5 flex justify-end">
-              <button onClick={saveRoom} disabled={isSaving} className="flex items-center gap-2 bg-white px-5 py-2.5 text-xs font-black uppercase text-black hover:bg-amber-400 disabled:opacity-50">
+              <button onClick={saveRoom} disabled={isSaving} className="flex items-center gap-2 bg-white px-5 py-2.5 text-xs font-black uppercase text-black hover:bg-purple-400 disabled:opacity-50">
                 <Save className="h-3.5 w-3.5" /> {selectedRoom ? 'Lưu thay đổi' : 'Tạo phòng'}
               </button>
             </div>
@@ -599,7 +599,7 @@ export default function AdminRoomsPanel({ ctx }) {
                                         : seat.status === 'UNAVAILABLE'
                                           ? 'border-rose-500/30 bg-rose-500/10 text-rose-400'
                                           : seat.status === 'MAINTENANCE'
-                                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                                            ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
                                             : seat.seatType === 'VIP'
                                               ? 'border-purple-500/40 bg-purple-500/10 text-purple-300'
                                               : seat.seatType === 'COUPLE'
@@ -664,10 +664,10 @@ export default function AdminRoomsPanel({ ctx }) {
 
       {confirmAction && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md border border-amber-500/30 bg-[#090909] p-6 shadow-2xl">
+          <div className="w-full max-w-md border border-purple-500/30 bg-[#090909] p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div className="flex gap-3">
-                <div className="border border-amber-500/30 bg-amber-500/10 p-2 text-amber-400"><AlertTriangle className="h-5 w-5" /></div>
+                <div className="border border-purple-500/30 bg-purple-500/10 p-2 text-purple-400"><AlertTriangle className="h-5 w-5" /></div>
                 <div>
                   <h3 className="text-sm font-black uppercase text-white">{confirmAction.title}</h3>
                   <p className="mt-2 text-xs leading-5 text-neutral-400">{confirmAction.description}</p>
@@ -677,7 +677,7 @@ export default function AdminRoomsPanel({ ctx }) {
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <button onClick={() => setConfirmAction(null)} className="border border-white/10 px-4 py-2 text-[11px] font-black uppercase text-neutral-400 hover:text-white">Quay lại</button>
-              <button onClick={runConfirmedAction} className="bg-amber-500 px-4 py-2 text-[11px] font-black uppercase text-black hover:bg-amber-400">Xác nhận</button>
+              <button onClick={runConfirmedAction} className="bg-purple-600 px-4 py-2 text-[11px] font-black uppercase text-white hover:bg-purple-500">Xác nhận</button>
             </div>
           </div>
         </div>

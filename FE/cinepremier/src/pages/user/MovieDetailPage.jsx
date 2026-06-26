@@ -170,21 +170,11 @@ export default function DetailView() {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-10" />
         <div className="absolute inset-0 bg-black/50 z-0 backdrop-blur-[1px]" />
 
-        {/* Back navigation */}
-        <button
-          onClick={onBack}
-          className="absolute top-6 left-6 z-30 flex items-center space-x-2 border border-white/25 bg-black px-4 py-2.5 text-[10px] uppercase tracking-[0.15em] font-sans text-white hover:bg-white hover:text-black transition-all duration-300"
-          id="detail-back-button"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>QUAY LẠI</span>
-        </button>
-
-        <div className="relative max-w-7xl w-full mx-auto z-20 grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
+        <div className="relative max-w-5xl w-full mx-auto z-20 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           
           {/* Movie Poster Vertical Card */}
-          <div className="md:col-span-3 flex justify-center md:justify-start">
-            <div className="relative w-52 aspect-[2/3] overflow-hidden border border-white/10 shadow-2xl flex-shrink-0 bg-black">
+          <div className="md:col-span-4 flex justify-center md:justify-start">
+            <div className="relative w-72 aspect-[2/3] overflow-hidden border border-white/10 shadow-2xl flex-shrink-0 bg-black">
               <img 
                 src={movie.posterUrl} 
                 alt={movie.title}
@@ -198,14 +188,14 @@ export default function DetailView() {
           </div>
 
           {/* Quick texts and Action indicators */}
-          <div className="md:col-span-9 space-y-4 text-center md:text-left">
+          <div className="md:col-span-8 space-y-4 text-center md:text-left">
             <div className="flex flex-wrap justify-center md:justify-start gap-2">
               {movie.genre.map((gen) => (
-                <span key={gen} className="border border-white/15 bg-black text-neutral-300 font-sans text-[10px] tracking-[0.1em] uppercase px-3 py-1">
+                <span key={gen} className="border border-white/15 bg-black text-white font-sans text-[10px] tracking-[0.1em] uppercase px-3 py-1">
                   {gen}
                 </span>
               ))}
-              <span className="border border-white/10 bg-black text-neutral-400 font-sans text-[10px] tracking-[0.1em] uppercase px-3 py-1 flex items-center gap-1.5">
+              <span className="border border-white/10 bg-black text-white font-sans text-[10px] tracking-[0.1em] uppercase px-3 py-1 flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
                 {movie.duration} MIN
               </span>
@@ -215,12 +205,12 @@ export default function DetailView() {
               <h1 className="text-3xl sm:text-5xl font-serif font-light text-white tracking-wider leading-none uppercase italic">
                 {movie.title}
               </h1>
-              <p className="text-xs sm:text-sm font-sans tracking-[0.2em] text-neutral-400 uppercase pt-1">
+              <p className="text-xs sm:text-sm font-sans tracking-[0.2em] text-white uppercase pt-1">
                 {movie.englishTitle}
               </p>
             </div>
 
-            <p className="text-[10px] text-neutral-500 font-sans uppercase tracking-[0.15em]">
+            <p className="text-[10px] text-white font-sans uppercase tracking-[0.15em]">
               ĐẠO DIỄN: <span className="text-white font-bold">{movie.director}</span> • RA MẮT: {movie.releaseDate}
             </p>
 
@@ -229,7 +219,7 @@ export default function DetailView() {
               {isBookable ? (
                 <button
                   onClick={() => onBook(movie)}
-                  className="border border-white bg-white text-black text-xs font-bold font-sans uppercase tracking-[0.15em] px-8 py-3.5 hover:bg-black hover:text-white transition duration-300"
+                  className="border border-purple-400/70 bg-purple-600 text-white text-xs font-bold font-sans uppercase tracking-[0.15em] px-8 py-3.5 hover:bg-purple-500 hover:border-purple-300 transition duration-300"
                   id="detail-book-now"
                 >
                   XÁC THỰC & ĐẶT VÉ NGAY
@@ -243,7 +233,7 @@ export default function DetailView() {
               <button
                 onClick={() => setShowTrailer(true)}
                 disabled={!trailerUrl}
-                className="border border-white/10 bg-black/40 hover:bg-neutral-900 hover:border-white/35 text-white px-6 py-3.5 text-xs font-sans uppercase tracking-[0.15em] flex items-center gap-2 transition duration-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black/40 disabled:hover:border-white/10"
+                className="border border-purple-400/50 bg-black/40 hover:bg-purple-950/40 hover:border-purple-400/70 text-white px-6 py-3.5 text-xs font-sans uppercase tracking-[0.15em] flex items-center gap-2 transition duration-300 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black/40 disabled:hover:border-purple-400/20"
                 id="detail-trailer-button"
               >
                 <Play className="h-4 w-4 fill-white text-white" />
@@ -263,32 +253,53 @@ export default function DetailView() {
                 <Heart className={`h-4 w-4 ${isWatchlisted ? 'fill-current' : ''}`} />
                 {isWatchlisted ? 'ĐÃ LƯU' : 'LƯU PHIM'}
               </button>
-
+
+              <button
+                type="button"
+                className="border border-purple-400/50 bg-black/40 hover:bg-purple-950/40 hover:border-purple-400/70 text-white px-6 py-3.5 text-xs font-sans uppercase tracking-[0.15em] transition duration-300"
+                id="detail-analysis-button"
+              >
+                PHÂN TÍCH
+              </button>
+
+
             </div>
           </div>
 
         </div>
       </section>
 
+      {/* Back button - outside banner section */}
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
+        <button
+          onClick={onBack}
+          className="flex items-center space-x-2 border border-purple-400/50 bg-black px-4 py-2.5 text-[10px] uppercase tracking-[0.15em] font-sans text-white hover:bg-purple-600 hover:text-white transition-all duration-300"
+          id="detail-back-button"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>QUAY LẠI</span>
+        </button>
+      </div>
+
       {/* 2. MAIN DETAILS GRID */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
           {/* Left Block: Synopsis & Actors representation */}
           <div className="lg:col-span-12 space-y-10">
             <div className="space-y-4">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-neutral-400 border-b border-white/10 pb-2">TÓM TẮT NỘI DUNG</h3>
-              <p className="text-sm text-neutral-300 leading-relaxed font-sans font-light">
+              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">TÓM TẮT NỘI DUNG</h3>
+              <p className="text-sm text-white leading-relaxed font-sans font-light">
                 {movie.synopsis}
               </p>
             </div>
 
             {/* Circular Actors representation block */}
             <div className="space-y-4">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-neutral-400 border-b border-white/10 pb-2">DIỄN VIÊN CHÍNH</h3>
+              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">DIỄN VIÊN CHÍNH</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" id="cast-list">
                 {mainCasts.length === 0 && (
-                  <p className="col-span-full border border-dashed border-white/10 bg-black p-4 text-xs text-neutral-500">
+                  <p className="col-span-full border border-dashed border-white/10 bg-black p-4 text-xs text-white">
                     Chưa chọn diễn viên chính cho phim này.
                   </p>
                 )}
@@ -310,7 +321,7 @@ export default function DetailView() {
                     </div>
                     <div className="min-w-0">
                       <h4 className="text-xs font-sans text-white truncate font-bold">{cast.name}</h4>
-                      <p className="text-[9px] text-neutral-500 uppercase tracking-widest truncate mt-0.5">{cast.role}</p>
+                      <p className="text-[9px] text-white uppercase tracking-widest truncate mt-0.5">{cast.role}</p>
                     </div>
                   </div>
                 ))}
@@ -318,10 +329,10 @@ export default function DetailView() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-neutral-400 border-b border-white/10 pb-2">MỘT SỐ DIỄN VIÊN TRONG PHIM</h3>
+              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">MỘT SỐ DIỄN VIÊN TRONG PHIM</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" id="supporting-cast-list">
                 {supportingCasts.length === 0 && (
-                  <p className="col-span-full border border-dashed border-white/10 bg-black p-4 text-xs text-neutral-500">
+                  <p className="col-span-full border border-dashed border-white/10 bg-black p-4 text-xs text-white">
                     Chưa có diễn viên phụ hoặc tất cả diễn viên đang được đánh dấu là vai chính.
                   </p>
                 )}
@@ -343,7 +354,7 @@ export default function DetailView() {
                     </div>
                     <div className="min-w-0">
                       <h4 className="text-xs font-sans text-white truncate font-bold">{cast.name}</h4>
-                      <p className="text-[9px] text-neutral-500 uppercase tracking-widest truncate mt-0.5">{cast.role}</p>
+                      <p className="text-[9px] text-white uppercase tracking-widest truncate mt-0.5">{cast.role}</p>
                     </div>
                   </div>
                 ))}
@@ -352,13 +363,13 @@ export default function DetailView() {
 
             {/* Action Reviews comment section */}
             <div className="space-y-6">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-neutral-400 border-b border-white/10 pb-2">
+              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">
                 NHẬN XÉT CỦA CINEPHILE ({reviews.length})
               </h3>
 
               {/* Form Comment */}
               <form onSubmit={handleAddReview} className="border border-white/10 bg-black p-5 space-y-4">
-                <span className="text-[10px] font-sans font-medium text-neutral-400 uppercase tracking-[0.15em] block">Viết đánh giá phê bình</span>
+                <span className="text-[10px] font-sans font-medium text-white uppercase tracking-[0.15em] block">Viết đánh giá phê bình</span>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <input
@@ -371,7 +382,7 @@ export default function DetailView() {
                     className="border border-white/10 bg-[#0A0A0A] p-2.5 text-xs text-white placeholder-neutral-700 font-sans focus:outline-none focus:border-white"
                   />
                   <div className="flex items-center space-x-3">
-                    <span className="text-xs uppercase tracking-wider text-neutral-500 font-sans">Độ nồng:</span>
+                    <span className="text-xs uppercase tracking-wider text-white font-sans">Độ nồng:</span>
                     <div className="flex space-x-1.5">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -400,7 +411,7 @@ export default function DetailView() {
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="border border-white bg-white text-black hover:bg-black hover:text-white px-5 py-2 text-[10px] tracking-widest uppercase font-sans font-bold transition"
+                    className="border border-purple-400/70 bg-purple-600 text-white hover:bg-purple-500 px-5 py-2 text-[10px] tracking-widest uppercase font-sans font-bold transition"
                   >
                     GỬI ĐÁNH GIÁ
                   </button>
@@ -435,11 +446,11 @@ export default function DetailView() {
                       </div>
                     </div>
 
-                    <p className="text-neutral-400 text-xs leading-relaxed font-sans font-light pl-11">
+                    <p className="text-neutral-200 text-xs leading-relaxed font-sans font-light pl-11">
                       "{rev.content}"
                     </p>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5 font-sans text-[9px] tracking-wider text-neutral-500 pl-11">
+                    <div className="flex items-center justify-between pt-2 border-t border-white/5 font-sans text-[9px] tracking-wider text-white pl-11">
                       <button
                         onClick={() => handleLikeReview(rev.id)}
                         className={`flex items-center gap-1.5 hover:text-white transition uppercase ${likedReviews[rev.id] ? 'text-white font-bold' : ''}`}
@@ -497,7 +508,7 @@ export default function DetailView() {
             </div>
             
             <div className="p-4 bg-neutral-950 border-t border-white/10">
-              <p className="text-[9px] text-neutral-500 font-sans tracking-[0.25em] uppercase">TRAILER CHÍNH THỨC</p>
+              <p className="text-[9px] text-white font-sans tracking-[0.25em] uppercase">TRAILER CHÍNH THỨC</p>
               <h4 className="text-base font-serif text-white mt-1 italic">{movie.title}: {movie.englishTitle}</h4>
             </div>
 

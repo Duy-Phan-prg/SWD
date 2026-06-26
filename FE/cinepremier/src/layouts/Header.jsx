@@ -64,7 +64,7 @@ export default function Header({
             <span className="font-sans font-black tracking-[0.22em] text-xs sm:text-sm text-white uppercase leading-none group-hover:text-amber-400 transition-colors duration-300">
               CINE<span className="text-amber-400">PREMIER</span>
             </span>
-            <span className="text-[7.5px] font-mono tracking-[0.45em] text-neutral-400 uppercase mt-1 leading-none group-hover:text-neutral-300 transition-colors">
+            <span className="text-[7.5px] font-mono tracking-[0.45em] text-neutral-200 uppercase mt-1 leading-none group-hover:text-neutral-100 transition-colors">
               STUDIOS
             </span>
           </div>
@@ -76,14 +76,14 @@ export default function Header({
           {/* Quick action buttons */}
           <button
             onClick={() => onTabChange('explore')}
-            className="hidden lg:flex h-9 items-center gap-1.5 bg-yellow-400 hover:bg-yellow-300 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-black transition whitespace-nowrap rounded"
+            className="hidden lg:flex h-9 items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-black transition whitespace-nowrap rounded"
             id="btn-book-now"
           >
             <Ticket className="h-3.5 w-3.5" /> ĐẶT VÉ NGAY
           </button>
           <button
             onClick={() => onTabChange('explore')}
-            className="hidden lg:flex h-9 items-center gap-1.5 bg-purple-600 hover:bg-purple-500 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-white transition whitespace-nowrap rounded"
+            className="hidden lg:flex h-9 items-center gap-1.5 bg-purple-700 hover:bg-purple-800 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-white transition whitespace-nowrap rounded"
             id="btn-order-food"
           >
             <Popcorn className="h-3.5 w-3.5" /> ĐẶT BẮP NƯỚC
@@ -91,7 +91,7 @@ export default function Header({
 
           {/* Search Box */}
           <div className="relative hidden xl:block w-40 xl:w-48 h-9 flex items-center">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-200 pointer-events-none" />
             <input
               type="text"
               placeholder="TÌM PHIM..."
@@ -109,21 +109,21 @@ export default function Header({
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="group flex h-10 items-center justify-center gap-2 whitespace-nowrap border border-white/10 bg-black/60 px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] text-neutral-300 transition-all duration-300 hover:border-amber-500/40 hover:bg-black/80 hover:text-white rounded"
+              className="group flex h-10 items-center justify-center gap-2 whitespace-nowrap border border-white/10 bg-black/60 px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] text-neutral-200 transition-all duration-300 hover:border-amber-500/40 hover:bg-black/80 hover:text-white rounded"
               id="location-button"
             >
-              <span className="flex h-6 w-6 items-center justify-center border border-white/10 text-neutral-400">
+              <span className="flex h-6 w-6 items-center justify-center border border-white/10 text-neutral-200">
                 <MapPin className="h-3.5 w-3.5" />
               </span>
               <span className="hidden max-w-[120px] text-left sm:block">
                 <span className="block truncate font-black text-white">
                   {cinema?.name || 'Chưa có rạp'}
                 </span>
-                <span className="mt-0.5 block truncate text-[7px] font-bold tracking-[0.18em] text-neutral-500">
+                <span className="mt-0.5 block truncate text-[7px] font-bold tracking-[0.18em] text-neutral-300">
                   {cinema?.city || 'ĐỊA ĐIỂM CHIẾU'}
                 </span>
               </span>
-              <ChevronDown className={`h-3 w-3 text-neutral-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-3 w-3 text-neutral-200 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {typeof document !== 'undefined' && createPortal(<AnimatePresence>
               {dropdownOpen && (
@@ -153,7 +153,7 @@ export default function Header({
                           <h2 className="mt-1 text-lg font-black uppercase tracking-wide text-white">{cinema?.name || 'Chưa cấu hình rạp'}</h2>
                         </div>
                       </div>
-                      <button type="button" onClick={() => setDropdownOpen(false)} className="p-2 text-neutral-500 transition hover:bg-white/5 hover:text-white" aria-label="Dong">
+                      <button type="button" onClick={() => setDropdownOpen(false)} className="p-2 text-neutral-300 transition hover:bg-white/5 hover:text-white" aria-label="Dong">
                         <X className="h-5 w-5" />
                       </button>
                     </div>
@@ -170,7 +170,7 @@ export default function Header({
                           >
                             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                             <span className="flex-1">{cinemaAddress || 'Chua co Địa chỉ rap'}</span>
-                            <ExternalLink className="h-4 w-4 shrink-0 text-neutral-500" />
+                            <ExternalLink className="h-4 w-4 shrink-0 text-neutral-300" />
                           </a>
                         </div>
 
@@ -193,7 +193,7 @@ export default function Header({
                               {cinema?.status === 'ACTIVE' ? 'Đang hoạt động' : cinema?.status || 'Chưa cấu hình'}
                             </span>
                           </div>
-                          <p className="text-xs leading-relaxed text-neutral-500">
+                          <p className="text-xs leading-relaxed text-neutral-300">
                             Thông tin được tải trực tiếp từ hệ thống khi ứng dụng khởi động.
                           </p>
                         </div>
@@ -260,7 +260,7 @@ export default function Header({
               onClick={() => onTabChange('home')}
               className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'home'
                 ? 'text-white border-white font-bold'
-                : 'text-neutral-400 hover:text-white border-transparent'
+                : 'text-neutral-300 hover:text-white border-transparent'
                 }`}
               id="nav-home"
             >
@@ -272,7 +272,7 @@ export default function Header({
               onClick={() => onTabChange('explore')}
               className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'explore'
                 ? 'text-white border-white font-bold'
-                : 'text-neutral-400 hover:text-white border-transparent'
+                : 'text-neutral-300 hover:text-white border-transparent'
                 }`}
               id="nav-explore"
             >
@@ -284,7 +284,7 @@ export default function Header({
               onClick={() => onTabChange('my-tickets')}
               className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
                 ? 'text-white border-white font-bold'
-                : 'text-neutral-400 hover:text-white border-transparent'
+                : 'text-neutral-300 hover:text-white border-transparent'
                 }`}
               id="nav-my-bookings"
             >
@@ -296,7 +296,7 @@ export default function Header({
               onClick={() => onTabChange('wishlist')}
               className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'wishlist'
                 ? 'text-white border-white font-bold'
-                : 'text-neutral-400 hover:text-white border-transparent'
+                : 'text-neutral-300 hover:text-white border-transparent'
                 }`}
               id="nav-wishlist"
             >
@@ -306,7 +306,7 @@ export default function Header({
 
             <button
               onClick={() => setDropdownOpen((v) => !v)}
-              className="px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 text-neutral-400 hover:text-white border-transparent"
+              className="px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 text-neutral-300 hover:text-white border-transparent"
               id="nav-choose-cinema"
             >
               <MapPin className="h-3.5 w-3.5" />
@@ -317,7 +317,7 @@ export default function Header({
               onClick={() => onTabChange('explore')}
               className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'explore'
                 ? 'text-white border-white font-bold'
-                : 'text-neutral-400 hover:text-white border-transparent'
+                : 'text-neutral-300 hover:text-white border-transparent'
                 }`}
               id="nav-showtimes"
             >
@@ -330,7 +330,7 @@ export default function Header({
                 onClick={() => onTabChange('profile')}
                 className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'profile'
                   ? 'text-white border-white font-bold'
-                  : 'text-neutral-400 hover:text-white border-transparent'
+                  : 'text-neutral-300 hover:text-white border-transparent'
                   }`}
                 id="nav-profile-tab"
               >

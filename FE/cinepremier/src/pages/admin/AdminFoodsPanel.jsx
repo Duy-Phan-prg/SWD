@@ -138,7 +138,7 @@ export default function AdminFoodsPanel({ ctx }) {
           className="space-y-6"
         >
           <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
-            <span className="text-[8px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black block">ADMIN FOOD</span>
+            <span className="text-[8px] font-mono tracking-[0.24em] text-purple-500 uppercase font-black block">ADMIN FOOD</span>
             <h2 className="text-lg font-sans font-black uppercase tracking-wider text-white mt-1">Quản lý bắp nước & combo</h2>
           </div>
 
@@ -157,7 +157,7 @@ export default function AdminFoodsPanel({ ctx }) {
                   <button
                     type="button"
                     onClick={resetFoodForm}
-                    className="border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 text-[10px] uppercase tracking-widest text-amber-200 hover:bg-amber-400 hover:text-black font-black transition"
+                    className="border border-purple-400/50 bg-purple-400/10 px-3 py-1.5 text-[10px] uppercase tracking-widest text-purple-200 hover:bg-purple-400 hover:text-black font-black transition"
                   >
                     Hủy sửa
                   </button>
@@ -173,7 +173,7 @@ export default function AdminFoodsPanel({ ctx }) {
                       setFoodKind(kind);
                       setEditingFood(null);
                     }}
-                    className={`py-2 text-[10px] uppercase tracking-widest font-black border transition ${foodKind === kind ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-800 text-neutral-400 hover:text-white'}`}
+                    className={`py-2 text-[10px] uppercase tracking-widest font-black border transition ${foodKind === kind ? 'border-purple-400 bg-purple-400 text-black' : 'border-neutral-800 text-neutral-400 hover:text-white'}`}
                   >
                     {kind === 'combo' ? 'Combo' : 'Món lẻ'}
                   </button>
@@ -321,7 +321,7 @@ export default function AdminFoodsPanel({ ctx }) {
                     value={foodSearch}
                     onChange={(e) => setFoodSearch(e.target.value)}
                     placeholder="Tìm món..."
-                    className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
               </div>
@@ -377,7 +377,7 @@ export default function AdminFoodsPanel({ ctx }) {
                                 <button
                                   type="button"
                                   onClick={() => handleEditFood(item, item.kind)}
-                                  className="p-2 text-amber-300 border border-amber-500/20 bg-amber-500/5 hover:bg-amber-400 hover:text-black transition"
+                                  className="p-2 text-purple-300 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-400 hover:text-black transition"
                                   title="Chỉnh sửa món"
                                 >
                                   <Edit3 className="h-3.5 w-3.5" />
