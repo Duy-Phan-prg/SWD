@@ -11,16 +11,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -39,20 +35,6 @@ public class AdminCinemaController {
     })
     public ApiResponse<CinemaResponse> getCinema() {
         return ApiResponse.success(cinemaService.getAdminCinema());
-    }
-
-    @PostMapping
-    @SecurityRequirement(name = "Bearer Authentication")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create configured cinema (Admin)", description = "Create the cinema if missing. The system is limited to one cinema (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Cinema created successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request body"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role")
-    })
-    public ApiResponse<CinemaResponse> createCinema(@Valid @RequestBody CinemaRequest request) {
-        return ApiResponse.success(cinemaService.create(request), "Cinema saved successfully");
     }
 
     @PutMapping
@@ -80,20 +62,6 @@ public class AdminCinemaController {
     })
     public ApiResponse<CinemaResponse> updateStatus(@RequestParam CinemaStatus status) {
         return ApiResponse.success(cinemaService.updateStatus(status), "Cinema status updated successfully");
-    }
-
-    @DeleteMapping
-    @SecurityRequirement(name = "Bearer Authentication")
-    @Operation(summary = "Deactivate configured cinema (Admin)", description = "Deactivate the single configured cinema (Admin only)")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cinema deactivated successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token missing or invalid"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - User does not have ADMIN role"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cinema not found")
-    })
-    public ApiResponse<Void> deleteCinema() {
-        cinemaService.delete();
-        return ApiResponse.success(null, "Cinema deactivated successfully");
     }
 
 }

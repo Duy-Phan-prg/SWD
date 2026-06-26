@@ -13,8 +13,6 @@ public interface CinemaService {
 
         public CinemaResponse getCinema(Long id);
 
-        public CinemaResponse create(CinemaRequest request);
-
         public CinemaResponse update(CinemaRequest request);
 
         public CinemaResponse update(Long id, CinemaRequest request);
@@ -22,10 +20,6 @@ public interface CinemaService {
         public CinemaResponse updateStatus(CinemaStatus status);
 
         public CinemaResponse updateStatus(Long id, CinemaStatus status);
-
-        public void delete();
-
-        public void delete(Long id);
 
         public Cinema findById(Long id);
 
