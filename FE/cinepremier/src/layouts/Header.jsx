@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Search, MapPin, Ticket, User, Heart, Compass, Home,
-  Building2, ChevronDown, Phone, Settings2, X, ExternalLink
+  Building2, ChevronDown, Phone, Settings2, X, ExternalLink, LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -19,7 +19,9 @@ export default function Header({
   currentUser,
   currentRole = 'user',
   onRoleChange = () => { },
-  showToast = () => { }
+  showToast = () => { },
+  handleLogout = () => { },
+  navigate = () => { }
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const cinemaAddress = [cinema?.address, cinema?.city].filter(Boolean).join(', ');
@@ -292,6 +294,18 @@ export default function Header({
               {isLoggedIn ? (currentUser?.name) : 'ĐĂNG NHẬP'}
             </span>
           </button>
+
+          {/* Logout Button - chỉ hiện khi đã đăng nhập */}
+          {isLoggedIn && (
+            <button
+              onClick={() => handleLogout({ navigate, showToast })}
+              className="flex h-9 items-center justify-center space-x-1.5 border border-white/20 bg-black px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] font-bold text-white hover:bg-white hover:text-black transition-all duration-300 whitespace-nowrap shadow-md"
+              id="logout-button"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>ĐĂNG XUẤT</span>
+            </button>
+          )}
         </div>
 
       </div>

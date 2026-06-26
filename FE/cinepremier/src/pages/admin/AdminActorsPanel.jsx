@@ -28,9 +28,9 @@ export default function AdminActorsPanel({ ctx }) {
     try {
       const uploaded = await adminService.uploadAdminImage(token, file, 'actors');
       updateField('avatarUrl', uploaded.url);
-      showToast('Đã tải ảnh diễn viên lên Cloudinary.');
+      showToast('Đã tải ảnh diễn viên lên Storage.');
     } catch (error) {
-      showToast(error.message || 'Không thể tải ảnh lên Cloudinary.');
+      showToast(error.message || 'Không thể tải ảnh lên Storage.');
     } finally {
       setIsUploadingAvatar(false);
     }

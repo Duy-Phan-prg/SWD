@@ -234,9 +234,9 @@ export default function AdminMoviesPanel({ ctx }) {
     try {
       const uploaded = await adminService.uploadAdminImage(token, file, 'actors');
       setActorForm((prev) => ({ ...prev, avatarUrl: uploaded.url }));
-      showToast('Đã tải ảnh diễn viên lên Cloudinary.');
+      showToast('Đã tải ảnh diễn viên lên Storage.');
     } catch (error) {
-      showToast(error.message || 'Không thể tải ảnh lên Cloudinary.');
+      showToast(error.message || 'Không thể tải ảnh lên Storage.');
     } finally {
       setIsActorImageUploading(false);
     }
@@ -254,9 +254,9 @@ export default function AdminMoviesPanel({ ctx }) {
     try {
       const uploaded = await adminService.uploadAdminImage(token, file, folder);
       setFormData((prev) => ({ ...prev, [field]: uploaded.url }));
-      showToast(field === 'posterUrl' ? 'Đã tải poster lên Cloudinary.' : 'Đã tải banner lên Cloudinary.');
+      showToast(field === 'posterUrl' ? 'Đã tải poster lên Storage.' : 'Đã tải banner lên Storage.');
     } catch (error) {
-      showToast(error.message || 'Không thể tải ảnh lên Cloudinary.');
+      showToast(error.message || 'Không thể tải ảnh lên Storage.');
     } finally {
       setUploading(false);
     }
@@ -273,9 +273,9 @@ export default function AdminMoviesPanel({ ctx }) {
     try {
       const uploaded = await adminService.uploadAdminVideo(token, file, 'movies/trailers');
       setFormData((prev) => ({ ...prev, trailerUrl: uploaded.url }));
-      showToast('Đã tải trailer lên Cloudinary.');
+      showToast('Đã tải trailer lên Storage.');
     } catch (error) {
-      showToast(error.message || 'Không thể tải trailer lên Cloudinary.');
+      showToast(error.message || 'Không thể tải trailer lên Storage.');
     } finally {
       setIsTrailerUploading(false);
     }
@@ -691,7 +691,7 @@ export default function AdminMoviesPanel({ ctx }) {
                           />
                         </label>
                       </div>
-                      <p className="text-[9px] text-neutral-500">Hỗ trợ URL YouTube/Cloudinary hoặc video local MP4, WEBM, MOV tối đa 100MB.</p>
+                      <p className="text-[9px] text-neutral-500">Hỗ trợ URL YouTube/Storage hoặc video local MP4, WEBM, MOV tối đa 100MB.</p>
                     </div>
                   </div>
 

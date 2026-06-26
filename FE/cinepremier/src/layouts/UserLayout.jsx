@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Ticket } from 'lucide-react';
+import { X, Ticket, User, LogOut } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import AuthModal from '@/pages/auth/AuthModal';
@@ -20,10 +20,12 @@ export default function UserLayout({ children }) {
   const setAuthMode = useUiStore((state) => state.setAuthMode);
   const showWatchlist = useUiStore((state) => state.showWatchlist);
   const setShowWatchlist = useUiStore((state) => state.setShowWatchlist);
+  const showToast = useUiStore((state) => state.showToast);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const currentUser = useAuthStore((state) => state.currentUser);
   const currentRole = useAuthStore((state) => state.currentRole);
   const setCurrentRole = useAuthStore((state) => state.setCurrentRole);
+  const handleLogout = useAuthStore((state) => state.handleLogout);
   const { searchQuery, setSearchQuery, setMoviePagination, publicCinema, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
 
   const activeTab = (() => {
@@ -37,6 +39,9 @@ export default function UserLayout({ children }) {
     return 'home';
   })();
 
+  // Admin/Staff dùng layout riêng — không hiển thị header/footer/rail của khách.
+  const isBackoffice = activeTab === 'admin' || activeTab === 'staff';
+
   const handleTabChange = (tab) => {
     if (tab === 'my-tickets' && !isLoggedIn) return;
     const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
@@ -47,8 +52,33 @@ export default function UserLayout({ children }) {
     <div className="min-h-screen w-full max-w-full overflow-x-clip bg-black text-white selection:bg-white selection:text-black">
       <Toast toast={toast} onClose={() => setToast(null)} />
 
+      {/* Header cố định cho admin/staff */}
+      {isBackoffice && (
+        <div className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-white/10 bg-black/95 backdrop-blur-md px-4 sm:px-6 lg:px-8">
+          <h1 className="text-sm font-sans uppercase tracking-[0.2em] text-white font-bold">
+            {activeTab === 'admin' ? 'BẢNG ĐIỀU KHIỂN QUẢN TRỊ VIÊN' : 'BẢNG ĐIỀU KHIỂN NHÂN VIÊN'}
+          </h1>
+          <div className="flex items-center gap-2">
+            {isLoggedIn && (
+              <>
+                <span className="hidden sm:flex items-center gap-1.5 border border-yellow-500/40 bg-yellow-500/10 px-3 h-9 text-[10px] font-sans uppercase tracking-[0.15em] font-bold text-yellow-500">
+                  <User className="h-3.5 w-3.5" />{currentUser?.name || 'CINEMAAI ADMIN'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleLogout({ navigate, showToast })}
+                  className="flex h-9 items-center gap-1.5 border border-white/20 bg-black px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] font-bold text-white hover:bg-white hover:text-black transition"
+                >
+                  <LogOut className="h-3.5 w-3.5" /> ĐĂNG XUẤT
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Left Rail */}
-      <div className="hidden md:flex flex-col items-center justify-between py-12 border-r border-white/10 bg-black text-neutral-500 w-[60px] h-screen fixed left-0 top-0 z-40">
+      <div className={`${isBackoffice ? '!hidden' : 'hidden md:flex'} flex-col items-center justify-between py-12 border-r border-white/10 bg-black text-neutral-500 w-[60px] h-screen fixed left-0 top-0 z-40`}>
         <div className="text-[9px] uppercase tracking-[0.3em] font-sans font-bold whitespace-nowrap rotate-270 -my-8 text-neutral-400 select-none">EST. 2026</div>
         <div className="flex flex-col items-center space-y-4">
           {[['home', '/'], ['explore', '/movies'], ...(isLoggedIn ? [['my-tickets', '/tickets']] : []), ['wishlist', '/watchlist']].map(([tab, path]) => (
@@ -65,8 +95,9 @@ export default function UserLayout({ children }) {
       </div>
 
       {/* Main */}
-      <div className="min-h-screen w-full max-w-full overflow-x-clip md:pl-[60px] flex flex-col justify-between">
+      <div className={`min-h-screen w-full max-w-full overflow-x-clip ${isBackoffice ? '' : 'md:pl-[60px]'} flex flex-col justify-between`}>
         <div>
+          {!isBackoffice && (
           <Header
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -80,10 +111,14 @@ export default function UserLayout({ children }) {
             currentUser={currentUser}
             currentRole={currentRole}
             onRoleChange={setCurrentRole}
+            handleLogout={handleLogout}
+            navigate={navigate}
+            showToast={showToast}
           />
+          )}
           <main className="relative z-0 min-w-0 max-w-full overflow-x-clip">{children}</main>
         </div>
-        <Footer onTabChange={handleTabChange} cinema={publicCinema} />
+        {!isBackoffice && <Footer onTabChange={handleTabChange} cinema={publicCinema} />}
       </div>
 
       {/* Watchlist Drawer */}

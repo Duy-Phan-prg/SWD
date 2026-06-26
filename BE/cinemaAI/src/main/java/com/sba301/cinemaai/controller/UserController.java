@@ -5,7 +5,7 @@ import com.sba301.cinemaai.dto.request.user.ChangePasswordRequest;
 import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import com.sba301.cinemaai.dto.request.user.UserProfileUpdateRequest;
 import com.sba301.cinemaai.security.AuthenticatedUser;
-import com.sba301.cinemaai.service.CloudinaryUploadService;
+import com.sba301.cinemaai.service.StorageUploadService;
 import com.sba301.cinemaai.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,7 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
     private final UserService userService;
-    private final CloudinaryUploadService cloudinaryUploadService;
+    private final StorageUploadService storageUploadService;
 
     @GetMapping("/me")
     public ApiResponse<UserProfileResponse> currentUser(@AuthenticationPrincipal AuthenticatedUser user) {
@@ -47,7 +47,7 @@ public class UserController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @RequestParam MultipartFile file
     ) {
-        String avatarUrl = cloudinaryUploadService.uploadImage(file, "avatars", user.id()).url();
+        String avatarUrl = storageUploadService.uploadImage(file, "avatars", user.id()).url();
         return ApiResponse.success(userService.updateAvatar(user.email(), avatarUrl), "Avatar updated successfully");
     }
 

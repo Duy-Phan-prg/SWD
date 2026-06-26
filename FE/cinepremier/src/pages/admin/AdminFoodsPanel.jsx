@@ -249,12 +249,12 @@ export default function AdminFoodsPanel({ ctx }) {
                       setFoodForm((prev) => ({ ...prev, imageUrl: e.target.value }));
                       if (foodErrors.imageUrl) setFoodErrors((prev) => ({ ...prev, imageUrl: undefined }));
                     }}
-                    placeholder="https://res.cloudinary.com/..."
+                    placeholder="https://storage.example.com/..."
                     className={`min-w-0 flex-1 bg-black border p-3 text-xs text-white focus:outline-none rounded-none ${foodErrors.imageUrl ? 'border-rose-500' : 'border-neutral-800 focus:border-amber-400'}`}
                   />
                   <label
                     className={`inline-flex min-w-[92px] cursor-pointer items-center justify-center gap-2 border px-3 text-[10px] font-black uppercase tracking-widest transition ${isFoodImageUploading ? 'pointer-events-none border-neutral-800 text-neutral-500 opacity-70' : 'border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-400 hover:text-black'}`}
-                    title="Upload ảnh từ máy lên Cloudinary"
+                    title="Upload ảnh từ máy lên Storage"
                   >
                     <input
                       type="file"
@@ -278,7 +278,7 @@ export default function AdminFoodsPanel({ ctx }) {
                   </div>
                 )}
                 <p className="text-[10px] text-neutral-500 font-medium">
-                  Chọn ảnh từ máy để upload lên Cloudinary, hoặc dán URL ảnh có sẵn.
+                  Chọn ảnh từ máy để upload lên Storage, hoặc dán URL ảnh có sẵn.
                 </p>
                 {foodErrors.imageUrl && <p className="text-[10px] text-rose-400 font-bold">{foodErrors.imageUrl}</p>}
               </div>

@@ -4,10 +4,11 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags
+  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags, LogOut
 } from 'lucide-react';
 import { expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../../services/authService';
 import { adminService } from '../../services/adminService';
+import { useAuthStore } from '../../stores/useAuthStore';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminMoviesPanel from './AdminMoviesPanel';
 import AdminGenresPanel from './AdminGenresPanel';
@@ -451,14 +452,14 @@ export default function AdminDashboard({
       const uploaded = await adminService.uploadAdminImage(token, file, 'foods');
       const uploadedUrl = uploaded?.url || uploaded?.secureUrl || uploaded?.imageUrl || uploaded?.data?.url;
       if (!uploadedUrl) {
-        throw new Error('Không nhận được URL ảnh từ Cloudinary.');
+        throw new Error('Không nhận được URL ảnh từ Storage.');
       }
 
       setFoodForm((prev) => ({ ...prev, imageUrl: uploadedUrl }));
       setFoodErrors((prev) => ({ ...prev, imageUrl: undefined }));
-      showToast('Đã upload ảnh món lên Cloudinary.');
+      showToast('Đã upload ảnh món lên Storage.');
     } catch (error) {
-      showToast(error.message || 'Không thể upload ảnh món lên Cloudinary.');
+      showToast(error.message || 'Không thể upload ảnh món lên Storage.');
     } finally {
       setIsFoodImageUploading(false);
     }
@@ -1373,41 +1374,11 @@ export default function AdminDashboard({
   return (
     <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-5 xl:px-8 2xl:px-10 py-8 text-white select-none">
 
-      {/* 1. TOP STATS ENGINE HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-neutral-950 to-neutral-900 border border-neutral-850 p-6 shadow-xl relative mb-6" id="admin-top-banner">
-        <div className="absolute top-0 left-0 w-2 h-full bg-amber-500"></div>
-        <div>
-          <div className="flex items-center space-x-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[9px] font-mono tracking-widest text-[#B5C2CA]">HỆ THỐNG TRUNG TÂM PHÒNG CHIẾU CINEPREMIER</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-serif font-black tracking-normal uppercase mt-1">
-            BẢNG ĐIỀU KHIỂN QUẢN TRỊ VIÊN
-          </h1>
-          <p className="text-xs text-neutral-400 font-sans mt-0.5 max-w-2xl">
-            Cơ sở kiểm kê hạ tầng rạp chiếu toàn quốc, điều phối kế hoạch chiếu, kiểm toán giao dịch bán vé và cập nhật thư viện phim độc quyền một cách chuyên nghiệp.
-          </p>
-        </div>
-
-        {/* Quick status counters */}
-        <div className="flex gap-4.5 bg-black/60 border border-neutral-850 p-3 items-center">
-          <div className="text-center">
-            <span className="text-[10px] text-neutral-500 block font-mono">SERVER HEALTH</span>
-            <span className="text-xs font-bold text-emerald-400 font-mono tracking-wider">99.8% ONLINE</span>
-          </div>
-          <div className="h-6 w-[1px] bg-neutral-800"></div>
-          <div className="text-center">
-            <span className="text-[10px] text-neutral-500 block font-mono">HẠNG MỤC</span>
-            <span className="text-xs font-bold text-amber-500 font-mono">ADMIN</span>
-          </div>
-        </div>
-      </div>
-
       {/* CORE GRID: RESPONSIVE SIDEBAR + ACTIVE VIEW */}
       <div className="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-5 items-start">
 
         {/* LEFT COMPONENT: THE DASHBOARD SELECTOR BAR (Cols 3) */}
-        <div className="space-y-4 lg:sticky lg:top-8" id="admin-sidebar-bar">
+        <div className="space-y-4 lg:sticky lg:top-20" id="admin-sidebar-bar">
 
           {/* Active Admin Profile */}
           <div className="bg-gradient-to-b from-[#0a0a0a] to-[#040404] border border-neutral-850 p-3 space-y-2.5">
@@ -1623,7 +1594,7 @@ export default function AdminDashboard({
 
             <div className="h-[1px] bg-neutral-900 my-3"></div>
 
-            {/* Quick action: Exit / Back */}
+            {/* Quick action: Làm mới trang */}
             <button
               onClick={() => {
                 playPulseSound(300, 'sine', 0.15);
@@ -1667,10 +1638,6 @@ export default function AdminDashboard({
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{calculatedRevenue.toLocaleString()}đ</h2>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[10px] text-emerald-400 font-mono">▲ +12.4%</span>
-                  <span className="text-[9px] text-[#556268]">so với tuần trước</span>
-                </div>
               </div>
             </div>
 
@@ -1682,10 +1649,6 @@ export default function AdminDashboard({
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{totalBookingsCount} vé</h2>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[10px] text-emerald-400 font-mono">▲ +48 vé mới</span>
-                  <span className="text-[9px] text-[#556268]">qua giao dịch cổng VIP</span>
-                </div>
               </div>
             </div>
 
@@ -1697,10 +1660,6 @@ export default function AdminDashboard({
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{averageFillRate}%</h2>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[10px] text-[#7E8B93] font-mono">Tối ưu hóa:</span>
-                  <span className="text-[9px] text-orange-400 font-bold">KHUNG GIỜ VÀNG QUÁ TẢI</span>
-                </div>
               </div>
             </div>
 
@@ -1712,10 +1671,6 @@ export default function AdminDashboard({
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{moviesList.length} tác phẩm</h2>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[10px] text-neutral-400 font-sans">Phân loại:</span>
-                  <span className="text-[9px] text-amber-400 font-mono font-bold">{moviesList.filter(m => m.status === 'UPCOMING').length} sắp chiếu / {moviesList.filter(m => m.status === 'NOW_SHOWING').length} đang chiếu / {moviesList.filter(m => m.status === 'INACTIVE').length} ngừng hiển thị</span>
-                </div>
               </div>
             </div>
 

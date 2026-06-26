@@ -1,7 +1,7 @@
 package com.sba301.cinemaai.service.impl;
 
 
-import com.sba301.cinemaai.service.CloudinaryUploadService;
+import com.sba301.cinemaai.service.StorageUploadService;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.sba301.cinemaai.config.CloudinaryCredentials;
@@ -22,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
-public class CloudinaryUploadServiceImpl implements CloudinaryUploadService {
+public class StorageUploadServiceImpl implements StorageUploadService {
 
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024;
     private static final long MAX_VIDEO_SIZE = 100L * 1024 * 1024;

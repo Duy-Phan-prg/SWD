@@ -7,7 +7,7 @@ import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.repository.UploadedFileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
-import com.sba301.cinemaai.service.impl.CloudinaryUploadServiceImpl;
+import com.sba301.cinemaai.service.impl.StorageUploadServiceImpl;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class CloudinaryUploadServiceTest {
+class StorageUploadServiceTest {
 
     @Mock
     private Cloudinary cloudinary;
@@ -40,11 +40,11 @@ class CloudinaryUploadServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    private CloudinaryUploadService cloudinaryUploadService;
+    private StorageUploadService storageUploadService;
 
     @BeforeEach
     void setUp() {
-        cloudinaryUploadService = new CloudinaryUploadServiceImpl(
+        storageUploadService = new StorageUploadServiceImpl(
                 cloudinary,
                 new CloudinaryCredentials("dmcodhbcc", "api-key", "api-secret"),
                 uploadedFileRepository,
@@ -67,7 +67,7 @@ class CloudinaryUploadServiceTest {
         when(uploader.upload(any(byte[].class), anyMap()))
                 .thenThrow(new RuntimeException("Invalid cloud_name dmcodhbcc"));
 
-        assertThatThrownBy(() -> cloudinaryUploadService.uploadImage(file, "posters", 1L))
+        assertThatThrownBy(() -> storageUploadService.uploadImage(file, "posters", 1L))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Cloudinary upload failed: Invalid cloud_name dmcodhbcc");
 
@@ -76,7 +76,7 @@ class CloudinaryUploadServiceTest {
 
     @Test
     void shouldRejectMissingCloudinaryConfigurationBeforeUpload() {
-        cloudinaryUploadService = new CloudinaryUploadServiceImpl(
+        storageUploadService = new StorageUploadServiceImpl(
                 cloudinary,
                 new CloudinaryCredentials("", "api-key", "api-secret"),
                 uploadedFileRepository,
@@ -89,7 +89,7 @@ class CloudinaryUploadServiceTest {
                 new byte[] {1}
         );
 
-        assertThatThrownBy(() -> cloudinaryUploadService.uploadImage(file, "posters", 1L))
+        assertThatThrownBy(() -> storageUploadService.uploadImage(file, "posters", 1L))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Cloudinary is not configured");
 
