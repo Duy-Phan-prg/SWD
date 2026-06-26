@@ -77,6 +77,8 @@ public class MovieSeeder implements Seeder {
         movie.setMainActors("Sample lead actors");
         movie.setCastList("Sample cast");
         movie.setStatus(seed.status());
+        movie.setPosterUrl("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10");
+        movie.setAvatarUrl("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10");
 
         for (String genreName : seed.genreNames().split(",")) {
             genreRepository.findByName(genreName.trim()).ifPresent(genre -> {

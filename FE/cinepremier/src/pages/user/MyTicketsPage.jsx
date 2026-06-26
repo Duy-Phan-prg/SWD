@@ -133,7 +133,7 @@ export default function MyTicketsView() {
       holdExpiresAt: b.holdExpiresAt,
       canCancel: canCancelBooking(b),
       totalAmount: b.totalAmount,
-      poster: b.posterUrl || b.moviePosterUrl || b.showtime?.posterUrl || b.showtime?.moviePosterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop',
+      poster: b.posterUrl || b.moviePosterUrl || b.showtime?.posterUrl || b.showtime?.moviePosterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
       isReal: true
     }));
 
@@ -423,7 +423,7 @@ export default function MyTicketsView() {
               <div className="md:col-span-4 border border-white/10 bg-black p-5 flex flex-col items-center justify-center text-center space-y-4">
                 <div className="w-28 aspect-[3/4] overflow-hidden border border-white/5 bg-neutral-900 shadow-xl relative">
                   <img
-                    src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=350&auto=format&fit=crop"
+                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10"
                     alt="Oppenheimer"
                     className="w-full h-full object-cover grayscale"
                     referrerPolicy="no-referrer"
@@ -536,3 +536,4 @@ export default function MyTicketsView() {
     </div>
   );
 }
+

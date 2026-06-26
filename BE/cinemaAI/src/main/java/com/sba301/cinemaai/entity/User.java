@@ -62,14 +62,14 @@ public class User extends BaseEntity {
     }
 
     public String getFullName() {
-        return profile.getFullName();
+        return profile != null ? profile.getFullName() : null;
     }
 
     public String getPhone() {
-        return profile.getPhone();
+        return profile != null ? profile.getPhone() : null;
     }
 
     public boolean isPhoneVerified() {
-        return profile.isPhoneVerified();
+        return profile != null && profile.isPhoneVerified();
     }
 }

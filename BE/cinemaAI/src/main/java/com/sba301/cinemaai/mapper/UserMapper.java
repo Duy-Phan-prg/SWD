@@ -11,6 +11,23 @@ public class UserMapper {
 
     public UserProfileResponse toProfile(User user, List<String> roles) {
         UserProfile profile = user.getProfile();
+        if (profile == null) {
+            // Handle case where user doesn't have a profile yet
+            return new UserProfileResponse(
+                    user.getId(),
+                    user.getEmail(),
+                    null,  // fullName
+                    null,  // phone
+                    null,  // avatarUrl
+                    user.getBirthYear(),
+                    user.getStatus(),
+                    user.isEmailVerified(),
+                    false, // phoneVerified
+                    roles,
+                    user.getCreatedAt(),
+                    user.getUpdatedAt()
+            );
+        }
         return new UserProfileResponse(
                 user.getId(),
                 user.getEmail(),

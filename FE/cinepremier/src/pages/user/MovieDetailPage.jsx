@@ -118,7 +118,7 @@ export default function DetailView() {
     const newRev = {
       id: `user-rev-${Date.now()}`,
       author: newAuthor,
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop',
+      avatarUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
       rating: newRating,
       content: newContent,
       date: 'Hôm nay',
@@ -509,3 +509,4 @@ export default function DetailView() {
     </div>
   );
 }
+

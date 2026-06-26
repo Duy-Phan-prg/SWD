@@ -43,13 +43,14 @@ export default function UserLayout({ children }) {
   const isBackoffice = activeTab === 'admin' || activeTab === 'staff';
 
   const handleTabChange = (tab) => {
-    if (tab === 'my-tickets' && !isLoggedIn) return;
+    // Guest bấm "Vé của tôi" → mở modal đăng nhập (vé yêu cầu đăng nhập).
+    if (tab === 'my-tickets' && !isLoggedIn) { setAuthMode('login'); setShowOTP(true); return; }
     const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
     navigate(paths[tab] || '/');
   };
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-black text-white selection:bg-white selection:text-black">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-black text-white selection:bg-amber-400 selection:text-white">
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* Header cố định cho admin/staff */}
@@ -78,24 +79,12 @@ export default function UserLayout({ children }) {
       )}
 
       {/* Left Rail */}
-      <div className={`${isBackoffice ? '!hidden' : 'hidden md:flex'} flex-col items-center justify-between py-12 border-r border-white/10 bg-black text-neutral-500 w-[60px] h-screen fixed left-0 top-0 z-40`}>
-        <div className="text-[9px] uppercase tracking-[0.3em] font-sans font-bold whitespace-nowrap rotate-270 -my-8 text-neutral-400 select-none">EST. 2026</div>
-        <div className="flex flex-col items-center space-y-4">
-          {[['home', '/'], ['explore', '/movies'], ...(isLoggedIn ? [['my-tickets', '/tickets']] : []), ['wishlist', '/watchlist']].map(([tab, path]) => (
-            <button
-              type="button"
-              key={tab}
-              onClick={() => navigate(path)}
-              className={`w-1.5 h-1.5 rounded-full cursor-pointer transition-all duration-300 ${activeTab === tab ? 'bg-white scale-150' : 'bg-neutral-800'}`}
-              title={tab}
-            />
-          ))}
-        </div>
-        <div className="text-[10px] uppercase tracking-[0.25em] font-serif italic text-white text-center select-none font-light">C P</div>
+      <div className="hidden">
+        {/* Left Rail hidden */}
       </div>
 
       {/* Main */}
-      <div className={`min-h-screen w-full max-w-full overflow-x-clip ${isBackoffice ? '' : 'md:pl-[60px]'} flex flex-col justify-between`}>
+      <div className={`min-h-screen w-full max-w-full overflow-x-clip flex flex-col justify-between`}>
         <div>
           {!isBackoffice && (
           <Header

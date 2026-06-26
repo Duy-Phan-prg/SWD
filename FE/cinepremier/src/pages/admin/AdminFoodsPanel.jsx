@@ -351,7 +351,7 @@ export default function AdminFoodsPanel({ ctx }) {
                             <td className="py-3.5 px-4 min-w-0">
                               <div className="flex items-center gap-3">
                                 <img
-                                  src={item.imageUrl || 'https://images.unsplash.com/photo-1578849278619-e73505e9610f?q=80&w=300&auto=format&fit=crop'}
+                                  src={item.imageUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10'}
                                   alt={item.name}
                                   className="h-12 w-12 object-cover border border-neutral-800 bg-black"
                                   referrerPolicy="no-referrer"
@@ -434,3 +434,4 @@ export default function AdminFoodsPanel({ ctx }) {
     </>
   );
 }
+

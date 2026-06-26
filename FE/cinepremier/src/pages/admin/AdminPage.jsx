@@ -72,8 +72,8 @@ export default function AdminDashboard({
     totalElements: moviesList.length
   });
 
-  const DEFAULT_POSTER_URL = 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=600&auto=format&fit=crop';
-  const DEFAULT_BANNER_URL = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200&auto=format&fit=crop';
+  const DEFAULT_POSTER_URL = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10';
+  const DEFAULT_BANNER_URL = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10';
   const buildDefaultMovieForm = () => ({
     title: '',
     englishTitle: '',
@@ -1085,8 +1085,8 @@ export default function AdminDashboard({
       ageRating: 'T13',
       director: '',
       synopsis: '',
-      posterUrl: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=600&auto=format&fit=crop',
-      bannerUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200&auto=format&fit=crop',
+      posterUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
+      bannerUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
       releaseDate: '2026-06-01',
       isHot: false,
       isUpcoming: false
@@ -1706,3 +1706,4 @@ export default function AdminDashboard({
     </div>
   );
 }
+

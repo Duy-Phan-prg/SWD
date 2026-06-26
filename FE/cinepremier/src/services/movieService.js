@@ -49,8 +49,8 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     synopsis: movie.synopsis || movie.description || movie.overview || movie.content || fallback.synopsis || 'Thong tin noi dung phim dang duoc cap nhat.',
     duration: Number(movie.duration ?? movie.durationMinutes ?? movie.runningTime ?? fallback.duration ?? 100),
     ageRating: movie.ageRating || movie.ratingLabel || movie.ageLimit || fallback.ageRating || 'P',
-    posterUrl: movie.posterUrl || movie.poster || movie.posterImageUrl || movie.imageUrl || movie.thumbnailUrl || fallback.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=600&auto=format&fit=crop',
-    bannerUrl: movie.bannerUrl || movie.avatarUrl || movie.backdropUrl || movie.coverUrl || movie.bannerImageUrl || fallback.bannerUrl || movie.posterUrl || fallback.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200&auto=format&fit=crop',
+    posterUrl: movie.posterUrl || movie.poster || movie.posterImageUrl || movie.imageUrl || movie.thumbnailUrl || fallback.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
+    bannerUrl: movie.bannerUrl || movie.avatarUrl || movie.backdropUrl || movie.coverUrl || movie.bannerImageUrl || fallback.bannerUrl || movie.posterUrl || fallback.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
     releaseDate: movie.releaseDate || movie.premiereDate || movie.startDate || fallback.releaseDate || 'Dang cap nhat',
     trailerUrl: getMovieTrailerUrl(movie, fallback),
     director: movie.director || movie.directorName || fallback.director || 'Dang cap nhat',
@@ -124,3 +124,4 @@ export const movieService = {
   getFoodCombos: () => request('/api/v1/foods/combos'),
   getPublicCinema: () => request('/api/v1/cinema')
 };
+

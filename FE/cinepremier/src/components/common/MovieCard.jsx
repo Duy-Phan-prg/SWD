@@ -16,19 +16,20 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
 
   return (
     <div 
-      className="group relative flex flex-col bg-black border border-white/10 rounded-none transition-all duration-300 hover:border-white/30"
+      className="group relative flex flex-col bg-black border-2 border-purple-500/30 rounded-none transition-all duration-300 hover:border-purple-400/60"
       id={`movie-${movie.id}`}
     >
       {/* Poster Media Box */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 rounded-none">
         <img
-          src={movie.posterUrl}
+          src={movie.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10'}
           alt={movie.title}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.target.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10';
+          }}
         />
-        {/* Dark overlay backdrop on hover */}
-        <div className="absolute inset-0 bg-neutral-950/30 group-hover:bg-neutral-950/75 transition-all duration-300" />
 
         {/* Rating Badge */}
         {isBookable && (
@@ -134,3 +135,4 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
     </div>
   );
 }
+

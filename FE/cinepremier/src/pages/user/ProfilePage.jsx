@@ -37,7 +37,7 @@ export default function ProfileView() {
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onTabChange = (tab) => { const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets' }; navigate(paths[tab] || '/'); };
   const onProfileUpdated = (user) => { setCurrentUser(user); setCurrentRole(user.role || 'user'); };
-  const [profileImg, setProfileImg] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop');
+  const [profileImg, setProfileImg] = useState('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10');
   const [name, setName] = useState(currentUser?.name || 'MINH HỒNG (VIP)');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
@@ -241,7 +241,7 @@ export default function ProfileView() {
     : 'Đang cập nhật';
   const getBookingPoster = (booking) => (
     moviesList.find((movie) => movie.title === booking.movieTitle)?.posterUrl
-    || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=350&auto=format&fit=crop'
+    || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10'
   );
   const bookingStatusMeta = {
     PAID: { label: 'Đã thanh toán', className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' },
@@ -1325,3 +1325,4 @@ export default function ProfileView() {
     </div>
   );
 }
+
