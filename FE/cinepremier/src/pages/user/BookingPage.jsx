@@ -151,10 +151,8 @@ export default function BookingView() {
     setConcessionsPage((page) => Math.min(page, concessionsTotalPages));
   }, [concessionsTotalPages]);
 
-  // Promo
-  const [promoCode, setPromoCode] = useState('');
-  const [appliedPromo, setAppliedPromo] = useState(null); // { code, discountAmount, finalAmount }
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  // Tính năng giảm giá/khuyến mãi đã được gỡ khỏi nghiệp vụ.
+  const appliedPromo = null;
 
   // Booking & payment flow
   const [bookingStep, setBookingStep] = useState('seats');
@@ -233,7 +231,6 @@ export default function BookingView() {
       setSelectedShowtime(first);
     }
     setSelectedSeats([]);
-    setAppliedPromo(null);
   };
 
   const handleSelectRoom = (roomKey) => {
@@ -241,14 +238,12 @@ export default function BookingView() {
     const first = showtimesForDate.find(st => getShowtimeRoomKey(st) === roomKey);
     if (first) setSelectedShowtime(first);
     setSelectedSeats([]);
-    setAppliedPromo(null);
   };
 
   const handleSelectShowtime = (st) => {
     setSelectedRoomKey(getShowtimeRoomKey(st));
     setSelectedShowtime(st);
     setSelectedSeats([]);
-    setAppliedPromo(null);
   };
 
   // Seat selection
@@ -385,26 +380,6 @@ export default function BookingView() {
     });
   };
 
-  // Promo — validate via real API (không apply ngay, apply sau khi hold)
-  const handleApplyPromo = async (e) => {
-    e.preventDefault();
-    const code = promoCode.trim().toUpperCase();
-    if (!code) return;
-    setIsApplyingPromo(true);
-    try {
-      const result = await paymentService.validatePromotion({ code, orderAmount: priceTickets + priceCombos });
-      setAppliedPromo({ code, discountAmount: result.discountAmount, message: result.message });
-      setPromoCode('');
-      showToast(`Áp dụng mã "${code}" thành công — giảm ${result.discountAmount?.toLocaleString()}đ`);
-    } catch (err) {
-      showToast(err.message || 'Mã không hợp lệ hoặc không đủ điều kiện.');
-    } finally {
-      setIsApplyingPromo(false);
-    }
-  };
-
-  const handleRemovePromo = () => setAppliedPromo(null);
-
   // Financial calculations
   const fallbackTicketPrice = selectedSeats.reduce((total, s) => total + getSeatLineTotal(s), 0);
   const priceTickets = Number(ticketPriceValidation?.finalAmount ?? ticketPriceValidation?.ticketSubtotal ?? fallbackTicketPrice);
@@ -413,8 +388,8 @@ export default function BookingView() {
     return total + (item ? item.price * qty : 0);
   }, 0);
   const subTotal = priceTickets + priceCombos;
-  const discountAmount = appliedPromo ? Math.min(appliedPromo.discountAmount, subTotal) : 0;
-  const totalAmount = Math.max(0, subTotal - discountAmount);
+  const discountAmount = 0;
+  const totalAmount = subTotal;
 
   // Proceed: hold seats on BE first
   const handleProceedToPayment = async () => {
@@ -456,15 +431,6 @@ export default function BookingView() {
       });
       console.log('[holdSeats] result:', holdResult);
       setHoldBookingId(holdResult.id);
-
-      // Apply promo if any
-      if (appliedPromo?.code) {
-        try {
-          await paymentService.applyPromotion(accessToken, holdResult.id, appliedPromo.code);
-        } catch {
-          showToast("Không thể áp dụng mã khuyến mãi, tiếp tục đặt vé.");
-        }
-      }
 
       setPaymentState('payment_method');
     } catch (err) {
@@ -1629,45 +1595,6 @@ export default function BookingView() {
               </div>
             )}
 
-          </div>
-
-          {/* Voucher system promo code form */}
-          <div className="space-y-3">
-            <span className="text-[9px] font-sans tracking-[0.2em] font-bold text-neutral-400 block uppercase">MÃ KHUYẾN MÃI CINEPREMIER</span>
-
-            {appliedPromo ? (
-              <div className="flex items-center justify-between border border-emerald-500/20 bg-emerald-950/20 px-3 py-2 text-[10px] text-emerald-400 tracking-wider">
-                <div className="flex items-center space-x-1.5 uppercase">
-                  <span>ÁP DỤNG: {appliedPromo?.code} (-{appliedPromo?.discountAmount?.toLocaleString()}đ)</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRemovePromo}
-                  className="text-neutral-500 hover:text-white font-bold"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleApplyPromo} className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  placeholder="Mã coupon..."
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  className="flex-1 border border-white/10 bg-neutral-950 px-3 py-2 text-[11px] text-white tracking-wider uppercase placeholder-neutral-700 focus:outline-none focus:border-white"
-                />
-                <button
-                  type="submit"
-                  disabled={!promoCode.trim()}
-                  className="bg-white hover:bg-neutral-200 border border-white text-black text-[10px] tracking-wider uppercase px-4 py-2 text-xs font-bold transition disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black"
-                >
-                  ÁP DỤNG
-                </button>
-              </form>
-            )}
-
-            <span className="text-[8px] tracking-wider text-neutral-600 block uppercase">Nhập mã khuyến mãi để được giảm giá</span>
           </div>
 
           {/* Checkout receipts final value indicator */}

@@ -39,4 +39,18 @@ public class AdminUploadController {
                 "Image uploaded successfully"
         );
     }
+
+    @PostMapping("/videos")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Upload video (e.g. trailer) to Cloudinary")
+    public ApiResponse<UploadedFileResponse> uploadVideo(
+            @RequestParam MultipartFile file,
+            @RequestParam(defaultValue = "videos") String folder,
+            @AuthenticationPrincipal AuthenticatedUser currentUser
+    ) {
+        return ApiResponse.success(
+                cloudinaryUploadService.uploadVideo(file, folder, currentUser.id()),
+                "Video uploaded successfully"
+        );
+    }
 }

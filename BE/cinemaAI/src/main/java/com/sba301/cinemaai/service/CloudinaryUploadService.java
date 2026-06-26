@@ -6,4 +6,6 @@ import org.springframework.web.multipart.MultipartFile;
 public interface CloudinaryUploadService {
 
         public UploadedFileResponse uploadImage(MultipartFile file, String requestedFolder, Long userId);
+
+        public UploadedFileResponse uploadVideo(MultipartFile file, String requestedFolder, Long userId);
 }

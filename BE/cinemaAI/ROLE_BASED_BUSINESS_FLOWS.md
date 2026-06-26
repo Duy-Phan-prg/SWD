@@ -2,718 +2,295 @@
 
 ## CinemaAI / CinePremier
 
-> Nguồn tham chiếu: `docs/SRS_CINEMA_SYSTEM_COMPLETE.md`  
-> Ngày cập nhật: 16/06/2026  
-> Phạm vi: mô tả luồng nghiệp vụ theo role và actor hệ thống cho mô hình một rạp duy nhất.
+> Nguồn tham chiếu: `SRS_CINEMA_SYSTEM_COMPLETE.md`
+> Ngày cập nhật: 25/06/2026 (đối chiếu trực tiếp với mã nguồn BE = `be/new`)
+> Phạm vi: luồng nghiệp vụ theo role/actor cho mô hình **một rạp duy nhất**, kèm **API thật** của từng luồng.
+> Base path mọi API: `/api/v1`.
+
+### Lưu ý quan trọng về phạm vi đã chốt
+- **Wallet đã được bỏ hoàn toàn.** Không còn `WalletController`/`WalletService`/entity `Wallet`. Hoàn tiền **không** cộng vào ví; khi ADMIN hủy suất, booking chỉ chuyển `REFUNDED` (đánh dấu trạng thái) + thu hồi loyalty + gửi notification. Việc trả tiền thực tế xử lý ngoài hệ thống.
+- **Promotion/khuyến mãi:** ngoài phạm vi, không có API.
+- Database chính thức là **PostgreSQL**; MySQL trong `application.properties` chỉ là cấu hình chạy local trên máy dev.
 
 ---
 
-## 1. Quy ước chung
+## 1. Quy ước actor
 
-### 1.1 Role và actor
+| Actor | Ý nghĩa |
+|---|---|
+| `GUEST` | Chưa đăng nhập — chỉ đọc dữ liệu công khai. |
+| `CUSTOMER` | Khách đã đăng nhập (role `CUSTOMER`). |
+| `STAFF` | Nhân viên rạp — check-in vé. |
+| `ADMIN` | Quản trị danh mục, vận hành, tài khoản. Không check-in. |
+| `SYSTEM` | Scheduler, callback thanh toán, cộng/thu hồi loyalty, notification. |
+| `VNPAY` / `SMTP` / `CLOUDINARY` | Dịch vụ ngoài. |
 
-| Actor | Ý nghĩa | Ghi chú |
+RBAC: `/api/v1/admin/**` → ADMIN; `/api/v1/staff/**` → STAFF; còn lại public hoặc CUSTOMER (theo JWT).
+
+---
+
+## 2. Luồng GUEST (public, không cần token)
+
+### GUEST-01 — Đăng ký / đăng nhập / khôi phục mật khẩu
+SRS: AUTH-01→07.
+
+| Bước | API |
+|---|---|
+| Đăng ký | `POST /auth/register` |
+| Gửi/nhập OTP email | `POST /auth/verify-email/request` · `POST /auth/verify-email` |
+| Đăng nhập email/mật khẩu | `POST /auth/login` |
+| Đăng nhập Google (+xác minh) | `POST /auth/google` · `POST /auth/google/verify` |
+| Refresh / logout | `POST /auth/refresh` · `POST /auth/logout` |
+| Quên mật khẩu | `POST /auth/password-reset/request` · `POST /auth/password-reset/confirm` |
+
+### GUEST-02 — Xem catalog phim / thể loại / diễn viên
+SRS: MOV-01,02,05,07.
+`GET /movies` · `GET /movies/{movieId}` · `GET /genres` · `GET /genres/{genreId}` · `GET /actors` · `GET /actors/{actorId}` · `GET /actors/{actorId}/movies`
+
+### GUEST-03 — Xem rạp, suất chiếu, seat map, đồ ăn, giá vé
+SRS: CIN-01, SHOW-01,02, FOOD-01, PRICE.
+`GET /cinema` · `GET /cinema/rooms` · `GET /cinemas/{id}` · `GET /cinemas/{id}/rooms` · `GET /showtimes` · `GET /showtimes/{id}` · `GET /showtimes/{id}/seat-map` · `GET /foods/items` · `GET /foods/combos` · `GET /ticket-pricing/combos` · `POST /ticket-pricing/validate`
+
+### GUEST-04 — Đọc review công khai
+SRS: REV-02,04.
+`GET /reviews/movies/{movieId}` · `GET /reviews/movies/{movieId}/average-rating`
+
+> Khi GUEST bấm hold ghế/đặt vé → buộc đăng nhập thành CUSTOMER.
+
+---
+
+## 3. Luồng CUSTOMER (cần JWT)
+
+### CUSTOMER-01 — Hồ sơ cá nhân
+SRS: AUTH-08,09,10.
+`GET /users/me` · `PUT /users/me` · `POST /users/me/avatar` · `POST /users/me/password`
+
+### CUSTOMER-02 — Hold ghế → tạo booking
+SRS: BOOK-01→06, PRICE-01→04, FOOD-03.
+1. Tải seat map (GUEST-03) → chọn ghế.
+2. `POST /bookings/hold` — giữ ghế 2 phút.
+3. Chọn loại vé/tuổi/đồ ăn, kiểm giá: `POST /ticket-pricing/validate`.
+4. `POST /bookings` — tạo booking từ hold.
+
+⚠️ Chưa có DB lock chống double-booking (BOOK-04).
+
+### CUSTOMER-03 — Thanh toán
+SRS: PAY-01→05, TICKET-01.
+`POST /payments/vnpay/create` → (callback VNPAY do SYSTEM xử lý) → booking `PAID` + sinh QR.
+Dev/demo: `POST /payments/mock`. Tra cứu: `GET /payments/booking/{bookingId}`.
+
+### CUSTOMER-04 — Xem booking / vé
+SRS: BOOK-07, TICKET-01.
+`GET /bookings` · `GET /bookings/{bookingId}`
+
+### CUSTOMER-05 — Hủy / yêu cầu hoàn tiền
+SRS: BOOK-08, PAY-07.
+- Hủy trước thanh toán (`HOLDING`/`PENDING_PAYMENT`): `DELETE /bookings/{bookingId}`.
+- `POST /bookings/{bookingId}/refund-request` ⚠️ **vẫn tồn tại trong code** dù SRS (PAY-07) yêu cầu bỏ. Chỉ đổi trạng thái `REFUND_REQUESTED`, **không hoàn tiền thật**.
+
+### CUSTOMER-06 — Wishlist
+SRS: WISH-01.
+`POST /wishlist` · `GET /wishlist` · `DELETE /wishlist/{movieId}`
+
+### CUSTOMER-07 — Loyalty
+SRS: LOY-01,02,05.
+`GET /loyalty/me` (xem điểm) · `POST /loyalty/me/redeem` (đổi điểm — đã có; 1000 điểm = 1.000đ).
+Cộng điểm tự động khi `PAID` do SYSTEM.
+
+### CUSTOMER-08 — Review phim
+SRS: REV-01.
+`POST /reviews/movies/{movieId}` (chỉ khi có booking `USED`) · `PUT /reviews/{reviewId}` · `DELETE /reviews/{reviewId}`
+
+### CUSTOMER-09 — Recommendation (AI rule-based)
+SRS: REC-01→04, MOV-09.
+`POST /recommendations/trailer-interactions` · `POST /recommendations/preferences/refresh` · `GET /recommendations/preferences/me` · `GET /recommendations/movies` · `GET /recommendations/favorite-actors`
+
+### CUSTOMER-10 — Notification
+SRS: NOTI-01,02,04.
+`GET /notifications/me` · `GET /notifications/me/unread` · `PATCH /notifications/{id}/read` · `PATCH /notifications/me/read-all`
+
+---
+
+## 4. Luồng STAFF
+
+### STAFF-01 — Đăng nhập
+Dùng tài khoản ADMIN cấp (xem ADMIN-01): `POST /auth/login`.
+
+### STAFF-02 — Check-in vé bằng QR
+SRS: TICKET-03,04, OPS-01.
+`POST /staff/check-in` (chỉ role `STAFF`). Kiểm tra booking `PAID`, chưa dùng → chuyển `USED`.
+
+---
+
+## 5. Luồng ADMIN (cần role ADMIN)
+
+### ADMIN-01 — Tài khoản & STAFF
+SRS: AUTH-11,12, OPS-03.
+`GET /admin/users` · `GET /admin/users/{userId}` · `POST /admin/users/staff` · `PATCH /admin/users/{userId}/status`
+
+### ADMIN-02 — Phim / thể loại / diễn viên
+SRS: MOV-03,04,06,08.
+- Phim: `GET /admin/movies` · `POST /admin/movies` · `GET|PUT|DELETE /admin/movies/{movieId}` · `PATCH /admin/movies/{movieId}/status`
+- Thể loại: `POST /admin/genres` · `PUT|DELETE /admin/genres/{genreId}`
+- Diễn viên: `GET /admin/actors` · `POST /admin/actors` · `PUT|DELETE /admin/actors/{actorId}`
+
+### ADMIN-03 — Rạp duy nhất
+SRS: CIN-02→06.
+`GET /admin/cinema` · `PUT /admin/cinema` · `PATCH /admin/cinema/status` · (`POST`/`DELETE` tồn tại trong code nhưng nghiệp vụ không dùng — single-cinema).
+
+### ADMIN-04 — Phòng & ghế
+SRS: CIN-07→11.
+`GET /admin/rooms` · `POST /admin/rooms` · `GET|PUT /admin/rooms/{roomId}` · `PATCH /admin/rooms/{roomId}/status` · `GET /admin/rooms/{roomId}/seats` · `POST /admin/rooms/{roomId}/seats/generate` · `PUT /admin/rooms/{roomId}/seats` · `GET|PUT|DELETE /admin/rooms/seats/{seatId}`
+
+### ADMIN-05 — Suất chiếu (+ hủy do sự cố)
+SRS: SHOW-03→08, PRICE-05.
+`GET /admin/showtimes` · `POST /admin/showtimes` · `POST /admin/showtimes/bulk` · `GET|PUT|DELETE /admin/showtimes/{id}` · `PATCH /admin/showtimes/{id}/status` · `GET /admin/showtimes/{id}/seat-map`.
+**Hủy suất đã bán vé:** booking `PAID` → `REFUNDED` + **thu hồi loyalty** + **notification**. (Không cộng tiền vào ví — wallet đã bỏ.)
+
+### ADMIN-06 — Giá vé
+SRS: PRICE-05.
+`GET|POST /admin/ticket-pricing/rules` · `PUT|DELETE /admin/ticket-pricing/rules/{ruleId}` · `GET|POST /admin/ticket-pricing/combos` · `PUT|DELETE /admin/ticket-pricing/combos/{comboId}`
+
+### ADMIN-07 — Đồ ăn & combo
+SRS: FOOD-02 (FOOD-04 tồn kho chưa làm).
+`GET|POST /admin/foods/items` · `GET|POST /admin/foods/combos` · `PUT|DELETE /admin/foods/items/{itemId}` · `PUT|DELETE /admin/foods/combos/{comboId}`
+
+### ADMIN-08 — Booking & refund
+SRS: BOOK-08, PAY-07,08.
+`GET /admin/bookings` · `GET|DELETE /admin/bookings/{bookingId}` · `POST /admin/bookings/{id}/check-in` · `POST /admin/bookings/{id}/refund-request` · `POST /admin/bookings/{id}/mark-refunded`.
+`mark-refunded` chỉ đổi `REFUND_REQUESTED → REFUNDED` (không hoàn tiền thật).
+
+### ADMIN-09 — Review moderation
+SRS: REV-03.
+`GET /admin/reviews` · `PATCH /admin/reviews/{reviewId}/hide` · `DELETE /admin/reviews/{reviewId}`
+
+### ADMIN-10 — Loyalty quản trị
+`POST /admin/loyalty/add` · `POST /admin/loyalty/{userId}/redeem`
+
+### ADMIN-11 — Upload ảnh
+SRS: UP-01.
+`POST /admin/uploads/images` (Cloudinary).
+
+### ADMIN-12 — Báo cáo
+SRS: RPT-01→03 (đã có API).
+`GET /admin/reports/revenue` · `GET /admin/reports/top-movies` · `GET /admin/reports/occupancy`
+
+### ADMIN-13 — Notification (tạo thủ công) & debug recommendation
+`POST /notifications` · `GET /admin/recommendations/users/{userId}/debug`
+
+---
+
+## 6. Luồng SYSTEM (nền)
+
+| Mã | Việc | Cơ chế |
 |---|---|---|
-| `GUEST` | Người chưa đăng nhập | Chỉ được xem dữ liệu công khai. |
-| `CUSTOMER` | Khách hàng đã đăng nhập | Role trong code là `CUSTOMER`, thay cho cách gọi `USER`. |
-| `STAFF` | Nhân viên rạp | Chỉ vận hành check-in vé. |
-| `ADMIN` | Quản trị viên | Quản trị danh mục, vận hành, tài khoản và cấu hình hệ thống. Không có quyền check-in theo nghiệp vụ. |
-| `SYSTEM` | Tác vụ nền | Scheduler, callback, cộng/hoàn điểm, notification tự động. |
-| `VNPAY` | Cổng thanh toán ngoài | Xử lý thanh toán return/IPN sandbox hoặc thật. |
-| `SMTP` | Dịch vụ email | Gửi OTP, reset password, email vé khi triển khai. |
-| `CLOUDINARY` | Dịch vụ lưu ảnh | Lưu ảnh upload của admin/customer. |
-
-### 1.2 Ranh giới GUEST/CUSTOMER
-
-GUEST được xem phim, thể loại, diễn viên, thông tin rạp, suất chiếu, seat map và đồ ăn công khai.
-
-CUSTOMER bắt buộc đăng nhập trước khi:
-
-- Hold ghế.
-- Tạo booking.
-- Thanh toán.
-- Xem vé cá nhân.
-- Thêm/xóa wishlist.
-- Xem điểm loyalty.
-- Gửi review.
-- Nhận recommendation cá nhân hóa.
-
-### 1.3 Quy tắc một rạp duy nhất
-
-- Không có chọn thành phố, chi nhánh hoặc rạp khi xem lịch chiếu/đặt vé.
-- Mọi phòng, ghế, suất chiếu, booking, staff và báo cáo thuộc rạp duy nhất.
-- ADMIN chỉ xem, cập nhật, vô hiệu hóa hoặc kích hoạt lại rạp.
-- ADMIN không tạo mới hoặc xóa rạp.
+| SYSTEM-01 | Giải phóng hold hết hạn | `SeatHoldCleanupScheduler` → booking/seat `EXPIRED`/`RELEASED` |
+| SYSTEM-02 | Cập nhật trạng thái suất | `ShowtimeStatusScheduler` (`SCHEDULED→OPEN→COMPLETED`) |
+| SYSTEM-03 | Callback thanh toán | `GET /payments/vnpay/return` · `GET /payments/vnpay/ipn` — verify chữ ký/số tiền, idempotent, set `PAID` + QR + cộng loyalty |
+| SYSTEM-04 | Loyalty | Cộng điểm khi `PAID`; thu hồi khi hủy suất |
+| SYSTEM-05 | Notification tự động | Một phần (event-driven chưa đầy đủ) |
 
 ---
 
-## 2. Ma trận quyền tổng quan
-
-| Nhóm chức năng | GUEST | CUSTOMER | STAFF | ADMIN | SYSTEM |
-|---|---:|---:|---:|---:|---:|
-| Xem phim/thể loại/diễn viên | Có | Có | Có | Có | Không |
-| Xem suất chiếu/seat map | Có | Có | Có | Có | Không |
-| Hold ghế/tạo booking | Không | Có | Không | Không | Không |
-| Thanh toán | Không | Có | Không | Không | Callback |
-| Xem vé cá nhân | Không | Có | Không | Không | Không |
-| Check-in QR | Không | Không | Có | Không | Không |
-| Wishlist | Không | Có | Không | Không | Sự kiện thông báo chưa có |
-| Loyalty | Không | Có | Không | Quản trị trực tiếp chưa có | Cộng/hoàn điểm |
-| Review | Xem review công khai | Tạo/sửa review sau khi xem | Không | Ẩn/xóa review vi phạm | Tính điểm khi có service |
-| Quản lý catalog | Không | Không | Không | Có | Không |
-| Quản lý rạp/phòng/ghế/suất | Không | Không | Không | Có | Scheduler trạng thái suất chưa có |
-| Quản lý tài khoản | Không | Hồ sơ cá nhân | Không | Có | Không |
-| Cấp tài khoản STAFF | Không | Không | Không | Có | Không |
-| Báo cáo | Không | Không | Không | Chưa có API thật | Tổng hợp khi triển khai |
+## 7. Dịch vụ ngoài
+- **VNPAY:** tạo URL, return/IPN sandbox.
+- **SMTP:** OTP đăng ký + reset mật khẩu. (Email vé QR: chưa có.)
+- **CLOUDINARY:** lưu ảnh phim/diễn viên/avatar.
 
 ---
 
-## 3. Luồng GUEST
-
-### GUEST-01: Xem danh mục phim
-
-Liên quan SRS: `MOV-01`, `MOV-02`, `MOV-05`, `MOV-07`.
-
-Tiền điều kiện: không cần đăng nhập.
-
-Luồng chính:
-
-1. GUEST mở trang chủ hoặc trang khám phá.
-2. Hệ thống tải danh sách phim công khai.
-3. GUEST lọc/tìm kiếm theo từ khóa, thể loại hoặc trạng thái phim.
-4. GUEST mở chi tiết phim.
-5. Hệ thống hiển thị thông tin phim, diễn viên, thể loại và trailer nếu có.
-
-Ngoại lệ:
-
-- Nếu phim inactive hoặc không tồn tại, hệ thống hiển thị lỗi hoặc trang không tìm thấy.
-- Public actor filmography đang hoàn thành một phần.
-
-Trạng thái: hoàn thành phần lõi.
-
-### GUEST-02: Xem suất chiếu và seat map
-
-Liên quan SRS: `SHOW-01`, `SHOW-02`, `BOOK-01`.
-
-Tiền điều kiện: không cần đăng nhập.
-
-Luồng chính:
-
-1. GUEST chọn phim.
-2. Hệ thống hiển thị suất chiếu công khai của rạp duy nhất.
-3. GUEST chọn một suất chiếu.
-4. Hệ thống tải seat map và trạng thái ghế hiện tại.
-5. GUEST xem ghế trống, ghế đã hold, ghế đã bán hoặc đã check-in.
-
-Ranh giới quyền:
-
-- GUEST chỉ được xem.
-- Khi bấm giữ ghế hoặc đặt vé, hệ thống yêu cầu đăng nhập để chuyển sang role `CUSTOMER`.
-
-Trạng thái: hoàn thành phần xem; realtime seat map chưa có.
-
-### GUEST-03: Đăng ký, đăng nhập và reset mật khẩu
-
-Liên quan SRS: `AUTH-01` đến `AUTH-07`.
-
-Luồng chính:
-
-1. GUEST đăng ký bằng email, mật khẩu, họ tên, SĐT và năm sinh.
-2. Hệ thống gửi OTP xác minh email.
-3. GUEST nhập OTP.
-4. Hệ thống tạo tài khoản `CUSTOMER`.
-5. CUSTOMER đăng nhập bằng email/mật khẩu hoặc Google.
-6. Hệ thống cấp access token và refresh token.
-
-Ngoại lệ:
-
-- Email/SĐT trùng: từ chối đăng ký.
-- OTP sai/hết hạn: yêu cầu nhập lại hoặc gửi lại OTP.
-- Quên mật khẩu: GUEST gửi yêu cầu reset và đặt mật khẩu mới bằng token/OTP.
-
-Trạng thái: đã hoàn thành.
+## 8. Đối chiếu nhanh với SRS (điểm lệch còn lại)
+- **Code đã làm nhưng SRS ghi "chưa":** Review (REV), Reports (RPT), Showtime scheduler (SHOW-08), Loyalty redeem (LOY-05), Notification read-all (NOTI-04). → nên cập nhật SRS.
+- **SRS mô tả nhưng code không có:** Wallet refund (đã bỏ — gỡ khỏi SRS). (DB: PostgreSQL vẫn là target; MySQL chỉ là config local.)
+- **Còn thiếu thật:** ký QR (TICKET-02), DB lock chống double-booking (BOOK-04), Flyway/migration chuẩn, gửi vé QR qua email, FE test.
+- **Cần quyết:** có bỏ `POST /bookings/{id}/refund-request` (customer refund) theo SRS PAY-07 hay không.
 
 ---
 
-## 4. Luồng CUSTOMER
-
-### CUSTOMER-01: Quản lý hồ sơ cá nhân
-
-Liên quan SRS: `AUTH-08`, `AUTH-09`, `AUTH-10`.
-
-Tiền điều kiện: CUSTOMER đã đăng nhập.
-
-Luồng chính:
-
-1. CUSTOMER mở trang hồ sơ.
-2. Hệ thống hiển thị email, họ tên, SĐT, năm sinh, avatar và trạng thái xác minh.
-3. CUSTOMER cập nhật hồ sơ hoặc upload avatar.
-4. CUSTOMER có thể đổi mật khẩu bằng mật khẩu cũ và mật khẩu mới.
-
-Ngoại lệ:
-
-- Mật khẩu cũ sai: từ chối đổi mật khẩu.
-- Avatar upload lỗi Cloudinary: giữ avatar cũ.
-
-Trạng thái: đã hoàn thành.
-
-### CUSTOMER-02: Hold ghế và tạo booking
-
-Liên quan SRS: `BOOK-01` đến `BOOK-06`, `PRICE-01` đến `PRICE-04`, `FOOD-03`.
-
-Tiền điều kiện:
-
-- CUSTOMER đã đăng nhập.
-- Suất chiếu còn mở để đặt.
-- Ghế được chọn đang khả dụng.
-
-Luồng chính:
-
-1. CUSTOMER chọn phim và suất chiếu.
-2. Hệ thống tải seat map.
-3. CUSTOMER chọn một hoặc nhiều ghế.
-4. Hệ thống hold ghế trong 2 phút.
-5. CUSTOMER chọn loại vé, nhập tuổi người xem nếu cần.
-6. Hệ thống kiểm tra age rating và loại vé.
-7. CUSTOMER chọn đồ ăn/combo nếu muốn.
-8. Hệ thống tính tổng tiền.
-9. CUSTOMER xác nhận để tạo booking từ hold.
-
-Ngoại lệ:
-
-- Ghế đã bị hold/bán/check-in: hệ thống từ chối.
-- Hold hết hạn: ghế được giải phóng.
-- Tuổi không phù hợp age rating: không cho tiếp tục.
-- Chưa có database lock tuyệt đối: còn rủi ro double booking khi request đồng thời.
-
-Trạng thái: hoàn thành phần lõi; cần bổ sung khóa DB chống giữ ghế đồng thời.
-
-### CUSTOMER-03: Thanh toán booking
-
-Liên quan SRS: `PAY-01` đến `PAY-05`, `TICKET-01`.
-
-Tiền điều kiện:
-
-- Booking hợp lệ.
-- Booking ở trạng thái có thể thanh toán.
-
-Luồng chính:
-
-1. CUSTOMER chọn thanh toán VNPay.
-2. Hệ thống tạo payment record và URL thanh toán.
-3. CUSTOMER được chuyển sang VNPay.
-4. VNPAY trả kết quả qua return/IPN.
-5. Hệ thống xác minh chữ ký, số tiền và idempotency.
-6. Nếu thành công, booking chuyển `PAID`.
-7. Hệ thống sinh QR cho booking.
-8. CUSTOMER xem vé trong trang vé cá nhân.
-
-Ngoại lệ:
-
-- Thanh toán thất bại: payment `FAILED`, booking chưa thành vé hợp lệ.
-- Callback lặp: hệ thống không xử lý trùng.
-- Mock payment chỉ dùng dev/demo và phải được bảo vệ trước production.
-
-Trạng thái: hoàn thành phần lõi.
-
-### CUSTOMER-04: Xem vé và lịch sử booking
-
-Liên quan SRS: `BOOK-07`, `TICKET-01`.
-
-Tiền điều kiện: CUSTOMER đã đăng nhập.
-
-Luồng chính:
-
-1. CUSTOMER mở trang vé của tôi.
-2. Hệ thống tải danh sách booking cá nhân.
-3. CUSTOMER xem chi tiết booking, ghế, đồ ăn, tổng tiền, trạng thái và QR nếu đã thanh toán.
-
-Ngoại lệ:
-
-- Booking chưa thanh toán: không sinh QR hợp lệ.
-- Booking đã được hoàn tiền do hủy suất/cancel/expire: hiển thị trạng thái tương ứng.
-
-Trạng thái: đã hoàn thành.
-
-### CUSTOMER-05: Hủy booking trước thanh toán
-
-Liên quan SRS: `BOOK-08`.
-
-Tiền điều kiện: CUSTOMER sở hữu booking.
-
-Luồng hủy booking:
-
-1. Nếu booking ở `HOLDING` hoặc `PENDING_PAYMENT`, CUSTOMER có thể hủy khi còn hợp lệ.
-2. Hệ thống chuyển booking sang `CANCELLED` và giải phóng ghế.
-
-Không hợp lệ:
-
-- Booking `PAID` không được hủy hoặc yêu cầu hoàn tiền từ phía CUSTOMER.
-- Booking `USED`, `REFUNDED`, `CANCELLED`, `EXPIRED` không được hủy lại.
-- Vé đã thanh toán là vé đã bán ra; hệ thống không hỗ trợ hoàn tiền theo yêu cầu khách hàng sau khi mua vé.
-
-Trạng thái: hoàn thành một phần; chưa cần UI customer refund vì nghiệp vụ không cho phép khách tự hoàn tiền sau thanh toán.
-
-### CUSTOMER-06: Wishlist
-
-Liên quan SRS: `WISH-01`, `WISH-02`.
-
-Tiền điều kiện: CUSTOMER đã đăng nhập.
-
-Luồng chính:
-
-1. CUSTOMER thêm phim vào wishlist.
-2. Hệ thống lưu phim yêu thích.
-3. CUSTOMER xem hoặc xóa phim khỏi wishlist.
-
-Chưa thực hiện:
-
-- Tự thông báo khi phim trong wishlist có suất mới.
-
-Trạng thái: thêm/xóa/xem đã hoàn thành.
-
-### CUSTOMER-07: Loyalty
-
-Liên quan SRS: `LOY-01` đến `LOY-05`.
-
-Tiền điều kiện: CUSTOMER có booking thanh toán thành công.
-
-Luồng cộng điểm:
-
-1. Mỗi phim cấu hình số điểm cộng trên một ghế/vé.
-2. Khi booking thanh toán thành công, SYSTEM tính điểm bằng điểm của phim nhân với số ghế hợp lệ.
-3. Điểm được cộng vào tài khoản CUSTOMER.
-4. Điểm tồn tại vĩnh viễn.
-
-Luồng đổi điểm:
-
-1. CUSTOMER dùng điểm khi thanh toán.
-2. Tỷ lệ đổi là `1000 điểm = 1.000 VND`.
-3. Hệ thống trừ điểm và giảm số tiền thanh toán tương ứng.
-
-Luồng thu hồi/hoàn điểm khi rạp hủy suất:
-
-1. Khi booking được hoàn tiền do ADMIN hủy suất, SYSTEM hoàn lại/trừ phần điểm đã cộng hoặc đã sử dụng theo ledger.
-2. Cần lịch sử giao dịch điểm chi tiết để xử lý chính xác.
-
-Trạng thái: hoàn thành một phần; đổi điểm và ledger hoàn điểm chưa hoàn chỉnh.
-
-### CUSTOMER-08: Review phim
-
-Liên quan SRS: `REV-01` đến `REV-05`.
-
-Tiền điều kiện:
-
-- CUSTOMER đã có booking `USED` của phim đó.
-- Mỗi CUSTOMER chỉ có một review cho mỗi phim.
-
-Luồng chính:
-
-1. CUSTOMER mở phim đã xem.
-2. CUSTOMER nhập rating và nội dung review.
-3. Hệ thống lưu review ở trạng thái công khai/đã chấp nhận tự động.
-4. Review được hiển thị công khai ngay và tính vào điểm trung bình phim.
-5. ADMIN có thể ẩn hoặc xóa review vi phạm sau khi review đã được đăng.
-
-Trạng thái: chưa thực hiện.
-
-### CUSTOMER-09: Recommendation cá nhân hóa
-
-Liên quan SRS: `REC-01` đến `REC-04`, `MOV-09`.
-
-Tiền điều kiện: CUSTOMER đã đăng nhập.
-
-Luồng chính:
-
-1. CUSTOMER xem trailer, booking hoặc review phim.
-2. Hệ thống ghi nhận tín hiệu sở thích.
-3. CUSTOMER yêu cầu refresh hồ sơ sở thích.
-4. Hệ thống trả danh sách phim gợi ý hoặc gợi ý theo diễn viên yêu thích.
-
-Trạng thái: BE có nền tảng; FE tích hợp chưa rõ.
-
----
-
-## 5. Luồng STAFF
-
-### STAFF-01: Đăng nhập tài khoản STAFF
-
-Liên quan SRS: `AUTH-03`, `AUTH-12`.
-
-Tiền điều kiện:
-
-- ADMIN đã cấp tài khoản STAFF.
-- Tài khoản STAFF ở trạng thái active.
-
-Luồng chính:
-
-1. STAFF đăng nhập bằng email và mật khẩu được cấp.
-2. Hệ thống xác thực role `STAFF`.
-3. STAFF truy cập màn hình check-in.
-
-Ghi chú:
-
-- AUTH-12 hiện chỉ cấp tài khoản đăng nhập STAFF.
-- Quản lý hồ sơ nhân viên cơ bản thuộc `OPS-03` và đã có API/UI.
-- Nên bổ sung chính sách bắt buộc đổi mật khẩu lần đầu trong tương lai.
-
-Trạng thái: cấp tài khoản và staff profile cơ bản đã hoàn thành.
-
-### STAFF-02: Check-in booking bằng QR
-
-Liên quan SRS: `TICKET-03`, `TICKET-04`, `OPS-01`.
-
-Tiền điều kiện:
-
-- STAFF đã đăng nhập.
-- Booking đã thanh toán (`PAID`).
-- QR thuộc booking hợp lệ.
-
-Luồng chính:
-
-1. STAFF mở màn hình check-in.
-2. STAFF quét hoặc nhập QR booking.
-3. Hệ thống xác thực QR.
-4. Hệ thống kiểm tra booking đã thanh toán, chưa check-in và chưa bị hoàn tiền do hủy suất/cancel.
-5. Hệ thống chuyển booking sang `USED`.
-6. Hệ thống ghi nhận thời điểm check-in.
-
-Không hợp lệ:
-
-- QR sai hoặc không tồn tại.
-- Booking chưa thanh toán.
-- Booking đã check-in.
-- Booking đã cancel/được hoàn tiền do hủy suất/expire.
-
-Phạm vi hiện tại:
-
-- QR gắn với booking, một lần quét xác nhận toàn bộ booking.
-- Nếu cần check-in từng vé/ghế riêng lẻ, phải bổ sung QR và trạng thái riêng cho từng vé.
-
-Trạng thái: đã hoàn thành với API thật cho role `STAFF`.
-
-### STAFF-03: Tra cứu booking thủ công
-
-Liên quan SRS: `TICKET-05`, `OPS-02`.
-
-Tiền điều kiện: STAFF đã đăng nhập.
-
-Luồng chính:
-
-1. STAFF nhập booking code hoặc QR.
-2. Hệ thống trả booking phù hợp.
-3. STAFF xem trạng thái thanh toán/check-in.
-4. STAFF check-in booking hợp lệ.
-
-Phạm vi hiện tại:
-
-- Đã có tra cứu theo booking code hoặc QR.
-- Đã có danh sách booking theo suất chiếu cho STAFF bằng `showtimeId`.
-
-Trạng thái: hoàn thành tra cứu thủ công theo mã/QR và xem danh sách theo suất chiếu.
-
----
-
-## 6. Luồng ADMIN
-
-### ADMIN-01: Quản lý tài khoản CUSTOMER/STAFF
-
-Liên quan SRS: `AUTH-11`, `AUTH-12`, `OPS-03`.
-
-Tiền điều kiện: ADMIN đã đăng nhập.
-
-Luồng xem và khóa/mở tài khoản:
-
-1. ADMIN mở quản lý người dùng.
-2. Hệ thống hiển thị danh sách tài khoản.
-3. ADMIN xem chi tiết tài khoản.
-4. ADMIN chuyển trạng thái tài khoản sang active/disabled theo quy tắc.
-
-Quy tắc bảo vệ:
-
-- ADMIN không được tự khóa chính mình.
-- Hệ thống nên chặn khóa admin cuối cùng.
-
-Luồng cấp tài khoản STAFF:
-
-1. ADMIN nhập email, mật khẩu, họ tên, SĐT và năm sinh.
-2. Hệ thống kiểm tra trùng email/SĐT.
-3. Hệ thống tạo tài khoản active, xác minh email và gán role `STAFF`.
-4. STAFF có thể đăng nhập ngay.
-
-Luồng staff profile cơ bản cần bổ sung:
-
-1. ADMIN tạo/cập nhật mã nhân viên, vị trí, SĐT, trạng thái và rạp duy nhất.
-2. ADMIN vô hiệu hóa/kích hoạt hồ sơ nhân viên.
-
-Trạng thái: AUTH-11/AUTH-12 và staff profile cơ bản đã hoàn thành.
-
-### ADMIN-02: Quản lý phim, thể loại và diễn viên
-
-Liên quan SRS: `MOV-03`, `MOV-04`, `MOV-06`, `MOV-08`, `UP-01`.
-
-Luồng chính:
-
-1. ADMIN tạo/cập nhật/xóa hoặc đổi trạng thái phim.
-2. ADMIN quản lý thể loại.
-3. ADMIN quản lý diễn viên.
-4. ADMIN gán thể loại và diễn viên chính cho phim.
-5. ADMIN upload ảnh poster/banner/avatar qua Cloudinary.
-
-Trạng thái: đã hoàn thành phần lõi.
-
-### ADMIN-03: Quản lý rạp duy nhất
-
-Liên quan SRS: `CIN-01` đến `CIN-06`.
-
-Luồng chính:
-
-1. ADMIN xem thông tin rạp duy nhất.
-2. ADMIN cập nhật tên, địa chỉ, thành phố, SĐT hoặc trạng thái.
-3. ADMIN có thể vô hiệu hóa hoặc kích hoạt lại rạp.
-
-Không được phép:
-
-- Tạo rạp mới.
-- Xóa rạp.
-- Chuyển dữ liệu giữa nhiều rạp.
-
-Trạng thái: đã hoàn thành.
-
-### ADMIN-04: Quản lý phòng và ghế
-
-Liên quan SRS: `CIN-07` đến `CIN-11`.
-
-Luồng chính:
-
-1. ADMIN tạo/cập nhật phòng.
-2. ADMIN sinh sơ đồ ghế theo hàng/cột.
-3. ADMIN thay thế layout ghế.
-4. ADMIN cập nhật hoặc vô hiệu hóa ghế riêng lẻ.
-
-Ngoại lệ:
-
-- Không được sửa layout nếu có suất hoặc booking đang hoạt động.
-
-Trạng thái: đã hoàn thành.
-
-### ADMIN-05: Quản lý suất chiếu
-
-Liên quan SRS: `SHOW-03` đến `SHOW-08`, `PRICE-05`.
-
-Luồng tạo/cập nhật:
-
-1. ADMIN chọn phim, phòng, thời gian, trạng thái và cấu hình giá.
-2. Hệ thống kiểm tra xung đột phòng/thời gian.
-3. Hệ thống tạo suất chiếu đơn hoặc bulk.
-4. ADMIN cập nhật suất chiếu khi cần.
-
-Luồng hủy suất do sự cố rạp:
-
-1. ADMIN yêu cầu hủy suất.
-2. ADMIN nhập lý do sự cố vận hành, ví dụ lỗi kỹ thuật, mất điện, sự cố phòng chiếu hoặc lịch chiếu bắt buộc phải dừng.
-3. Hệ thống chuyển suất sang `CANCELLED`.
-4. Nếu suất đã bán vé, hệ thống tự động chuyển các booking hợp lệ sang `REFUNDED`, hoàn tiền vào wallet của CUSTOMER, thu hồi/trừ loyalty đã cộng từ booking đó và gửi notification cho khách.
-5. Nếu suất chưa bán vé, hệ thống chỉ chuyển trạng thái suất và không phát sinh refund.
-
-Không thuộc STAFF:
-
-- STAFF không xử lý hủy suất.
-- STAFF không xử lý hoàn tiền do hủy suất.
-
-Trạng thái: cần đồng bộ code để hủy suất có booking tự động refund vào wallet, thu hồi loyalty và gửi notification.
-
-### ADMIN-06: Quản lý đồ ăn và combo
-
-Liên quan SRS: `FOOD-01` đến `FOOD-04`.
-
-Luồng chính:
-
-1. ADMIN tạo/cập nhật món ăn.
-2. ADMIN tạo/cập nhật combo.
-3. ADMIN đổi trạng thái active/inactive/out-of-stock.
-
-Chưa có:
-
-- Quản lý tồn kho thực tế.
-
-Trạng thái: CRUD đã hoàn thành.
-
-### ADMIN-07: Quản lý booking và hoàn tiền do hủy suất
-
-Liên quan SRS: `BOOK-08`, `PAY-07`, `PAY-08`, `PAY-10`, `SHOW-06`, `SHOW-07`.
-
-Luồng chính:
-
-1. ADMIN xem booking/giao dịch.
-2. CUSTOMER không có luồng gửi yêu cầu refund sau khi đã thanh toán.
-3. Khi rạp có sự cố, ADMIN hủy suất chiếu từ màn hình quản lý suất.
-4. SYSTEM tự động hoàn tiền vào wallet của CUSTOMER cho các booking đã thanh toán của suất bị hủy.
-5. SYSTEM thu hồi/trừ loyalty đã cộng từ booking và gửi notification cho CUSTOMER.
-
-Chưa có:
-
-- Đối soát thanh toán đầy đủ.
-- Wallet/ledger hoàn tiền do hủy suất.
-- Notification tự động cho khách khi suất bị hủy.
-
-Trạng thái: cần đồng bộ code/UI theo nghiệp vụ mới.
-
-### ADMIN-08: Review moderation
-
-Liên quan SRS: `REV-03`.
-
-Luồng mong muốn:
-
-1. ADMIN xem danh sách review đã được user đăng.
-2. ADMIN ẩn hoặc xóa review vi phạm nội quy.
-3. Hệ thống không yêu cầu ADMIN duyệt review trước khi hiển thị.
-4. Hệ thống chỉ hiển thị review chưa bị ẩn/xóa và tính lại điểm trung bình phim theo các review công khai.
-
-Trạng thái: chưa thực hiện.
-
-### ADMIN-09: Báo cáo
-
-Liên quan SRS: `RPT-01` đến `RPT-05`.
-
-Luồng mong muốn:
-
-1. ADMIN chọn khoảng thời gian.
-2. Hệ thống thống kê doanh thu rạp duy nhất.
-3. Hệ thống thống kê vé bán, phim bán chạy, suất chiếu và tỷ lệ lấp đầy.
-4. ADMIN export báo cáo nếu cần.
-
-Không có:
-
-- Báo cáo theo nhiều thành phố/rạp.
-
-Trạng thái: report API chưa thực hiện.
-
----
-
-## 7. Luồng SYSTEM
-
-### SYSTEM-01: Giải phóng hold hết hạn
-
-Liên quan SRS: `BOOK-09`, `NFR-PERF-02`.
-
-Luồng chính:
-
-1. Scheduler tìm các hold quá hạn.
-2. Hệ thống chuyển booking/seat hold hết hạn sang `EXPIRED` hoặc `RELEASED`.
-3. Ghế trở lại trạng thái có thể đặt.
-
-Trạng thái: đã có scheduler; cần batch/paging/lock phân tán cho production.
-
-### SYSTEM-02: Cập nhật trạng thái suất chiếu
-
-Liên quan SRS: `SHOW-08`.
-
-Luồng mong muốn:
-
-1. SYSTEM chuyển `SCHEDULED` sang `OPEN` khi đến thời điểm mở bán/vận hành.
-2. SYSTEM chuyển `OPEN` sang `COMPLETED` khi suất kết thúc.
-3. SYSTEM bỏ qua suất `CANCELLED`.
-
-Trạng thái: chưa thực hiện.
-
-### SYSTEM-03: Xử lý callback thanh toán
-
-Liên quan SRS: `PAY-02`, `PAY-03`, `PAY-04`.
-
-Luồng chính:
-
-1. VNPAY gửi return/IPN.
-2. SYSTEM xác minh chữ ký và số tiền.
-3. SYSTEM kiểm tra callback đã xử lý chưa.
-4. SYSTEM cập nhật payment và booking.
-5. SYSTEM sinh QR và cộng điểm loyalty nếu thành công.
-
-Trạng thái: đã hoàn thành phần lõi.
-
-### SYSTEM-04: Loyalty ledger
-
-Liên quan SRS: `LOY-01` đến `LOY-05`.
-
-Luồng mong muốn:
-
-1. Khi booking `PAID`, SYSTEM cộng điểm theo phim và số ghế.
-2. Khi CUSTOMER đổi điểm, SYSTEM ghi ledger trừ điểm.
-3. Khi booking được hoàn tiền do ADMIN hủy suất chiếu, SYSTEM thu hồi/trừ điểm đã phát sinh từ booking đó.
-4. Điểm không hết hạn.
-
-Trạng thái: cần ledger chi tiết.
-
-### SYSTEM-05: Notification tự động
-
-Liên quan SRS: `NOTI-03`, `WISH-02`.
-
-Luồng mong muốn:
-
-1. Khi thanh toán thành công, SYSTEM tạo notification vé.
-2. Khi booking bị hủy trước thanh toán hoặc được hoàn tiền do suất chiếu bị ADMIN hủy, SYSTEM tạo notification trạng thái.
-3. Khi phim trong wishlist có suất mới, SYSTEM thông báo cho CUSTOMER.
-4. Nếu WebSocket được triển khai, thông báo được đẩy realtime.
-
-Trạng thái: chưa hoàn chỉnh.
-
----
-
-## 8. Luồng dịch vụ ngoài
-
-### VNPAY-01: Thanh toán
-
-Actor: `VNPAY`, `SYSTEM`, `CUSTOMER`.
-
-1. SYSTEM tạo URL thanh toán.
-2. CUSTOMER thanh toán trên VNPay.
-3. VNPAY trả kết quả qua return/IPN.
-4. SYSTEM xác minh và cập nhật booking.
-
-Trạng thái: đã hoàn thành sandbox/core.
-
-### WALLET-01: Hoàn tiền do hủy suất
-
-Actor: `SYSTEM`, `ADMIN`, `CUSTOMER`.
-
-1. ADMIN hủy suất chiếu do sự cố từ rạp.
-2. SYSTEM xác định các booking đã thanh toán của suất bị hủy.
-3. SYSTEM hoàn tiền vào wallet của CUSTOMER theo số tiền booking đã thanh toán.
-4. SYSTEM cập nhật booking `REFUNDED`, thu hồi/trừ loyalty đã cộng và gửi notification cho khách.
-
-Trạng thái: cần triển khai wallet/ledger và notification tự động.
-
-### SMTP-01: Email xác thực và vé
-
-Actor: `SMTP`, `SYSTEM`.
-
-Đã có:
-
-- Gửi OTP email.
-- Reset password.
-
-Chưa có:
-
-- Gửi vé QR qua email sau thanh toán.
-
-### CLOUDINARY-01: Upload ảnh
-
-Actor: `CLOUDINARY`, `ADMIN`, `CUSTOMER`.
-
-Đã có:
-
-- ADMIN upload ảnh phim/diễn viên.
-- CUSTOMER upload avatar.
-
-Chưa có:
-
-- UI quản lý file upload.
-- Xóa file và xóa trên Cloudinary.
-
-## 9. Điểm cần đồng bộ code với nghiệp vụ
-
-1. **Refund:** bỏ luồng CUSTOMER yêu cầu refund sau khi mua vé; chỉ hoàn tiền tự động vào wallet khi ADMIN hủy suất do sự cố rạp.
-2. **Loyalty:** cần ledger để cộng điểm theo ghế, đổi điểm, và thu hồi/trừ điểm khi booking được hoàn tiền do hủy suất.
-3. **Review:** cần controller/service, điều kiện booking `USED`, một review mỗi CUSTOMER mỗi phim, và moderation.
-4. **Promotion:** đã loại khỏi phạm vi nghiệp vụ hiện tại; nếu code còn API promotion thì không đưa vào luồng bàn giao.
-5. **Hủy suất:** cần cho phép ADMIN hủy suất do sự cố kể cả khi đã bán vé; hệ thống tự notification, hoàn tiền vào wallet và thu hồi loyalty.
+## 9. Kịch bản chạy API theo actor (test cases)
+
+> Quy ước kết quả: `2xx` thành công · `400` sai dữ liệu/nghiệp vụ · `401` thiếu/sai token · `403` sai role · `404` không tồn tại · `409` xung đột.
+> Token lấy từ `POST /auth/login` → gắn header `Authorization: Bearer <accessToken>`.
+
+### 9.1 GUEST
+
+| # | Kịch bản | API + payload | Kỳ vọng |
+|---|---|---|---|
+| G1 | Đăng ký hợp lệ | `POST /auth/register` `{email,password,fullName,phone,birthYear}` | 200, gửi OTP |
+| G2 | Đăng ký email trùng | `POST /auth/register` email đã có | 400/409 |
+| G3 | Xác minh OTP đúng | `POST /auth/verify-email` `{email,otp}` | 200, tạo CUSTOMER |
+| G4 | OTP sai/hết hạn | `POST /auth/verify-email` otp sai | 400 |
+| G5 | Login đúng | `POST /auth/login` `{username:email,password}` | 200 + access/refresh token |
+| G6 | Login sai mật khẩu | `POST /auth/login` sai pass | 401 |
+| G7 | Google login thiếu config | `POST /auth/google` `{credential}` khi chưa set `GOOGLE_CLIENT_ID` | 400 "client id not configured" |
+| G8 | Xem phim/suất/seat-map | `GET /movies` · `GET /showtimes/{id}/seat-map` | 200, không cần token |
+| G9 | GUEST cố hold ghế | `POST /bookings/hold` không token | 401 |
+| G10 | Reset mật khẩu | `POST /auth/password-reset/request` → `.../confirm` | 200 |
+
+### 9.2 CUSTOMER (cần token CUSTOMER)
+
+| # | Kịch bản | API + payload | Kỳ vọng |
+|---|---|---|---|
+| C1 | Xem hồ sơ | `GET /users/me` | 200 |
+| C2 | Đổi mật khẩu sai pass cũ | `POST /users/me/password` | 400 |
+| C3 | Hold ghế hợp lệ | `POST /bookings/hold` `{showtimeId,seatIds:[..]}` | 200, ghế `HOLDING` 2 phút |
+| C4 | Hold ghế đã bị giữ/bán | `POST /bookings/hold` ghế HOLDING/BOOKED | 400/409 |
+| C5 | Tạo booking từ hold | `POST /bookings` `{holdBookingId,tickets:[..],foods:[..],comboId,holiday}` | 200 |
+| C6 | Tạo booking sau khi hold hết hạn | `POST /bookings` hold đã EXPIRED | 400 |
+| C7 | Sai tuổi vs age rating | `POST /bookings` tuổi không hợp lệ | 400 |
+| C8 | Thanh toán VNPay | `POST /payments/vnpay/create` `{bookingId}` | 200 + payUrl |
+| C9 | Mock payment (dev) | `POST /payments/mock` `{bookingId}` | 200, booking `PAID` + QR |
+| C10 | Xem vé của tôi | `GET /bookings` · `GET /bookings/{id}` | 200 |
+| C11 | Hủy booking chưa thanh toán | `DELETE /bookings/{id}` (HOLDING/PENDING) | 200, `CANCELLED` |
+| C12 | Hủy booking đã PAID | `DELETE /bookings/{id}` (PAID) | 400 |
+| C13 | Truy cập booking người khác | `GET /bookings/{idNgườiKhác}` | 403/404 |
+| C14 | Wishlist | `POST /wishlist` `{movieId}` · `GET /wishlist` · `DELETE /wishlist/{movieId}` | 200 |
+| C15 | Xem điểm | `GET /loyalty/me` | 200 |
+| C16 | Đổi điểm vượt số dư | `POST /loyalty/me/redeem?points=999999` | 400 thiếu điểm |
+| C17 | Review khi chưa xem phim | `POST /reviews/movies/{id}` chưa có booking `USED` | 400 |
+| C18 | Review hợp lệ | `POST /reviews/movies/{id}` `{rating,comment}` có booking USED | 200 |
+| C19 | Recommendation | `GET /recommendations/movies` · `GET /recommendations/favorite-actors` | 200 |
+| C20 | Notification | `GET /notifications/me` · `PATCH /notifications/me/read-all` | 200 |
+| C21 | Customer gọi API admin | `GET /admin/users` với token CUSTOMER | 403 |
+
+### 9.3 STAFF (cần token STAFF)
+
+| # | Kịch bản | API | Kỳ vọng |
+|---|---|---|---|
+| S1 | Check-in vé PAID | `POST /staff/check-in` `{qrCode}` | 200, booking `USED` |
+| S2 | Check-in vé chưa thanh toán | `POST /staff/check-in` booking chưa PAID | 400 |
+| S3 | Check-in lại vé đã USED | `POST /staff/check-in` đã check-in | 400 |
+| S4 | QR sai/giả | `POST /staff/check-in` qr không hợp lệ | 400/404 |
+| S5 | STAFF gọi API admin | `GET /admin/movies` token STAFF | 403 |
+
+### 9.4 ADMIN (cần token ADMIN)
+
+| # | Kịch bản | API | Kỳ vọng |
+|---|---|---|---|
+| A1 | Tạo phim hợp lệ | `POST /admin/movies` (title≤50, duration 60–180…) | 200 |
+| A2 | Tạo phim vi phạm validate | `POST /admin/movies` title>50 | 400 field-level |
+| A3 | Lùi trạng thái phim sai luật | `PATCH /admin/movies/{id}/status` ENDED→UPCOMING | 400 |
+| A4 | Cấp tài khoản STAFF | `POST /admin/users/staff` | 200 |
+| A5 | Khóa/mở user | `PATCH /admin/users/{id}/status` | 200 |
+| A6 | Tạo rạp mới (cấm) | `POST /admin/cinema` | nghiệp vụ không dùng (single-cinema) |
+| A7 | Sinh ghế | `POST /admin/rooms/{id}/seats/generate` | 200 |
+| A8 | Sửa layout khi có booking | `PUT /admin/rooms/{id}/seats` đang có suất active | 400 |
+| A9 | Tạo suất trùng giờ/phòng | `POST /admin/showtimes` xung đột | 400/409 |
+| A10 | Tạo bulk suất | `POST /admin/showtimes/bulk` | 200 |
+| A11 | Hủy suất đã bán vé | `DELETE /admin/showtimes/{id}` | 200; booking `REFUNDED` + thu hồi loyalty + notification (**không ví**) |
+| A12 | Mark refunded sai trạng thái | `POST /admin/bookings/{id}/mark-refunded` khi chưa `REFUND_REQUESTED` | 400 |
+| A13 | Ẩn/xóa review | `PATCH /admin/reviews/{id}/hide` · `DELETE /admin/reviews/{id}` | 200 |
+| A14 | Báo cáo | `GET /admin/reports/revenue?from=..&to=..` | 200 |
+| A15 | Upload ảnh | `POST /admin/uploads/images` (multipart) | 200 + URL Cloudinary |
+
+### 9.5 SYSTEM (tự động, không gọi tay)
+
+| # | Kịch bản | Kích hoạt | Kỳ vọng |
+|---|---|---|---|
+| Y1 | Giải phóng hold hết hạn | `SeatHoldCleanupScheduler` | hold>2′ → `EXPIRED`/ghế `RELEASED` |
+| Y2 | Chuyển trạng thái suất | `ShowtimeStatusScheduler` | `SCHEDULED→OPEN→COMPLETED` |
+| Y3 | Callback VNPay hợp lệ | `GET /payments/vnpay/ipn` đúng chữ ký | booking `PAID` + cộng loyalty |
+| Y4 | Callback lặp (idempotency) | IPN gọi lại trên booking đã PAID | không xử lý trùng |
+| Y5 | Callback sai chữ ký | IPN chữ ký sai | từ chối, không đổi trạng thái |
+
+> Gợi ý chạy: dùng **Swagger** (`/swagger-ui.html`) — login lấy token, bấm *Authorize* dán Bearer, rồi chạy lần lượt theo bảng trên. Hoặc import Postman collection trong `api/`.

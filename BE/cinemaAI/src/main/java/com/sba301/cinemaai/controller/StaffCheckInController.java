@@ -9,10 +9,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -35,5 +39,20 @@ public class StaffCheckInController {
     })
     public ApiResponse<BookingResponse> checkIn(@Valid @RequestBody CheckInRequest request) {
         return ApiResponse.success(bookingService.checkIn(request.qrCode()), "Ticket checked in successfully");
+    }
+
+    @GetMapping("/lookup")
+    @Operation(summary = "Lookup booking for check-in (Staff/Admin)", description = "Find a booking by booking code or QR code")
+    public ApiResponse<BookingResponse> lookup(
+            @RequestParam(required = false) String bookingCode,
+            @RequestParam(required = false) String qrCode
+    ) {
+        return ApiResponse.success(bookingService.lookupForCheckIn(bookingCode, qrCode), "Booking found");
+    }
+
+    @GetMapping("/showtimes/{showtimeId}/bookings")
+    @Operation(summary = "List bookings by showtime (Staff/Admin)", description = "Get all bookings of a showtime for check-in")
+    public ApiResponse<List<BookingResponse>> bookingsByShowtime(@PathVariable Long showtimeId) {
+        return ApiResponse.success(bookingService.getStaffBookingsByShowtime(showtimeId), "Bookings retrieved");
     }
 }

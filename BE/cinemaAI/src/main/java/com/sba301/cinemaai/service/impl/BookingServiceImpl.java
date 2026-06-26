@@ -290,6 +290,33 @@ public class BookingServiceImpl implements BookingService {
         return expiredBookings.size();
     }
 
+    @Transactional(readOnly = true)
+    public BookingResponse lookupForCheckIn(String bookingCode, String qrCode) {
+        String resolvedCode = bookingCode;
+        if ((resolvedCode == null || resolvedCode.isBlank()) && qrCode != null && !qrCode.isBlank()) {
+            try {
+                resolvedCode = qrTicketService.extractBookingCode(qrCode);
+            } catch (IllegalArgumentException exception) {
+                throw new BadRequestException(exception.getMessage());
+            }
+        }
+        if (resolvedCode == null || resolvedCode.isBlank()) {
+            throw new BadRequestException("Booking code or QR code is required");
+        }
+        Booking booking = bookingRepository.findByBookingCode(resolvedCode.trim())
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+        return toResponse(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getStaffBookingsByShowtime(Long showtimeId) {
+        Showtime showtime = findShowtime(showtimeId);
+        return bookingRepository.findByShowtime(showtime)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private BigDecimal applyTicketSelections(
             Booking booking,
             Long comboId,

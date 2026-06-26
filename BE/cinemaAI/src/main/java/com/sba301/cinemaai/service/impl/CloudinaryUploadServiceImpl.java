@@ -25,10 +25,16 @@ import org.springframework.web.multipart.MultipartFile;
 public class CloudinaryUploadServiceImpl implements CloudinaryUploadService {
 
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+    private static final long MAX_VIDEO_SIZE = 100L * 1024 * 1024;
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
             "image/jpeg",
             "image/png",
             "image/webp"
+    );
+    private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of(
+            "video/mp4",
+            "video/webm",
+            "video/quicktime"
     );
 
     private final Cloudinary cloudinary;
@@ -44,7 +50,22 @@ public class CloudinaryUploadServiceImpl implements CloudinaryUploadService {
         User uploadedBy = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        Map<?, ?> result = uploadToCloudinary(file, folder);
+        return saveUpload(file, folder, "image", uploadedBy);
+    }
+
+    @Transactional
+    public UploadedFileResponse uploadVideo(MultipartFile file, String requestedFolder, Long userId) {
+        validateVideo(file);
+        validateCloudinaryConfiguration();
+        String folder = normalizeFolder(requestedFolder);
+        User uploadedBy = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        return saveUpload(file, folder, "video", uploadedBy);
+    }
+
+    private UploadedFileResponse saveUpload(MultipartFile file, String folder, String resourceType, User uploadedBy) {
+        Map<?, ?> result = uploadToCloudinary(file, folder, resourceType);
         String url = String.valueOf(result.get("secure_url"));
         String publicId = String.valueOf(result.get("public_id"));
         UploadedFile savedFile = uploadedFileRepository.save(new UploadedFile(
@@ -57,6 +78,18 @@ public class CloudinaryUploadServiceImpl implements CloudinaryUploadService {
                 uploadedBy
         ));
         return toResponse(savedFile);
+    }
+
+    private void validateVideo(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Video file is required");
+        }
+        if (file.getSize() > MAX_VIDEO_SIZE) {
+            throw new BadRequestException("Video file must not exceed 100 MB");
+        }
+        if (!ALLOWED_VIDEO_TYPES.contains(file.getContentType())) {
+            throw new BadRequestException("Only MP4, WEBM, and MOV videos are allowed");
+        }
     }
 
     private void validateImage(MultipartFile file) {
@@ -77,13 +110,13 @@ public class CloudinaryUploadServiceImpl implements CloudinaryUploadService {
         }
     }
 
-    private Map<?, ?> uploadToCloudinary(MultipartFile file, String folder) {
+    private Map<?, ?> uploadToCloudinary(MultipartFile file, String folder, String resourceType) {
         try {
             return cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
                             "folder", "cinema-ai/" + folder,
-                            "resource_type", "image",
+                            "resource_type", resourceType,
                             "unique_filename", true
                     )
             );

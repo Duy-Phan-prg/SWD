@@ -9,6 +9,28 @@
 
 ---
 
+## 0. Cập nhật 25/06/2026 (đối chiếu lại mã nguồn BE = `be/new`)
+
+> Các điểm sau **ghi đè** trạng thái cũ bên dưới (bản 15/06 đã lỗi thời ở những mục này):
+
+**Đã hoàn thành thêm (bản cũ ghi CHƯA):**
+- **REV-01→05 Review:** đã có `ReviewController` + `AdminReviewController` + `ReviewServiceImpl` (xem/tạo/sửa/xóa, average-rating, ẩn/xóa). → **ĐÃ HOÀN THÀNH (BE)**.
+- **RPT-01→03 Báo cáo:** đã có `AdminReportController` (`/revenue`, `/top-movies`, `/occupancy`) + `ReportService`. → **ĐÃ HOÀN THÀNH (BE)**.
+- **LOY-05 Đổi điểm:** đã có `POST /api/v1/loyalty/me/redeem`. → **ĐÃ HOÀN THÀNH (BE)**.
+- **SHOW-08 Scheduler suất chiếu:** đã có `ShowtimeStatusScheduler`. → **ĐÃ HOÀN THÀNH**.
+- **NOTI-04 Đánh dấu tất cả đã đọc:** đã có `PATCH /api/v1/notifications/me/read-all`. → **ĐÃ HOÀN THÀNH (BE)**.
+- **NFR-SEC-03 Secret:** đã externalize qua biến môi trường `${ENV}` + `.env`. → **ĐÃ HOÀN THÀNH**.
+
+**Đã loại bỏ / sai khác so với bản cũ:**
+- **Wallet bị bỏ hoàn toàn.** Không còn `Wallet`/`WalletService`/`WalletController`. Mọi yêu cầu "hoàn tiền vào wallet" (PAY-09, SHOW-07, LOY-03, Phase 6) **không áp dụng**. Khi ADMIN hủy suất: booking → `REFUNDED` + thu hồi loyalty + notification, **không cộng ví**.
+- **Database chính thức vẫn là PostgreSQL.** `application.properties` đang trỏ MySQL chỉ vì là cấu hình chạy local trên máy dev, không phải thay đổi target — DB-03/DB-05/P0#1 giữ nguyên theo PostgreSQL.
+
+**Còn thiếu thật (bản cũ vẫn đúng):** ký QR (TICKET-02), DB lock chống double-booking (BOOK-04), Flyway/migration chuẩn, email vé QR, FE test.
+
+**Cần quyết:** `POST /api/v1/bookings/{id}/refund-request` (customer refund) **vẫn còn trong code** dù PAY-07 yêu cầu bỏ.
+
+---
+
 ## 1. Mục đích tài liệu
 
 Tài liệu này mô tả yêu cầu phần mềm của hệ thống CinemaAI / CinePremier và đối chiếu trực tiếp với trạng thái triển khai hiện tại.
@@ -55,7 +77,7 @@ CinemaAI / CinePremier là hệ thống web đặt vé xem phim trực tuyến c
 | Frontend | React 19, React Router, Vite, Tailwind CSS |
 | Backend | Java 17, Spring Boot 3.5, Spring Security, Spring Data JPA |
 | Xác thực | JWT access token, refresh token, Google login, email OTP |
-| Cơ sở dữ liệu runtime | PostgreSQL |
+| Cơ sở dữ liệu runtime | PostgreSQL (MySQL chỉ là cấu hình chạy local trên máy dev) |
 | Test backend | JUnit, Spring Boot Test, H2 |
 | Thanh toán | VNPay sandbox và mock payment |
 | Lưu trữ ảnh | Cloudinary |
@@ -296,7 +318,7 @@ Lưu ý nghiệp vụ: CUSTOMER không được yêu cầu hoàn tiền sau khi 
 | BOOK-05 | Tạo booking từ hold | Có | Có | **ĐÃ HOÀN THÀNH** |
 | BOOK-06 | Chọn loại vé, tuổi và F&B | Có | Có | **ĐÃ HOÀN THÀNH** |
 | BOOK-07 | Xem danh sách/chi tiết booking cá nhân | Có | Có | **ĐÃ HOÀN THÀNH** |
-| BOOK-08 | Hủy booking hợp lệ | Có, chỉ cho `HOLDING`/`PENDING_PAYMENT` còn hạn | Có nút hủy trước thanh toán trong Vé của tôi | **ĐÃ HOÀN THÀNH** |
+| BOOK-08 | Hủy booking hợp lệ | Có | FE chưa có luồng rõ ràng | **HOÀN THÀNH MỘT PHẦN** |
 | BOOK-09 | Scheduler giải phóng hold hết hạn | Có | Không áp dụng | **ĐÃ HOÀN THÀNH** |
 | BOOK-10 | Realtime cập nhật trạng thái ghế | Chưa có | Chưa có | **CHƯA THỰC HIỆN** |
 

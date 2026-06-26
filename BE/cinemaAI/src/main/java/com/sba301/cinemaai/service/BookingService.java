@@ -5,6 +5,7 @@ import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.booking.BookingResponse;
 import com.sba301.cinemaai.enums.BookingStatus;
+import java.util.List;
 
 public interface BookingService {
 
@@ -33,6 +34,10 @@ public interface BookingService {
     BookingResponse checkIn(String qrCode);
 
     BookingResponse checkInAdmin(Long bookingId, String qrCode);
+
+    BookingResponse lookupForCheckIn(String bookingCode, String qrCode);
+
+    List<BookingResponse> getStaffBookingsByShowtime(Long showtimeId);
 
     int releaseExpiredHolds();
 }

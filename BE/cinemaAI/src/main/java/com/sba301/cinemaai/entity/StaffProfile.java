@@ -53,4 +53,9 @@ public class StaffProfile extends BaseEntity {
         this.position = position;
     }
 
+    public void updateDetails(String employeeCode, String position) {
+        this.employeeCode = employeeCode;
+        this.position = position;
+    }
+
 }
