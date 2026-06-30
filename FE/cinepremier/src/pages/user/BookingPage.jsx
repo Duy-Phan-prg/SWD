@@ -393,6 +393,44 @@ export default function BookingView() {
   const discountAmount = 0;
   const totalAmount = subTotal;
 
+  const refreshSeatMap = async () => {
+    if (!selectedShowtime?.id) return;
+    try {
+      const data = await bookingService.getSeatMap(selectedShowtime.id);
+      setSeatMapData(data);
+    } catch {
+      // A later explicit seat-map load will recover this state.
+    }
+  };
+
+  const releaseHeldBooking = async () => {
+    const bookingId = holdBookingId;
+    if (!bookingId) return;
+
+    const { accessToken } = getStoredAuth();
+    setHoldBookingId(null);
+    setTicketPriceValidation(null);
+
+    if (!accessToken) return;
+    try {
+      await bookingService.cancelBooking(accessToken, bookingId);
+    } catch (err) {
+      console.warn('[releaseHeldBooking] unable to cancel held booking:', err);
+    } finally {
+      refreshSeatMap();
+    }
+  };
+
+  const handleBackToBooking = async () => {
+    setIsHolding(true);
+    setPaymentState('booking');
+    try {
+      await releaseHeldBooking();
+    } finally {
+      setIsHolding(false);
+    }
+  };
+
   const canMovePastSeats = () => {
     if (selectedSeats.length === 0) { showToast('Vui lòng chọn ít nhất một ghế.'); return false; }
     if (!selectedShowtime) { showToast('Vui lòng chọn suất chiếu.'); return false; }
@@ -427,6 +465,10 @@ export default function BookingView() {
 
     setIsHolding(true);
     try {
+      if (holdBookingId) {
+        await releaseHeldBooking();
+      }
+
       const validation = await bookingService.validateTicketPrice(accessToken, {
         showtimeId: selectedShowtime.id,
         holiday: false,
@@ -544,7 +586,7 @@ export default function BookingView() {
 
           {paymentState === 'payment_method' && (
             <button
-              onClick={() => setPaymentState('booking')}
+              onClick={handleBackToBooking}
               className="text-[10px] text-zinc-400 hover:text-white border border-white/10 hover:border-white px-3 py-1.5 uppercase font-mono tracking-wider transition bg-neutral-950"
             >
               ← Trở lại sơ đồ ghế
@@ -600,7 +642,7 @@ export default function BookingView() {
                 Thử thanh toán lại
               </button>
               <button
-                onClick={() => setPaymentState('booking')}
+                onClick={handleBackToBooking}
                 className="w-full border border-white/20 hover:border-white text-white hover:bg-neutral-900 py-3.5 text-xs font-bold uppercase tracking-widest font-sans transition"
               >
                 Quay lại thay đổi ghế

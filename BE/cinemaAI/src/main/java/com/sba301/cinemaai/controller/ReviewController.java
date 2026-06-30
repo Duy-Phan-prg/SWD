@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,6 +50,15 @@ public class ReviewController {
             @Parameter(description = "Movie ID") @PathVariable Long movieId
     ) {
         return ApiResponse.success(reviewService.getAverageRating(movieId));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Get my reviews", description = "Returns reviews created by the current customer.")
+    public ApiResponse<List<ReviewResponse>> getMine(
+            @AuthenticationPrincipal AuthenticatedUser currentUser
+    ) {
+        return ApiResponse.success(reviewService.getMyReviews(currentUser.getUsername()));
     }
 
     @PostMapping("/movies/{movieId}")

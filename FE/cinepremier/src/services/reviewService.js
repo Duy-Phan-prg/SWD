@@ -3,6 +3,7 @@ import { request } from './authService';
 export const reviewService = {
   getMovieReviews: (movieId) => request(`/api/v1/reviews/movies/${encodeURIComponent(movieId)}`),
   getAverageRating: (movieId) => request(`/api/v1/reviews/movies/${encodeURIComponent(movieId)}/average-rating`),
+  getMyReviews: (token) => request('/api/v1/reviews/me', { token }),
   createReview: (token, movieId, payload) => request(`/api/v1/reviews/movies/${encodeURIComponent(movieId)}`, {
     method: 'POST',
     token,

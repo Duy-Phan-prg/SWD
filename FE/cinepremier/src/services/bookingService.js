@@ -1,4 +1,4 @@
-import { buildQueryString, request } from './authService';
+import { buildQueryString, request, unwrapListPayload } from './authService';
 
 export const bookingService = {
   getShowtimes: (params = {}) => request(`/api/v1/showtimes${buildQueryString(params)}`),
@@ -7,7 +7,7 @@ export const bookingService = {
   validateTicketPrice: (token, body) => request('/api/v1/ticket-pricing/validate', { method: 'POST', token, body }),
   holdSeats: (token, body) => request('/api/v1/bookings/hold', { method: 'POST', token, body }),
   createBooking: (token, body) => request('/api/v1/bookings', { method: 'POST', token, body }),
-  getMyBookings: (token) => request('/api/v1/bookings', { token }),
+  getMyBookings: (token) => request('/api/v1/bookings', { token }).then(unwrapListPayload),
   getMyBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { token }),
   cancelBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { method: 'DELETE', token })
 };

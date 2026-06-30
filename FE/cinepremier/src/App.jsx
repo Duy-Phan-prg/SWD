@@ -22,6 +22,7 @@ function AuthBootstrap() {
 function MovieBootstrap() {
   const location = useLocation();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const currentRole = useAuthStore((state) => state.currentRole);
   const fetchPublicCinema = useMovieStore((state) => state.fetchPublicCinema);
   const fetchGenres = useMovieStore((state) => state.fetchGenres);
   const fetchMoviesPage = useMovieStore((state) => state.fetchMoviesPage);
@@ -48,8 +49,8 @@ function MovieBootstrap() {
 
   useEffect(() => {
     if (!isLoggedIn) setFoodCatalog([]);
-    fetchWishlist({ isLoggedIn });
-  }, [fetchWishlist, isLoggedIn, setFoodCatalog]);
+    fetchWishlist({ isLoggedIn, currentRole });
+  }, [currentRole, fetchWishlist, isLoggedIn, setFoodCatalog]);
 
   return null;
 }

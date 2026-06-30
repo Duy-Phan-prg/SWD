@@ -26,7 +26,9 @@ export default function Header({
   const googleMapsUrl = cinemaAddress
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cinemaAddress)}`
     : 'https://www.google.com/maps';
-  const isAdminRole = currentRole === 'admin';
+  const isAdminRole = currentRole === 'admin' || currentUser?.role === 'admin';
+  const isStaffRole = currentRole === 'staff' || currentUser?.role === 'staff';
+  const canUseWishlist = !isAdminRole && !isStaffRole;
 
   return (
     <header className="sticky top-0 z-[100] w-full max-w-full overflow-visible border-b border-white/10 bg-black/95 backdrop-blur-md">
@@ -295,17 +297,19 @@ export default function Header({
               </button>
             )}
 
-            <button
-              onClick={() => onTabChange('wishlist')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'wishlist'
-                ? 'text-white border-white font-bold'
-                : 'text-neutral-300 hover:text-white border-transparent'
-                }`}
-              id="nav-wishlist"
-            >
-              <Heart className="h-3.5 w-3.5" />
-              <span>WATCHLIST</span>
-            </button>
+            {canUseWishlist && (
+              <button
+                onClick={() => onTabChange('wishlist')}
+                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'wishlist'
+                  ? 'text-white border-white font-bold'
+                  : 'text-neutral-300 hover:text-white border-transparent'
+                  }`}
+                id="nav-wishlist"
+              >
+                <Heart className="h-3.5 w-3.5" />
+                <span>WATCHLIST</span>
+              </button>
+            )}
 
             <button
               onClick={() => onTabChange('explore')}

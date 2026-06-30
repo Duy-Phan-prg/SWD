@@ -1,7 +1,5 @@
-import { request } from './authService';
+import { request, unwrapListPayload } from './authService';
 
-// Staff check-in, tra cứu booking và danh sách theo suất đã có ở BE.
-// Riêng staff foods (BE be/new chưa có) vẫn vô hiệu hoá an toàn.
 export const staffService = {
   lookupStaffCheckInBooking: (token, { bookingCode, qrCode }) => {
     const params = new URLSearchParams();
@@ -15,8 +13,14 @@ export const staffService = {
     token,
     body: { qrCode }
   }),
-  getStaffFoodItems: () => Promise.resolve([]),
-  getStaffFoodCombos: () => Promise.resolve([]),
-  updateStaffFoodItemStatus: () => Promise.reject(new Error('Quản lý đồ ăn cho staff chưa được hỗ trợ ở backend')),
-  updateStaffFoodComboStatus: () => Promise.reject(new Error('Quản lý đồ ăn cho staff chưa được hỗ trợ ở backend'))
+  getStaffFoodItems: (token) => request('/api/v1/staff/foods/items?size=100', { token }).then(unwrapListPayload),
+  getStaffFoodCombos: (token) => request('/api/v1/staff/foods/combos?size=100', { token }).then(unwrapListPayload),
+  updateStaffFoodItemStatus: (token, itemId, status) => request(`/api/v1/staff/foods/items/${encodeURIComponent(itemId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  }),
+  updateStaffFoodComboStatus: (token, comboId, status) => request(`/api/v1/staff/foods/combos/${encodeURIComponent(comboId)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'PATCH',
+    token
+  })
 };

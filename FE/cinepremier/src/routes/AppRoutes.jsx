@@ -93,7 +93,10 @@ function AdminRouteView() {
 
 export default function AppRoutes() {
   const currentUser = useAuthStore((state) => state.currentUser);
+  const currentRole = useAuthStore((state) => state.currentRole);
   const mustSetupPassword = currentUser?.passwordChangeRequired;
+  const isAdmin = currentRole === 'admin' || currentUser?.role === 'admin';
+  const isStaff = currentRole === 'staff' || currentUser?.role === 'staff';
 
   return (
     <Routes>
@@ -106,7 +109,7 @@ export default function AppRoutes() {
       <Route path="/movies/:id" element={<AppShell><DetailView /></AppShell>} />
       <Route path="/movies/:id/book" element={<AppShell><ProtectedRoute><BookingView /></ProtectedRoute></AppShell>} />
       <Route path="/tickets" element={<AppShell><ProtectedRoute><MyTicketsView /></ProtectedRoute></AppShell>} />
-      <Route path="/watchlist" element={<AppShell><ProtectedRoute><WishlistView /></ProtectedRoute></AppShell>} />
+      <Route path="/watchlist" element={isAdmin ? <Navigate to="/admin/overview" replace /> : isStaff ? <Navigate to="/staff" replace /> : <AppShell><ProtectedRoute><WishlistView /></ProtectedRoute></AppShell>} />
       <Route path="/profile" element={<AppShell><ProtectedRoute><ProfileView /></ProtectedRoute></AppShell>} />
       <Route path="/policies" element={<AppShell><PoliciesPage /></AppShell>} />
       <Route path="/admin" element={<Navigate to="/admin/overview" replace />} />

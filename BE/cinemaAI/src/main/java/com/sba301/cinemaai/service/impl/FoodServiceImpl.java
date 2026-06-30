@@ -115,6 +115,20 @@ public class FoodServiceImpl implements FoodService {
     }
 
     @Transactional
+    public FoodItemResponse updateItemStatus(Long id, FoodItemStatus status) {
+        FoodItem foodItem = findItem(id);
+        foodItem.setStatus(status);
+        return foodMapper.toFoodItemResponse(foodItem);
+    }
+
+    @Transactional
+    public FoodComboResponse updateComboStatus(Long id, FoodItemStatus status) {
+        FoodCombo foodCombo = findCombo(id);
+        foodCombo.setStatus(status);
+        return foodMapper.toFoodComboResponse(foodCombo);
+    }
+
+    @Transactional
     public FoodItemResponse deleteItem(Long id) {
         FoodItem foodItem = findItem(id);
         foodItem.setStatus(FoodItemStatus.INACTIVE);

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getStoredAuth } from '../services/authService';
+import { getStoredAuth, hasBackendAdminAccess, hasBackendStaffAccess } from '../services/authService';
 import { movieService } from '../services/movieService';
 import { wishlistService } from '../services/wishlistService';
 import { useAuthStore } from './useAuthStore';
@@ -173,9 +173,11 @@ export const useMovieStore = create((set, get) => ({
     }
   },
 
-  fetchWishlist: async ({ isLoggedIn } = {}) => {
-    const { accessToken } = getStoredAuth();
-    if (!isLoggedIn || !accessToken) {
+  fetchWishlist: async ({ isLoggedIn, currentRole } = {}) => {
+    const { accessToken, user } = getStoredAuth();
+    const isAdmin = currentRole === 'admin' || hasBackendAdminAccess(accessToken, user);
+    const isStaff = currentRole === 'staff' || hasBackendStaffAccess(accessToken, user);
+    if (!isLoggedIn || !accessToken || isAdmin || isStaff) {
       set({ watchlist: [] });
       return [];
     }
@@ -215,8 +217,15 @@ export const useMovieStore = create((set, get) => ({
 
   handleToggleWatchlist: async (movie, { isLoggedIn = useAuthStore.getState().isLoggedIn } = {}) => {
     const backendMovieId = movie.backendId || movie.movieId || movie.id;
-    const { accessToken } = getStoredAuth();
+    const { accessToken, user } = getStoredAuth();
     const showToast = useUiStore.getState().showToast;
+    const authState = useAuthStore.getState();
+    const isAdmin = authState.currentRole === 'admin' || hasBackendAdminAccess(accessToken, user || authState.currentUser);
+    const isStaff = authState.currentRole === 'staff' || hasBackendStaffAccess(accessToken, user || authState.currentUser);
+    if (isAdmin || isStaff) {
+      set({ watchlist: [] });
+      return;
+    }
     if (!isLoggedIn || !accessToken) {
       showToast('Vui long dang nhap de dong bo watchlist voi he thong.', 4500, null, 'sad');
       return;

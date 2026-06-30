@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
+import { reviewService } from '../../services/reviewService';
 import { useMovies } from '../../stores/useMovieStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUiStore } from '../../stores/useUiStore';
@@ -13,7 +14,7 @@ export default function MyTicketsView() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const showToast = useUiStore((state) => state.showToast);
   const setShowOTP = useUiStore((state) => state.setShowOTP);
-  const { publicCinema } = useMovies();
+  const { publicCinema, moviesList = [] } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onOpenOTP = () => setShowOTP(true);
   const [reviewContent, setReviewContent] = useState('');
@@ -23,6 +24,7 @@ export default function MyTicketsView() {
   const [realBookings, setRealBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [cancellingBookingId, setCancellingBookingId] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const loadBookings = () => {
     if (!isLoggedIn) return;
@@ -35,8 +37,18 @@ export default function MyTicketsView() {
       .finally(() => setIsLoading(false));
   };
 
+  const loadMyReviews = () => {
+    if (!isLoggedIn) return;
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) return;
+    return reviewService.getMyReviews(accessToken)
+      .then(data => setReviewsList(Array.isArray(data) ? data : []))
+      .catch(() => setReviewsList([]));
+  };
+
   useEffect(() => {
     loadBookings();
+    loadMyReviews();
   }, [isLoggedIn]);
 
   const canCancelBooking = (booking) => {
@@ -111,6 +123,16 @@ export default function MyTicketsView() {
     }
   };
 
+  const normalizeMovieTitle = (value) => String(value || '').trim().toLowerCase();
+
+  const findMovieForBooking = (booking) => {
+    const title = normalizeMovieTitle(booking.movieTitle || booking.showtime?.movieTitle);
+    if (!title) return null;
+    return moviesList.find((movie) => (
+      normalizeMovieTitle(movie.title || movie.movieTitle || movie.name) === title
+    )) || null;
+  };
+
   // Map BE booking sang display format
   const activeTickets = realBookings
     .filter(b => b.status === 'PAID' || b.status === 'USED' || b.status === 'HOLDING' || b.status === 'PENDING_PAYMENT')
@@ -133,7 +155,7 @@ export default function MyTicketsView() {
       holdExpiresAt: b.holdExpiresAt,
       canCancel: canCancelBooking(b),
       totalAmount: b.totalAmount,
-      poster: b.posterUrl || b.moviePosterUrl || b.showtime?.posterUrl || b.showtime?.moviePosterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
+      poster: b.posterUrl || b.moviePosterUrl || b.showtime?.posterUrl || b.showtime?.moviePosterUrl || findMovieForBooking(b)?.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
       isReal: true
     }));
 
@@ -148,7 +170,85 @@ export default function MyTicketsView() {
     statusColor: getBookingBadgeColor(booking.status)
   }));
 
-  const handleReviewSubmit = (e) => {
+  const reviewedMovieIds = useMemo(() => new Set(
+    reviewsList.map((review) => String(review.movieId)).filter(Boolean)
+  ), [reviewsList]);
+
+  const reviewableBookings = useMemo(() => {
+    const seenMovieIds = new Set();
+    return realBookings
+      .filter((booking) => booking.status === 'USED')
+      .map((booking) => {
+        const matchedMovie = findMovieForBooking(booking);
+        const movieId = booking.movieId || booking.showtime?.movieId || matchedMovie?.backendId || matchedMovie?.id;
+        return {
+          ...booking,
+          movieId,
+          movieTitle: booking.movieTitle || booking.showtime?.movieTitle || matchedMovie?.title || 'Phim',
+          posterUrl: booking.posterUrl || booking.moviePosterUrl || booking.showtime?.posterUrl || booking.showtime?.moviePosterUrl || matchedMovie?.posterUrl,
+        };
+      })
+      .filter((booking) => {
+        if (!booking.movieId || seenMovieIds.has(String(booking.movieId))) return false;
+        seenMovieIds.add(String(booking.movieId));
+        return true;
+      });
+  }, [realBookings, moviesList]);
+
+  const pendingReviewBookings = useMemo(
+    () => reviewableBookings.filter((booking) => !reviewedMovieIds.has(String(booking.movieId))),
+    [reviewableBookings, reviewedMovieIds]
+  );
+  const selectedReviewBooking = reviewableBookings.find((booking) => String(booking.movieId) === String(selectedReviewMovie))
+    || pendingReviewBookings[0]
+    || reviewableBookings[0]
+    || null;
+
+  useEffect(() => {
+    const nextBooking = pendingReviewBookings[0] || null;
+    if (!nextBooking) {
+      if (selectedReviewMovie) setSelectedReviewMovie('');
+      return;
+    }
+    if (!selectedReviewMovie || reviewedMovieIds.has(String(selectedReviewMovie))) {
+      setSelectedReviewMovie(String(nextBooking.movieId));
+    }
+  }, [pendingReviewBookings, reviewedMovieIds, selectedReviewMovie]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    const comment = reviewContent.trim();
+    const movieId = selectedReviewBooking?.movieId || selectedReviewMovie;
+    if (!comment || !movieId) return;
+    if (reviewedMovieIds.has(String(movieId))) {
+      showToast('Bạn đã đánh giá phim này rồi nên không thể gửi thêm đánh giá.', 4500, null, 'sad');
+      return;
+    }
+
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      showToast('Vui lòng đăng nhập lại để gửi đánh giá.', 4500, null, 'sad');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const savedReview = await reviewService.createReview(accessToken, movieId, {
+        rating: reviewRating,
+        comment
+      });
+      setReviewsList((current) => [savedReview, ...current.filter((review) => String(review.id) !== String(savedReview.id))]);
+      setReviewContent('');
+      showToast(`Đã gửi đánh giá cho phim ${selectedReviewBooking?.movieTitle || 'này'}.`);
+      await loadMyReviews();
+    } catch (error) {
+      showToast(error.message || 'Không thể gửi đánh giá phim.', 4500, null, 'sad');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  const legacyHandleReviewSubmit = (e) => {
     e.preventDefault();
     if (!reviewContent) return;
 

@@ -31,6 +31,7 @@ import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.BookingTicketRepository;
+import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
 import com.sba301.cinemaai.dto.response.PageResponse;
@@ -80,6 +81,7 @@ public class BookingServiceImpl implements BookingService {
     private final QrTicketService qrTicketService;
     private final BookingMapper bookingMapper;
     private final LoyaltyPointService loyaltyPointService;
+    private final ReviewRepository reviewRepository;
 
     @Transactional
     public BookingResponse holdSeats(String email, HoldSeatsRequest request) {
@@ -470,6 +472,9 @@ public class BookingServiceImpl implements BookingService {
     private void validateRefundable(Booking booking) {
         if (booking.getStatus() != BookingStatus.PAID && booking.getStatus() != BookingStatus.CANCELLED) {
             throw new BadRequestException("Only paid or cancelled booking can request refund");
+        }
+        if (reviewRepository.existsByUserAndMovie(booking.getUser(), booking.getShowtime().getMovie())) {
+            throw new BadRequestException("Reviewed movie cannot request refund");
         }
     }
 

@@ -121,6 +121,7 @@ public final class MessageTranslator {
             entry("Seat is not available", "Ghế không khả dụng"),
             entry("Seat is already held or booked", "Ghế đã được giữ hoặc đã được đặt"),
             entry("Only paid or cancelled booking can request refund", "Chỉ đặt vé đã thanh toán hoặc đã hủy mới có thể yêu cầu hoàn tiền"),
+            entry("Reviewed movie cannot request refund", "Phim đã được đánh giá nên không thể yêu cầu hoàn tiền"),
             entry("Booking not found", "Không tìm thấy đặt vé"),
 
             entry("System is limited to one cinema", "Hệ thống chỉ cho phép một rạp phim"),

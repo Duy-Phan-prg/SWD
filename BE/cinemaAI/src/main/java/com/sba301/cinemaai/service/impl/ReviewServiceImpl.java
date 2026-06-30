@@ -3,6 +3,7 @@ package com.sba301.cinemaai.service.impl;
 import com.sba301.cinemaai.dto.request.review.ReviewRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.review.ReviewResponse;
+import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Review;
 import com.sba301.cinemaai.entity.User;
@@ -14,6 +15,7 @@ import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import com.sba301.cinemaai.service.ReviewService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -37,14 +39,16 @@ public class ReviewServiceImpl implements ReviewService {
         User user = resolveUser(userEmail);
         Movie movie = resolveMovie(movieId);
 
-        if (!bookingRepository.existsUsedBookingByUserAndMovie(user, movie)) {
+        Booking usedBooking = bookingRepository.findLatestUsedBookingByUserAndMovie(user, movie)
+                .orElse(null);
+        if (usedBooking == null) {
             throw new BadRequestException("You can only review a movie after watching it (booking status must be USED)");
         }
         if (reviewRepository.existsByUserAndMovie(user, movie)) {
             throw new BadRequestException("You have already reviewed this movie");
         }
 
-        Review review = reviewRepository.save(new Review(user, movie, null, request.getRating(), request.getComment()));
+        Review review = reviewRepository.save(new Review(user, movie, usedBooking, request.getRating(), request.getComment()));
         log.info("User {} created review for movie {}", userEmail, movieId);
         return ReviewResponse.from(review);
     }
@@ -67,6 +71,16 @@ public class ReviewServiceImpl implements ReviewService {
         review.setComment(request.getComment());
         log.info("User {} updated review {}", userEmail, reviewId);
         return ReviewResponse.from(review);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ReviewResponse> getMyReviews(String userEmail) {
+        User user = resolveUser(userEmail);
+        return reviewRepository.findByUser(user)
+                .stream()
+                .map(ReviewResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)

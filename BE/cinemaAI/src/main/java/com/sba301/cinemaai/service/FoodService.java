@@ -7,6 +7,7 @@ import com.sba301.cinemaai.dto.response.food.FoodComboResponse;
 import com.sba301.cinemaai.dto.response.food.FoodItemResponse;
 import com.sba301.cinemaai.entity.FoodCombo;
 import com.sba301.cinemaai.entity.FoodItem;
+import com.sba301.cinemaai.enums.FoodItemStatus;
 import java.util.List;
 
 public interface FoodService {
@@ -34,6 +35,10 @@ public interface FoodService {
     FoodItemResponse updateItem(Long id, FoodItemRequest request);
 
     FoodComboResponse updateCombo(Long id, FoodComboRequest request);
+
+    FoodItemResponse updateItemStatus(Long id, FoodItemStatus status);
+
+    FoodComboResponse updateComboStatus(Long id, FoodItemStatus status);
 
     FoodItemResponse deleteItem(Long id);
 

@@ -37,6 +37,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END FROM Booking b WHERE b.user = :user AND b.showtime.movie = :movie AND b.status = 'USED'")
     boolean existsUsedBookingByUserAndMovie(@Param("user") User user, @Param("movie") Movie movie);
 
+    @Query("SELECT b FROM Booking b WHERE b.user = :user AND b.showtime.movie = :movie AND b.status = 'USED' ORDER BY b.checkedInAt DESC, b.id DESC")
+    Optional<Booking> findLatestUsedBookingByUserAndMovie(@Param("user") User user, @Param("movie") Movie movie);
+
     @Query("SELECT b FROM Booking b WHERE b.showtime = :showtime AND b.status = :status")
     List<Booking> findByShowtimeAndStatus(@Param("showtime") Showtime showtime, @Param("status") BookingStatus status);
 

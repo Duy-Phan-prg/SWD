@@ -27,6 +27,9 @@ export default function UserLayout({ children }) {
   const setCurrentRole = useAuthStore((state) => state.setCurrentRole);
   const handleLogout = useAuthStore((state) => state.handleLogout);
   const { searchQuery, setSearchQuery, setMoviePagination, publicCinema, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
+  const isAdmin = currentRole === 'admin' || currentUser?.role === 'admin';
+  const isStaff = currentRole === 'staff' || currentUser?.role === 'staff';
+  const isWishlistRestricted = isAdmin || isStaff;
 
   const activeTab = (() => {
     const p = location.pathname;
@@ -47,11 +50,16 @@ export default function UserLayout({ children }) {
     { id: 'my-tickets', label: 'VÉ CỦA TÔI', icon: Ticket },
     { id: 'wishlist', label: 'WATCHLIST', icon: Heart },
     { id: 'profile', label: 'CÁ NHÂN', icon: User },
-  ].filter(({ id }) => currentRole !== 'admin' || id !== 'my-tickets');
+  ].filter(({ id }) => {
+    if (isAdmin && (id === 'my-tickets' || id === 'wishlist')) return false;
+    if (isStaff && id === 'wishlist') return false;
+    return true;
+  });
 
   const handleTabChange = (tab) => {
     // Guest bấm "Vé của tôi" → mở modal đăng nhập (vé yêu cầu đăng nhập).
     if (tab === 'my-tickets' && !isLoggedIn) { setAuthMode('login'); setShowOTP(true); return; }
+    if (tab === 'wishlist' && isWishlistRestricted) return;
     const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
     navigate(paths[tab] || '/');
   };
