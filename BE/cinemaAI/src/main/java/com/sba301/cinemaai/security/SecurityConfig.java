@@ -52,6 +52,7 @@ public class SecurityConfig {
                                 "/api/v1/cinema/**",
                                 "/api/v1/cinemas/**",
                                 "/api/v1/showtimes/**",
+                                "/api/v1/reviews/movies/**",
                                 "/api/v1/foods/**",
                                 "/api/v1/ticket-pricing/combos"
                         ).permitAll()

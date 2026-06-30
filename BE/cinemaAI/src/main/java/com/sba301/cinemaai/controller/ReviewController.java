@@ -100,7 +100,7 @@ public class ReviewController {
             @AuthenticationPrincipal AuthenticatedUser currentUser,
             @Parameter(description = "Review ID") @PathVariable Long reviewId
     ) {
-        reviewService.deleteReview(reviewId);
+        reviewService.deleteOwnReview(currentUser.getUsername(), reviewId);
         return ApiResponse.success(null, "Review deleted");
     }
 }

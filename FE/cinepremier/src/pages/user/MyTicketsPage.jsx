@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle } from 'lucide-react';
+import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle, MessageSquare, Pencil, Trash2, Save, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
@@ -25,6 +25,12 @@ export default function MyTicketsView() {
   const [isLoading, setIsLoading] = useState(false);
   const [cancellingBookingId, setCancellingBookingId] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState('');
+  const [editReviewContent, setEditReviewContent] = useState('');
+  const [editReviewRating, setEditReviewRating] = useState(5);
+  const [savingReviewId, setSavingReviewId] = useState('');
+  const [deletingReviewId, setDeletingReviewId] = useState('');
+  const reviewSectionRef = useRef(null);
 
   const loadBookings = () => {
     if (!isLoggedIn) return;
@@ -140,6 +146,7 @@ export default function MyTicketsView() {
       bookingId: b.id,
       id: b.bookingCode || String(b.id),
       status: b.status,
+      movieId: b.movieId || b.showtime?.movieId || findMovieForBooking(b)?.backendId || findMovieForBooking(b)?.id,
       title: b.movieTitle || b.showtime?.movieTitle || 'Phim',
       englishTitle: b.bookingCode || '',
       time: b.showtimeStart ? new Date(b.showtimeStart).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—',
@@ -170,12 +177,25 @@ export default function MyTicketsView() {
     statusColor: getBookingBadgeColor(booking.status)
   }));
 
-  const reviewedMovieIds = useMemo(() => new Set(
-    reviewsList.map((review) => String(review.movieId)).filter(Boolean)
+  const reviewedBookingIds = useMemo(() => new Set(
+    reviewsList
+      .filter((review) => review.status !== 'DELETED')
+      .map((review) => review.bookingId)
+      .filter((bookingId) => bookingId !== null && bookingId !== undefined)
+      .map(String)
   ), [reviewsList]);
 
+  const visibleReviews = useMemo(
+    () => reviewsList.filter((review) => review.status !== 'DELETED'),
+    [reviewsList]
+  );
+
+  const isReviewInEditWindow = (review) => {
+    if (!review?.createdAt) return false;
+    return Date.now() - new Date(review.createdAt).getTime() <= 24 * 60 * 60 * 1000;
+  };
+
   const reviewableBookings = useMemo(() => {
-    const seenMovieIds = new Set();
     return realBookings
       .filter((booking) => booking.status === 'USED')
       .map((booking) => {
@@ -189,17 +209,15 @@ export default function MyTicketsView() {
         };
       })
       .filter((booking) => {
-        if (!booking.movieId || seenMovieIds.has(String(booking.movieId))) return false;
-        seenMovieIds.add(String(booking.movieId));
-        return true;
+        return booking.id && booking.movieId;
       });
   }, [realBookings, moviesList]);
 
   const pendingReviewBookings = useMemo(
-    () => reviewableBookings.filter((booking) => !reviewedMovieIds.has(String(booking.movieId))),
-    [reviewableBookings, reviewedMovieIds]
+    () => reviewableBookings.filter((booking) => !reviewedBookingIds.has(String(booking.id))),
+    [reviewableBookings, reviewedBookingIds]
   );
-  const selectedReviewBooking = reviewableBookings.find((booking) => String(booking.movieId) === String(selectedReviewMovie))
+  const selectedReviewBooking = reviewableBookings.find((booking) => String(booking.id) === String(selectedReviewMovie))
     || pendingReviewBookings[0]
     || reviewableBookings[0]
     || null;
@@ -210,18 +228,18 @@ export default function MyTicketsView() {
       if (selectedReviewMovie) setSelectedReviewMovie('');
       return;
     }
-    if (!selectedReviewMovie || reviewedMovieIds.has(String(selectedReviewMovie))) {
-      setSelectedReviewMovie(String(nextBooking.movieId));
+    if (!selectedReviewMovie || reviewedBookingIds.has(String(selectedReviewMovie))) {
+      setSelectedReviewMovie(String(nextBooking.id));
     }
-  }, [pendingReviewBookings, reviewedMovieIds, selectedReviewMovie]);
+  }, [pendingReviewBookings, reviewedBookingIds, selectedReviewMovie]);
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     const comment = reviewContent.trim();
-    const movieId = selectedReviewBooking?.movieId || selectedReviewMovie;
+    const movieId = selectedReviewBooking?.movieId;
     if (!comment || !movieId) return;
-    if (reviewedMovieIds.has(String(movieId))) {
-      showToast('Bạn đã đánh giá phim này rồi nên không thể gửi thêm đánh giá.', 4500, null, 'sad');
+    if (selectedReviewBooking?.id && reviewedBookingIds.has(String(selectedReviewBooking.id))) {
+      showToast('Bạn đã đánh giá vé này rồi nên không thể gửi thêm đánh giá.', 4500, null, 'sad');
       return;
     }
 
@@ -234,6 +252,7 @@ export default function MyTicketsView() {
     setIsSubmittingReview(true);
     try {
       const savedReview = await reviewService.createReview(accessToken, movieId, {
+        bookingId: selectedReviewBooking?.id,
         rating: reviewRating,
         comment
       });
@@ -248,22 +267,82 @@ export default function MyTicketsView() {
     }
   };
 
-  const legacyHandleReviewSubmit = (e) => {
-    e.preventDefault();
-    if (!reviewContent) return;
+  const scrollToReviewSection = () => {
+    reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
-    showToast(`Cảm ơn đóng báo của bạn về phim ${selectedReviewMovie}!\nNhận xét đã được ghi nhận trên cổng phê bình Cinephile.`);
-    setReviewsList([
-      {
-        id: Date.now(),
-        movie: selectedReviewMovie,
-        rating: reviewRating,
-        content: reviewContent,
-        date: 'Vừa xong'
-      },
-      ...reviewsList
-    ]);
-    setReviewContent('');
+  const handleGoToReviewFromTicket = (ticket) => {
+    const bookingId = ticket?.bookingId;
+    if (bookingId && !reviewedBookingIds.has(String(bookingId))) {
+      setSelectedReviewMovie(String(bookingId));
+    }
+    scrollToReviewSection();
+    if (bookingId && reviewedBookingIds.has(String(bookingId))) {
+      showToast('Bạn đã đánh giá vé này. Có thể sửa hoặc xóa trong 24 giờ sau khi gửi.');
+    }
+  };
+
+  const handleStartEditReview = (review) => {
+    setEditingReviewId(String(review.id));
+    setEditReviewRating(review.rating || 5);
+    setEditReviewContent(review.comment || review.content || '');
+  };
+
+  const handleCancelEditReview = () => {
+    setEditingReviewId('');
+    setEditReviewRating(5);
+    setEditReviewContent('');
+  };
+
+  const handleUpdateReview = async (review) => {
+    const comment = editReviewContent.trim();
+    if (!comment) return;
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      showToast('Vui lòng đăng nhập lại để sửa đánh giá.', 4500, null, 'sad');
+      return;
+    }
+
+    setSavingReviewId(String(review.id));
+    try {
+      const updatedReview = await reviewService.updateReview(accessToken, review.id, {
+        rating: editReviewRating,
+        comment
+      });
+      setReviewsList((current) => current.map((item) => (
+        String(item.id) === String(updatedReview.id) ? updatedReview : item
+      )));
+      handleCancelEditReview();
+      showToast('Đã cập nhật đánh giá.');
+    } catch (error) {
+      showToast(error.message || 'Không thể cập nhật đánh giá.', 4500, null, 'sad');
+    } finally {
+      setSavingReviewId('');
+    }
+  };
+
+  const handleDeleteReview = async (review) => {
+    const confirmed = window.confirm('Xóa đánh giá này? Thao tác chỉ hợp lệ trong 24 giờ sau khi gửi.');
+    if (!confirmed) return;
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      showToast('Vui lòng đăng nhập lại để xóa đánh giá.', 4500, null, 'sad');
+      return;
+    }
+
+    setDeletingReviewId(String(review.id));
+    try {
+      await reviewService.deleteReview(accessToken, review.id);
+      setReviewsList((current) => current.map((item) => (
+        String(item.id) === String(review.id) ? { ...item, status: 'DELETED' } : item
+      )));
+      if (editingReviewId === String(review.id)) handleCancelEditReview();
+      showToast('Đã xóa đánh giá.');
+    } catch (error) {
+      showToast(error.message || 'Không thể xóa đánh giá.', 4500, null, 'sad');
+    } finally {
+      setDeletingReviewId('');
+    }
   };
 
   return (
@@ -421,6 +500,17 @@ export default function MyTicketsView() {
                             Hủy booking
                           </button>
                         )}
+                        {t.status === 'USED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleGoToReviewFromTicket(t)}
+                            className="inline-flex items-center gap-1.5 border border-amber-500/30 bg-amber-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black"
+                            title={t.bookingId && reviewedBookingIds.has(String(t.bookingId)) ? 'Xem hoặc sửa đánh giá' : 'Đánh giá phim đã xem'}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            {t.bookingId && reviewedBookingIds.has(String(t.bookingId)) ? 'Xem đánh giá' : 'Đánh giá'}
+                          </button>
+                        )}
                         <button
                           onClick={() => showToast(`Mã rạp chiếu kĩ thuật số: ${t.code} đã được gửi lên hệ thống. Đưa mã này khi nhận vé bắp nước combo VIP.`)}
                           className="p-1.5 hover:bg-neutral-900 text-neutral-500 hover:text-white transition rounded-full shrink-0"
@@ -508,10 +598,10 @@ export default function MyTicketsView() {
           </div>
 
           {/* SECTION: ĐÁNH GIÁ PHIM ĐÃ XEM FEEDBACK AREA */}
-          <div className="space-y-4">
+          <div ref={reviewSectionRef} className="space-y-4 scroll-mt-24">
             <div className="flex items-center gap-2 border-b border-white/5 pb-2">
               <Star className="h-4 w-4 text-white" />
-              <span className="text-[10px] uppercase font-sans font-black tracking-widest text-neutral-400">
+              <span className="text-[13px] uppercase font-sans font-black tracking-widest text-neutral-400">
                 💬 Đánh giá phim đã xem
               </span>
             </div>
@@ -523,16 +613,20 @@ export default function MyTicketsView() {
               <div className="md:col-span-4 border border-white/10 bg-black p-5 flex flex-col items-center justify-center text-center space-y-4">
                 <div className="w-28 aspect-[3/4] overflow-hidden border border-white/5 bg-neutral-900 shadow-xl relative">
                   <img
-                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10"
-                    alt="Oppenheimer"
+                    src={selectedReviewBooking?.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10'}
+                    alt={selectedReviewBooking?.movieTitle || 'Phim đã xem'}
                     className="w-full h-full object-cover grayscale"
                     referrerPolicy="no-referrer"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <h4 className="text-sm font-serif font-bold italic text-white uppercase tracking-wider">{selectedReviewMovie}</h4>
-                  <p className="text-[9px] uppercase tracking-widest text-[#888888] font-sans">Đã xem ngày 12/09/2024</p>
+                  <h4 className="text-sm font-serif font-bold italic text-white uppercase tracking-wider">{selectedReviewBooking?.movieTitle || 'Chưa có vé đã sử dụng'}</h4>
+                  <p className="text-[9px] uppercase tracking-widest text-[#888888] font-sans">
+                    {selectedReviewBooking?.showtimeStart
+                      ? `Đã xem ngày ${new Date(selectedReviewBooking.showtimeStart).toLocaleDateString('vi-VN')}`
+                      : 'Chỉ vé đã sử dụng mới được đánh giá'}
+                  </p>
                 </div>
 
                 {/* Simulated star ratings click selector */}
@@ -563,11 +657,16 @@ export default function MyTicketsView() {
                       <select
                         value={selectedReviewMovie}
                         onChange={(e) => setSelectedReviewMovie(e.target.value)}
-                        className="w-full border border-white/10 bg-neutral-950 p-2 text-xs text-white uppercase tracking-wider focus:outline-none focus:border-white rounded-none"
+                        disabled={pendingReviewBookings.length === 0}
+                        className="w-full border border-white/10 bg-neutral-950 p-2 text-xs text-white uppercase tracking-wider focus:outline-none focus:border-white rounded-none disabled:opacity-50"
                       >
-                        <option value="Oppenheimer">Oppenheimer (12/09/2024)</option>
-                        <option value="Interstellar">Interstellar (28/08/2024)</option>
-                        <option value="The Batman">The Batman (15/07/2024)</option>
+                        {pendingReviewBookings.length === 0 ? (
+                          <option value="">Không có phim đủ điều kiện</option>
+                        ) : pendingReviewBookings.map((booking) => (
+                          <option key={booking.id} value={String(booking.id)}>
+                            {booking.movieTitle} - {booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || booking.bookingCode || `Vé #${booking.id}`} ({booking.showtimeStart ? new Date(booking.showtimeStart).toLocaleDateString('vi-VN') : 'Đã sử dụng'})
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -588,6 +687,7 @@ export default function MyTicketsView() {
                       placeholder="Nhập nhận xét của bạn về bộ phim này..."
                       value={reviewContent}
                       onChange={(e) => setReviewContent(e.target.value)}
+                      disabled={pendingReviewBookings.length === 0 || isSubmittingReview}
                       className="w-full border border-white/10 bg-[#090909] p-3 text-xs text-white placeholder-neutral-700 font-sans focus:outline-none focus:border-white rounded-none leading-relaxed"
                     />
                   </div>
@@ -595,10 +695,11 @@ export default function MyTicketsView() {
                   <div className="flex justify-end pt-1">
                     <button
                       type="submit"
+                      disabled={pendingReviewBookings.length === 0 || isSubmittingReview}
                       className="bg-purple-900 duration-250 border border-purple-500/30 hover:bg-neutral-900 hover:text-white px-6 py-2.5 text-xs text-white font-sans font-bold tracking-widest uppercase transition rounded-none flex items-center gap-1.5"
                       style={{ background: 'linear-gradient(270deg, #D4145A 0%, #FBB03B 100%)' }}
                     >
-                      GỬI ĐÁNH GIÁ
+                      {isSubmittingReview ? 'ĐANG GỬI...' : 'GỬI ĐÁNH GIÁ'}
                     </button>
                   </div>
                 </form>
@@ -607,24 +708,99 @@ export default function MyTicketsView() {
             </div>
 
             {/* User reviews state displays if submitted */}
-            {reviewsList.length > 0 && (
+            {visibleReviews.length > 0 && (
               <div className="space-y-3 pt-3">
                 <span className="text-[8px] tracking-wider text-neutral-500 font-sans block uppercase">ĐÁNH GIÁ VỪA KHAI THÁC CỦA BẠN:</span>
                 <div className="space-y-3">
-                  {reviewsList.map((rev) => (
-                    <div key={rev.id} className="border border-white/5 bg-[#0a0a0a] p-4 font-sans text-xs space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-serif italic text-white font-bold">{rev.movie}</span>
-                        <span className="text-neutral-500 font-mono text-[9px]">{rev.date}</span>
+                  {visibleReviews.map((rev) => {
+                    const isEditing = editingReviewId === String(rev.id);
+                    const canChangeReview = rev.status === 'VISIBLE' && isReviewInEditWindow(rev);
+                    return (
+                      <div key={rev.id} className="border border-white/5 bg-[#0a0a0a] p-4 font-sans text-xs space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-serif italic text-white font-bold">{rev.movieTitle || rev.movie || 'Phim'}</span>
+                          <span className="text-neutral-500 font-mono text-[9px]">{rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('vi-VN') : rev.date}</span>
+                        </div>
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <div className="flex space-x-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setEditReviewRating(star)}
+                                  className="text-white"
+                                >
+                                  <Star className={`h-3.5 w-3.5 ${editReviewRating >= star ? 'fill-current text-white' : 'text-neutral-800'}`} />
+                                </button>
+                              ))}
+                            </div>
+                            <textarea
+                              rows={3}
+                              maxLength={300}
+                              value={editReviewContent}
+                              onChange={(e) => setEditReviewContent(e.target.value)}
+                              className="w-full border border-white/10 bg-black p-3 text-xs text-white placeholder-neutral-700 font-sans focus:outline-none focus:border-white rounded-none leading-relaxed"
+                            />
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={handleCancelEditReview}
+                                className="inline-flex items-center gap-1.5 border border-white/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-neutral-300 hover:bg-white hover:text-black"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Hủy
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateReview(rev)}
+                                disabled={savingReviewId === String(rev.id)}
+                                className="inline-flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-950/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-300 hover:bg-emerald-500 hover:text-black disabled:cursor-wait disabled:opacity-60"
+                              >
+                                {savingReviewId === String(rev.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                Lưu
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex space-x-0.5">
+                              {Array.from({ length: 5 }, (_, idx) => (
+                                <Star key={idx} className={`h-3 w-3 ${idx < rev.rating ? 'fill-current text-white' : 'text-neutral-800'}`} />
+                              ))}
+                            </div>
+                            <p className="text-neutral-400 font-light leading-relaxed">"{rev.comment || rev.content || ''}"</p>
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2">
+                              <span className="text-[9px] uppercase tracking-widest text-neutral-500">
+                                {canChangeReview ? 'Có thể sửa/xóa trong 24 giờ sau khi gửi' : 'Đã hết hạn sửa/xóa sau 24 giờ'}
+                              </span>
+                              {canChangeReview && (
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditReview(rev)}
+                                    className="inline-flex items-center gap-1.5 border border-sky-500/30 bg-sky-950/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-sky-300 hover:bg-sky-500 hover:text-black"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    Sửa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteReview(rev)}
+                                    disabled={deletingReviewId === String(rev.id)}
+                                    className="inline-flex items-center gap-1.5 border border-rose-500/30 bg-rose-950/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-rose-300 hover:bg-rose-500 hover:text-white disabled:cursor-wait disabled:opacity-60"
+                                  >
+                                    {deletingReviewId === String(rev.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                    Xóa
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div className="flex space-x-0.5">
-                        {Array.from({ length: 5 }, (_, idx) => (
-                          <Star key={idx} className={`h-3 w-3 ${idx < rev.rating ? 'fill-current text-white' : 'text-neutral-800'}`} />
-                        ))}
-                      </div>
-                      <p className="text-neutral-400 font-light leading-relaxed">"{rev.content}"</p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}

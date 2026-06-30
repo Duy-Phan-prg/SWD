@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.repository;
 
 import com.sba301.cinemaai.entity.Movie;
+import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.Review;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.ReviewStatus;
@@ -26,6 +27,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Optional<Review> findByUserAndMovie(User user, Movie movie);
 
     boolean existsByUserAndMovie(User user, Movie movie);
+
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Review r WHERE r.booking = :booking AND r.status <> :status")
+    boolean existsByBookingAndStatusNot(@Param("booking") Booking booking, @Param("status") ReviewStatus status);
 
     @Query("SELECT COALESCE(AVG(r.rating), 0) FROM Review r WHERE r.movie = :movie AND r.status = 'VISIBLE'")
     double averageRatingByMovie(@Param("movie") Movie movie);

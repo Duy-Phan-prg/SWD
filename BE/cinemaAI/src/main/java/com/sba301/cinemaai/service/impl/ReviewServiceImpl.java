@@ -7,6 +7,7 @@ import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Review;
 import com.sba301.cinemaai.entity.User;
+import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.ReviewStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.NotFoundException;
@@ -15,6 +16,7 @@ import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import com.sba301.cinemaai.service.ReviewService;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,13 +41,12 @@ public class ReviewServiceImpl implements ReviewService {
         User user = resolveUser(userEmail);
         Movie movie = resolveMovie(movieId);
 
-        Booking usedBooking = bookingRepository.findLatestUsedBookingByUserAndMovie(user, movie)
-                .orElse(null);
+        Booking usedBooking = resolveReviewBooking(user, movie, request.getBookingId());
         if (usedBooking == null) {
             throw new BadRequestException("You can only review a movie after watching it (booking status must be USED)");
         }
-        if (reviewRepository.existsByUserAndMovie(user, movie)) {
-            throw new BadRequestException("You have already reviewed this movie");
+        if (reviewRepository.existsByBookingAndStatusNot(usedBooking, ReviewStatus.DELETED)) {
+            throw new BadRequestException("You have already reviewed this ticket");
         }
 
         Review review = reviewRepository.save(new Review(user, movie, usedBooking, request.getRating(), request.getComment()));
@@ -66,6 +67,7 @@ public class ReviewServiceImpl implements ReviewService {
         if (review.getStatus() != ReviewStatus.VISIBLE) {
             throw new BadRequestException("Cannot update a review that is hidden or deleted");
         }
+        requireWithinCustomerEditWindow(review);
 
         review.setRating(request.getRating());
         review.setComment(request.getComment());
@@ -126,6 +128,24 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Transactional
     @Override
+    public void deleteOwnReview(String userEmail, Long reviewId) {
+        User user = resolveUser(userEmail);
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new NotFoundException("Review not found: " + reviewId));
+        if (!review.getUser().getId().equals(user.getId())) {
+            throw new NotFoundException("Review not found: " + reviewId);
+        }
+        if (review.getStatus() != ReviewStatus.VISIBLE) {
+            throw new BadRequestException("Cannot delete a review that is hidden or deleted");
+        }
+        requireWithinCustomerEditWindow(review);
+
+        review.setStatus(ReviewStatus.DELETED);
+        log.info("User {} deleted own review {}", userEmail, reviewId);
+    }
+
+    @Transactional
+    @Override
     public void deleteReview(Long reviewId) {
         if (!reviewRepository.existsById(reviewId)) {
             throw new NotFoundException("Review not found: " + reviewId);
@@ -139,6 +159,30 @@ public class ReviewServiceImpl implements ReviewService {
     public double getAverageRating(Long movieId) {
         Movie movie = resolveMovie(movieId);
         return reviewRepository.averageRatingByMovie(movie);
+    }
+
+    private void requireWithinCustomerEditWindow(Review review) {
+        if (review.getCreatedAt() == null || review.getCreatedAt().isBefore(LocalDateTime.now().minusHours(24))) {
+            throw new BadRequestException("Review can only be changed within 24 hours after creation");
+        }
+    }
+
+    private Booking resolveReviewBooking(User user, Movie movie, Long bookingId) {
+        if (bookingId != null) {
+            Booking booking = bookingRepository.findById(bookingId)
+                    .orElseThrow(() -> new NotFoundException("Booking not found: " + bookingId));
+            if (!booking.getUser().getId().equals(user.getId())
+                    || !booking.getShowtime().getMovie().getId().equals(movie.getId())
+                    || booking.getStatus() != BookingStatus.USED) {
+                throw new BadRequestException("You can only review a movie after watching it (booking status must be USED)");
+            }
+            return booking;
+        }
+        return bookingRepository.findUsedBookingsByUserAndMovieOrderByLatest(user, movie)
+                .stream()
+                .filter((booking) -> !reviewRepository.existsByBookingAndStatusNot(booking, ReviewStatus.DELETED))
+                .findFirst()
+                .orElse(null);
     }
 
     private User resolveUser(String email) {

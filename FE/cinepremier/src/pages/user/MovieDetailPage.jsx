@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Play, Star, Clock, Heart } from 'lucide-react';
+import { ArrowLeft, Play, Star, Clock, Heart, Loader2 } from 'lucide-react';
 import { useMovies } from '../../stores/useMovieStore';
 import { getStoredAuth } from '../../services/authService';
 import { adminService } from '../../services/adminService';
 import { movieService } from '../../services/movieService';
+import { reviewService } from '../../services/reviewService';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const extractYoutubeId = (url = '') => {
@@ -92,9 +93,7 @@ export default function DetailView() {
 
   const [showTrailer, setShowTrailer] = useState(false);
   const [reviews, setReviews] = useState([]);
-  const [newAuthor, setNewAuthor] = useState('');
-  const [newRating, setNewRating] = useState(5);
-  const [newContent, setNewContent] = useState('');
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [likedReviews, setLikedReviews] = useState({});
   const isBookable = movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
   const isWatchlisted = movie && watchlist.some((item) => (
@@ -104,39 +103,35 @@ export default function DetailView() {
   const trailerEmbedSrc = getTrailerEmbedSrc(trailerUrl);
   const hasDirectTrailerVideo = isDirectVideoUrl(trailerUrl);
 
-  // Reviews are user-generated; do not seed frontend mock reviews.
+  const detailMovieId = movie?.backendId || movie?.movieId || movie?.id || id;
+
   useEffect(() => {
-    if (!movie) return;
-    setReviews([]);
-  }, [movie]);
-
-  // Handle post user review
-  const handleAddReview = (e) => {
-    e.preventDefault();
-    if (!newAuthor.trim() || !newContent.trim()) return;
-
-    const newRev = {
-      id: `user-rev-${Date.now()}`,
-      author: newAuthor,
-      avatarUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
-      rating: newRating,
-      content: newContent,
-      date: 'Hôm nay',
-      likes: 0
+    if (!detailMovieId) return;
+    let cancelled = false;
+    setIsLoadingReviews(true);
+    reviewService.getMovieReviews(detailMovieId)
+      .then((payload) => {
+        if (cancelled) return;
+        setReviews(Array.isArray(payload) ? payload : payload?.items || []);
+      })
+      .catch(() => {
+        if (!cancelled) setReviews([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingReviews(false);
+      });
+    return () => {
+      cancelled = true;
     };
-
-    setReviews([newRev, ...reviews]);
-    setNewAuthor('');
-    setNewContent('');
-    setNewRating(5);
-  };
+  }, [detailMovieId]);
 
   const handleLikeReview = (id) => {
     setLikedReviews(prev => {
       const isAlreadyLiked = !!prev[id];
       setReviews(current => current.map(r => {
         if (r.id === id) {
-          return { ...r, likes: isAlreadyLiked ? r.likes - 1 : r.likes + 1 };
+          const currentLikes = Number(r.likes || 0);
+          return { ...r, likes: isAlreadyLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1 };
         }
         return r;
       }));
@@ -149,21 +144,21 @@ export default function DetailView() {
   const mainActorIdSet = new Set((movie.mainActorIds || []).map((actorId) => Number(actorId)));
   const currentCasts = Array.isArray(movie.actors)
     ? movie.actors.map((actor) => ({
-        id: Number.isFinite(Number(actor.id ?? actor.actorId)) ? Number(actor.id ?? actor.actorId) : actor.name,
-        name: actor.name || actor.fullName || actor.actorName || 'Diễn viên',
-        role: actor.role || actor.characterName || actor.description || 'Diễn viên',
-        avatarUrl: actor.avatarUrl || actor.imageUrl || actor.photoUrl || '',
-        isMain: mainActorIdSet.has(Number(actor.id ?? actor.actorId))
-      }))
+      id: Number.isFinite(Number(actor.id ?? actor.actorId)) ? Number(actor.id ?? actor.actorId) : actor.name,
+      name: actor.name || actor.fullName || actor.actorName || 'Diễn viên',
+      role: actor.role || actor.characterName || actor.description || 'Diễn viên',
+      avatarUrl: actor.avatarUrl || actor.imageUrl || actor.photoUrl || '',
+      isMain: mainActorIdSet.has(Number(actor.id ?? actor.actorId))
+    }))
     : [];
   const mainCasts = currentCasts.filter((cast) => cast.isMain);
   const supportingCasts = currentCasts.filter((cast) => !cast.isMain);
 
   return (
     <div className="pb-24 space-y-12">
-      
+
       {/* 1. BLURRED BANNER HERO BACKGROUND */}
-      <section 
+      <section
         className="relative min-h-[55vh] flex items-end bg-cover bg-center px-4 sm:px-6 lg:px-8 py-10"
         style={{ backgroundImage: `url(${movie.bannerUrl})` }}
       >
@@ -171,12 +166,12 @@ export default function DetailView() {
         <div className="absolute inset-0 bg-black/50 z-0 backdrop-blur-[1px]" />
 
         <div className="relative max-w-5xl w-full mx-auto z-20 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-          
+
           {/* Movie Poster Vertical Card */}
           <div className="md:col-span-4 flex justify-center md:justify-start">
             <div className="relative w-72 aspect-[2/3] overflow-hidden border border-white/10 shadow-2xl flex-shrink-0 bg-black">
-              <img 
-                src={movie.posterUrl} 
+              <img
+                src={movie.posterUrl}
                 alt={movie.title}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -222,7 +217,7 @@ export default function DetailView() {
                   className="border border-purple-400/70 bg-purple-600 text-white text-xs font-bold font-sans uppercase tracking-[0.15em] px-8 py-3.5 hover:bg-purple-500 hover:border-purple-300 transition duration-300"
                   id="detail-book-now"
                 >
-                  XÁC THỰC & ĐẶT VÉ NGAY
+                  ĐẶT VÉ NGAY
                 </button>
               ) : (
                 <span className="border border-white/20 bg-neutral-900 text-white uppercase text-[10px] tracking-widest px-8 py-3.5 font-bold font-sans">
@@ -243,24 +238,17 @@ export default function DetailView() {
               <button
                 type="button"
                 onClick={() => handleToggleWatchlist(movie)}
-                className={`border px-5 py-3.5 text-xs font-sans uppercase tracking-[0.15em] flex items-center gap-2 transition duration-300 ${
-                  isWatchlisted
-                    ? 'border-rose-400/70 bg-rose-500 text-white hover:bg-black'
-                    : 'border-white/10 bg-black/40 text-white hover:bg-white hover:text-black'
-                }`}
+                className={`border px-5 py-3.5 text-xs font-sans uppercase tracking-[0.15em] flex items-center gap-2 transition duration-300 ${isWatchlisted
+                  ? 'border-rose-400/70 bg-rose-500 text-white hover:bg-black'
+                  : 'border-white/10 bg-black/40 text-white hover:bg-white hover:text-black'
+                  }`}
                 id="detail-watchlist-button"
               >
                 <Heart className={`h-4 w-4 ${isWatchlisted ? 'fill-current' : ''}`} />
                 {isWatchlisted ? 'ĐÃ LƯU' : 'LƯU PHIM'}
               </button>
 
-              <button
-                type="button"
-                className="border border-purple-400/50 bg-black/40 hover:bg-purple-950/40 hover:border-purple-400/70 text-white px-6 py-3.5 text-xs font-sans uppercase tracking-[0.15em] transition duration-300"
-                id="detail-analysis-button"
-              >
-                PHÂN TÍCH
-              </button>
+
 
 
             </div>
@@ -284,7 +272,7 @@ export default function DetailView() {
       {/* 2. MAIN DETAILS GRID */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          
+
           {/* Left Block: Synopsis & Actors representation */}
           <div className="lg:col-span-12 space-y-10">
             <div className="space-y-4">
@@ -367,87 +355,51 @@ export default function DetailView() {
                 NHẬN XÉT CỦA CINEPHILE ({reviews.length})
               </h3>
 
-              {/* Form Comment */}
-              <form onSubmit={handleAddReview} className="border border-white/10 bg-black p-5 space-y-4">
-                <span className="text-[10px] font-sans font-medium text-white uppercase tracking-[0.15em] block">Viết đánh giá phê bình</span>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    required
-                    maxLength={30}
-                    placeholder="Tên bút danh..."
-                    value={newAuthor}
-                    onChange={(e) => setNewAuthor(e.target.value)}
-                    className="border border-white/10 bg-[#0A0A0A] p-2.5 text-xs text-white placeholder-neutral-700 font-sans focus:outline-none focus:border-white"
-                  />
-                  <div className="flex items-center space-x-3">
-                    <span className="text-xs uppercase tracking-wider text-white font-sans">Độ nồng:</span>
-                    <div className="flex space-x-1.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setNewRating(star)}
-                          className="text-white focus:outline-none"
-                        >
-                          <Star className={`h-4.5 w-4.5 ${newRating >= star ? 'fill-current text-white' : 'text-neutral-800'}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              <div className="border border-white/10 bg-black p-5">
+                <p className="text-xs text-neutral-400 font-sans leading-relaxed">
+                  Đánh giá bên dưới được lấy từ 100% đánh giá thực tế của khách hàng đã xem phim.
+                </p>
+              </div>
 
-                <textarea
-                  required
-                  rows={2}
-                  maxLength={250}
-                  placeholder="Điền vài dòng phản ánh cảm tính của bản thân về kịch cảnh..."
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  className="w-full border border-white/10 bg-[#0A0A0A] p-2.5 text-xs text-white placeholder-neutral-700 font-sans focus:outline-none focus:border-white"
-                />
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="border border-purple-400/70 bg-purple-600 text-white hover:bg-purple-500 px-5 py-2 text-[10px] tracking-widest uppercase font-sans font-bold transition"
-                  >
-                    GỬI ĐÁNH GIÁ
-                  </button>
-                </div>
-              </form>
-
-              {/* List Comments rendering */}
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {reviews.map((rev) => (
+                {isLoadingReviews && (
+                  <div className="flex items-center justify-center gap-2 border border-white/10 bg-[#0A0A0A] p-6 text-xs uppercase tracking-widest text-neutral-400">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang tải đánh giá
+                  </div>
+                )}
+                {!isLoadingReviews && reviews.length === 0 && (
+                  <div className="border border-dashed border-white/10 bg-[#0A0A0A] p-6 text-center text-xs uppercase tracking-widest text-neutral-500">
+                    Chưa có đánh giá công khai cho phim này.
+                  </div>
+                )}
+                {!isLoadingReviews && reviews.map((rev) => (
                   <div key={rev.id} className="bg-[#0A0A0A] p-4 border border-white/5 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <img 
-                          src={rev.avatarUrl} 
-                          alt="Av" 
-                          className="h-8 w-8 rounded-full object-cover border border-white/10 grayscale"
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-neutral-950 text-[10px] font-black text-white">
+                          {(rev.userFullName || rev.userEmail || 'C').slice(0, 1).toUpperCase()}
+                        </div>
                         <div>
-                          <h4 className="font-sans text-xs text-white font-bold">{rev.author}</h4>
-                          <span className="text-[9px] text-neutral-500 uppercase tracking-widest">{rev.date}</span>
+                          <h4 className="font-sans text-xs text-white font-bold">{rev.userFullName || rev.userEmail || 'Cinephile'}</h4>
+                          <span className="text-[11px] text-neutral-500 uppercase tracking-widest">
+                            {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('vi-VN') : 'Đã đánh giá'}
+                          </span>
                         </div>
                       </div>
 
                       <div className="flex space-x-0.5">
                         {Array.from({ length: 5 }, (_, idx) => (
-                          <Star 
-                            key={idx} 
-                            className={`h-3 w-3 ${idx < rev.rating ? 'text-white fill-current' : 'text-neutral-800'}`} 
+                          <Star
+                            key={idx}
+                            className={`h-3 w-3 ${idx < rev.rating ? 'text-white fill-current' : 'text-neutral-800'}`}
                           />
                         ))}
                       </div>
                     </div>
 
                     <p className="text-neutral-200 text-xs leading-relaxed font-sans font-light pl-11">
-                      "{rev.content}"
+                      "{rev.comment || ''}"
                     </p>
 
                     <div className="flex items-center justify-between pt-2 border-t border-white/5 font-sans text-[9px] tracking-wider text-white pl-11">
@@ -456,9 +408,9 @@ export default function DetailView() {
                         className={`flex items-center gap-1.5 hover:text-white transition uppercase ${likedReviews[rev.id] ? 'text-white font-bold' : ''}`}
                       >
                         <Heart className={`h-3 w-3 ${likedReviews[rev.id] ? 'fill-current' : ''}`} />
-                        <span>Thích {rev.likes}</span>
+                        <span>Thích {rev.likes || 0}</span>
                       </button>
-                      <span>KHÁCH VIP ĐÃ XÁC THỰC</span>
+
                     </div>
 
                   </div>
@@ -473,7 +425,7 @@ export default function DetailView() {
 
       {/* 3. VIDEO TRAILER DIALOG COMPONENT MODAL */}
       {showTrailer && trailerUrl && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 transition duration-300"
           id="trailer-modal"
         >
@@ -506,7 +458,7 @@ export default function DetailView() {
                 />
               )}
             </div>
-            
+
             <div className="p-4 bg-neutral-950 border-t border-white/10">
               <p className="text-[9px] text-white font-sans tracking-[0.25em] uppercase">TRAILER CHÍNH THỨC</p>
               <h4 className="text-base font-serif text-white mt-1 italic">{movie.title}: {movie.englishTitle}</h4>

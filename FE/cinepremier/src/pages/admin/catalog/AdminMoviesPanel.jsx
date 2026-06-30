@@ -121,6 +121,7 @@ export default function AdminMoviesPanel({ ctx }) {
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const [isTrailerUploading, setIsTrailerUploading] = useState(false);
   const [createdActors, setCreatedActors] = useState([]);
+  const isMovieMediaUploading = isPosterUploading || isBannerUploading || isTrailerUploading;
 
   const hasReleaseDatePassed = (value) => {
     if (!value) return false;
@@ -310,6 +311,41 @@ export default function AdminMoviesPanel({ ctx }) {
       className: 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
     };
   };
+
+  const renderImagePreview = (src, label, className = 'h-14 w-14') => (
+    <div className={`shrink-0 overflow-hidden border border-neutral-800 bg-neutral-950 ${className}`}>
+      {src ? (
+        <img
+          src={src}
+          alt={label}
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="grid h-full w-full place-items-center text-neutral-700">
+          <ImageUp className="h-4 w-4" />
+        </div>
+      )}
+    </div>
+  );
+
+  const renderVideoPreview = (src) => (
+    <div className="h-14 w-24 shrink-0 overflow-hidden border border-neutral-800 bg-neutral-950">
+      {src ? (
+        <video
+          src={src}
+          className="h-full w-full object-cover"
+          muted
+          playsInline
+          preload="metadata"
+        />
+      ) : (
+        <div className="grid h-full w-full place-items-center text-neutral-700">
+          <Video className="h-4 w-4" />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -625,7 +661,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-2 border border-neutral-800 bg-black p-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2">
                         <input
                           type="text"
                           placeholder="Tên actor"
@@ -640,27 +676,20 @@ export default function AdminMoviesPanel({ ctx }) {
                           onChange={(e) => setActorForm({ ...actorForm, biography: e.target.value })}
                           className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
                         />
-                        <div className="flex gap-1">
-                          <input
-                            type="text"
-                            placeholder="Avatar URL"
-                            value={actorForm.avatarUrl}
-                            onChange={(e) => setActorForm({ ...actorForm, avatarUrl: e.target.value })}
-                            className="min-w-0 flex-1 bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                          />
-                          <label className={`grid place-items-center border border-amber-500/40 bg-amber-500/10 px-2 text-amber-300 cursor-pointer ${isActorImageUploading ? 'opacity-50 pointer-events-none' : ''}`} title="Chọn ảnh từ máy">
-                            <ImageUp className="h-4 w-4" />
-                            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleQuickActorImageUpload} className="hidden" />
-                          </label>
-                        </div>
+                        <label className={`flex cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isActorImageUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                          {isActorImageUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
+                          {isActorImageUploading ? 'Đang tải ảnh...' : actorForm.avatarUrl ? 'Đã chọn ảnh local' : 'Chọn ảnh local'}
+                          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleQuickActorImageUpload} className="hidden" />
+                        </label>
+                        {renderImagePreview(actorForm.avatarUrl, 'Ảnh actor', 'h-10 w-10')}
                       </div>
                       <button
                         type="button"
                         onClick={handleQuickCreateActor}
-                        disabled={isActorSaving}
+                        disabled={isActorSaving || isActorImageUploading}
                         className="w-full border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 hover:bg-amber-500 hover:text-black disabled:opacity-50"
                       >
-                        {isActorSaving ? 'Đang tạo actor...' : 'Tạo actor và gán ID vào phim'}
+                        {isActorImageUploading ? 'Đang tải ảnh actor...' : isActorSaving ? 'Đang tạo actor...' : 'Tạo actor và gán ID vào phim'}
                       </button>
                       {createdActors.length > 0 && (
                         <div className="text-[9px] text-neutral-400 font-mono">
@@ -670,19 +699,11 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trailer URL</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Dán URL trailer hoặc bấm Local để upload video"
-                          maxLength={500}
-                          value={formData.trailerUrl}
-                          onChange={(e) => setFormData({ ...formData, trailerUrl: e.target.value })}
-                          className="min-w-0 flex-1 bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
-                        />
-                        <label className={`flex cursor-pointer items-center gap-1.5 border border-amber-500/40 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isTrailerUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trailer từ máy</label>
+                      <div className="flex items-center gap-2">
+                        <label className={`flex min-h-14 flex-1 cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isTrailerUploading ? 'pointer-events-none opacity-60' : ''}`}>
                           {isTrailerUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
-                          Local
+                          {isTrailerUploading ? 'Đang tải trailer...' : formData.trailerUrl ? 'Đã chọn trailer local' : 'Chọn video trailer local'}
                           <input
                             type="file"
                             accept="video/mp4,video/webm,video/quicktime"
@@ -690,26 +711,19 @@ export default function AdminMoviesPanel({ ctx }) {
                             className="hidden"
                           />
                         </label>
+                        {renderVideoPreview(formData.trailerUrl)}
                       </div>
-                      <p className="text-[9px] text-neutral-500">Hỗ trợ URL YouTube/Cloudinary hoặc video local MP4, WEBM, MOV tối đa 100MB.</p>
+                      <p className="text-[9px] text-neutral-500">Chỉ nhận video local MP4, WEBM, MOV. File sẽ được upload và tự lưu đường dẫn nội bộ.</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 block">Địa chỉ ảnh Poster đứng (URL)</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Bắt buộc: https://... hoặc bấm Local"
-                          maxLength={500}
-                          value={formData.posterUrl}
-                          onChange={(e) => setFormData({ ...formData, posterUrl: e.target.value })}
-                          className="min-w-0 flex-1 bg-black border border-neutral-800 p-2.5 text-xs text-neutral-300 focus:outline-none focus:border-amber-400 font-mono"
-                        />
-                        <label className={`flex cursor-pointer items-center gap-1.5 border border-amber-500/40 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isPosterUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 block">Ảnh poster đứng từ máy</label>
+                      <div className="flex items-center gap-2">
+                        <label className={`flex min-h-20 flex-1 cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isPosterUploading ? 'pointer-events-none opacity-60' : ''}`}>
                           {isPosterUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
-                          Local
+                          {isPosterUploading ? 'Đang tải poster...' : formData.posterUrl ? 'Đã chọn poster local' : 'Chọn poster local'}
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
@@ -717,23 +731,16 @@ export default function AdminMoviesPanel({ ctx }) {
                             className="hidden"
                           />
                         </label>
+                        {renderImagePreview(formData.posterUrl, 'Poster phim', 'h-20 w-14')}
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 block">Địa chỉ ảnh Banner ngang (URL)</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Bắt buộc: https://... hoặc bấm Local"
-                          maxLength={500}
-                          value={formData.bannerUrl}
-                          onChange={(e) => setFormData({ ...formData, bannerUrl: e.target.value })}
-                          className="min-w-0 flex-1 bg-black border border-neutral-800 p-2.5 text-xs text-neutral-300 focus:outline-none focus:border-amber-400 font-mono"
-                        />
-                        <label className={`flex cursor-pointer items-center gap-1.5 border border-amber-500/40 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isBannerUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 block">Ảnh banner ngang từ máy</label>
+                      <div className="flex items-center gap-2">
+                        <label className={`flex min-h-20 flex-1 cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isBannerUploading ? 'pointer-events-none opacity-60' : ''}`}>
                           {isBannerUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
-                          Local
+                          {isBannerUploading ? 'Đang tải banner...' : formData.bannerUrl ? 'Đã chọn banner local' : 'Chọn banner local'}
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
@@ -741,6 +748,7 @@ export default function AdminMoviesPanel({ ctx }) {
                             className="hidden"
                           />
                         </label>
+                        {renderImagePreview(formData.bannerUrl, 'Banner phim', 'h-14 w-24')}
                       </div>
                     </div>
                   </div>
@@ -781,10 +789,12 @@ export default function AdminMoviesPanel({ ctx }) {
 
                   <button
                     type="submit"
-                    disabled={isMovieSaving}
+                    disabled={isMovieSaving || isMovieMediaUploading}
                     className="w-full py-4.5 bg-amber-500 hover:bg-amber-400 text-black font-sans font-black text-xs uppercase tracking-widest transition shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isMovieSaving
+                    {isMovieMediaUploading
+                      ? 'ĐANG TẢI FILE LOCAL...'
+                      : isMovieSaving
                       ? (editingMovie ? 'ĐANG CHUẨN BỊ CẬP NHẬT PHIM...' : 'ĐANG CHUẨN BỊ CẬP NHẬT PHIM...')
                       : (editingMovie ? 'CẬP NHẬT BẢN GHI PHIM' : 'GHI BẢN GHI PHIM & PHÁT HÀNH TRÊN CỔNG TRỰC TUYẾN')}
                   </button>

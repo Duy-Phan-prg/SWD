@@ -19,6 +19,8 @@ public interface ReviewService {
 
     ReviewResponse hideReview(Long reviewId);
 
+    void deleteOwnReview(String userEmail, Long reviewId);
+
     void deleteReview(Long reviewId);
 
     double getAverageRating(Long movieId);

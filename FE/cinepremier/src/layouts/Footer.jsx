@@ -30,7 +30,7 @@ export default function Footer({ onTabChange = () => { }, cinema = null }) {
                 Cine<span className="font-serif italic font-light text-purple-300">Premier</span>
               </span>
             </div>
-            <p className="max-w-sm text-[10px] leading-6 text-neutral-300 font-sans font-normal">
+            <p className="max-w-sm text-[12px] leading-6 text-neutral-300 font-sans font-normal">
               Trải nghiệm chiếu bóng chuẩn mực với hệ thống đặt vé, phòng chiếu IMAX và lịch chiếu được tối ưu cho từng suất phim.
             </p>
             {cinema && (
