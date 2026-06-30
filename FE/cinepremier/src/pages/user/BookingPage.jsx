@@ -73,7 +73,7 @@ const getShowtimeRoomKey = (showtime) => {
   return `name-${showtime?.roomName || 'unknown'}`;
 };
 
-const CONCESSIONS_PAGE_SIZE = 10;
+const CONCESSIONS_PAGE_SIZE = 6;
 
 const sortShowtimes = (showtimes) => [...showtimes].sort((a, b) => {
   const timeDiff = new Date(a.startTime || 0) - new Date(b.startTime || 0);
@@ -393,6 +393,22 @@ export default function BookingView() {
   const discountAmount = 0;
   const totalAmount = subTotal;
 
+  const canMovePastSeats = () => {
+    if (selectedSeats.length === 0) { showToast('Vui lòng chọn ít nhất một ghế.'); return false; }
+    if (!selectedShowtime) { showToast('Vui lòng chọn suất chiếu.'); return false; }
+    if (selectedSeats.length !== totalTickets) {
+      showToast(`Vui lòng chọn đủ ${totalTickets} ghế theo số lượng vé.`);
+      return false;
+    }
+    return true;
+  };
+
+  const handleContinueToCombos = () => {
+    if (!canMovePastSeats()) return;
+    setBookingStep('combos');
+    if (concessions.length === 0) fetchPublicFoodCatalog({ force: true });
+  };
+
   // Proceed: hold seats on BE first
   const handleProceedToPayment = async () => {
     if (selectedSeats.length === 0) { showToast("Vui lòng chọn ít nhất một ghế."); return; }
@@ -441,6 +457,14 @@ export default function BookingView() {
     } finally {
       setIsHolding(false);
     }
+  };
+
+  const handleReceiptAction = () => {
+    if (bookingStep === 'seats') {
+      handleContinueToCombos();
+      return;
+    }
+    handleProceedToPayment();
   };
 
   const handleMockPayment = async () => {
@@ -1650,7 +1674,7 @@ export default function BookingView() {
 
           {/* CTA Proceed triggers */}
           <button
-            onClick={handleProceedToPayment}
+            onClick={handleReceiptAction}
             disabled={selectedSeats.length === 0 || isHolding || !selectedShowtime}
             className={`w-full flex items-center justify-center space-x-2 py-4 text-xs font-bold font-sans uppercase tracking-[0.2em] transition-all border ${selectedSeats.length === 0 || !selectedShowtime
               ? 'bg-neutral-900 border-neutral-800 text-neutral-600 cursor-not-allowed opacity-30'
@@ -1658,9 +1682,9 @@ export default function BookingView() {
               }`}
             id="proceed-payment-submit"
           >
-            {isHolding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ticket className="h-4 w-4" />}
+            {isHolding ? <Loader2 className="h-4 w-4 animate-spin" /> : bookingStep === 'seats' ? <ShoppingBag className="h-4 w-4" /> : <Ticket className="h-4 w-4" />}
             <span>
-              {isHolding ? 'ĐANG GIỮ GHẾ...' : selectedSeats.length === 0 ? 'CHƯA CHỌN GHẾ' : 'TIẾP TỤC THANH TOÁN'}
+              {isHolding ? 'ĐANG GIỮ GHẾ...' : selectedSeats.length === 0 ? 'CHƯA CHỌN GHẾ' : bookingStep === 'seats' ? 'TIẾP TỤC CHỌN BẮP NƯỚC' : 'TIẾP TỤC THANH TOÁN'}
             </span>
           </button>
 

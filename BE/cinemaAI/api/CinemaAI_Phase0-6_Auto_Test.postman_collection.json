@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "8d0c20d0-0a06-46a7-8c94-cinemaai-phase0-6",
     "name": "CinemaAI Phase 0-6 Auto Test",
-    "description": "Auto-test collection generated from api phase 0-6 docs. Run against local backend. Seed admin defaults: admin@cinemaai.com / Admin123.",
+    "description": "Auto-test collection generated from api phase 0-6 docs. Run against local backend. Configure seed admin credentials through .env and collection variables.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -49,7 +49,7 @@
     },
     {
       "key": "adminPassword",
-      "value": "Admin123"
+      "value": "change-me-admin-password"
     },
     {
       "key": "accessToken",

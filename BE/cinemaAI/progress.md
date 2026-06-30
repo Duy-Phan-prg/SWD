@@ -1,81 +1,182 @@
 # CinemaAI Progress
 
-## Current snapshot
+## Session update - 2026-06-27 configuration externalization
 
-- Updated: 2026-06-25 (Asia/Ho_Chi_Minh).
-- Git HEAD at inspection: `477c0ec`.
-- Stack: Spring Boot 3.5.13, Java 17 source, Maven Wrapper, PostgreSQL runtime, H2 tests.
-- Product code is organized into consolidated `AuthController`, `CustomerPublicController`, `AdminController`, and `StaffController`.
+Scope:
 
-## This session
+- Scanned Java source, application/test properties, Maven metadata, Postman/docs examples and provider/config adapters for deployment-specific values.
+- Externalized CORS origins, payment redirect URL, VNPay client IP fallback, Google token-info base URL, Cloudinary upload folder prefix/default folder, local seed account values, mail sender flags, scheduler flags/delays, recommendation weights, upload limits and provider settings through `application.properties` placeholders backed by `.env`.
+- Kept domain/business constants in code, including booking/showtime/review state machines, role/enums, upload validation limits in service logic and recommendation scoring semantics.
 
-Created the Harness Engineering baseline:
+Files changed:
 
-- `AGENTS.md`
-- `architecture.md`
-- `api-contract.md`
-- `domain-rules.md`
-- `init.ps1`
-- `progress.md`
-- `feature_list.json`
+- `src/main/resources/application.properties`
+- `src/test/resources/application.properties`
+- `.env.example`
+- `src/main/java/com/sba301/cinemaai/config/*Properties.java`, `CloudinaryConfig`, `CorsConfig`, `VNPayConfig`, `VnpayProperties`
+- `PaymentController`, `GoogleTokenVerifierImpl`, `MailServiceImpl`, `StorageUploadServiceImpl`, `VNPayServiceImpl`
+- `AdminAccountSeeder`, `StaffAccountSeeder`
+- `StorageUploadServiceTest`
+- `api/CinemaAI_Phase0-6_Auto_Test.postman_collection.json`
+- `api/phase-2-auth-user-security/README.md`
+- `api/phase-6-payment/README.md`
 
-Evidence gathered from controllers, DTOs, services, security config, migrations, tests, Postman docs, SRS and role-based flows.
+Local-only note:
 
-## Verification
+- Added missing `SEED_*` keys to local `.env` without reading or changing existing values, so current local seed-account behavior is preserved while committed Java/config no longer contains those passwords.
 
-### Passed
+Verification performed:
 
 ```powershell
 .\mvnw.cmd -DskipTests package
-```
-
-Result: `BUILD SUCCESS` on 2026-06-25.
-
-Several suites pass individually in the full run, including auth integration, booking integration, payment integration, recommendation, foundation, migration inventory, movie/actor, Cloudinary and ticket pricing integration tests.
-
-### Failed baseline
-
-```powershell
+.\mvnw.cmd -Dtest=PaymentIntegrationTests test
+.\mvnw.cmd -Dtest=StorageUploadServiceTest test
 .\mvnw.cmd test
 ```
 
-Observed failures:
+Results:
 
-1. Endpoint inventory tests still read controller files removed by controller consolidation, including `UserController.java`, `AdminUserController.java` and other old domain controllers.
-2. `CinemaShowtimeIntegrationTests` has a functional assertion failure.
-3. `TicketPricingSchemaCleanup` dùng `database()` và metadata query theo MySQL nên không tương thích H2; logic này cũng không phù hợp PostgreSQL runtime.
-4. Cleanup attempts `ticket_type = 'SENIOR'` while the H2 enum only allows `ADULT`, `CHILD`, `STUDENT`.
+- Package build: `BUILD SUCCESS`.
+- `PaymentIntegrationTests`: 3 tests passed.
+- `StorageUploadServiceTest`: 2 tests passed after updating the constructor for `UploadProperties`.
+- Full test run still fails in cinema baseline tests:
+  - `CinemaShowtimeEndpointInventoryTests`: stale assertion expects `@GetMapping("/api/v1/admin/cinema")` instead of composed class + method mappings.
+  - `CinemaShowtimeIntegrationTests`: expected `201` but got `405` on cinema/showtime flow.
 
-Full test is therefore not a clean completion gate yet.
+Next action:
 
-## Architecture and configuration gaps
+- Resolve the existing cinema endpoint contract/inventory mismatch separately; no config externalization failures remain in the focused verification.
 
-- Flyway SQL exists (`V1`–`V5`) but `flyway-core` is absent and Flyway is disabled.
-- Runtime database được xác định là PostgreSQL với `ddl-auto=update`; tests dùng H2 PostgreSQL mode. H2 mode vẫn không thay thế được integration test trên PostgreSQL thật.
-- `.env.example` đã dùng PostgreSQL URL và phù hợp với database mục tiêu.
-- `pom.xml` còn chứa cả PostgreSQL và MySQL runtime drivers; MySQL connector là dependency dư cần loại bỏ sau khi rà soát profile triển khai.
-- Migration `V1`–`V5` còn dùng SQL Server dialect (`dbo`, `IDENTITY`, `NVARCHAR`, `DATETIME2`) nên chưa chạy được trên PostgreSQL.
-- Ticket schema cleanup is a startup migration workaround and should become a proper versioned migration.
-- Some docs contain historical statements that no longer match current code (for example hold duration and review/report status).
+## Current snapshot
 
-## Recommended next actions
+- Reconfirmed: 2026-06-25 (Asia/Ho_Chi_Minh).
+- Git HEAD: `2e2287a`.
+- Progress source: `phase_mapping_srs_vs_docx_refund_role_updated.md`, updated 2026-06-25.
+- Stack: Spring Boot 3.5.13, Java 17 source, Maven Wrapper, PostgreSQL runtime target, H2 tests.
+- Controller structure: 33 domain-specific controllers; the previous consolidated-controller snapshot is obsolete.
 
-1. Fix endpoint inventory tests to inspect consolidated controllers.
-2. Loại bỏ `TicketPricingSchemaCleanup` mang cú pháp MySQL và thay bằng PostgreSQL Flyway migration.
-3. Chuẩn hóa PostgreSQL + Flyway thành schema path duy nhất; chuyển migration sang PostgreSQL dialect, bật Flyway và đặt Hibernate thành `validate`.
-4. Re-run full tests and update evidence/status.
-5. Add concurrency-safe seat locking test for simultaneous hold requests.
-6. Review production protection for mock payment, actuator exposure and default JWT secret.
+## Verification performed
+
+```powershell
+.\mvnw.cmd -DskipTests package
+.\mvnw.cmd test
+```
+
+Results:
+
+- Package build: `BUILD SUCCESS`.
+- Full test process completed.
+- 17/18 reported test classes passed.
+- Only `CinemaShowtimeEndpointInventoryTests` failed: the test expects full paths inside method-level annotations, while `AdminCinemaController` correctly composes class-level `@RequestMapping("/api/v1/admin/cinema")` with `@GetMapping`, `@PostMapping`, etc.
+- `CinemaShowtimeIntegrationTests` passed.
+- Previous failures caused by missing consolidated controller files are no longer applicable.
+
+## Reconfirmed phase status
+
+| Phase | Verified status | Evidence from current repository | Remaining gap |
+|---|---|---|---|
+| 0 — Shared Foundation | Done | `ApiResponse`, global error handler, JWT security, OpenAPI, correlation/request filters, auditing; foundation tests pass | Improve production observability/OpenAPI error examples |
+| 1 — Database Migration | Partial / blocked | `V1`–`V5` and seeders exist | Flyway disabled/missing runtime; migrations use SQL Server dialect, not PostgreSQL; `ddl-auto=update` remains |
+| 2 — Auth, Customer & Security | Done with RBAC mismatch | Register/login/Google/refresh/logout/OTP/reset/profile/admin user management; auth tests pass | Role flow says check-in is STAFF-only, but code also permits ADMIN |
+| 3 — Movie, Genre & Actor | Done | Public catalog, admin CRUD, relations; movie/actor integration and inventory tests pass | No material backend gap identified |
+| 4 — Cinema, Room, Seat & Showtime | Partial | Single-cinema service, room/seat/layout, showtime CRUD/bulk/overlap, seat map and automatic `SCHEDULED -> OPEN -> COMPLETED` scheduler exist; integration test passes | Contract mismatch: mapping says no cinema CREATE/DELETE, code exposes both; one stale inventory assertion |
+| 5 — Booking, Seat Locking, F&B & QR | Partial | Hold, booking, ticket pricing, F&B, QR, cleanup scheduler and check-in exist; booking tests pass | No DB lock/unique guarantee against concurrent double booking; QR is not signed; STAFF-only role policy not enforced |
+| 6 — Payment & Refund | Partial | VNPay/mock payment, return/IPN, amount/signature/idempotency basics, customer refund request, admin request/mark-refunded, wallet refund on showtime cancellation | No VNPay Refund API; no dedicated refund entity/proof/history/claim; customer refund lacks time-policy check; manual mark-refunded does not update `Payment.status` |
+| 7 — Loyalty & Notification | Partial | Earn/redeem/revoke loyalty, notification persistence, unread list, mark one/all read, payment and showtime-cancel notifications exist | No transaction ledger; no complete refund event types/claim notifications; no realtime push |
+| 8 — Review | Partial, not “not implemented” | Customer create/update/delete, `USED` eligibility, one review/movie, public list/average and admin moderation are implemented | No dedicated integration suite; current review starts `VISIBLE` rather than requiring approval as stated in mapping |
+| 9 — Staff Operations, Audit & Reports | Partial, not “not implemented” | STAFF QR check-in exists; admin revenue/top-movie/occupancy reports exist; audit entity/repository exists | No staff manual booking lookup/combo pickup; audit logging is not wired into operations; report tests missing; ADMIN currently can check in |
+| 10 — Storage, Email, WebSocket & Scheduler | Partial | Cloudinary upload, OTP email, hold cleanup and showtime status schedulers exist | No ticket email; no seat/notification WebSocket; no upload delete/management UI/API |
+| 11 — Recommendation & AI Analysis | Partial | Hybrid recommendation, signal weights, preference profile, favorite actors and admin debug exist; recommendation test passes | No distinct AI movie-content analysis workflow/model integration found |
+| 12 — Integration & QA | Partial | Build passes; auth/catalog/booking/payment/recommendation/foundation tests and Postman collection exist | One inventory test fails; no concurrency, refund incident, refund claim/proof/history, report/review or comprehensive RBAC tests |
+
+## Refund confirmation
+
+### Existing customer-policy/manual refund
+
+Implemented in a basic form:
+
+```text
+PAID or CANCELLED -> REFUND_REQUESTED -> REFUNDED
+```
+
+Evidence:
+
+- `POST /api/v1/bookings/{bookingId}/refund-request`
+- `POST /api/v1/admin/bookings/{bookingId}/refund-request`
+- `POST /api/v1/admin/bookings/{bookingId}/mark-refunded`
+- `BookingServiceImpl`
+
+Confirmed gaps against the updated mapping:
+
+- Code accepts both `PAID` and `CANCELLED`; mapping requires customer-policy refund from `PAID`.
+- No minimum time-before-showtime policy.
+- Ownership is checked for customer request.
+- `USED` cannot enter the flow because it fails current status validation.
+- Marking booking refunded does not mark the associated `Payment` as `REFUNDED`.
+- There is no gateway refund reference or provider refund proof.
+
+### Existing showtime-cancellation compensation
+
+When ADMIN cancels a showtime:
+
+- `HOLDING`/`PENDING_PAYMENT` bookings become `CANCELLED`.
+- `PAID`/`REFUND_REQUESTED` bookings become `REFUNDED`.
+- Booking amount is credited to the internal wallet.
+- Earned loyalty points are revoked.
+- A notification is persisted.
+
+This is incident-like compensation, but it is not the requested Cinema Incident Refund module because there is no incident record, refund record, gateway refund, proof, history or claim workflow.
+
+### Cinema Incident Refund
+
+Status: not implemented / blocked by scope decision.
+
+Confirmed absent:
+
+- `CinemaIncident`, `Refund`, `RefundClaim` entities/repositories.
+- Incident/refund/claim enums.
+- Incident overlap query and APIs.
+- Refund gateway adapter or `MockPaymentGatewayRefundService`.
+- Refund proof/history APIs.
+- Missing-refund claim create/approve/reject APIs.
+- Dedicated audit and QA coverage.
+
+Required role decision:
+
+- Updated role flow says STAFF only checks in and ADMIN handles refund.
+- Current security also lets ADMIN check in.
+- Default for incident refund should therefore be ADMIN-only until role documents and security explicitly authorize STAFF.
+
+## Differences from the mapping document
+
+The following mapping statements are stale relative to current code:
+
+1. Phase 4 says showtime scheduler is missing; it exists in `ShowtimeStatusScheduler`.
+2. Phase 4 says cinema has no CREATE/DELETE; current admin API exposes both, with DELETE implemented as deactivation.
+3. Phase 7 says mark-all-read is missing; it is implemented.
+4. Phase 8 says review is not implemented; backend review flow is implemented.
+5. Phase 9 says reports are not implemented; three admin report endpoints are implemented.
+6. Phase 10 says showtime scheduler is missing; both showtime and hold-cleanup schedulers exist.
+7. Role flow says ADMIN cannot check in; current security/controllers permit ADMIN check-in.
+
+## Prioritized next actions
+
+1. Decide and enforce role ownership for check-in and incident refund.
+2. Fix `CinemaShowtimeEndpointInventoryTests` to understand class-level + method-level mappings.
+3. Convert migrations to PostgreSQL and enable Flyway with Hibernate `validate`.
+4. Add concurrency-safe seat locking/constraint and concurrent hold tests.
+5. Implement Cinema Incident Refund in isolated phases: schema, incident, gateway refund, claim, proof/history, notification/audit/tests.
+6. Add dedicated review, report, scheduler and RBAC integration tests.
 
 ## Handoff rule
 
-Future sessions must append/update:
+Future sessions must update:
 
-- task scope;
+- selected phase/feature;
+- scope and out-of-scope;
 - files changed;
 - commands actually run;
 - pass/fail evidence;
-- unresolved blockers;
-- next concrete action.
+- unresolved blocker and next concrete action.
 
-Do not replace a failing baseline with an unverified “done”.
+Do not mark a partial phase `done` merely because its primary controller exists.

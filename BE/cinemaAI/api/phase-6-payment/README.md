@@ -40,7 +40,7 @@ Authorization: Bearer {{accessToken}}
 ## 2. VNPay return callback
 
 ### Ten mo ta API
-VNPay redirect browser ve backend sau khi user thanh toan. Backend verify signature, cap nhat payment `SUCCESS`/`FAILED`, sau do redirect FE ve `http://localhost:3000/payment-callback` kem query goc.
+VNPay redirect browser ve backend sau khi user thanh toan. Backend verify signature, cap nhat payment `SUCCESS`/`FAILED`, sau do redirect FE ve `PAYMENT_SUCCESS_REDIRECT_URL` kem query goc.
 
 ### API
 ```http
@@ -54,7 +54,7 @@ GET /api/v1/payments/vnpay/return?vnp_TxnRef={{vnpTxnRef}}&vnp_ResponseCode=00&v
 
 ### Post-response
 ```http
-302 Location: http://localhost:3000/payment-callback?...
+302 Location: {{PAYMENT_SUCCESS_REDIRECT_URL}}?...
 ```
 
 ## 3. VNPay IPN callback

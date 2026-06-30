@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.service.impl;
 
 
+import com.sba301.cinemaai.config.UploadProperties;
 import com.sba301.cinemaai.service.StorageUploadService;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
@@ -39,6 +40,7 @@ public class StorageUploadServiceImpl implements StorageUploadService {
 
     private final Cloudinary cloudinary;
     private final CloudinaryCredentials cloudinaryCredentials;
+    private final UploadProperties uploadProperties;
     private final UploadedFileRepository uploadedFileRepository;
     private final UserRepository userRepository;
 
@@ -115,7 +117,7 @@ public class StorageUploadServiceImpl implements StorageUploadService {
             return cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "cinema-ai/" + folder,
+                            "folder", uploadProperties.getCloudinaryFolderPrefix() + "/" + folder,
                             "resource_type", resourceType,
                             "unique_filename", true
                     )
@@ -135,10 +137,10 @@ public class StorageUploadServiceImpl implements StorageUploadService {
 
     private String normalizeFolder(String folder) {
         if (folder == null || folder.isBlank()) {
-            return "images";
+            return uploadProperties.getDefaultImageFolder();
         }
         String normalized = folder.trim().toLowerCase().replaceAll("[^a-z0-9-]", "-");
-        return normalized.isBlank() ? "images" : normalized;
+        return normalized.isBlank() ? uploadProperties.getDefaultImageFolder() : normalized;
     }
 
     private UploadedFileResponse toResponse(UploadedFile file) {

@@ -1,5 +1,6 @@
 package com.sba301.cinemaai.controller;
 
+import com.sba301.cinemaai.config.PaymentRedirectProperties;
 import com.sba301.cinemaai.dto.response.payment.PaymentResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PaymentRedirectProperties paymentRedirectProperties;
 
     @PostMapping("/vnpay/create")
     @SecurityRequirement(name = "Bearer Authentication")
@@ -47,8 +49,16 @@ public class PaymentController {
         Map<String, String> params = extractParams(request);
         paymentService.handleVnpayReturn(params);
         String queryString = request.getQueryString();
-        String redirectUrl = "http://localhost:3000/payment-callback" + (queryString != null ? "?" + queryString : "");
+        String successRedirectUrl = resolveSuccessRedirectUrl();
+        String redirectUrl = successRedirectUrl
+                + (queryString != null ? "?" + queryString : "");
         return ResponseEntity.status(302).header("Location", redirectUrl).build();
+    }
+
+    @GetMapping("/vnpay/null")
+    @Operation(summary = "VNPAY legacy null return URL handler", description = "Handles old callbacks generated before redirect URL was configured")
+    public ResponseEntity<Void> vnpayNullReturn(HttpServletRequest request) {
+        return vnpayReturn(request);
     }
 
     @GetMapping("/vnpay/ipn")
@@ -95,5 +105,12 @@ public class PaymentController {
             return xForwardedFor.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private String resolveSuccessRedirectUrl() {
+        String configuredUrl = paymentRedirectProperties.getSuccessRedirectUrl();
+        return (configuredUrl == null || configuredUrl.isBlank() || "null".equalsIgnoreCase(configuredUrl))
+                ? "http://localhost:3000/payment-callback"
+                : configuredUrl;
     }
 }

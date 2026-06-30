@@ -1,10 +1,10 @@
 package com.sba301.cinemaai.service.impl;
 
+import com.sba301.cinemaai.config.MailProperties;
 import com.sba301.cinemaai.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -20,22 +20,17 @@ import com.sba301.cinemaai.service.MailService;
 public class MailServiceImpl implements MailService {
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
-
-    @Value("${app.mail.enabled:false}")
-    private boolean enabled;
-
-    @Value("${app.mail.from:}")
-    private String from;
+    private final MailProperties mailProperties;
 
     public void sendOtp(String to, String otp, String purpose) {
-        if (!enabled) {
+        if (!mailProperties.isEnabled()) {
             log.warn("OTP email was not sent because MAIL_ENABLED/app.mail.enabled is false");
             return;
         }
         if (to == null || to.isBlank()) {
             throw new BadRequestException("Recipient email is required");
         }
-        if (from == null || from.isBlank()) {
+        if (mailProperties.getFrom() == null || mailProperties.getFrom().isBlank()) {
             throw new BadRequestException("Mail sender is not configured");
         }
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
@@ -46,7 +41,7 @@ public class MailServiceImpl implements MailService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
-            helper.setFrom(from);
+            helper.setFrom(mailProperties.getFrom());
             helper.setTo(to);
             helper.setSubject("CinemaAI - Mã xác minh của bạn");
             helper.setText(buildOtpEmail(purpose, otp), true);

@@ -43,6 +43,10 @@ public class FoodCombo extends BaseEntity {
     private String imageUrl;
 
     @Setter
+    @Column(name = "stock_quantity")
+    private Integer stockQuantity = 0;
+
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private FoodItemStatus status = FoodItemStatus.ACTIVE;

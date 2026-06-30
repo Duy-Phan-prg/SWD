@@ -1,6 +1,11 @@
 HELP.md
 target/
+
+# Environment / secrets
 .env
+.env.*
+!.env.example
+
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -32,5 +37,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Project docs ignored
 **/cinemaAI/ROLE_BASED_BUSINESS_FLOWS.md
 **/cinemaAI/SRS_CINEMA_SYSTEM_COMPLETE.md

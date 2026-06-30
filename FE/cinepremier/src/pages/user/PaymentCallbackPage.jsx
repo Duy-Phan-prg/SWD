@@ -17,7 +17,7 @@ export default function PaymentCallbackPage() {
     const transactionNo = params.get('vnp_TransactionNo');
 
     setInfo({
-      amount: amount ? (parseInt(amount) / 100).toLocaleString() + 'đ' : '',
+      amount: amount ? (Number.parseInt(amount, 10) / 100).toLocaleString('vi-VN') + 'đ' : '',
       txnRef,
       orderInfo,
       transactionNo

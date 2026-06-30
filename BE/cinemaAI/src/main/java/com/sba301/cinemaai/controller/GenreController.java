@@ -23,7 +23,7 @@ public class GenreController {
     @GetMapping
     public ApiResponse<PageResponse<GenreResponse>> getGenres(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "10") int size
     ) {
         return ApiResponse.success(genreService.getGenres(page, size));
     }

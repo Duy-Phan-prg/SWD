@@ -138,7 +138,7 @@ export default function AdminFoodsPanel({ ctx }) {
           className="space-y-6"
         >
           <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
-            <span className="text-[8px] font-mono tracking-[0.24em] text-purple-500 uppercase font-black block">ADMIN FOOD</span>
+            <span className="text-[8px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black block">ADMIN FOOD</span>
             <h2 className="text-lg font-sans font-black uppercase tracking-wider text-white mt-1">Quản lý bắp nước & combo</h2>
           </div>
 
@@ -157,7 +157,7 @@ export default function AdminFoodsPanel({ ctx }) {
                   <button
                     type="button"
                     onClick={resetFoodForm}
-                    className="border border-purple-400/50 bg-purple-400/10 px-3 py-1.5 text-[10px] uppercase tracking-widest text-purple-200 hover:bg-purple-400 hover:text-black font-black transition"
+                    className="border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 text-[10px] uppercase tracking-widest text-amber-200 hover:bg-amber-400 hover:text-black font-black transition"
                   >
                     Hủy sửa
                   </button>
@@ -173,7 +173,7 @@ export default function AdminFoodsPanel({ ctx }) {
                       setFoodKind(kind);
                       setEditingFood(null);
                     }}
-                    className={`py-2 text-[10px] uppercase tracking-widest font-black border transition ${foodKind === kind ? 'border-purple-400 bg-purple-400 text-black' : 'border-neutral-800 text-neutral-400 hover:text-white'}`}
+                    className={`py-2 text-[10px] uppercase tracking-widest font-black border transition ${foodKind === kind ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-800 text-neutral-400 hover:text-white'}`}
                   >
                     {kind === 'combo' ? 'Combo' : 'Món lẻ'}
                   </button>
@@ -241,45 +241,35 @@ export default function AdminFoodsPanel({ ctx }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">URL hình ảnh</label>
-                <div className="flex gap-2">
-                  <input
-                    value={foodForm.imageUrl}
-                    onChange={(e) => {
-                      setFoodForm((prev) => ({ ...prev, imageUrl: e.target.value }));
-                      if (foodErrors.imageUrl) setFoodErrors((prev) => ({ ...prev, imageUrl: undefined }));
-                    }}
-                    placeholder="https://storage.example.com/..."
-                    className={`min-w-0 flex-1 bg-black border p-3 text-xs text-white focus:outline-none rounded-none ${foodErrors.imageUrl ? 'border-rose-500' : 'border-neutral-800 focus:border-amber-400'}`}
-                  />
-                  <label
-                    className={`inline-flex min-w-[92px] cursor-pointer items-center justify-center gap-2 border px-3 text-[10px] font-black uppercase tracking-widest transition ${isFoodImageUploading ? 'pointer-events-none border-neutral-800 text-neutral-500 opacity-70' : 'border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-400 hover:text-black'}`}
-                    title="Upload ảnh từ máy lên Storage"
-                  >
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      onChange={handleFoodImageUpload}
-                      disabled={isFoodImageUploading}
-                      className="hidden"
-                    />
-                    {isFoodImageUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                    Local
-                  </label>
-                </div>
+                <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Hình ảnh món</label>
                 {foodForm.imageUrl && (
-                  <div className="overflow-hidden border border-neutral-850 bg-black">
-                    <img
-                      src={foodForm.imageUrl}
-                      alt={foodForm.name || 'Ảnh món'}
-                      className="h-32 w-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                  <div className="space-y-1">
+                    <div className="overflow-hidden border border-neutral-850 bg-black">
+                      <img
+                        src={foodForm.imageUrl}
+                        alt={foodForm.name || 'Ảnh món'}
+                        className="h-32 w-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                    <p className="text-[9px] text-neutral-600 truncate" title={foodForm.imageUrl}>{foodForm.imageUrl}</p>
                   </div>
                 )}
-                <p className="text-[10px] text-neutral-500 font-medium">
-                  Chọn ảnh từ máy để upload lên Storage, hoặc dán URL ảnh có sẵn.
-                </p>
+                <label
+                  className={`w-full py-3 flex items-center justify-center gap-2 border text-[10px] font-black uppercase tracking-widest transition cursor-pointer ${isFoodImageUploading ? 'pointer-events-none border-neutral-800 text-neutral-500 opacity-70' : 'border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-400 hover:text-black'}`}
+                  title="Upload ảnh từ máy lên Cloudinary"
+                >
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleFoodImageUpload}
+                    disabled={isFoodImageUploading}
+                    className="hidden"
+                  />
+                  {isFoodImageUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                  {isFoodImageUploading ? 'Đang tải ảnh...' : foodForm.imageUrl ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
+                </label>
+                <p className="text-[10px] text-neutral-500 font-medium">JPG, PNG, WEBP hoặc GIF, tối đa 5 MB.</p>
                 {foodErrors.imageUrl && <p className="text-[10px] text-rose-400 font-bold">{foodErrors.imageUrl}</p>}
               </div>
 
@@ -321,7 +311,7 @@ export default function AdminFoodsPanel({ ctx }) {
                     value={foodSearch}
                     onChange={(e) => setFoodSearch(e.target.value)}
                     placeholder="Tìm món..."
-                    className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-purple-400"
+                    className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
@@ -351,7 +341,7 @@ export default function AdminFoodsPanel({ ctx }) {
                             <td className="py-3.5 px-4 min-w-0">
                               <div className="flex items-center gap-3">
                                 <img
-                                  src={item.imageUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10'}
+                                  src={item.imageUrl || 'https://images.unsplash.com/photo-1578849278619-e73505e9610f?q=80&w=300&auto=format&fit=crop'}
                                   alt={item.name}
                                   className="h-12 w-12 object-cover border border-neutral-800 bg-black"
                                   referrerPolicy="no-referrer"
@@ -377,7 +367,7 @@ export default function AdminFoodsPanel({ ctx }) {
                                 <button
                                   type="button"
                                   onClick={() => handleEditFood(item, item.kind)}
-                                  className="p-2 text-purple-300 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-400 hover:text-black transition"
+                                  className="p-2 text-amber-300 border border-amber-500/20 bg-amber-500/5 hover:bg-amber-400 hover:text-black transition"
                                   title="Chỉnh sửa món"
                                 >
                                   <Edit3 className="h-3.5 w-3.5" />
@@ -434,4 +424,3 @@ export default function AdminFoodsPanel({ ctx }) {
     </>
   );
 }
-

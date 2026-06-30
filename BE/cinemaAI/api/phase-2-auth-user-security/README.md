@@ -19,7 +19,7 @@ POST /api/v1/auth/register
 ```json
 {
   "email": "customer@example.com",
-  "password": "Password123",
+  "password": "{{customerPassword}}",
   "fullName": "Customer One",
   "phone": "0900111222",
   "birthYear": 2000
@@ -113,7 +113,7 @@ POST /api/v1/auth/login
 ```json
 {
   "username": "customer@example.com",
-  "password": "Password123"
+  "password": "{{customerPassword}}"
 }
 ```
 
@@ -152,7 +152,7 @@ POST /api/v1/auth/login
 ```json
 {
   "username": "admin@cinemaai.com",
-  "password": "Admin123"
+  "password": "{{adminPassword}}"
 }
 ```
 
@@ -251,7 +251,7 @@ Authorization: Bearer {{accessToken}}
 ### JSON
 ```json
 {
-  "oldPassword": "Password123",
+  "oldPassword": "{{customerPassword}}",
   "newPassword": "NewPassword456",
   "confirmPassword": "NewPassword456"
 }
@@ -479,7 +479,7 @@ Authorization: Bearer {{adminToken}}
 ```json
 {
   "email": "staff@example.com",
-  "password": "Staff1234",
+  "password": "{{staffPassword}}",
   "fullName": "Staff One",
   "phone": "0900222333",
   "birthYear": 1999

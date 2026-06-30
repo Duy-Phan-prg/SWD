@@ -314,6 +314,7 @@ class BookingIntegrationTests {
                                 "Booking test snack",
                                 BigDecimal.valueOf(30000),
                                 "https://example.com/popcorn.jpg",
+                                10,
                                 FoodItemStatus.ACTIVE
                         ))))
                 .andExpect(status().isCreated())

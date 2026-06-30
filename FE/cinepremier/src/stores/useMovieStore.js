@@ -20,10 +20,12 @@ const getFreshCache = (entry) => {
 
 const toCacheEntry = (data) => ({ data, updatedAt: Date.now() });
 
-const normalizeFoodCatalog = (items = [], combos = []) => [
-  ...combos.map(item => ({ ...item, id: `combo-${item.id}`, backendId: item.id, foodComboId: item.id, category: 'combo' })),
-  ...items.map(item => ({ ...item, id: `item-${item.id}`, backendId: item.id, foodItemId: item.id, category: 'item' })),
-];
+const normalizeFoodCatalog = (items = [], combos = []) => (
+  [
+    ...items.map(item => ({ ...item, id: `item-${item.id}`, backendId: item.id, foodItemId: item.id, category: 'item' })),
+    ...combos.map(item => ({ ...item, id: `combo-${item.id}`, backendId: item.id, foodComboId: item.id, category: 'combo' })),
+  ]
+);
 
 export const useMovieStore = create((set, get) => ({
   moviesList: [],

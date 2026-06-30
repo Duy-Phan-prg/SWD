@@ -120,8 +120,8 @@ export const movieService = {
   getMoviesByActor: (actorId) => request(`/api/v1/actors/${encodeURIComponent(actorId)}/movies`)
     .then(normalizeMovieListResponse),
   getGenres: () => request('/api/v1/genres'),
-  getFoodItems: () => request('/api/v1/foods/items'),
-  getFoodCombos: () => request('/api/v1/foods/combos'),
+  getFoodItems: () => request('/api/v1/foods/items').then(unwrapListPayload),
+  getFoodCombos: () => request('/api/v1/foods/combos').then(unwrapListPayload),
   getPublicCinema: () => request('/api/v1/cinema')
 };
 

@@ -5,9 +5,10 @@ import com.cloudinary.utils.ObjectUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -21,19 +22,32 @@ public class CloudinaryConfig {
 
     @Bean
     public CloudinaryCredentials cloudinaryCredentials(
-            @Value("${cloudinary.url:${CLOUDINARY_URL:}}") String cloudinaryUrl,
+            @Value("${cloudinary.url:}") String cloudinaryUrl,
             @Value("${cloudinary.cloud-name:}") String cloudName,
             @Value("${cloudinary.api-key:}") String apiKey,
             @Value("${cloudinary.api-secret:}") String apiSecret
     ) {
-        Map<String, String> localEnv = readLocalEnv();
-        String resolvedUrl = firstText(localEnv.get("CLOUDINARY_URL"), cloudinaryUrl);
-        CloudinaryCredentials credentials = parseCloudinaryUrl(resolvedUrl)
-                .orElseGet(() -> new CloudinaryCredentials(
-                        firstText(localEnv.get("CLOUDINARY_CLOUD_NAME"), cloudName),
-                        firstText(localEnv.get("CLOUDINARY_API_KEY"), apiKey),
-                        firstText(localEnv.get("CLOUDINARY_API_SECRET"), apiSecret)
-                ));
+        CloudinaryCredentials explicitCredentials = new CloudinaryCredentials(
+                firstText(cloudName, ""),
+                firstText(apiKey, ""),
+                firstText(apiSecret, "")
+        );
+        Optional<CloudinaryCredentials> localEnvCredentials = readLocalEnvCredentials();
+        CloudinaryCredentials credentials;
+        if (explicitCredentials.isConfigured()) {
+            credentials = localEnvCredentials
+                    .filter(localCredentials -> sameCloudName(localCredentials, explicitCredentials))
+                    .map(localCredentials -> {
+                        log.info("Cloudinary credentials loaded from local .env for cloud_name={}",
+                                localCredentials.cloudName());
+                        return localCredentials;
+                    })
+                    .orElse(explicitCredentials);
+        } else {
+            credentials = parseCloudinaryUrl(cloudinaryUrl)
+                    .or(() -> localEnvCredentials)
+                    .orElse(explicitCredentials);
+        }
 
         if (credentials.isConfigured()) {
             log.info("Cloudinary configured for cloud_name={} api_key={}",
@@ -55,42 +69,66 @@ public class CloudinaryConfig {
         ));
     }
 
-    private Map<String, String> readLocalEnv() {
-        return envPath()
-                .map(this::readEnvFile)
-                .orElseGet(Map::of);
+    private Optional<CloudinaryCredentials> readLocalEnvCredentials() {
+        return readLocalEnvCredentials(".")
+                .or(() -> readLocalEnvCredentials("BE/cinemaAI"));
     }
 
-    private Optional<Path> envPath() {
-        return Optional.of(Path.of(System.getProperty("user.dir")))
-                .flatMap(userDir -> possibleEnvPaths(userDir).stream()
-                        .filter(Files::isRegularFile)
-                        .findFirst());
-    }
-
-    private java.util.List<Path> possibleEnvPaths(Path userDir) {
-        return java.util.List.of(
-                userDir.resolve(".env"),
-                userDir.resolve("cinemaAI/.env"),
-                userDir.resolve("BE/cinemaAI/.env")
-        );
-    }
-
-    private Map<String, String> readEnvFile(Path path) {
-        try {
-            return Files.readAllLines(path).stream()
-                    .map(String::trim)
-                    .filter(line -> !line.isBlank() && !line.startsWith("#"))
-                    .filter(line -> line.contains("="))
-                    .collect(java.util.stream.Collectors.toMap(
-                            line -> line.substring(0, line.indexOf('=')).trim(),
-                            line -> line.substring(line.indexOf('=') + 1).trim(),
-                            (first, second) -> second
-                    ));
-        } catch (IOException exception) {
-            log.warn("Could not read Cloudinary .env file at {}", path, exception);
-            return Map.of();
+    private Optional<CloudinaryCredentials> readLocalEnvCredentials(String directory) {
+        Path envPath = Path.of(directory, ".env");
+        if (!Files.isRegularFile(envPath)) {
+            return Optional.empty();
         }
+        Map<String, String> entries = new HashMap<>();
+        try {
+            for (String line : Files.readAllLines(envPath)) {
+                putEnvEntry(entries, line);
+            }
+        } catch (IOException exception) {
+            log.warn("Could not read local .env for Cloudinary configuration: {}", envPath);
+            return Optional.empty();
+        }
+        CloudinaryCredentials credentials = new CloudinaryCredentials(
+                firstText(entries.get("CLOUDINARY_CLOUD_NAME"), ""),
+                firstText(entries.get("CLOUDINARY_API_KEY"), ""),
+                firstText(entries.get("CLOUDINARY_API_SECRET"), "")
+        );
+        return credentials.isConfigured() ? Optional.of(credentials) : Optional.empty();
+    }
+
+    private void putEnvEntry(Map<String, String> entries, String line) {
+        String trimmed = line == null ? "" : line.trim();
+        if (trimmed.isBlank() || trimmed.startsWith("#")) {
+            return;
+        }
+        if (trimmed.startsWith("export ")) {
+            trimmed = trimmed.substring("export ".length()).trim();
+        }
+        int separator = trimmed.indexOf('=');
+        if (separator <= 0) {
+            return;
+        }
+        String key = trimmed.substring(0, separator).trim();
+        if (!key.startsWith("CLOUDINARY_")) {
+            return;
+        }
+        String value = trimmed.substring(separator + 1).trim();
+        entries.put(key, stripQuotes(value));
+    }
+
+    private String stripQuotes(String value) {
+        if (value.length() >= 2
+                && ((value.startsWith("\"") && value.endsWith("\""))
+                || (value.startsWith("'") && value.endsWith("'")))) {
+            return value.substring(1, value.length() - 1);
+        }
+        return value;
+    }
+
+    private boolean sameCloudName(CloudinaryCredentials first, CloudinaryCredentials second) {
+        return hasText(first.cloudName())
+                && hasText(second.cloudName())
+                && first.cloudName().equalsIgnoreCase(second.cloudName());
     }
 
     private Optional<CloudinaryCredentials> parseCloudinaryUrl(String cloudinaryUrl) {
@@ -113,7 +151,7 @@ public class CloudinaryConfig {
             return Optional.empty();
         }
         return Optional.of(new CloudinaryCredentials(
-                host,
+                host.trim(),
                 decode(parts[0]),
                 decode(parts[1])
         ));
@@ -134,7 +172,7 @@ public class CloudinaryConfig {
     }
 
     private String decode(String value) {
-        return URLDecoder.decode(value, StandardCharsets.UTF_8);
+        return URLDecoder.decode(value, StandardCharsets.UTF_8).trim();
     }
 
     private String mask(String value) {

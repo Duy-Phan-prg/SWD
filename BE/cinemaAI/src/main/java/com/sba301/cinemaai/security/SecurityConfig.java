@@ -56,7 +56,11 @@ public class SecurityConfig {
                                 "/api/v1/ticket-pricing/combos"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/payments/vnpay/return", "/api/v1/payments/vnpay/ipn").permitAll()
+                        .requestMatchers(
+                                "/api/v1/payments/vnpay/return",
+                                "/api/v1/payments/vnpay/null",
+                                "/api/v1/payments/vnpay/ipn"
+                        ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/staff/**").hasAnyRole("ADMIN", "STAFF")
                         .anyRequest().authenticated()

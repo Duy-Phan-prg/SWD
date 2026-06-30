@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Check, Edit3, ImageUp, Plus, Search, Trash2, UserRound } from 'lucide-react';
-import { adminService } from '../../services/adminService';
+import { adminService } from '../../../services/adminService';
 
 export default function AdminActorsPanel({ ctx }) {
   const {
@@ -28,9 +28,9 @@ export default function AdminActorsPanel({ ctx }) {
     try {
       const uploaded = await adminService.uploadAdminImage(token, file, 'actors');
       updateField('avatarUrl', uploaded.url);
-      showToast('Đã tải ảnh diễn viên lên Storage.');
+      showToast('Đã tải ảnh diễn viên lên Cloudinary.');
     } catch (error) {
-      showToast(error.message || 'Không thể tải ảnh lên Storage.');
+      showToast(error.message || 'Không thể tải ảnh lên Cloudinary.');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -66,16 +66,17 @@ export default function AdminActorsPanel({ ctx }) {
             <textarea value={actorForm.biography} maxLength={1000} rows={6} onChange={(event) => updateField('biography', event.target.value)} className="w-full resize-none bg-black border border-neutral-800 p-2.5 text-sm text-white focus:outline-none focus:border-amber-400" />
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-[9px] uppercase text-neutral-400">Avatar URL</span>
-            <input value={actorForm.avatarUrl} maxLength={500} onChange={(event) => updateField('avatarUrl', event.target.value)} className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400" />
-          </label>
-
           <div className="space-y-2">
-            {actorForm.avatarUrl && <img src={actorForm.avatarUrl} alt="Actor preview" className="w-full h-48 object-cover border border-neutral-800 bg-black" />}
+            <span className="text-[9px] uppercase text-neutral-400 block">Ảnh đại diện</span>
+            {actorForm.avatarUrl && (
+              <div className="space-y-1">
+                <img src={actorForm.avatarUrl} alt="Actor preview" className="w-full h-48 object-cover border border-neutral-800 bg-black" />
+                <p className="text-[9px] text-neutral-600 truncate" title={actorForm.avatarUrl}>{actorForm.avatarUrl}</p>
+              </div>
+            )}
             <label className={`w-full py-3 border border-amber-500/40 bg-amber-500/10 text-amber-300 font-black text-xs uppercase flex items-center justify-center gap-2 cursor-pointer ${isUploadingAvatar ? 'opacity-50 pointer-events-none' : ''}`}>
               <ImageUp className="h-4 w-4" />
-              {isUploadingAvatar ? 'Đang tải ảnh...' : 'Chọn ảnh từ máy'}
+              {isUploadingAvatar ? 'Đang tải ảnh...' : actorForm.avatarUrl ? 'Chọn ảnh khác' : 'Chọn ảnh từ máy'}
               <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarUpload} className="hidden" />
             </label>
             <p className="text-[9px] text-neutral-600">JPG, PNG hoặc WEBP, tối đa 5 MB.</p>

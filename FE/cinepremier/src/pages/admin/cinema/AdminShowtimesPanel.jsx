@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, Layers, DollarSign,
   Play, PauseCircle, Ban, Check, X, Info, Zap
 } from 'lucide-react';
-import { adminService } from '../../services/adminService';
+import { adminService } from '../../../services/adminService';
 
 /* ─── helpers ────────────────────────────────────────────── */
 const STATUS_META = {
@@ -252,7 +252,7 @@ function DateTimePicker({ value, onChange, error, label }) {
         </div>
 
         {timePart && (
-          <p className="text-[9px] text-purple-300 font-mono font-bold mt-3 text-center bg-purple-900/20 py-1.5 rounded border border-purple-900/30">
+          <p className="text-[9px] text-amber-400 font-mono font-bold mt-3 text-center bg-amber-900/20 py-1.5 rounded border border-amber-900/30">
             ✓ Đã chọn: {datePart ? `${datePart.split('-').reverse().join('/')} lúc ${timePart}` : timePart}
           </p>
         )}
@@ -322,7 +322,7 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
         </table>
       </div>
       {!allowChildTickets && (
-        <p className="text-[11px] font-black uppercase tracking-wide text-purple-300">
+        <p className="text-[11px] font-black uppercase tracking-wide text-amber-300">
           Phim {ageRatingLabel || '16+'} Không cho phép bán vé trẻ em, bảng giá mục này vô hiệu hóa!
         </p>
       )}
@@ -338,6 +338,10 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
 /* ─── main component ─────────────────────────────────────── */
 export default function AdminShowtimesPanel({ ctx }) {
   const { getAdminToken, showToast, moviesList } = ctx;
+
+  // Stable ref – ensures useEffect([]) always calls the latest getAdminToken
+  const getTokenRef = React.useRef(getAdminToken);
+  React.useEffect(() => { getTokenRef.current = getAdminToken; }, [getAdminToken]);
 
   /* state */
   const [showtimes, setShowtimes] = useState([]);
@@ -369,17 +373,17 @@ export default function AdminShowtimesPanel({ ctx }) {
 
   /* fetch rooms once */
   useEffect(() => {
-    const token = getAdminToken();
+    const token = getTokenRef.current?.();
     if (!token) return;
     adminService.getAdminRooms(token).then(data => {
       const list = Array.isArray(data) ? data : (data?.content || data?.items || []);
       setRooms(list);
     }).catch(() => { });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* fetch showtimes */
   const fetchShowtimes = useCallback(async (p = 0) => {
-    const token = getAdminToken();
+    const token = getTokenRef.current?.();
     if (!token) return;
     setLoading(true);
     try {
@@ -395,9 +399,9 @@ export default function AdminShowtimesPanel({ ctx }) {
     } finally {
       setLoading(false);
     }
-  }, [filters, getAdminToken, showToast]);
+  }, [filters, showToast]);
 
-  useEffect(() => { fetchShowtimes(0); }, []);
+  useEffect(() => { fetchShowtimes(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── create / edit submit ── */
   const handleFormSubmit = async (e) => {
@@ -751,7 +755,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               <Plus className="w-3 h-3" /> Tạo suất
             </button>
             <button onClick={() => { setMode('bulk'); setBulkForm(EMPTY_BULK); setEditingBulkSlotIndex(0); setEditingId(null); setEditingStatus(''); setErrors({}); }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-purple-500 transition">
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition">
               <Zap className="w-3 h-3" /> Tạo hàng loạt
             </button>
           </div>
@@ -843,10 +847,10 @@ export default function AdminShowtimesPanel({ ctx }) {
         {/* ── BULK FORM ── */}
         {mode === 'bulk' && (
           <motion.div key="form-bulk" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="border border-purple-500/30 bg-gradient-to-b from-[#0d0900] to-[#040404] p-6">
+            className="border border-amber-500/30 bg-gradient-to-b from-[#0d0900] to-[#040404] p-6">
             <div className="flex items-center gap-2 mb-4 pb-2 border-b border-zinc-900">
-              <Zap className="w-3.5 h-3.5 text-purple-400" />
-              <h3 className="text-xs font-black uppercase tracking-wider text-purple-300">Tạo hàng loạt suất chiếu</h3>
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-amber-300">Tạo hàng loạt suất chiếu</h3>
 
             </div>
             <form onSubmit={handleBulkSubmit} className="space-y-5 text-xs font-sans">
@@ -888,7 +892,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               <div className="space-y-4 border border-zinc-900 bg-zinc-950/40 p-4">
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                   <div>
-                    <label className="text-[9px] uppercase tracking-wider text-purple-500 font-bold">
+                    <label className="text-[9px] uppercase tracking-wider text-amber-500 font-bold">
                       Khung giờ có thể chiếu ({selectedBulkSlotsCount}/{bulkForm.slots.length} đã chọn)
                     </label>
                     <p className="text-[10px] text-zinc-400 mt-1">

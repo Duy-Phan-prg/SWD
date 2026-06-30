@@ -9,7 +9,7 @@ public record GenreRequest(
         String name,
 
         @NotBlank(message = "Description is required")
-        @Size(min = 200, max = 1000, message = "Description must be between 200 and 1000 characters")
+        @Size(min = 50, max = 1000, message = "Description must be between 50 and 1000 characters")
         String description
 ) {
 }

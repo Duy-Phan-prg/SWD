@@ -143,6 +143,9 @@ public class FoodServiceImpl implements FoodService {
         foodItem.setDescription(request.description());
         foodItem.setPrice(request.price());
         foodItem.setImageUrl(request.imageUrl());
+        if (request.stockQuantity() != null) {
+            foodItem.setStockQuantity(request.stockQuantity());
+        }
     }
 
     private void applyComboFields(FoodCombo foodCombo, FoodComboRequest request) {
@@ -150,6 +153,9 @@ public class FoodServiceImpl implements FoodService {
         foodCombo.setDescription(request.description());
         foodCombo.setPrice(request.price());
         foodCombo.setImageUrl(request.imageUrl());
+        if (request.stockQuantity() != null) {
+            foodCombo.setStockQuantity(request.stockQuantity());
+        }
     }
 
     private PageRequest pageable(int page, int size) {

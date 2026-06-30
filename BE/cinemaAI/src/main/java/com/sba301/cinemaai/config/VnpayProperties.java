@@ -17,4 +17,5 @@ public class VnpayProperties {
     private String apiQueryUrl;
     private String returnUrl;
     private String ipnUrl;
+    private String defaultClientIp;
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, Ticket, User, LogOut } from 'lucide-react';
+import { X, Ticket, User, LogOut, Search, MapPin, Home, Compass, Heart, ChevronDown } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import AuthModal from '@/pages/auth/AuthModal';
@@ -41,6 +41,13 @@ export default function UserLayout({ children }) {
 
   // Admin/Staff dùng layout riêng — không hiển thị header/footer/rail của khách.
   const isBackoffice = activeTab === 'admin' || activeTab === 'staff';
+  const backofficeNavItems = [
+    { id: 'home', label: 'TRANG CHỦ', icon: Home },
+    { id: 'explore', label: 'KHÁM PHÁ', icon: Compass },
+    { id: 'my-tickets', label: 'VÉ CỦA TÔI', icon: Ticket },
+    { id: 'wishlist', label: 'WATCHLIST', icon: Heart },
+    { id: 'profile', label: 'CÁ NHÂN', icon: User },
+  ].filter(({ id }) => currentRole !== 'admin' || id !== 'my-tickets');
 
   const handleTabChange = (tab) => {
     // Guest bấm "Vé của tôi" → mở modal đăng nhập (vé yêu cầu đăng nhập).
@@ -55,27 +62,102 @@ export default function UserLayout({ children }) {
 
       {/* Header cố định cho admin/staff */}
       {isBackoffice && (
-        <div className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-white/10 bg-black/95 backdrop-blur-md px-4 sm:px-6 lg:px-8">
-          <h1 className="text-sm font-sans uppercase tracking-[0.2em] text-white font-bold">
-            {activeTab === 'admin' ? 'BẢNG ĐIỀU KHIỂN QUẢN TRỊ VIÊN' : 'BẢNG ĐIỀU KHIỂN NHÂN VIÊN'}
-          </h1>
-          <div className="flex items-center gap-2">
-            {isLoggedIn && (
-              <>
-                <span className="hidden sm:flex items-center gap-1.5 border border-yellow-500/40 bg-yellow-500/10 px-3 h-9 text-[10px] font-sans uppercase tracking-[0.15em] font-bold text-yellow-500">
-                  <User className="h-3.5 w-3.5" />{currentUser?.name || 'CINEMAAI ADMIN'}
+        <header className="sticky top-0 z-50 border-b border-white/10 bg-black/95 backdrop-blur-md">
+          <div className="mx-auto flex min-h-16 w-full max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:flex-nowrap lg:px-8">
+            <button
+              type="button"
+              onClick={() => handleTabChange('home')}
+              className="group flex shrink-0 items-center gap-3.5 pr-2 text-left"
+              aria-label="CinePremier home"
+            >
+              <span className="relative flex h-10 w-10 items-center justify-center border border-white/15 bg-zinc-950 text-white shadow-[inset_0_0_12px_rgba(255,255,255,0.05)] transition group-hover:border-amber-400/45">
+                <span className="absolute left-1 top-1 h-1.5 w-1.5 border-l border-t border-white/35"></span>
+                <span className="absolute right-1 top-1 h-1.5 w-1.5 border-r border-t border-white/35"></span>
+                <span className="absolute bottom-1 left-1 h-1.5 w-1.5 border-b border-l border-white/35"></span>
+                <span className="absolute bottom-1 right-1 h-1.5 w-1.5 border-b border-r border-white/35"></span>
+                <span className="font-serif text-lg font-black italic text-amber-100">C</span>
+              </span>
+              <span className="hidden flex-col sm:flex">
+                <span className="text-sm font-black leading-none tracking-[0.22em] text-white">
+                  CINE<span className="text-amber-400">PREMIER</span>
                 </span>
+                <span className="mt-1 text-[7.5px] font-mono uppercase leading-none tracking-[0.45em] text-neutral-300">
+                  STUDIOS
+                </span>
+              </span>
+            </button>
+
+            <nav className="order-3 flex w-full min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] lg:order-none lg:w-auto lg:flex-1 lg:justify-center [&::-webkit-scrollbar]:hidden">
+              {backofficeNavItems.map(({ id, label, icon: Icon }) => (
                 <button
+                  key={id}
                   type="button"
-                  onClick={() => handleLogout({ navigate, showToast })}
-                  className="flex h-9 items-center gap-1.5 border border-white/20 bg-black px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] font-bold text-white hover:bg-white hover:text-black transition"
+                  onClick={() => handleTabChange(id)}
+                  className={`flex h-10 shrink-0 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.18em] transition ${activeTab === id
+                    ? 'text-white'
+                    : 'text-neutral-400 hover:text-white'
+                    }`}
                 >
-                  <LogOut className="h-3.5 w-3.5" /> ĐĂNG XUẤT
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{label}</span>
                 </button>
-              </>
-            )}
+              ))}
+            </nav>
+
+            <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+              <div className="relative hidden h-10 w-48 xl:block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setMoviePagination((prev) => ({ ...prev, page: 0 }));
+                  }}
+                  onFocus={() => {
+                    if (location.pathname !== '/movies') navigate('/movies');
+                  }}
+                  placeholder="TÌM PHIM..."
+                  className="h-full w-full border border-white/10 bg-black/60 pl-9 pr-3 text-[9.5px] font-bold uppercase tracking-[0.16em] text-white outline-none transition placeholder:text-neutral-600 focus:border-white/30"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => activeTab === 'admin' ? navigate('/admin/cinema') : handleTabChange('explore')}
+                className="hidden h-10 items-center gap-2 border border-white/10 bg-black/60 px-3.5 text-left text-[9px] uppercase tracking-[0.14em] text-neutral-300 transition hover:border-amber-500/40 hover:text-white md:flex"
+              >
+                <MapPin className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="max-w-[150px] truncate">
+                  <span className="block text-[10px] font-black leading-tight text-white">{publicCinema?.name || 'CINEAI CENTRAL'}</span>
+                  <span className="block text-[7px] font-bold leading-tight text-neutral-500">{publicCinema?.city || 'HO CHI MINH CITY'}</span>
+                </span>
+                <ChevronDown className="h-3 w-3 text-neutral-500" />
+              </button>
+
+              {isLoggedIn && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange(activeTab === 'admin' ? 'admin' : 'staff')}
+                    className="flex h-10 items-center gap-1.5 border border-yellow-500/40 bg-yellow-500/10 px-3 text-[10px] font-black uppercase tracking-[0.15em] text-yellow-500 transition hover:bg-yellow-500 hover:text-black"
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{activeTab === 'admin' ? 'CINEMAAI ADMIN' : currentUser?.name || 'CINEMAAI STAFF'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLogout({ navigate, showToast })}
+                    className="flex h-10 w-10 items-center justify-center border border-white/10 bg-black/60 text-white transition hover:bg-white hover:text-black"
+                    aria-label="Đăng xuất"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </header>
       )}
 
       {/* Left Rail */}

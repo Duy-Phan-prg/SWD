@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Building2, CheckCircle2, Globe2, MapPin,
   Phone, Power, RefreshCw, Save, ShieldCheck
 } from 'lucide-react';
-import { adminService } from '../../services/adminService';
+import { adminService } from '../../../services/adminService';
 
 const emptyForm = {
   name: '',

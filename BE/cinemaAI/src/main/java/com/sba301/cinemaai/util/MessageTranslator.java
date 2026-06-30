@@ -270,7 +270,7 @@ public final class MessageTranslator {
             entry("Genre name is required", "Tên thể loại là bắt buộc"),
             entry("Genre name must be at most 100 characters", "Tên thể loại tối đa 100 ký tự"),
             entry("Description is required", "Mô tả là bắt buộc"),
-            entry("Description must be between 200 and 1000 characters", "Mô tả phải từ 200 đến 1000 ký tự"),
+            entry("Description must be between 50 and 1000 characters", "Mô tả phải từ 50 đến 1000 ký tự"),
             entry("Title is required", "Tên phim là bắt buộc"),
             entry("Trailer URL must be at most 500 characters", "URL trailer tối đa 500 ký tự"),
             entry("Poster URL must be at most 500 characters", "URL poster tối đa 500 ký tự"),

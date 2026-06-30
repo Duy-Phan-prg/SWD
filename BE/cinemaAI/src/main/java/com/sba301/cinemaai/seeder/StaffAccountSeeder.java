@@ -1,5 +1,6 @@
 package com.sba301.cinemaai.seeder;
 
+import com.sba301.cinemaai.config.SeederAccountProperties;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;
@@ -19,13 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class StaffAccountSeeder implements Seeder {
 
-    private static final String STAFF_EMAIL = "staff@cinemaai.com";
-    private static final String STAFF_PASSWORD = "Staff123";
-
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SeederAccountProperties seederAccountProperties;
 
     @Override
     @Transactional
@@ -33,13 +32,14 @@ public class StaffAccountSeeder implements Seeder {
         Role staffRole = roleRepository.findByName(RoleName.STAFF)
                 .orElseGet(() -> roleRepository.save(new Role(RoleName.STAFF)));
 
-        User staff = userRepository.findByEmail(STAFF_EMAIL)
+        SeederAccountProperties.Account staffAccount = seederAccountProperties.getStaff();
+        User staff = userRepository.findByEmail(staffAccount.getEmail())
                 .orElseGet(() -> {
                     User user = new User(
-                            STAFF_EMAIL,
-                            passwordEncoder.encode(STAFF_PASSWORD),
-                            "CinemaAI Staff",
-                            "0900000002"
+                            staffAccount.getEmail(),
+                            passwordEncoder.encode(staffAccount.getPassword()),
+                            staffAccount.getFullName(),
+                            staffAccount.getPhone()
                     );
                     user.setEmailVerified(true);
                     user.setStatus(UserStatus.ACTIVE);

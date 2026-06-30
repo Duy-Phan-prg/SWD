@@ -9,16 +9,16 @@ import {
 import { expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../../services/authService';
 import { adminService } from '../../services/adminService';
 import { useAuthStore } from '../../stores/useAuthStore';
-import AdminOverviewPanel from './AdminOverviewPanel';
-import AdminMoviesPanel from './AdminMoviesPanel';
-import AdminGenresPanel from './AdminGenresPanel';
-import AdminActorsPanel from './AdminActorsPanel';
-import AdminFoodsPanel from './AdminFoodsPanel';
-import AdminShowtimesPanel from './AdminShowtimesPanel';
-import AdminTransactionsPanel from './AdminTransactionsPanel';
-import AdminUsersPanel from './AdminUsersPanel';
-import AdminCinemaPanel from './AdminCinemaPanel';
-import AdminRoomsPanel from './AdminRoomsPanel';
+import AdminOverviewPanel from './overview/AdminOverviewPanel';
+import AdminMoviesPanel from './catalog/AdminMoviesPanel';
+import AdminGenresPanel from './catalog/AdminGenresPanel';
+import AdminActorsPanel from './catalog/AdminActorsPanel';
+import AdminFoodsPanel from './catalog/AdminFoodsPanel';
+import AdminShowtimesPanel from './cinema/AdminShowtimesPanel';
+import AdminTransactionsPanel from './system/AdminTransactionsPanel';
+import AdminUsersPanel from './system/AdminUsersPanel';
+import AdminCinemaPanel from './cinema/AdminCinemaPanel';
+import AdminRoomsPanel from './cinema/AdminRoomsPanel';
 
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies', 'foods'].includes(section)) return 'movies';
@@ -114,6 +114,7 @@ export default function AdminDashboard({
   const [isAddingShowtime, setIsAddingShowtime] = useState(false);
   const [showtimeSuccessMessage, setShowtimeSuccessMessage] = useState('');
   const [genres, setGenres] = useState([]);
+  const [genrePagination, setGenrePagination] = useState({ page: 0, size: 10, totalPages: 1, totalItems: 0 });
   const [genreSearch, setGenreSearch] = useState('');
   const [genreForm, setGenreForm] = useState({ name: '', description: '' });
   const [genreErrors, setGenreErrors] = useState({});
@@ -505,14 +506,23 @@ export default function AdminDashboard({
     return Object.keys(errors).length === 0;
   };
 
-  const fetchGenres = async () => {
+  const fetchGenres = async (page = 0) => {
     const token = getAdminToken();
     if (!token) return;
 
     setIsGenreLoading(true);
     try {
-      const data = await adminService.getAdminGenres(token);
-      setGenres(Array.isArray(data) ? data : []);
+      const data = await adminService.getAdminGenres({ page, size: 10 });
+      const genreList = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+      setGenres(genreList);
+      if (data && !Array.isArray(data)) {
+        setGenrePagination({
+          page: data.page ?? page,
+          size: data.size ?? 10,
+          totalPages: data.totalPages ?? 1,
+          totalItems: data.totalItems ?? genreList.length
+        });
+      }
     } catch (error) {
       showToast(error.message || 'Không thể tải danh sách thể loại phim.');
     } finally {
@@ -757,16 +767,10 @@ export default function AdminDashboard({
         ? await adminService.updateAdminGenre(token, editingGenreId, payload)
         : await adminService.createAdminGenre(token, payload);
 
-      setGenres((prev) => {
-        if (editingGenreId) {
-          return prev.map((genre) => genre.id === editingGenreId ? savedGenre : genre);
-        }
-        return [savedGenre, ...prev];
-      });
-
       addAuditLog(editingGenreId ? 'Cập nhật thể loại phim' : 'Tạo thể loại phim', savedGenre.name);
       showToast(editingGenreId ? `Đã cập nhật thể loại: ${savedGenre.name}` : `Đã tạo thể loại mới: ${savedGenre.name}`);
       resetGenreForm();
+      await fetchGenres(0);
     } catch (error) {
       showToast(error.message || 'Không thể lưu thể loại phim.');
     } finally {
@@ -789,10 +793,13 @@ export default function AdminDashboard({
 
     try {
       await adminService.deleteAdminGenre(token, genre.id);
-      setGenres((prev) => prev.filter((item) => item.id !== genre.id));
       addAuditLog('Xóa thể loại phim', genre.name);
       showToast(`Đã xóa thể loại: ${genre.name}`);
       if (editingGenreId === genre.id) resetGenreForm();
+      // Reload trang hiện tại; nếu page bị rỗng thì lùi 1 trang
+      const currentPage = genrePagination.page;
+      const isLastOnPage = genres.length === 1 && currentPage > 0;
+      await fetchGenres(isLastOnPage ? currentPage - 1 : currentPage);
     } catch (error) {
       showToast(error.message || 'Không thể xóa thể loại phim.');
     }
@@ -1240,6 +1247,8 @@ export default function AdminDashboard({
     setShowtimeSuccessMessage,
     genres,
     setGenres,
+    genrePagination,
+    setGenrePagination,
     genreSearch,
     setGenreSearch,
     genreForm,

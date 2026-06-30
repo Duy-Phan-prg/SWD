@@ -26,6 +26,7 @@ export default function Header({
   const googleMapsUrl = cinemaAddress
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cinemaAddress)}`
     : 'https://www.google.com/maps';
+  const isAdminRole = currentRole === 'admin';
 
   return (
     <header className="sticky top-0 z-[100] w-full max-w-full overflow-visible border-b border-white/10 bg-black/95 backdrop-blur-md">
@@ -280,17 +281,19 @@ export default function Header({
               <span>KHÁM PHÁ</span>
             </button>
 
-            <button
+            {!isAdminRole && (
+              <button
               onClick={() => onTabChange('my-tickets')}
               className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
                 ? 'text-white border-white font-bold'
                 : 'text-neutral-300 hover:text-white border-transparent'
                 }`}
               id="nav-my-bookings"
-            >
-              <Ticket className="h-3.5 w-3.5" />
-              <span>VÉ CỦA TÔI</span>
-            </button>
+              >
+                <Ticket className="h-3.5 w-3.5" />
+                <span>VÉ CỦA TÔI</span>
+              </button>
+            )}
 
             <button
               onClick={() => onTabChange('wishlist')}
@@ -302,15 +305,6 @@ export default function Header({
             >
               <Heart className="h-3.5 w-3.5" />
               <span>WATCHLIST</span>
-            </button>
-
-            <button
-              onClick={() => setDropdownOpen((v) => !v)}
-              className="px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 text-neutral-300 hover:text-white border-transparent"
-              id="nav-choose-cinema"
-            >
-              <MapPin className="h-3.5 w-3.5" />
-              <span>CHỌN RẠP</span>
             </button>
 
             <button

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -26,7 +27,9 @@ public class VNPayServiceImpl implements VNPayService {
         vnpParams.put("vnp_Version", "2.1.0");
         vnpParams.put("vnp_Command", "pay");
         vnpParams.put("vnp_TmnCode", vnPayConfig.getTmnCode());
-        vnpParams.put("vnp_Amount", String.valueOf(amount.multiply(BigDecimal.valueOf(100)).longValue()));
+        vnpParams.put("vnp_Amount", amount.multiply(BigDecimal.valueOf(100))
+                .setScale(0, RoundingMode.HALF_UP)
+                .toPlainString());
         vnpParams.put("vnp_CurrCode", "VND");
         vnpParams.put("vnp_TxnRef", txnRef);
         vnpParams.put("vnp_OrderInfo", orderInfo);
@@ -35,9 +38,12 @@ public class VNPayServiceImpl implements VNPayService {
         vnpParams.put("vnp_ReturnUrl", vnPayConfig.getReturnUrl());
         vnpParams.put("vnp_IpAddr", resolveIp(clientIp));
 
-        String now = new SimpleDateFormat("yyyyMMddHHmmss")
-                .format(Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7")).getTime());
-        vnpParams.put("vnp_CreateDate", now);
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        formatter.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        vnpParams.put("vnp_CreateDate", formatter.format(calendar.getTime()));
+        calendar.add(Calendar.MINUTE, 15);
+        vnpParams.put("vnp_ExpireDate", formatter.format(calendar.getTime()));
 
         String secureHash = VNPayUtil.hashAllFields(vnpParams, vnPayConfig.getHashSecret());
         String queryString = buildEncodedQueryString(vnpParams);
@@ -72,6 +78,10 @@ public class VNPayServiceImpl implements VNPayService {
     }
 
     private String resolveIp(String clientIp) {
-        return (clientIp == null || clientIp.contains(":")) ? "127.0.0.1" : clientIp;
+        if (clientIp == null || clientIp.isBlank() || clientIp.contains(":")) {
+            String defaultClientIp = vnPayConfig.getDefaultClientIp();
+            return (defaultClientIp == null || defaultClientIp.isBlank()) ? "127.0.0.1" : defaultClientIp;
+        }
+        return clientIp;
     }
 }

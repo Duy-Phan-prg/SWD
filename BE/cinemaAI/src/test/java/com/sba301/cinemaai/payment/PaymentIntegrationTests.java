@@ -38,9 +38,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -101,6 +105,16 @@ class PaymentIntegrationTests {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @TestConfiguration
+    static class PaymentTestSecurityConfig {
+
+        @Bean
+        @ConditionalOnMissingBean(PasswordEncoder.class)
+        PasswordEncoder passwordEncoder() {
+            return new BCryptPasswordEncoder(10);
+        }
+    }
+
     @Test
     void shouldCreateVnpayPaymentUrlAndRejectDuplicatePendingPayment() throws Exception {
         String customerToken = loginAs("phase6.payment.vnpay.", RoleName.CUSTOMER);
@@ -122,7 +136,7 @@ class PaymentIntegrationTests {
                 .getContentAsString();
 
         String paymentUrl = objectMapper.readTree(paymentResponse).at("/data/paymentUrl").asText();
-        assertThat(paymentUrl).contains("vnp_TxnRef=", "vnp_SecureHash=");
+        assertThat(paymentUrl).contains("vnp_TxnRef=", "vnp_IpAddr=", "vnp_ExpireDate=", "vnp_SecureHash=");
 
         mockMvc.perform(post("/api/v1/payments/vnpay/create")
                         .header("Authorization", "Bearer " + customerToken)

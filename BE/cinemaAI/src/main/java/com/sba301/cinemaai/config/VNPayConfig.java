@@ -1,25 +1,37 @@
 package com.sba301.cinemaai.config;
 
 import lombok.Getter;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @Getter
+@RequiredArgsConstructor
 public class VNPayConfig {
-    
-    @Value("${vnpay.tmn-code}")
-    private String tmnCode;
-    
-    @Value("${vnpay.hash-secret}")
-    private String hashSecret;
-    
-    @Value("${vnpay.api-url}")
-    private String paymentUrl;
-    
-    @Value("${vnpay.return-url}")
-    private String returnUrl;
-    
-    @Value("${vnpay.ipn-url}")
-    private String ipnUrl;
+
+    private final VnpayProperties properties;
+
+    public String getTmnCode() {
+        return properties.getTmnCode();
+    }
+
+    public String getHashSecret() {
+        return properties.getHashSecret();
+    }
+
+    public String getPaymentUrl() {
+        return properties.getApiUrl();
+    }
+
+    public String getReturnUrl() {
+        return properties.getReturnUrl();
+    }
+
+    public String getIpnUrl() {
+        return properties.getIpnUrl();
+    }
+
+    public String getDefaultClientIp() {
+        return properties.getDefaultClientIp();
+    }
 }
