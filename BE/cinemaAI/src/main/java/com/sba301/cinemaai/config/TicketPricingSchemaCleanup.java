@@ -17,28 +17,54 @@ public class TicketPricingSchemaCleanup {
 
     @EventListener(ApplicationReadyEvent.class)
     public void removeSeniorTicketSupport() {
-        execute("delete from ticket_pricing_rules where ticket_type = 'SENIOR'");
+        execute("DELETE FROM ticket_pricing_rules WHERE ticket_type = 'SENIOR'");
 
-        execute("""
-                alter table ticket_pricing_rules
-                add column if not exists seat_type varchar(30)
-                """);
+        addColumnIfNotExists("ticket_pricing_rules", "seat_type", "VARCHAR(30)");
 
-        execute("update ticket_pricing_rules set seat_type = 'STANDARD' where seat_type is null");
+        execute("UPDATE ticket_pricing_rules SET seat_type = 'STANDARD' WHERE seat_type IS NULL");
 
-        execute("delete from ticket_pricing_rules where seat_type = 'COUPLE' and ticket_type <> 'ADULT'");
+        execute("DELETE FROM ticket_pricing_rules WHERE seat_type = 'COUPLE' AND ticket_type <> 'ADULT'");
 
-        execute("""
-                alter table ticket_combos
-                drop column if exists senior_count
-                """);
+        dropColumnIfExists("ticket_combos", "senior_count");
+    }
+
+    private void addColumnIfNotExists(String table, String column, String definition) {
+        try {
+            Integer count = jdbcTemplate.queryForObject("""
+                    SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = ?
+                      AND COLUMN_NAME = ?
+                    """, Integer.class, table, column);
+            if (count == null || count == 0) {
+                execute("ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + definition);
+            }
+        } catch (DataAccessException ex) {
+            log.warn("Could not check/add column {}.{}: {}", table, column, ex.getMessage());
+        }
+    }
+
+    private void dropColumnIfExists(String table, String column) {
+        try {
+            Integer count = jdbcTemplate.queryForObject("""
+                    SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = ?
+                      AND COLUMN_NAME = ?
+                    """, Integer.class, table, column);
+            if (count != null && count > 0) {
+                execute("ALTER TABLE `" + table + "` DROP COLUMN `" + column + "`");
+            }
+        } catch (DataAccessException ex) {
+            log.warn("Could not check/drop column {}.{}: {}", table, column, ex.getMessage());
+        }
     }
 
     private void execute(String sql) {
         try {
             jdbcTemplate.execute(sql);
         } catch (DataAccessException ex) {
-            log.warn("Could not execute ticket pricing schema cleanup SQL: {}", sql, ex);
+            log.warn("Could not execute ticket pricing schema cleanup SQL: {}\n{}", sql, ex.getMessage());
         }
     }
 }

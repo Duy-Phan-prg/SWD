@@ -14,6 +14,8 @@ public interface MovieActorRepository extends JpaRepository<MovieActor, Long> {
 
     long countByActor(Actor actor);
 
+    List<MovieActor> findByMovieId(Long movieId);
+
     boolean existsByMovieAndActor(Movie movie, Actor actor);
 
     void deleteByMovie(Movie movie);

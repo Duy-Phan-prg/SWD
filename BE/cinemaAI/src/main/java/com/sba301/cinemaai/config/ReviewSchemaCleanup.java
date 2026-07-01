@@ -8,6 +8,8 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -17,59 +19,62 @@ public class ReviewSchemaCleanup {
 
     @EventListener(ApplicationReadyEvent.class)
     public void allowOneReviewPerUsedTicket() {
-        execute("alter table reviews drop constraint if exists reviews_user_id_movie_id_key");
-        execute("alter table reviews drop constraint if exists uk_reviews_user_movie");
-        execute("""
-                do $$
-                declare
-                    constraint_record record;
-                begin
-                    for constraint_record in
-                        select n.nspname, c.conname
-                        from pg_constraint c
-                        join pg_class t on t.oid = c.conrelid
-                        join pg_namespace n on n.oid = t.relnamespace
-                        where t.relname = 'reviews'
-                          and c.contype = 'u'
-                          and (
-                              select array_agg(a.attname::text order by a.attname::text)
-                              from unnest(c.conkey) key(attnum)
-                              join pg_attribute a on a.attrelid = c.conrelid and a.attnum = key.attnum
-                          ) = array['movie_id', 'user_id']
-                    loop
-                        execute format('alter table %I.%I drop constraint %I', constraint_record.nspname, 'reviews', constraint_record.conname);
-                    end loop;
-                end $$;
-                """);
-        execute("""
-                do $$
-                declare
-                    index_record record;
-                begin
-                    for index_record in
-                        select schemaname, indexname
-                        from pg_indexes
-                        where tablename = 'reviews'
-                          and indexdef ilike '%unique%'
-                          and indexdef ilike '%user_id%'
-                          and indexdef ilike '%movie_id%'
-                    loop
-                        execute format('drop index if exists %I.%I', index_record.schemaname, index_record.indexname);
-                    end loop;
-                end $$;
-                """);
-        execute("""
-                create unique index if not exists uk_reviews_booking_active
-                on reviews(booking_id)
-                where booking_id is not null and status <> 'DELETED'
-                """);
+        dropUniqueIndexesOnUserMovieFromReviews();
+        createUniqueIndexOnBookingId();
+    }
+
+    private void dropUniqueIndexesOnUserMovieFromReviews() {
+        try {
+            List<String> indexes = jdbcTemplate.queryForList("""
+                    SELECT DISTINCT INDEX_NAME
+                    FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'reviews'
+                      AND NON_UNIQUE = 0
+                      AND INDEX_NAME IN (
+                          SELECT INDEX_NAME FROM information_schema.STATISTICS
+                          WHERE TABLE_SCHEMA = DATABASE()
+                            AND TABLE_NAME = 'reviews'
+                            AND COLUMN_NAME = 'user_id'
+                      )
+                      AND INDEX_NAME IN (
+                          SELECT INDEX_NAME FROM information_schema.STATISTICS
+                          WHERE TABLE_SCHEMA = DATABASE()
+                            AND TABLE_NAME = 'reviews'
+                            AND COLUMN_NAME = 'movie_id'
+                      )
+                      AND INDEX_NAME <> 'PRIMARY'
+                    """, String.class);
+
+            for (String indexName : indexes) {
+                execute("ALTER TABLE reviews DROP INDEX `" + indexName + "`");
+            }
+        } catch (DataAccessException ex) {
+            log.warn("Could not query review indexes: {}", ex.getMessage());
+        }
+    }
+
+    private void createUniqueIndexOnBookingId() {
+        try {
+            Integer count = jdbcTemplate.queryForObject("""
+                    SELECT COUNT(*) FROM information_schema.STATISTICS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'reviews'
+                      AND INDEX_NAME = 'uk_reviews_booking_active'
+                    """, Integer.class);
+            if (count == null || count == 0) {
+                execute("CREATE UNIQUE INDEX uk_reviews_booking_active ON reviews(booking_id)");
+            }
+        } catch (DataAccessException ex) {
+            log.warn("Could not create review booking index: {}", ex.getMessage());
+        }
     }
 
     private void execute(String sql) {
         try {
             jdbcTemplate.execute(sql);
         } catch (DataAccessException ex) {
-            log.warn("Could not execute review schema cleanup SQL: {}", sql, ex);
+            log.warn("Could not execute review schema cleanup SQL: {}\n{}", sql, ex.getMessage());
         }
     }
 }
