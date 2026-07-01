@@ -65,6 +65,10 @@ public class Movie extends BaseEntity {
     private LocalDate releaseDate;
 
     @Setter
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Setter
     @Column(length = 50)
     private String language;
 

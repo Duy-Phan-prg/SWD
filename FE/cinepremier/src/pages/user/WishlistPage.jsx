@@ -68,18 +68,16 @@ export default function WishlistView() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
-      
+
       {/* HEADER ROW WITH LỌC THEO DROPDOWN */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        
+
         {/* BIG STYLED BANNER HEADINGS matches screenshot 3 */}
         <div className="space-y-4 max-w-xl text-left">
-          <div className="space-y-1">
-            <h1 className="text-3xl sm:text-5xl font-mono font-black text-white tracking-widest leading-none block uppercase">
-              DANH SÁCH
-            </h1>
-            <h1 className="text-3xl sm:text-5xl font-serif font-black italic tracking-widest leading-none text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-amber-400 block uppercase">
-              THEO DÕI
+          <div>
+            <h1 className="whitespace-nowrap text-2xl sm:text-5xl font-black leading-none uppercase tracking-wide">
+              <span className="font-mono text-white">DANH SÁCH </span>
+              <span className="font-serif italic text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-amber-400">THEO DÕI</span>
             </h1>
           </div>
           <p className="text-xs text-neutral-400 leading-relaxed font-sans max-w-lg font-light">
@@ -112,11 +110,10 @@ export default function WishlistView() {
                     setFilter(opt.val);
                     setShowFilterDropdown(false);
                   }}
-                  className={`flex w-full items-center px-4 py-2 text-[9.5px] uppercase tracking-wide font-black border-l-2 ${
-                    filter === opt.val 
-                      ? 'border-white text-white bg-neutral-950' 
-                      : 'border-transparent text-neutral-400 hover:bg-neutral-900 hover:text-white'
-                  } transition`}
+                  className={`flex w-full items-center px-4 py-2 text-[9.5px] uppercase tracking-wide font-black border-l-2 ${filter === opt.val
+                    ? 'border-white text-white bg-neutral-950'
+                    : 'border-transparent text-neutral-400 hover:bg-neutral-900 hover:text-white'
+                    } transition`}
                 >
                   {opt.label}
                 </button>
@@ -148,107 +145,106 @@ export default function WishlistView() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6" id="watchlist-deck-grid">
           {filteredItems.map((item, index) => (
-          <div 
-            key={`${item.id}-${index}`}
-            className="group border border-white/5 bg-[#050505] overflow-hidden flex flex-col justify-between relative transition duration-300 hover:border-white/15"
-          >
-            
-            {/* Poster image container */}
-            <div className="relative aspect-[3/4.2] overflow-hidden bg-neutral-950">
-              
-              <img 
-                src={item.posterUrl} 
-                alt={item.title}
-                className="w-full h-full object-cover transition duration-700 ease-out group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
+            <div
+              key={`${item.id}-${index}`}
+              className="group border border-white/5 bg-[#050505] overflow-hidden flex flex-col justify-between relative transition duration-300 hover:border-white/15"
+            >
 
-              {/* Black subtle overlay gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80"></div>
+              {/* Poster image container */}
+              <div className="relative aspect-[3/4.2] overflow-hidden bg-neutral-950">
 
-              {/* Top left text status badge */}
-              <div className="absolute left-2.5 top-2.5">
-                <span className={`inline-block border text-[7.5px] font-black px-2 py-0.5 tracking-wider rounded-none uppercase bg-black text-white border-white/20`}>
-                  {item.badge}
-                </span>
-              </div>
+                <img
+                  src={item.posterUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover transition duration-700 ease-out group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                />
 
-              {/* Optional top-right absolute icon badge shown in third card */}
-              {item.badgeTopRightIcon === 'bell' && (
-                <div className="absolute right-2.5 top-2.5 bg-black border border-white/20 p-1 text-white">
-                  <Bell className="h-3 w-3 fill-current text-purple-400" />
-                </div>
-              )}
+                {/* Black subtle overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80"></div>
 
-              {/* Optional absolute announcement layer over image - e.g. Card 3 "Sẽ ra mắt vào tháng 12" */}
-              {item.id === 'anh-sang' && (
-                <div className="absolute inset-0 flex items-center justify-center p-3 bg-neutral-950/75 text-center pointer-events-none">
-                  <span className="text-[10px] font-serif italic font-bold uppercase text-neutral-400 tracking-widest border-t border-b border-white/10 py-1.5 block w-full">
-                    Sẽ ra mắt vào tháng 12
+                {/* Top left text status badge */}
+                <div className="absolute left-2.5 top-2.5">
+                  <span className={`inline-block border text-[7.5px] font-black px-2 py-0.5 tracking-wider rounded-none uppercase bg-black text-white border-white/20`}>
+                    {item.badge}
                   </span>
                 </div>
-              )}
 
-              {/* Mini deletion float trigger for real items */}
-              {item.isReal && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleWatchlist(item.movie || { id: item.id, backendId: item.backendId });
-                  }}
-                  className="absolute right-2 bottom-2 bg-black/60 border border-white/5 hover:border-white hover:bg-neutral-950 p-1.5 text-neutral-500 hover:text-white transition rounded-none z-10"
-                  title="Xóa khỏi Watchlist"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
+                {/* Optional top-right absolute icon badge shown in third card */}
+                {item.badgeTopRightIcon === 'bell' && (
+                  <div className="absolute right-2.5 top-2.5 bg-black border border-white/20 p-1 text-white">
+                    <Bell className="h-3 w-3 fill-current text-purple-400" />
+                  </div>
+                )}
 
-            </div>
+                {/* Optional absolute announcement layer over image - e.g. Card 3 "Sẽ ra mắt vào tháng 12" */}
+                {item.id === 'anh-sang' && (
+                  <div className="absolute inset-0 flex items-center justify-center p-3 bg-neutral-950/75 text-center pointer-events-none">
+                    <span className="text-[10px] font-serif italic font-bold uppercase text-neutral-400 tracking-widest border-t border-b border-white/10 py-1.5 block w-full">
+                      Sẽ ra mắt vào tháng 12
+                    </span>
+                  </div>
+                )}
 
-            {/* Bottom details block */}
-            <div className="p-3.5 space-y-3.5 bg-neutral-950 text-left">
-              <div className="space-y-0.5 min-h-[44px] flex flex-col justify-center">
-                <h4 className="text-xs sm:text-[12.5px] font-serif font-black italic text-white tracking-wide truncate uppercase">
-                  {item.title}
-                </h4>
-                <p className="text-[7.5px] font-sans font-bold uppercase tracking-widest text-[#888888] truncate">
-                  {item.genreSubtitle}
-                </p>
+                {/* Mini deletion float trigger for real items */}
+                {item.isReal && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleWatchlist(item.movie || { id: item.id, backendId: item.backendId });
+                    }}
+                    className="absolute right-2 bottom-2 bg-black/60 border border-white/5 hover:border-white hover:bg-neutral-950 p-1.5 text-neutral-500 hover:text-white transition rounded-none z-10"
+                    title="Xóa khỏi Watchlist"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+
               </div>
 
-              {/* Red-ish styled action buttons representing screenshot 3 */}
-              <button
-                onClick={() => handleActionClick(item)}
-                className={`w-full py-2 text-[8px] font-sans font-black uppercase tracking-[0.2em] transition-all duration-300 text-center flex items-center justify-center gap-1.5 ${
-                  item.id === 'anh-sang'
+              {/* Bottom details block */}
+              <div className="p-3.5 space-y-3.5 bg-neutral-950 text-left">
+                <div className="space-y-0.5 min-h-[44px] flex flex-col justify-center">
+                  <h4 className="text-xs sm:text-[12.5px] font-sans font-bold text-white truncate">
+                    {item.title}
+                  </h4>
+                  <p className="text-[7.5px] font-sans font-bold uppercase tracking-widest text-[#888888] truncate">
+                    {item.genreSubtitle}
+                  </p>
+                </div>
+
+                {/* Red-ish styled action buttons representing screenshot 3 */}
+                <button
+                  onClick={() => handleActionClick(item)}
+                  className={`w-full py-2 text-[8px] font-sans font-black uppercase tracking-[0.2em] transition-all duration-300 text-center flex items-center justify-center gap-1.5 ${item.id === 'anh-sang'
                     ? 'bg-neutral-900 border border-neutral-800 text-neutral-500 cursor-not-allowed'
                     : item.actionIcon === 'bell'
-                    ? 'bg-purple-900 border border-purple-500 hover:bg-black hover:text-white text-white'
-                    : item.actionIcon === 'ticket'
-                    ? 'bg-white hover:bg-neutral-200 text-black'
-                    : 'border border-white/10 text-neutral-400 hover:text-white hover:border-white'
-                }`}
-                disabled={item.id === 'anh-sang'}
-                style={item.actionIcon === 'bell' ? { background: 'linear-gradient(90deg, #8E2DE2 0%, #4A00E0 100%)' } : {}}
-              >
-                {item.actionIcon === 'bell' && <Bell className="h-3 w-3" />}
-                {item.actionIcon === 'ticket' && <Ticket className="h-3 w-3" />}
-                {item.actionIcon === 'check' && <Check className="h-3 w-3" />}
-                {item.actionLabel}
-              </button>
-            </div>
+                      ? 'bg-purple-900 border border-purple-500 hover:bg-black hover:text-white text-white'
+                      : item.actionIcon === 'ticket'
+                        ? 'bg-white hover:bg-neutral-200 text-black'
+                        : 'border border-white/10 text-neutral-400 hover:text-white hover:border-white'
+                    }`}
+                  disabled={item.id === 'anh-sang'}
+                  style={item.actionIcon === 'bell' ? { background: 'linear-gradient(90deg, #8E2DE2 0%, #4A00E0 100%)' } : {}}
+                >
+                  {item.actionIcon === 'bell' && <Bell className="h-3 w-3" />}
+                  {item.actionIcon === 'ticket' && <Ticket className="h-3 w-3" />}
+                  {item.actionIcon === 'check' && <Check className="h-3 w-3" />}
+                  {item.actionLabel}
+                </button>
+              </div>
 
-          </div>
+            </div>
           ))}
         </div>
       )}
 
       {/* FOOTER NEWSLETTER BANNER SCREENSHOT 3 PROMO MOCKUP */}
-      <div 
+      <div
         className="border border-white/15 bg-black p-8 sm:p-10 relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #120509 0%, #050106 100%)' }}
       >
-        
+
         {/* Glow dots backgrounds */}
         <div className="absolute right-10 top-0 bottom-0 w-1/3 opacity-20 pointer-events-none select-none">
           <svg className="w-full h-full text-white/10" viewBox="0 0 100 100">
@@ -258,12 +254,12 @@ export default function WishlistView() {
         </div>
 
         <div className="max-w-2xl text-center mx-auto space-y-6 relative z-10 font-sans">
-          
+
           <div className="space-y-1.5">
-            <h2 className="text-xl sm:text-2xl font-serif font-black italic text-white uppercase tracking-wider">
+            <h2 className="text-xl sm:text-2xl font-sans font-bold text-white">
               Đừng bỏ lỡ bất kỳ khoảnh khắc nào
             </h2>
-            <p className="text-[10px] sm:text-xs text-neutral-400 leading-relaxed font-light uppercase tracking-wider">
+            <p className="text-[10px] sm:text-xs text-neutral-400 leading-relaxed font-light uppercase tracking-wide">
               Đăng ký nhận tin để được ưu tiên đặt vé cho những suất chiếu đặc biệt và sự kiện thảm đỏ CINEPREMIER.
             </p>
           </div>

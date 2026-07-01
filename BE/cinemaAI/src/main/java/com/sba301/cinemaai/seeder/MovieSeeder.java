@@ -31,6 +31,7 @@ public class MovieSeeder implements Seeder {
                 128,
                 MovieStatus.NOW_SHOWING,
                 LocalDate.now().minusDays(14),
+                LocalDate.now().plusDays(30),
                 "English",
                 "Vietnamese",
                 "13+",
@@ -43,6 +44,7 @@ public class MovieSeeder implements Seeder {
                 112,
                 MovieStatus.NOW_SHOWING,
                 LocalDate.now().minusDays(7),
+                LocalDate.now().plusDays(30),
                 "Vietnamese",
                 "English",
                 "16+",
@@ -55,6 +57,7 @@ public class MovieSeeder implements Seeder {
                 96,
                 MovieStatus.UPCOMING,
                 LocalDate.now().plusDays(10),
+                LocalDate.now().plusDays(45),
                 "Vietnamese",
                 "English",
                 "P",
@@ -70,6 +73,7 @@ public class MovieSeeder implements Seeder {
         movie.setDurationMinutes(seed.durationMinutes());
         movie.setDescription(seed.description());
         movie.setReleaseDate(seed.releaseDate());
+        movie.setEndDate(seed.endDate());
         movie.setLanguage(seed.language());
         movie.setSubtitleLanguage(seed.subtitleLanguage());
         movie.setAgeRating(AgeRating.from(seed.ageRating()));
@@ -95,6 +99,7 @@ public class MovieSeeder implements Seeder {
             int durationMinutes,
             MovieStatus status,
             LocalDate releaseDate,
+            LocalDate endDate,
             String language,
             String subtitleLanguage,
             String ageRating,

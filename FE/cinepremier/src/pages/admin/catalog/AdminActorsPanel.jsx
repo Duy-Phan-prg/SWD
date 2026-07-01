@@ -44,7 +44,7 @@ export default function AdminActorsPanel({ ctx }) {
       className="space-y-6"
     >
       <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
-        <span className="text-[8px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black">ADMIN ACTOR</span>
+        <span className="text-[12px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black">ADMIN ACTOR</span>
         <h2 className="text-lg font-sans font-black uppercase tracking-wider text-white mt-1">Quản lý diễn viên</h2>
       </div>
 

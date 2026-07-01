@@ -52,6 +52,7 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     posterUrl: movie.posterUrl || movie.poster || movie.posterImageUrl || movie.imageUrl || movie.thumbnailUrl || fallback.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
     bannerUrl: movie.bannerUrl || movie.avatarUrl || movie.backdropUrl || movie.coverUrl || movie.bannerImageUrl || fallback.bannerUrl || movie.posterUrl || fallback.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
     releaseDate: movie.releaseDate || movie.premiereDate || movie.startDate || fallback.releaseDate || 'Dang cap nhat',
+    endDate: movie.endDate || movie.finishDate || movie.endedDate || fallback.endDate || '',
     trailerUrl: getMovieTrailerUrl(movie, fallback),
     director: movie.director || movie.directorName || fallback.director || 'Dang cap nhat',
     mainActors: movie.mainActors || fallback.mainActors || movie.castList || fallback.castList || '',
@@ -67,7 +68,6 @@ export const normalizeMovie = (movie = {}, fallback = {}) => {
     isInactive,
     isNowShowing: effectiveStatus === 'NOW_SHOWING',
     isEnded: effectiveStatus === 'ENDED',
-    isHot: Boolean(movie.isHot ?? movie.hot ?? movie.featured ?? fallback.isHot),
     upcomingDate: movie.upcomingDate || fallback.upcomingDate,
     ratings: {
       ...fallback.ratings,

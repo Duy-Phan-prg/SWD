@@ -14,6 +14,7 @@ public record MovieResponse(
         String avatarUrl,
         int durationMinutes,
         LocalDate releaseDate,
+        LocalDate endDate,
         String language,
         String subtitleLanguage,
         MovieStatus status,

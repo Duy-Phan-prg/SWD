@@ -109,7 +109,7 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
         <div>
           <h3 
             onClick={() => onSelect(movie.id)}
-            className="cursor-pointer text-base font-serif text-white hover:text-zinc-300 transition-colors line-clamp-1 italic"
+            className="cursor-pointer text-base font-sans font-bold text-white hover:text-zinc-300 transition-colors line-clamp-1"
           >
             {movie.title}
           </h3>

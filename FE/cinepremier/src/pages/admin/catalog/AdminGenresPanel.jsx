@@ -30,9 +30,9 @@ export default function AdminGenresPanel({ ctx }) {
   // Client-side search filter (trên page hiện tại)
   const filteredGenres = genreSearch.trim()
     ? genres.filter((g) => {
-        const q = genreSearch.trim().toLowerCase();
-        return g.name?.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q);
-      })
+      const q = genreSearch.trim().toLowerCase();
+      return g.name?.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q);
+    })
     : genres;
 
   const goToPage = (nextPage) => {
@@ -53,7 +53,7 @@ export default function AdminGenresPanel({ ctx }) {
         >
           <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
             <div>
-              <span className="text-[8px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black block">ADMIN GENRE</span>
+              <span className="text-[12px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black block">ADMIN GENRE</span>
               <h2 className="text-lg font-sans font-black uppercase tracking-wider text-white mt-1">Quản trị thể loại phim</h2>
             </div>
           </div>
@@ -264,7 +264,7 @@ export default function AdminGenresPanel({ ctx }) {
                           className={`min-w-[30px] h-[30px] border text-[10px] font-black transition ${i === page
                             ? 'border-amber-500 bg-amber-500 text-black'
                             : 'border-neutral-800 bg-black text-neutral-400 hover:border-amber-500/50 hover:text-amber-300'
-                          }`}
+                            }`}
                         >
                           {i + 1}
                         </button>

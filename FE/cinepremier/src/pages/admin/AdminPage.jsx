@@ -72,8 +72,16 @@ export default function AdminDashboard({
     totalElements: moviesList.length
   });
 
-  const DEFAULT_POSTER_URL = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10';
-  const DEFAULT_BANNER_URL = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10';
+  const toDateInputValue = (date) => {
+    const value = new Date(date);
+    value.setMinutes(value.getMinutes() - value.getTimezoneOffset());
+    return value.toISOString().slice(0, 10);
+  };
+  const addDaysInputValue = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return toDateInputValue(date);
+  };
   const buildDefaultMovieForm = () => ({
     title: '',
     englishTitle: '',
@@ -90,11 +98,10 @@ export default function AdminDashboard({
     castList: '',
     actorIds: [],
     mainActorIds: [],
-    posterUrl: DEFAULT_POSTER_URL,
-    bannerUrl: DEFAULT_BANNER_URL,
-    releaseDate: '2026-06-01',
-    isHot: false,
-    isUpcoming: false
+    posterUrl: '',
+    bannerUrl: '',
+    releaseDate: toDateInputValue(new Date()),
+    endDate: addDaysInputValue(30)
   });
 
   // Form state for creating/editing movie
@@ -832,6 +839,18 @@ export default function AdminDashboard({
     releaseDate.setHours(0, 0, 0, 0);
     return !Number.isNaN(releaseDate.getTime()) && releaseDate < today;
   };
+  const resolveMovieStatusFromDates = (releaseDateValue, endDateValue) => {
+    const releaseDate = new Date(releaseDateValue);
+    const endDate = new Date(endDateValue);
+    const today = new Date();
+    releaseDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    if (Number.isNaN(releaseDate.getTime()) || Number.isNaN(endDate.getTime())) return 'UPCOMING';
+    if (today < releaseDate) return 'UPCOMING';
+    if (today > endDate) return 'ENDED';
+    return 'NOW_SHOWING';
+  };
   const movieStatusRank = (status) => ({ UPCOMING: 0, NOW_SHOWING: 1, ENDED: 2 }[String(status || '').toUpperCase()] ?? -1);
   const isInvalidMovieStatusTransition = (movie, requestedStatus) => {
     if (requestedStatus === 'INACTIVE' || !hasReleaseDatePassed(movie?.releaseDate)) return false;
@@ -966,8 +985,7 @@ export default function AdminDashboard({
       posterUrl: movie?.posterUrl || defaultForm.posterUrl,
       bannerUrl: movie?.bannerUrl || defaultForm.bannerUrl,
       releaseDate: normalizeDateInput(movie?.releaseDate) || defaultForm.releaseDate,
-      isHot: Boolean(movie?.isHot),
-      isUpcoming: Boolean(movie?.isUpcoming)
+      endDate: normalizeDateInput(movie?.endDate || movie?.raw?.endDate) || defaultForm.endDate
     });
     setShowMovieForm(true);
   };
@@ -1009,18 +1027,45 @@ export default function AdminDashboard({
       return;
     }
 
+    if (!formData.releaseDate || !formData.endDate) {
+      showToast('Vui lòng chọn ngày phát hành và ngày kết thúc phim.');
+      return;
+    }
+    if (formData.releaseDate < toDateInputValue(new Date())) {
+      showToast('Ngày phát hành phải là hôm nay hoặc trong tương lai.');
+      return;
+    }
+    if (new Date(formData.endDate) < new Date(formData.releaseDate)) {
+      showToast('Ngày kết thúc phải bằng hoặc sau ngày phát hành.');
+      return;
+    }
+    if (!String(formData.posterUrl || '').trim()) {
+      showToast('Vui lòng upload ảnh poster trước khi tạo phim.');
+      return;
+    }
+    if (!String(formData.bannerUrl || '').trim()) {
+      showToast('Vui lòng upload ảnh banner trước khi tạo phim.');
+      return;
+    }
+    if (!String(formData.trailerUrl || '').trim()) {
+      showToast('Vui lòng upload video trailer trước khi tạo phim.');
+      return;
+    }
+
+    const computedStatus = resolveMovieStatusFromDates(formData.releaseDate, formData.endDate);
     const payload = {
       title: formData.title.trim(),
       englishTitle: formData.englishTitle.trim(),
       description: formData.synopsis.trim(),
       trailerUrl: formData.trailerUrl.trim(),
-      posterUrl: formData.posterUrl,
-      avatarUrl: formData.bannerUrl,
+      posterUrl: formData.posterUrl.trim(),
+      avatarUrl: formData.bannerUrl.trim(),
       durationMinutes: Number(formData.duration),
       releaseDate: formData.releaseDate || null,
+      endDate: formData.endDate || null,
       language: formData.language.trim(),
       subtitleLanguage: formData.subtitleLanguage.trim(),
-      status: formData.status,
+      status: computedStatus,
       ageRating: formData.ageRating,
       director: formData.director.trim(),
       genreIds: (formData.genreIds || []).map((id) => Number(id)),
@@ -1076,8 +1121,6 @@ export default function AdminDashboard({
         audio: 9.0
       },
       tags: ['Được_Đề_Xuất', 'Phát_Hành_Mới'],
-      isHot: formData.isHot,
-      isUpcoming: formData.isUpcoming
     };
 
     setMoviesList([newMovieObj, ...moviesList]);
@@ -1092,11 +1135,10 @@ export default function AdminDashboard({
       ageRating: 'T13',
       director: '',
       synopsis: '',
-      posterUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
-      bannerUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
-      releaseDate: '2026-06-01',
-      isHot: false,
-      isUpcoming: false
+      posterUrl: '',
+      bannerUrl: '',
+      releaseDate: toDateInputValue(new Date()),
+      endDate: addDaysInputValue(30)
     });
 
     setShowMovieForm(false);
@@ -1617,20 +1659,7 @@ export default function AdminDashboard({
             </button>
           </div>
 
-          {/* Infrastructure Metrics indicators */}
-          <div className="bg-[#0b0b0b] border border-neutral-850 p-3 space-y-2" id="sidebar-telemetry">
-            <span className="text-[7.5px] font-mono tracking-widest text-neutral-500 uppercase block font-black">TRẠNG THÁI MÁY CHỦ</span>
-            <div className="space-y-1.5 text-[10px] font-mono">
-              <div className="flex justify-between items-center text-zinc-400">
-                <span>Cơ sở dữ liệu</span>
-                <span className="text-emerald-400 font-bold">OK</span>
-              </div>
-              <div className="flex justify-between items-center text-zinc-400">
-                <span>Cloud Run Cores</span>
-                <span className="text-zinc-300">04 Active</span>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         {/* RIGHT COMPONENT: MAIN VIEW DETAILS (Cols 9) */}
@@ -1679,30 +1708,13 @@ export default function AdminDashboard({
                 <div className="p-1 bg-purple-500/10 text-purple-400"><Film className="h-4 w-4" /></div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{moviesList.length} tác phẩm</h2>
+                <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{moviesList.length} phim</h2>
               </div>
             </div>
 
           </div>
 
-          {/* 3. SECONDARY CONTROLS OR AUDIT LOG MINI STRIP */}
-          <div className="flex flex-col sm:flex-row justify-between items-center bg-[#070707] border border-neutral-850 p-3 px-4.5 gap-3.5" id="audit-log-strip">
-            <div className="flex items-center gap-2.5 w-full sm:w-auto overflow-hidden">
-              <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[8.5px] font-mono font-bold border border-amber-500/20 uppercase">Nhật Ký Ghi Nhận</span>
-              <p className="text-[10.5px] text-neutral-400 font-sans truncate">
-                {auditLogs[0] ? `[${auditLogs[0].time}] ${auditLogs[0].action}: ${auditLogs[0].target} - thực hiện bởi ${auditLogs[0].user}` : 'Không có hoạt động mới ghi nhận'}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                playPulseSound(700, 'sine', 0.1);
-                addAuditLog('Làm mới chỉ số rạp chiếu', 'Cập nhật doanh thu tổng');
-              }}
-              className="shrink-0 flex items-center gap-1.5 text-[9px] font-mono hover:text-white uppercase text-[#88959C] border border-neutral-800 bg-black/40 px-3 py-1 transition"
-            >
-              <RefreshCw className="h-3 w-3 animate-spin-slow" /> LÀM MỚI SỐ LIỆU
-            </button>
-          </div>
+
 
           {/* TAB SCREENS EXECUTOR */}
           <div>

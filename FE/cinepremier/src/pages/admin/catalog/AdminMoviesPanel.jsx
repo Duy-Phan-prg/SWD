@@ -121,6 +121,9 @@ export default function AdminMoviesPanel({ ctx }) {
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const [isTrailerUploading, setIsTrailerUploading] = useState(false);
   const [createdActors, setCreatedActors] = useState([]);
+  const [focusedDateField, setFocusedDateField] = useState(null);
+  const [isActorDropdownOpen, setIsActorDropdownOpen] = useState(false);
+  const [actorPickerSearch, setActorPickerSearch] = useState('');
   const isMovieMediaUploading = isPosterUploading || isBannerUploading || isTrailerUploading;
 
   const hasReleaseDatePassed = (value) => {
@@ -130,6 +133,33 @@ export default function AdminMoviesPanel({ ctx }) {
     const releaseDate = new Date(value);
     releaseDate.setHours(0, 0, 0, 0);
     return !Number.isNaN(releaseDate.getTime()) && releaseDate < today;
+  };
+
+  const todayInputValue = (() => {
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    return today.toISOString().slice(0, 10);
+  })();
+
+  const formatDateForDisplay = (value) => {
+    if (!value) return '';
+    const parts = String(value).split('-');
+    if (parts.length !== 3) return value;
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  };
+
+  const resolveMovieStatusFromDates = (releaseDateValue, endDateValue) => {
+    const releaseDate = new Date(releaseDateValue);
+    const endDate = new Date(endDateValue);
+    const today = new Date();
+    releaseDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    if (Number.isNaN(releaseDate.getTime()) || Number.isNaN(endDate.getTime())) return 'UPCOMING';
+    if (today < releaseDate) return 'UPCOMING';
+    if (today > endDate) return 'ENDED';
+    return 'NOW_SHOWING';
   };
 
   const statusRank = (status) => ({ UPCOMING: 0, NOW_SHOWING: 1, ENDED: 2 }[String(status || '').toUpperCase()] ?? -1);
@@ -189,6 +219,44 @@ export default function AdminMoviesPanel({ ctx }) {
         : [...mainActorIds, id]
     });
   };
+
+  const normalizeSearchText = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const fuzzyIncludes = (source, query) => {
+    const normalizedSource = normalizeSearchText(source);
+    const normalizedQuery = normalizeSearchText(query);
+    if (!normalizedQuery) return true;
+    if (normalizedSource.includes(normalizedQuery)) return true;
+    let cursor = 0;
+    for (const char of normalizedQuery) {
+      cursor = normalizedSource.indexOf(char, cursor);
+      if (cursor === -1) return false;
+      cursor += 1;
+    }
+    return true;
+  };
+
+  const selectedActorIds = (formData.actorIds || []).map(Number);
+  const selectedMainActorIds = (formData.mainActorIds || []).map(Number);
+  const selectedActors = (actors || []).filter((actor) => selectedActorIds.includes(Number(actor.id)));
+  const actorPickerOptions = (actors || [])
+    .filter((actor) => {
+      const query = actorPickerSearch.trim();
+      if (!query) return true;
+      return fuzzyIncludes(`${actor.name || ''} ${actor.biography || ''} ${actor.id || ''}`, query);
+    })
+    .sort((left, right) => {
+      const leftSelected = selectedActorIds.includes(Number(left.id)) ? 0 : 1;
+      const rightSelected = selectedActorIds.includes(Number(right.id)) ? 0 : 1;
+      if (leftSelected !== rightSelected) return leftSelected - rightSelected;
+      return String(left.name || '').localeCompare(String(right.name || ''), 'vi');
+    });
 
   const handleQuickCreateActor = async (event) => {
     event.preventDefault();
@@ -330,7 +398,7 @@ export default function AdminMoviesPanel({ ctx }) {
   );
 
   const renderVideoPreview = (src) => (
-    <div className="h-14 w-24 shrink-0 overflow-hidden border border-neutral-800 bg-neutral-950">
+    <div className="h-11 w-20 shrink-0 overflow-hidden border border-neutral-800 bg-neutral-950">
       {src ? (
         <video
           src={src}
@@ -424,7 +492,7 @@ export default function AdminMoviesPanel({ ctx }) {
                 }}
                 className="ml-auto md:ml-0 px-4 py-2 bg-white text-black font-sans uppercase text-[9.5px] font-black tracking-wider hover:bg-neutral-250 transition flex items-center gap-1.5 shrink-0"
               >
-                <Plus className="h-4 w-4" /> THÊM BẢN GHI MỚI
+                <Plus className="h-4 w-4" /> TẠO PHIM
               </button>
             </div>
           </div>
@@ -568,28 +636,54 @@ export default function AdminMoviesPanel({ ctx }) {
                     <div className="space-y-1.5">
                       <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Ngày phát hành</label>
                       <input
-                        type="date"
+                        type={focusedDateField === 'release' ? 'date' : 'text'}
+                        lang="en-GB"
                         title="Bắt buộc chọn ngày phát hành"
-                        value={formData.releaseDate}
-                        onChange={(e) => setFormData({ ...formData, releaseDate: e.target.value })}
+                        min={todayInputValue}
+                        value={focusedDateField === 'release' ? formData.releaseDate : formatDateForDisplay(formData.releaseDate)}
+                        readOnly={focusedDateField !== 'release'}
+                        onFocus={() => setFocusedDateField('release')}
+                        onBlur={() => setFocusedDateField(null)}
+                        onChange={(e) => {
+                          const nextReleaseDate = e.target.value && e.target.value < todayInputValue ? todayInputValue : e.target.value;
+                          const shouldMoveEndDate = formData.endDate && new Date(formData.endDate) < new Date(nextReleaseDate);
+                          setFormData({
+                            ...formData,
+                            releaseDate: nextReleaseDate,
+                            endDate: shouldMoveEndDate ? nextReleaseDate : formData.endDate
+                          });
+                        }}
+                        placeholder="dd/mm/yyyy"
                         className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
                       />
+                      <p className="text-[10px] font-bold text-neutral-500">Định dạng dd/mm/yyyy, không chọn ngày quá khứ.</p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trạng thái API</label>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value, isUpcoming: e.target.value === 'UPCOMING' })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
-                      >
-                        <option value="NOW_SHOWING">NOW_SHOWING</option>
-                        <option value="UPCOMING" disabled={hasReleaseDatePassed(formData.releaseDate)}>UPCOMING</option>
-                        <option value="ENDED">ENDED</option>
-                        <option value="INACTIVE">INACTIVE</option>
-                      </select>
-                      {hasReleaseDatePassed(formData.releaseDate) && (
-                        <p className="text-[9px] font-bold text-amber-300">Phim đã qua ngày phát hành nên không thể để UPCOMING.</p>
+                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Ngày kết thúc</label>
+                      <input
+                        type={focusedDateField === 'end' ? 'date' : 'text'}
+                        lang="en-GB"
+                        title="Bắt buộc chọn ngày kết thúc"
+                        min={formData.releaseDate || todayInputValue}
+                        value={focusedDateField === 'end' ? (formData.endDate || '') : formatDateForDisplay(formData.endDate)}
+                        readOnly={focusedDateField !== 'end'}
+                        onFocus={() => setFocusedDateField('end')}
+                        onBlur={() => setFocusedDateField(null)}
+                        onChange={(e) => {
+                          const minEndDate = formData.releaseDate || todayInputValue;
+                          const nextEndDate = e.target.value && e.target.value < minEndDate ? minEndDate : e.target.value;
+                          setFormData({ ...formData, endDate: nextEndDate });
+                        }}
+                        placeholder="dd/mm/yyyy"
+                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
+                      />
+                      {formData.releaseDate && formData.endDate && new Date(formData.endDate) < new Date(formData.releaseDate) ? (
+                        <p className="text-[9px] font-bold text-rose-300">Ngày kết thúc phải bằng hoặc sau ngày phát hành.</p>
+                      ) : (
+                        <p className="text-[9px] font-bold text-amber-300">
+                          Trạng thái tự động: {resolveMovieStatusFromDates(formData.releaseDate, formData.endDate)}
+                        </p>
                       )}
                     </div>
 
@@ -623,44 +717,123 @@ export default function AdminMoviesPanel({ ctx }) {
                       <div className="flex items-center justify-between gap-3">
                         <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Chọn diễn viên và vai chính</label>
                         <span className="text-[9px] text-neutral-500">
-                          {(formData.actorIds || []).length} diễn viên, {(formData.mainActorIds || []).length} vai chính
+                          {selectedActorIds.length} diễn viên, {selectedMainActorIds.length} vai chính
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                        {actors?.length ? actors.map((actor) => {
-                          const actorId = Number(actor.id);
-                          const isSelected = (formData.actorIds || []).map(Number).includes(actorId);
-                          const isMain = (formData.mainActorIds || []).map(Number).includes(actorId);
-                          return (
-                            <div key={actor.id} className={`border p-2 flex items-center gap-2 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-neutral-850 bg-neutral-950'}`}>
-                              <button type="button" onClick={() => toggleMovieActor(actorId)} className="min-w-0 flex-1 text-left">
-                                <span className="block text-xs font-bold text-white truncate">{actor.name}</span>
-                                <span className="block text-[9px] text-neutral-500">#{actor.id} · {actor.movieCount || 0} phim</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => toggleMovieMainActor(actorId)}
-                                className={`px-2 py-1 text-[9px] font-black uppercase border ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-neutral-400 hover:border-amber-400 hover:text-amber-300'}`}
-                              >
-                                Main
-                              </button>
-                              {isSelected && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleMovieActor(actorId)}
-                                  className="border border-rose-500/30 px-2 py-1 text-[9px] font-black uppercase text-rose-300 transition hover:bg-rose-500 hover:text-white"
-                                  title="Bỏ chọn diễn viên khỏi phim"
-                                >
-                                  Xóa
-                                </button>
+
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsActorDropdownOpen((open) => !open)}
+                          className="flex min-h-11 w-full items-center justify-between gap-3 border border-neutral-800 bg-neutral-950 px-3 py-2 text-left text-xs text-white transition hover:border-amber-500/60 focus:outline-none focus:border-amber-400"
+                        >
+                          <span className="min-w-0 flex-1">
+                            {selectedActors.length ? (
+                              <span className="flex flex-wrap gap-1.5">
+                                {selectedActors.slice(0, 5).map((actor) => {
+                                  const actorId = Number(actor.id);
+                                  const isMain = selectedMainActorIds.includes(actorId);
+                                  return (
+                                    <span key={actor.id} className={`inline-flex max-w-full items-center gap-1 border px-2 py-1 text-[10px] font-bold ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 bg-black text-zinc-200'}`}>
+                                      <span className="truncate">{actor.name}</span>
+                                      {isMain && <span className="text-[8px] uppercase">Main</span>}
+                                    </span>
+                                  );
+                                })}
+                                {selectedActors.length > 5 && (
+                                  <span className="border border-neutral-700 bg-black px-2 py-1 text-[10px] font-bold text-zinc-400">
+                                    +{selectedActors.length - 5}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-500">Chọn diễn viên cho phim</span>
+                            )}
+                          </span>
+                          <ChevronDown className={`h-4 w-4 shrink-0 text-amber-400 transition ${isActorDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isActorDropdownOpen && (
+                          <div className="absolute left-0 right-0 z-30 mt-2 border border-amber-500/40 bg-[#050505] shadow-2xl shadow-black/60">
+                            <div className="border-b border-neutral-850 p-2">
+                              <div className="flex items-center gap-2 border border-neutral-800 bg-black px-2">
+                                <Search className="h-3.5 w-3.5 text-neutral-500" />
+                                <input
+                                  type="text"
+                                  value={actorPickerSearch}
+                                  onChange={(event) => setActorPickerSearch(event.target.value)}
+                                  placeholder="Tìm gần đúng tên diễn viên, tiểu sử hoặc ID..."
+                                  className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-neutral-600 focus:outline-none"
+                                  autoFocus
+                                />
+                              </div>
+                            </div>
+
+                            <div className="max-h-64 overflow-y-auto custom-scrollbar p-2">
+                              {actorPickerOptions.length ? actorPickerOptions.map((actor) => {
+                                const actorId = Number(actor.id);
+                                const isSelected = selectedActorIds.includes(actorId);
+                                const isMain = selectedMainActorIds.includes(actorId);
+                                return (
+                                  <div
+                                    key={actor.id}
+                                    className={`mb-1 grid grid-cols-[1fr_auto_auto] items-center gap-2 border px-2 py-2 last:mb-0 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-neutral-850 bg-neutral-950'}`}
+                                  >
+                                    <button type="button" onClick={() => toggleMovieActor(actorId)} className="min-w-0 text-left">
+                                      <span className="flex items-center gap-2">
+                                        <span className={`grid h-4 w-4 shrink-0 place-items-center border ${isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-transparent'}`}>
+                                          <Check className="h-3 w-3" />
+                                        </span>
+                                        <span className="min-w-0">
+                                          <span className="block truncate text-xs font-bold text-white">{actor.name}</span>
+                                          <span className="block truncate text-[9px] text-neutral-500">#{actor.id} · {actor.movieCount || 0} phim</span>
+                                        </span>
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleMovieMainActor(actorId)}
+                                      className={`h-7 px-2 text-[9px] font-black uppercase border ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-neutral-400 hover:border-amber-400 hover:text-amber-300'}`}
+                                    >
+                                      Vai chính
+                                    </button>
+                                    {isSelected && (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleMovieActor(actorId)}
+                                        className="h-7 border border-rose-500/30 px-2 text-[9px] font-black uppercase text-rose-300 transition hover:bg-rose-500 hover:text-white"
+                                        title="Bỏ chọn diễn viên khỏi phim"
+                                      >
+                                        Xóa
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              }) : (
+                                <p className="px-2 py-6 text-center text-[10px] text-neutral-500">Không tìm thấy diễn viên phù hợp.</p>
                               )}
                             </div>
-                          );
-                        }) : <p className="text-[10px] text-neutral-500">Chưa có actor. Tạo actor bên dưới hoặc tại mục Diễn viên.</p>}
+                          </div>
+                        )}
                       </div>
+
+                      {selectedActors.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedActors.map((actor) => {
+                            const actorId = Number(actor.id);
+                            const isMain = selectedMainActorIds.includes(actorId);
+                            return (
+                              <span key={actor.id} className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-bold ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 bg-neutral-950 text-zinc-300'}`}>
+                                {actor.name}
+                                <button type="button" onClick={() => toggleMovieActor(actorId)} className={isMain ? 'text-black/70 hover:text-black' : 'text-zinc-500 hover:text-rose-300'}>×</button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="space-y-2 border border-neutral-800 bg-black p-3">
+                    {/* <div className="space-y-2 border border-neutral-800 bg-black p-3">
                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2">
                         <input
                           type="text"
@@ -696,65 +869,65 @@ export default function AdminMoviesPanel({ ctx }) {
                           Actor vừa tạo: {createdActors.slice(0, 3).map((actor) => `${actor.name}#${actor.id}`).join(', ')}
                         </div>
                       )}
-                    </div>
+                    </div> */}
 
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trailer từ máy</label>
-                      <div className="flex items-center gap-2">
-                        <label className={`flex min-h-14 flex-1 cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isTrailerUploading ? 'pointer-events-none opacity-60' : ''}`}>
-                          {isTrailerUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
-                          {isTrailerUploading ? 'Đang tải trailer...' : formData.trailerUrl ? 'Đã chọn trailer local' : 'Chọn video trailer local'}
-                          <input
-                            type="file"
-                            accept="video/mp4,video/webm,video/quicktime"
-                            onChange={handleTrailerVideoUpload}
-                            className="hidden"
-                          />
-                        </label>
-                        {renderVideoPreview(formData.trailerUrl)}
+                    <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-3 gap-3 border border-neutral-850 bg-neutral-950/40 p-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trailer *</label>
+                        <div className="flex items-center gap-2">
+                          <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isTrailerUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                            {isTrailerUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <Video className="h-3 w-3 shrink-0" />}
+                            <span className="truncate">{isTrailerUploading ? 'Đang tải...' : formData.trailerUrl ? 'Đã chọn video' : 'Chọn video'}</span>
+                            <input
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime"
+                              onChange={handleTrailerVideoUpload}
+                              className="hidden"
+                            />
+                          </label>
+                          {renderVideoPreview(formData.trailerUrl)}
+                        </div>
+                        <p className="text-[8.5px] text-neutral-500">MP4, WEBM, MOV.</p>
                       </div>
-                      <p className="text-[9px] text-neutral-500">Chỉ nhận video local MP4, WEBM, MOV. File sẽ được upload và tự lưu đường dẫn nội bộ.</p>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 block">Ảnh poster đứng từ máy</label>
-                      <div className="flex items-center gap-2">
-                        <label className={`flex min-h-20 flex-1 cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isPosterUploading ? 'pointer-events-none opacity-60' : ''}`}>
-                          {isPosterUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
-                          {isPosterUploading ? 'Đang tải poster...' : formData.posterUrl ? 'Đã chọn poster local' : 'Chọn poster local'}
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={(event) => handleMovieImageUpload('posterUrl', 'movies/posters', event)}
-                            className="hidden"
-                          />
-                        </label>
-                        {renderImagePreview(formData.posterUrl, 'Poster phim', 'h-20 w-14')}
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Poster đứng *</label>
+                        <div className="flex items-center gap-2">
+                          <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isPosterUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                            {isPosterUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <ImageUp className="h-3 w-3 shrink-0" />}
+                            <span className="truncate">{isPosterUploading ? 'Đang tải...' : formData.posterUrl ? 'Đã chọn poster' : 'Chọn poster'}</span>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={(event) => handleMovieImageUpload('posterUrl', 'movies/posters', event)}
+                              className="hidden"
+                            />
+                          </label>
+                          {renderImagePreview(formData.posterUrl, 'Poster phim', 'h-14 w-10')}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 block">Ảnh banner ngang từ máy</label>
-                      <div className="flex items-center gap-2">
-                        <label className={`flex min-h-20 flex-1 cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isBannerUploading ? 'pointer-events-none opacity-60' : ''}`}>
-                          {isBannerUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
-                          {isBannerUploading ? 'Đang tải banner...' : formData.bannerUrl ? 'Đã chọn banner local' : 'Chọn banner local'}
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={(event) => handleMovieImageUpload('bannerUrl', 'movies/banners', event)}
-                            className="hidden"
-                          />
-                        </label>
-                        {renderImagePreview(formData.bannerUrl, 'Banner phim', 'h-14 w-24')}
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Banner ngang *</label>
+                        <div className="flex items-center gap-2">
+                          <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isBannerUploading ? 'pointer-events-none opacity-60' : ''}`}>
+                            {isBannerUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <ImageUp className="h-3 w-3 shrink-0" />}
+                            <span className="truncate">{isBannerUploading ? 'Đang tải...' : formData.bannerUrl ? 'Đã chọn banner' : 'Chọn banner'}</span>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={(event) => handleMovieImageUpload('bannerUrl', 'movies/banners', event)}
+                              className="hidden"
+                            />
+                          </label>
+                          {renderImagePreview(formData.bannerUrl, 'Banner phim', 'h-12 w-20')}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Tóm tắt cốt truyện cốt lõi</label>
+                    <label className="text-[10px] uppercase tracking-wider text-[#ffff] block">Tóm tắt cốt truyện cốt lõi</label>
                     <textarea
                       rows={3}
                       maxLength={1000}
@@ -765,28 +938,6 @@ export default function AdminMoviesPanel({ ctx }) {
                     />
                   </div>
 
-                  <div className="flex gap-6 p-1 border-t border-neutral-900 pt-3">
-                    <label className="flex items-center space-x-2 cursor-pointer text-zinc-300 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={formData.isHot}
-                        onChange={(e) => setFormData({ ...formData, isHot: e.target.checked })}
-                        className="accent-amber-500 h-3.5 w-3.5"
-                      />
-                      <span>Đánh dấu tác phẩm <b>BOM TẤN HOT</b></span>
-                    </label>
-
-                    <label className="flex items-center space-x-2 cursor-pointer text-zinc-300 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={formData.isUpcoming}
-                        onChange={(e) => setFormData({ ...formData, isUpcoming: e.target.checked })}
-                        className="accent-amber-500 h-3.5 w-3.5"
-                      />
-                      <span>Gắn nhãn tác phẩm <b>SẮP CHIẾU (CHƯA PHỤC VỤ ĐẶT GHẾ)</b></span>
-                    </label>
-                  </div>
-
                   <button
                     type="submit"
                     disabled={isMovieSaving || isMovieMediaUploading}
@@ -795,8 +946,8 @@ export default function AdminMoviesPanel({ ctx }) {
                     {isMovieMediaUploading
                       ? 'ĐANG TẢI FILE LOCAL...'
                       : isMovieSaving
-                      ? (editingMovie ? 'ĐANG CHUẨN BỊ CẬP NHẬT PHIM...' : 'ĐANG CHUẨN BỊ CẬP NHẬT PHIM...')
-                      : (editingMovie ? 'CẬP NHẬT BẢN GHI PHIM' : 'GHI BẢN GHI PHIM & PHÁT HÀNH TRÊN CỔNG TRỰC TUYẾN')}
+                        ? (editingMovie ? 'ĐANG CHUẨN BỊ CẬP NHẬT PHIM...' : 'ĐANG CHUẨN BỊ CẬP NHẬT PHIM...')
+                        : (editingMovie ? 'CẬP NHẬT BẢN GHI PHIM' : 'GHI BẢN GHI PHIM & PHÁT HÀNH TRÊN CỔNG TRỰC TUYẾN')}
                   </button>
                 </form>
               </motion.div>
@@ -828,7 +979,7 @@ export default function AdminMoviesPanel({ ctx }) {
                       />
                     </td>
                     <td className="py-3.5 px-4 font-sans">
-                      <div className="font-serif italic text-sm text-white font-black">{mv.title}</div>
+                      <div className="font-sans text-sm text-white font-bold truncate max-w-xs">{mv.title}</div>
                       <div className="text-[10px] text-zinc-500 truncate max-w-xs">{mv.englishTitle}</div>
                       <div className="flex gap-2 items-center mt-1">
                         <span className="text-[9.5px] border border-neutral-850 bg-[#060606] px-1.5 py-0.5 text-zinc-400 font-mono">{mv.duration} phút</span>
@@ -844,20 +995,6 @@ export default function AdminMoviesPanel({ ctx }) {
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex flex-col items-start gap-2">
-                        <select
-                          value={mv.status || 'NOW_SHOWING'}
-                          onChange={(event) => handleUpdateMovieStatus(mv, event.target.value)}
-                          className="h-7 min-w-32 border border-neutral-800 bg-black px-2 text-[9px] font-bold uppercase tracking-wider text-zinc-300 focus:border-amber-400 focus:outline-none"
-                          aria-label={`Đổi trạng thái ${mv.title}`}
-                        >
-                          <option value="NOW_SHOWING">NOW_SHOWING</option>
-                          <option value="UPCOMING" disabled={isMovieStatusOptionDisabled(mv, 'UPCOMING')}>UPCOMING</option>
-                          <option value="ENDED" disabled={isMovieStatusOptionDisabled(mv, 'ENDED')}>ENDED</option>
-                          <option value="INACTIVE">INACTIVE</option>
-                        </select>
-                        {hasReleaseDatePassed(mv.releaseDate) && (
-                          <span className="text-[8px] font-bold uppercase tracking-wider text-amber-300">Không được lùi trạng thái sau ngày phát hành</span>
-                        )}
                         <div className="flex items-center gap-2">
                           {mv.status === 'INACTIVE' ? (
                             <span className="inline-flex items-center px-2 py-1 bg-rose-950/30 text-rose-300 border border-rose-500/30 text-[9px] uppercase font-bold tracking-wider rounded-sm select-none shrink-0 h-6">
@@ -869,7 +1006,7 @@ export default function AdminMoviesPanel({ ctx }) {
                               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 mr-1.5"></span>
                               ĐÃ KẾT THÚC
                             </span>
-                          ) : mv.isUpcoming ? (
+                          ) : mv.status === 'UPCOMING' ? (
                             <span className="inline-flex items-center px-2 py-1 bg-amber-950/40 text-amber-400 border border-amber-500/30 text-[9px] uppercase font-bold tracking-wider rounded-sm select-none shrink-0 h-6">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>
                               SẮP CHIẾU
@@ -878,11 +1015,6 @@ export default function AdminMoviesPanel({ ctx }) {
                             <span className="inline-flex items-center px-2 py-1 bg-emerald-950/30 text-emerald-400 border border-emerald-500/20 text-[9px] uppercase font-bold tracking-wider rounded-sm select-none shrink-0 h-6">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
                               ĐANG CHIẾU
-                            </span>
-                          )}
-                          {mv.isHot && (
-                            <span className="inline-flex items-center px-1.5 py-1 bg-red-600 text-white text-[8px] font-black tracking-widest uppercase rounded-sm select-none shrink-0 h-6">
-                              HOT
                             </span>
                           )}
                         </div>

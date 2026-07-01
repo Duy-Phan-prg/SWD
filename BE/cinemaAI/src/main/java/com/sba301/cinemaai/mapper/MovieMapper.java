@@ -49,6 +49,7 @@ public class MovieMapper {
                 movie.getAvatarUrl(),
                 movie.getDurationMinutes(),
                 movie.getReleaseDate(),
+                movie.getEndDate(),
                 movie.getLanguage(),
                 movie.getSubtitleLanguage(),
                 movie.getStatus(),
