@@ -170,44 +170,6 @@ CREATE TABLE dbo.movie_actors (
     CONSTRAINT uk_movie_actors_movie_actor UNIQUE (movie_id, actor_id)
 );
 
-IF OBJECT_ID('dbo.trailer_interactions', 'U') IS NULL
-CREATE TABLE dbo.trailer_interactions (
-    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    movie_id BIGINT NOT NULL,
-    interaction_type NVARCHAR(30) NOT NULL,
-    watched_seconds INT,
-    total_seconds INT,
-    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT fk_trailer_interactions_user FOREIGN KEY (user_id) REFERENCES dbo.users(id),
-    CONSTRAINT fk_trailer_interactions_movie FOREIGN KEY (movie_id) REFERENCES dbo.movies(id)
-);
-
-IF OBJECT_ID('dbo.user_preference_profiles', 'U') IS NULL
-CREATE TABLE dbo.user_preference_profiles (
-    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    user_id BIGINT NOT NULL UNIQUE,
-    genre_scores NVARCHAR(MAX),
-    actor_scores NVARCHAR(MAX),
-    director_scores NVARCHAR(MAX),
-    cohort_key NVARCHAR(100),
-    last_refreshed_at DATETIME2,
-    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT fk_user_preference_profiles_user FOREIGN KEY (user_id) REFERENCES dbo.users(id)
-);
-
-IF OBJECT_ID('dbo.user_cohort_preferences', 'U') IS NULL
-CREATE TABLE dbo.user_cohort_preferences (
-    id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    cohort_key NVARCHAR(100) NOT NULL UNIQUE,
-    genre_scores NVARCHAR(MAX),
-    actor_scores NVARCHAR(MAX),
-    sample_size INT NOT NULL DEFAULT 0,
-    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
-);
 
 IF OBJECT_ID('dbo.cinemas', 'U') IS NULL
 CREATE TABLE dbo.cinemas (
@@ -541,10 +503,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movie_actors_movie' A
 CREATE INDEX idx_movie_actors_movie ON dbo.movie_actors(movie_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movie_actors_actor' AND object_id = OBJECT_ID('dbo.movie_actors'))
 CREATE INDEX idx_movie_actors_actor ON dbo.movie_actors(actor_id);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_trailer_interactions_user' AND object_id = OBJECT_ID('dbo.trailer_interactions'))
-CREATE INDEX idx_trailer_interactions_user ON dbo.trailer_interactions(user_id);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_trailer_interactions_movie' AND object_id = OBJECT_ID('dbo.trailer_interactions'))
-CREATE INDEX idx_trailer_interactions_movie ON dbo.trailer_interactions(movie_id);
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_showtimes_movie' AND object_id = OBJECT_ID('dbo.showtimes'))
 CREATE INDEX idx_showtimes_movie ON dbo.showtimes(movie_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_showtimes_room' AND object_id = OBJECT_ID('dbo.showtimes'))
