@@ -100,16 +100,18 @@ public class MovieServiceImpl implements MovieService {
             throw new ConflictException("Movie title already exists");
         }
 
-        Movie movie = new Movie(request.title(), request.durationMinutes(), request.status());
+        validateReleaseWindow(request.releaseDate(), request.endDate());
+        MovieStatus computedStatus = resolveStatusFromDates(request.releaseDate(), request.endDate());
+        Movie movie = new Movie(request.title(), request.durationMinutes(), computedStatus);
         List<Actor> actors = resolveActors(request.actorIds());
         Set<Long> mainActorIds = validateMainActorIds(actors, request.mainActorIds());
         String actorNames = actorNamesText(actors);
         String mainActorNames = actorNamesText(actors.stream()
                 .filter(actor -> mainActorIds.contains(actor.getId()))
                 .toList());
-        applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
+        applyMovieFields(movie, request.description(), request.releaseDate(), request.endDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
-                request.director(), mainActorNames, actorNames, request.status());
+                request.director(), mainActorNames, actorNames, computedStatus);
         Movie saved = movieRepository.save(movie);
         replaceGenres(saved, request.genreIds());
         replaceActors(saved, actors, mainActorIds);
@@ -127,15 +129,17 @@ public class MovieServiceImpl implements MovieService {
                 .ifPresent(existing -> {
                     throw new ConflictException("Movie title already exists");
                 });
+        validateReleaseWindow(request.releaseDate(), request.endDate());
+        MovieStatus computedStatus = resolveStatusFromDates(request.releaseDate(), request.endDate());
         List<Actor> actors = resolveActors(request.actorIds());
         Set<Long> mainActorIds = validateMainActorIds(actors, request.mainActorIds());
         String actorNames = actorNamesText(actors);
         String mainActorNames = actorNamesText(actors.stream()
                 .filter(actor -> mainActorIds.contains(actor.getId()))
                 .toList());
-        applyMovieFields(movie, request.description(), request.releaseDate(), request.trailerUrl(), request.posterUrl(),
+        applyMovieFields(movie, request.description(), request.releaseDate(), request.endDate(), request.trailerUrl(), request.posterUrl(),
                 request.avatarUrl(), request.language(), request.subtitleLanguage(), request.ageRating(),
-                request.director(), mainActorNames, actorNames, request.status());
+                request.director(), mainActorNames, actorNames, computedStatus);
         movie.setTitle(request.title());
         movie.setDurationMinutes(request.durationMinutes());
         replaceGenres(movie, request.genreIds());
@@ -186,6 +190,7 @@ public class MovieServiceImpl implements MovieService {
             Movie movie,
             String description,
             LocalDate releaseDate,
+            LocalDate endDate,
             String trailerUrl,
             String posterUrl,
             String avatarUrl,
@@ -199,6 +204,7 @@ public class MovieServiceImpl implements MovieService {
     ) {
         movie.setDescription(description);
         movie.setReleaseDate(releaseDate);
+        movie.setEndDate(endDate);
         movie.setTrailerUrl(trailerUrl);
         movie.setPosterUrl(posterUrl);
         movie.setAvatarUrl(avatarUrl);
@@ -209,6 +215,32 @@ public class MovieServiceImpl implements MovieService {
         movie.setMainActors(mainActors);
         movie.setCastList(castList);
         movie.setStatus(status);
+    }
+
+    private void validateReleaseWindow(LocalDate releaseDate, LocalDate endDate) {
+        if (releaseDate == null) {
+            throw new BadRequestException("Release date is required");
+        }
+        if (endDate == null) {
+            throw new BadRequestException("End date is required");
+        }
+        if (releaseDate.isBefore(LocalDate.now())) {
+            throw new BadRequestException("Release date must be today or in the future");
+        }
+        if (endDate.isBefore(releaseDate)) {
+            throw new BadRequestException("End date must be on or after release date");
+        }
+    }
+
+    private MovieStatus resolveStatusFromDates(LocalDate releaseDate, LocalDate endDate) {
+        LocalDate today = LocalDate.now();
+        if (today.isBefore(releaseDate)) {
+            return MovieStatus.UPCOMING;
+        }
+        if (today.isAfter(endDate)) {
+            return MovieStatus.ENDED;
+        }
+        return MovieStatus.NOW_SHOWING;
     }
 
     private void replaceActors(Movie movie, List<Actor> actors, Set<Long> mainActorIds) {

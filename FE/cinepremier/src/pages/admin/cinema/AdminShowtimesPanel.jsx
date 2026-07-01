@@ -41,6 +41,24 @@ const toLocalDateInput = (date = new Date()) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
+const normalizeDateInput = (value) => {
+  if (!value) return '';
+  const raw = String(value).slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : toLocalDateInput(parsed);
+};
+
+const formatDateInput = (value) => {
+  const normalized = normalizeDateInput(value);
+  return normalized ? normalized.split('-').reverse().join('/') : '--/--/----';
+};
+
+const maxDateInput = (...values) => {
+  const sorted = values.filter(Boolean).sort();
+  return sorted.length ? sorted[sorted.length - 1] : '';
+};
+
 const buildDateTimeOnDate = (sourceDateTime, targetDate) => {
   if (!sourceDateTime || !targetDate) return '';
   const source = new Date(sourceDateTime);
@@ -176,7 +194,7 @@ const clearChildPrices = (state) => ({
  * value  : "YYYY-MM-DDTHH:mm" (same as datetime-local)
  * onChange: (newValue: string) => void
  */
-function DateTimePicker({ value, onChange, error, label }) {
+function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpText }) {
   const datePart = value ? value.split('T')[0] : '';
   const timePart = value && value.includes('T') ? value.split('T')[1].slice(0, 5) : '';
 
@@ -192,6 +210,7 @@ function DateTimePicker({ value, onChange, error, label }) {
 
   // Today's date string for min attribute
   const today = toLocalDateInput();
+  const effectiveMinDate = maxDateInput(today, minDate);
 
   return (
     <div className="space-y-2">
@@ -201,11 +220,13 @@ function DateTimePicker({ value, onChange, error, label }) {
       {/* Date row */}
       <input
         type="date"
-        min={today}
+        min={effectiveMinDate}
+        max={maxDate || undefined}
         value={datePart}
         onChange={handleDate}
         className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
       />
+      {helpText && <p className="text-[9px] text-zinc-500 font-bold">{helpText}</p>}
       {/* Time inputs */}
       <div className="border border-zinc-800 bg-black p-3 mt-1">
         <p className="text-[9px] uppercase tracking-widest text-zinc-300 mb-2 font-bold">Nhập giờ chiếu</p>
@@ -371,6 +392,23 @@ export default function AdminShowtimesPanel({ ctx }) {
     (moviesList || []).find(m => getMovieOptionId(m) === String(movieId))
   ), [moviesList]);
 
+  const getMovieReleaseWindow = useCallback((movie) => ({
+    releaseDate: normalizeDateInput(movie?.releaseDate || movie?.raw?.releaseDate),
+    endDate: normalizeDateInput(movie?.endDate || movie?.raw?.endDate),
+  }), []);
+
+  const getShowtimeWindowError = useCallback((movie, startTime) => {
+    if (!movie) return null;
+    const { releaseDate, endDate } = getMovieReleaseWindow(movie);
+    if (!releaseDate || !endDate) return 'Ngày chiếu phim đang không nằm trong khoảng ngày phát hành hợp lệ.';
+    const showDate = normalizeDateInput(startTime);
+    if (!showDate) return null;
+    if (showDate < releaseDate || showDate > endDate) {
+      return `Suất chiếu phải nằm trong thời gian phát hành ${formatDateInput(releaseDate)} - ${formatDateInput(endDate)}.`;
+    }
+    return null;
+  }, [getMovieReleaseWindow]);
+
   /* fetch rooms once */
   useEffect(() => {
     const token = getTokenRef.current?.();
@@ -415,6 +453,8 @@ export default function AdminShowtimesPanel({ ctx }) {
     if (!form.movieId) errs.movieId = 'Chọn phim';
     if (!form.roomId) errs.roomId = 'Chọn phòng';
     if (!form.startTime || isNaN(new Date(form.startTime).getTime())) errs.startTime = 'Nhập thời gian hợp lệ';
+    const formWindowError = selectedMovie && form.startTime ? getShowtimeWindowError(selectedMovie, form.startTime) : null;
+    if (formWindowError) errs.startTime = formWindowError;
     if (!form.adultStandardPrice && !form.basePrice) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
     if (allowChildTickets && !form.childStandardPrice) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
     if (!form.studentStandardPrice) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
@@ -472,6 +512,11 @@ export default function AdminShowtimesPanel({ ctx }) {
       if (!s.roomId) errs[`slot_room_${i}`] = 'Chọn phòng';
       if (!s.startTime || isNaN(new Date(s.startTime).getTime())) {
         errs[`slot_time_${i}`] = 'Nhập thời gian hợp lệ';
+        return;
+      }
+      const slotWindowError = selectedMovie ? getShowtimeWindowError(selectedMovie, s.startTime) : null;
+      if (slotWindowError) {
+        errs[`slot_time_${i}`] = slotWindowError;
         return;
       }
       const normalizedStart = toApiLocalDateTime(s.startTime).slice(0, 16);
@@ -638,8 +683,10 @@ export default function AdminShowtimesPanel({ ctx }) {
 
   const activeMovies = (moviesList || []).filter(m => m.status === 'ACTIVE' || m.status === 'NOW_SHOWING' || m.status === 'UPCOMING');
   const formMovie = findUiMovie(form.movieId);
+  const formReleaseWindow = getMovieReleaseWindow(formMovie);
   const formAllowsChildTickets = allowsChildTicketsForMovie(formMovie);
   const bulkMovie = findUiMovie(bulkForm.movieId);
+  const bulkReleaseWindow = getMovieReleaseWindow(bulkMovie);
   const bulkAllowsChildTickets = allowsChildTicketsForMovie(bulkMovie);
   const bulkMovieDuration = Number(bulkMovie?.durationMinutes ?? bulkMovie?.duration ?? 0);
   const bulkStepMinutes = bulkMovieDuration ? bulkMovieDuration + 15 : 0;
@@ -726,6 +773,12 @@ export default function AdminShowtimesPanel({ ctx }) {
       showToast?.('Giờ bắt đầu không hợp lệ.', 'error');
       return;
     }
+    const windowError = getShowtimeWindowError(bulkMovie, firstSlot.startTime);
+    if (windowError) {
+      setErrors(prev => ({ ...prev, [`slot_time_${activeBulkSlotIndex}`]: windowError }));
+      showToast?.(windowError, 'error');
+      return;
+    }
     const dayEnd = new Date(start);
     dayEnd.setHours(23, 59, 59, 999);
     const slots = [];
@@ -783,12 +836,16 @@ export default function AdminShowtimesPanel({ ctx }) {
                 <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phim *</label>
                 <select value={form.movieId} onChange={e => {
                   const nextMovieId = e.target.value;
+                  const nextMovie = findUiMovie(nextMovieId);
                   const nextState = { ...form, movieId: nextMovieId };
-                  setForm(allowsChildTicketsForMovie(findUiMovie(nextMovieId)) ? nextState : clearChildPrices(nextState));
+                  if (nextState.startTime && getShowtimeWindowError(nextMovie, nextState.startTime)) {
+                    nextState.startTime = '';
+                  }
+                  setForm(allowsChildTicketsForMovie(nextMovie) ? nextState : clearChildPrices(nextState));
                 }}
                   className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                   <option value="">-- Chọn phim --</option>
-                  {(moviesList || []).map(m => (
+                  {activeMovies.map(m => (
                     <option key={m.id} value={m.backendId ?? m.id}>{m.title}</option>
                   ))}
                 </select>
@@ -814,6 +871,9 @@ export default function AdminShowtimesPanel({ ctx }) {
                 value={form.startTime}
                 onChange={v => setForm({ ...form, startTime: v })}
                 error={errors.startTime}
+                minDate={formReleaseWindow.releaseDate}
+                maxDate={formReleaseWindow.endDate}
+                helpText={formMovie ? `Chỉ tạo trong thời gian phát hành: ${formatDateInput(formReleaseWindow.releaseDate)} - ${formatDateInput(formReleaseWindow.endDate)}` : 'Chọn phim để giới hạn ngày chiếu.'}
               />
 
               {/* Status */}
@@ -861,12 +921,21 @@ export default function AdminShowtimesPanel({ ctx }) {
                   <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phim *</label>
                   <select value={bulkForm.movieId} onChange={e => {
                     const nextMovieId = e.target.value;
-                    const nextState = { ...bulkForm, movieId: nextMovieId };
-                    setBulkForm(allowsChildTicketsForMovie(findUiMovie(nextMovieId)) ? nextState : clearChildPrices(nextState));
+                    const nextMovie = findUiMovie(nextMovieId);
+                    const nextState = {
+                      ...bulkForm,
+                      movieId: nextMovieId,
+                      slots: bulkForm.slots.map(slot => (
+                        slot.startTime && getShowtimeWindowError(nextMovie, slot.startTime)
+                          ? { ...slot, startTime: '' }
+                          : slot
+                      ))
+                    };
+                    setBulkForm(allowsChildTicketsForMovie(nextMovie) ? nextState : clearChildPrices(nextState));
                   }}
                     className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                     <option value="">-- Chọn phim --</option>
-                    {(moviesList || []).map(m => (
+                    {activeMovies.map(m => (
                       <option key={m.id} value={m.backendId ?? m.id}>{m.title}</option>
                     ))}
                   </select>
@@ -937,6 +1006,9 @@ export default function AdminShowtimesPanel({ ctx }) {
                     value={activeBulkSlot?.startTime || ''}
                     onChange={v => updateBulkSlot(activeBulkSlotIndex, { startTime: v, selected: true })}
                     error={errors[`slot_time_${activeBulkSlotIndex}`]}
+                    minDate={bulkReleaseWindow.releaseDate}
+                    maxDate={bulkReleaseWindow.endDate}
+                    helpText={bulkMovie ? `Chỉ tạo trong thời gian phát hành: ${formatDateInput(bulkReleaseWindow.releaseDate)} - ${formatDateInput(bulkReleaseWindow.endDate)}` : 'Chọn phim để giới hạn ngày chiếu.'}
                   />
                   <div className="min-w-[160px] border border-amber-500/20 bg-amber-500/10 p-3 text-[9px] text-zinc-300">
                     <p className="uppercase tracking-widest text-amber-300 font-black">Bước nhảy</p>
@@ -1067,6 +1139,8 @@ export default function AdminShowtimesPanel({ ctx }) {
                           setBulkForm({ ...bulkForm, slots: s });
                         }}
                         error={errors[`slot_time_${i}`]}
+                        minDate={bulkReleaseWindow.releaseDate}
+                        maxDate={bulkReleaseWindow.endDate}
                       />
                     </div>
                     <button type="button" disabled={bulkForm.slots.length === 1}

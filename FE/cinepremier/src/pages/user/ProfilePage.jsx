@@ -485,20 +485,18 @@ export default function ProfileView() {
                                 setIsEditingName(false);
                               }
                             }}
-                            className="bg-black border border-amber-400/50 text-white text-xl px-2 py-0.5 focus:outline-none focus:border-amber-300 font-sans max-w-[260px]"
+                            className="bg-black border border-amber-400/50 text-white text-2xl px-2 py-0.5 focus:outline-none focus:border-amber-300 font-sans max-w-[320px]"
                             autoFocus
                           />
                         ) : (
-                          <h2 className="text-2xl font-serif text-white uppercase italic tracking-wide truncate max-w-[300px]">
+                          <h2 className="text-3xl font-sans font-bold text-white truncate max-w-[380px]">
                             {name}
                           </h2>
                         )}
 
-                        <span className="inline-flex self-center items-center h-5 px-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-[8px] font-black tracking-widest uppercase rounded-sm border border-yellow-300">
-                          VIP GOLD
-                        </span>
+
                       </div>
-                      <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-sans flex items-center justify-center md:justify-start gap-1">
+                      <p className="text-xs text-neutral-500 uppercase tracking-widest font-sans flex items-center justify-center md:justify-start gap-1">
                         Thành viên từ {memberSince} • {currentUser?.status === 'ACTIVE' ? 'Tài khoản đang hoạt động' : currentUser?.status || 'Đang cập nhật'}
                       </p>
                     </div>
@@ -511,21 +509,21 @@ export default function ProfileView() {
                         { icon: Cake, label: 'Năm sinh', value: currentUser?.birthYear || 'Chưa cập nhật' },
                         { icon: BadgeCheck, label: 'Xác thực', value: currentUser?.emailVerified ? 'Email đã xác thực' : 'Chưa xác thực email' }
                       ].map(({ icon: InfoIcon, label, value }) => (
-                        <div key={label} className="flex min-w-0 items-center gap-2.5 border border-white/5 bg-black/50 px-3 py-2 text-left">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-amber-500/20 bg-amber-500/5 text-amber-400">
-                            <InfoIcon className="h-3.5 w-3.5" />
+                        <div key={label} className="flex min-w-0 items-center gap-3 border border-white/5 bg-black/50 px-4 py-3 text-left">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-amber-500/20 bg-amber-500/5 text-amber-400">
+                            <InfoIcon className="h-4 w-4" />
                           </span>
                           <span className="min-w-0">
-                            <span className="block text-[7px] font-black uppercase tracking-[0.16em] text-neutral-600">{label}</span>
-                            <span className="mt-0.5 block truncate text-[9px] font-bold text-neutral-300">{value}</span>
+                            <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-neutral-600">{label}</span>
+                            <span className="mt-1 block truncate text-xs font-bold text-neutral-300">{value}</span>
                           </span>
                         </div>
                       ))}
                     </div>
 
                     {/* Level progress info bar matching screenshot */}
-                    <div className="space-y-1.5 max-w-sm mx-auto md:mx-0">
-                      <div className="flex justify-between text-[8px] uppercase tracking-widest text-neutral-400 font-bold">
+                    <div className="space-y-1.5 max-w-md mx-auto md:mx-0">
+                      <div className="flex justify-between text-[10px] uppercase tracking-widest text-neutral-400 font-bold">
                         <span>TIẾN TRÌNH HẠNG TIẾP THEO</span>
                         <span className="text-yellow-400 animate-pulse">85%</span>
                       </div>
@@ -535,20 +533,20 @@ export default function ProfileView() {
                     </div>
 
                     {/* Cinepoints & Watched points metrics cards mockup */}
-                    <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto md:mx-0 pointer-events-none">
+                    <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto md:mx-0 pointer-events-none">
 
-                      <div className="border border-white/5 bg-black/60 p-3 flex flex-col justify-center items-start">
-                        <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
-                          <Flame className="h-3 w-3 text-neutral-500" /> CinePoints
+                      <div className="border border-white/5 bg-black/60 p-4 flex flex-col justify-center items-start">
+                        <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
+                          <Flame className="h-3.5 w-3.5 text-neutral-500" /> CinePoints
                         </span>
-                        <span className="text-lg font-mono font-bold text-white mt-1">{loyaltyPoints.toLocaleString()}</span>
+                        <span className="text-2xl font-mono font-bold text-white mt-1">{loyaltyPoints.toLocaleString()}</span>
                       </div>
 
-                      <div className="border border-white/5 bg-black/60 p-3 flex flex-col justify-center items-start">
-                        <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
-                          <Film className="h-3 w-3 text-neutral-500" /> Phim đã xem
+                      <div className="border border-white/5 bg-black/60 p-4 flex flex-col justify-center items-start">
+                        <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
+                          <Film className="h-3.5 w-3.5 text-neutral-500" /> Phim đã xem
                         </span>
-                        <span className="text-lg font-mono font-bold text-white mt-1">
+                        <span className="text-2xl font-mono font-bold text-white mt-1">
                           {watchedCount}
                         </span>
                       </div>
@@ -562,7 +560,7 @@ export default function ProfileView() {
                     <button
                       onClick={handleTriggerEditName}
                       disabled={isSavingName}
-                      className="border border-white/10 hover:border-white/50 bg-black text-[9px] uppercase tracking-widest px-4 py-2 text-white font-sans transition disabled:opacity-50"
+                      className="border border-white/10 hover:border-white/50 bg-black text-[10px] uppercase tracking-widest px-5 py-2.5 text-white font-sans transition disabled:opacity-50"
                     >
                       {isSavingName ? 'ĐANG LƯU...' : isEditingName ? 'LƯU TÊN' : 'SỬA TÊN'}
                     </button>
@@ -572,7 +570,7 @@ export default function ProfileView() {
                           setName(currentUser?.name || currentUser?.fullName || '');
                           setIsEditingName(false);
                         }}
-                        className="ml-2 border border-white/5 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500 transition hover:text-white"
+                        className="ml-2 border border-white/5 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-neutral-500 transition hover:text-white"
                       >
                         Hủy
                       </button>
@@ -636,7 +634,7 @@ export default function ProfileView() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-bold text-white uppercase italic tracking-wide font-serif truncate">
+                          <h4 className="text-xs font-sans font-bold text-white truncate">
                             {booking.movieTitle}
                           </h4>
                           <p className="text-[10px] text-neutral-400 font-sans mt-0.5 truncate uppercase">
@@ -695,99 +693,7 @@ export default function ProfileView() {
             {/* RIGHT SECTION: PERSONALIZED PREFERENCES & SETTINGS */}
             <div className="lg:col-span-4 space-y-6">
 
-              {/* RADAR CHART BLOCK matching the screenshot */}
-              <div className="border border-white/10 bg-[#090909] p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <span className="text-[10px] font-sans font-bold uppercase tracking-[0.15em] text-neutral-400">
-                    🔍 Sở thích
-                  </span>
-                  <span className="text-[8px] uppercase tracking-wider text-neutral-600 bg-neutral-950 border border-white/5 px-2 py-0.5">
-                    Gu xem phim
-                  </span>
-                </div>
 
-                {/* Elegant Graphic Area */}
-                <div className="relative flex justify-center items-center py-2 h-44 bg-neutral-950 border border-white/5 rounded-sm">
-
-                  {/* SVG Radar Chart Representation */}
-                  <svg className="w-full h-full max-w-[180px] max-h-[180px]" viewBox="0 0 200 200">
-                    {/* Concentric pentagon lines */}
-                    <polygon points={outerWebPoints} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
-                    <polygon points={innerWebPoints1} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
-                    <polygon points={innerWebPoints2} fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-                    <polygon points={innerWebPoints3} fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-
-                    {/* Axes lines */}
-                    {categories.map((_, i) => {
-                      const outerCoords = getCoordinates(i, 1.0).split(',');
-                      return (
-                        <line
-                          key={i}
-                          x1="100"
-                          y1="100"
-                          x2={outerCoords[0]}
-                          y2={outerCoords[1]}
-                          stroke="rgba(255, 255, 255, 0.06)"
-                          strokeWidth="1"
-                        />
-                      );
-                    })}
-
-                    {/* Dynamic Value Polygon matching Minh Hong preference style */}
-                    <polygon
-                      points={polyPoints}
-                      fill="rgba(255, 255, 255, 0.12)"
-                      stroke="rgba(255, 255, 255, 0.8)"
-                      strokeWidth="1.5"
-                    />
-
-                    {/* Core level circular grid points */}
-                    {categories.map((_, i) => {
-                      const coords = getCoordinates(i, values[i]).split(',');
-                      return (
-                        <circle
-                          key={i}
-                          cx={coords[0]}
-                          cy={coords[1]}
-                          r="2.5"
-                          fill="#FFFFFF"
-                        />
-                      );
-                    })}
-
-                    {/* Categories labels rendering */}
-                    {labelPositions.map((lbl, i) => (
-                      <text
-                        key={i}
-                        x={lbl.x}
-                        y={lbl.y}
-                        fill="#888888"
-                        fontSize="7.5"
-                        fontFamily="sans-serif"
-                        fontWeight="bold"
-                        letterSpacing="0.05em"
-                        textAnchor={lbl.textAnchor}
-                      >
-                        {lbl.name}
-                      </text>
-                    ))}
-                  </svg>
-                </div>
-
-                {/* Preference Tags */}
-                <div className="flex flex-wrap gap-1.5 justify-center pt-1" id="profile-pref-tags">
-                  <span className="bg-[#1A0B0B] text-rose-400 border border-rose-500/20 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
-                    KHOA HỌC VIỄN TƯỞNG
-                  </span>
-                  <span className="bg-[#0B1A0F] text-emerald-400 border border-emerald-500/20 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
-                    HÀNH ĐỘNG
-                  </span>
-                  <span className="bg-[#101015] text-[#90A4AE] border border-white/5 text-[8px] font-bold px-2 py-1 uppercase tracking-wider">
-                    KINH DỊ NOIR
-                  </span>
-                </div>
-
-              </div>
 
               {/* SETTINGS OPTIONS WIDGETS SECTION */}
               <div className={`border bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-5.5 space-y-5 font-sans transition-all duration-300 relative overflow-hidden rounded-none ${glowColor === 'gold' ? 'border-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.08)]' :

@@ -872,7 +872,7 @@ export default function AuthModal({
                       {isSubmitting ? (
                         <span className="h-4 w-4 border-2 border-black border-t-transparent animate-spin rounded-full inline-block"></span>
                       ) : (
-                        <>THĂM DÒ NỀN MÓNG RẠP<ArrowRight className="h-3.5 w-3.5" /></>
+                        <>ĐĂNG NHẬP<ArrowRight className="h-3.5 w-3.5" /></>
                       )}
                     </button>
                   </form>
@@ -1444,9 +1444,9 @@ export default function AuthModal({
         {/* Dynamic Interactive Footer displaying membership privileges */}
         <div className="border-t border-neutral-900 bg-[#060606] p-4 text-[11px] text-zinc-400 flex items-center justify-between font-mono">
           <span className="uppercase tracking-wider flex items-center gap-1">
-            <ShieldCheck className="h-3.5 w-3.5 text-amber-500" /> An Toàn Đồng Bộ 256-Bit
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-500" /> An Toàn - Nhất Quán
           </span>
-          <span className="text-right uppercase tracking-[0.1em]">CinePremier Club 2026</span>
+          <span className="text-right uppercase tracking-[0.1em]">CinePremier Club </span>
         </div>
 
       </motion.div>

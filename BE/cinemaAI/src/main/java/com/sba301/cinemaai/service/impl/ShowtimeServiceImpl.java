@@ -177,6 +177,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             if (!slot.startTime().isAfter(LocalDateTime.now())) {
                 throw new BadRequestException(slotLabel + ": start time must be in the future");
             }
+            validateShowtimeWithinMovieReleaseWindow(movie, slot.startTime(), slotLabel + ": ");
             if (!roomStartTimesInRequest.add(slot.roomId() + "|" + slot.startTime())) {
                 throw new ConflictException(slotLabel + ": room " + room.getName()
                         + " already has another selected slot at " + slot.startTime());
@@ -299,6 +300,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         if (movie.getStatus() == MovieStatus.INACTIVE) {
             throw new BadRequestException("Cannot schedule inactive movie");
         }
+        validateShowtimeWithinMovieReleaseWindow(movie, startTime, "");
         if (room.getStatus() != RoomStatus.ACTIVE) {
             throw new BadRequestException("Cannot schedule showtime in room " + room.getName() + " because it is not active");
         }
@@ -310,6 +312,21 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         }
         if (hasOverlappingShowtime(room, startTime, endTime, excludeId)) {
             throw new ConflictException("Room " + room.getName() + " already has an overlapping showtime");
+        }
+    }
+
+    private void validateShowtimeWithinMovieReleaseWindow(Movie movie, LocalDateTime startTime, String label) {
+        if (startTime == null) {
+            return;
+        }
+        LocalDate releaseDate = movie.getReleaseDate();
+        LocalDate endDate = movie.getEndDate();
+        if (releaseDate == null || endDate == null) {
+            throw new BadRequestException(label + "movie release window is required for showtime scheduling");
+        }
+        LocalDate showtimeDate = startTime.toLocalDate();
+        if (showtimeDate.isBefore(releaseDate) || showtimeDate.isAfter(endDate)) {
+            throw new BadRequestException(label + "showtime date must be within movie release window");
         }
     }
 

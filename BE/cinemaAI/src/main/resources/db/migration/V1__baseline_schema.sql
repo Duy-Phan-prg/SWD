@@ -124,6 +124,7 @@ CREATE TABLE dbo.movies (
     avatar_url NVARCHAR(500),
     duration_minutes INT NOT NULL,
     release_date DATE,
+    end_date DATE,
     language NVARCHAR(50),
     subtitle_language NVARCHAR(50),
     status NVARCHAR(30) NOT NULL,
@@ -499,6 +500,10 @@ IF COL_LENGTH('dbo.email_verification_tokens', 'purpose') IS NULL
 ALTER TABLE dbo.email_verification_tokens ADD purpose NVARCHAR(30) NOT NULL DEFAULT 'EMAIL_VERIFICATION';
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movies_release_date' AND object_id = OBJECT_ID('dbo.movies'))
 CREATE INDEX idx_movies_release_date ON dbo.movies(release_date);
+IF COL_LENGTH('dbo.movies', 'end_date') IS NULL
+ALTER TABLE dbo.movies ADD end_date DATE;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movies_end_date' AND object_id = OBJECT_ID('dbo.movies'))
+CREATE INDEX idx_movies_end_date ON dbo.movies(end_date);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movie_actors_movie' AND object_id = OBJECT_ID('dbo.movie_actors'))
 CREATE INDEX idx_movie_actors_movie ON dbo.movie_actors(movie_id);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_movie_actors_actor' AND object_id = OBJECT_ID('dbo.movie_actors'))

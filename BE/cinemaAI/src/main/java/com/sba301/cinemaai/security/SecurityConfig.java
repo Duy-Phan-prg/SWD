@@ -54,7 +54,8 @@ public class SecurityConfig {
                                 "/api/v1/showtimes/**",
                                 "/api/v1/reviews/movies/**",
                                 "/api/v1/foods/**",
-                                "/api/v1/ticket-pricing/combos"
+                                "/api/v1/ticket-pricing/combos",
+                                "/api/recommendation/content/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(

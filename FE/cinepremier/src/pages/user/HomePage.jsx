@@ -312,7 +312,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       </div>
 
       {/* 2. NOW PLAYING GRID */}
-      <section className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-0" id="now-playing-section">
+      <section className="relative mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-0" id="now-playing-section">
         <div className="flex flex-col items-center text-center gap-3 pb-4 mb-10 relative">
           <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
           <div>
@@ -323,14 +323,14 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
           </div>
         </div>
 
-        <div className="relative -mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="relative">
           <button
             type="button"
             onClick={() => scrollNowPlaying(-1)}
             aria-label="Phim trước"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 -ml-8 sm:-ml-12 text-white hover:text-gray-300 transition"
+            className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-left-8 xl:-left-12"
           >
-            <ChevronLeft className="h-8 w-8" />
+            <ChevronLeft className="h-6 w-6" />
           </button>
 
           <div
@@ -339,7 +339,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             id="now-playing-grid"
           >
             {nowPlaying.map((movie) => (
-              <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[280px]">
+              <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[calc((100%_-_4.5rem)/4)]">
                 <MovieCard
                   movie={movie}
                   onSelect={onSelectMovie}
@@ -355,9 +355,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             type="button"
             onClick={() => scrollNowPlaying(1)}
             aria-label="Phim sau"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 -mr-8 sm:-mr-12 text-white hover:text-gray-300 transition"
+            className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-right-8 xl:-right-12"
           >
-            <ChevronRight className="h-8 w-8" />
+            <ChevronRight className="h-6 w-6" />
           </button>
         </div>
 
@@ -372,7 +372,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       </section>
 
       {/* 4. UPCOMING RELEASES */}
-      <section className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-0" id="upcoming-section">
+      <section className="relative mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-0" id="upcoming-section">
         <div className="flex flex-col items-center text-center gap-3 pb-4 mb-10 relative">
           <div>
             <h2 className="text-3xl sm:text-4xl font-sans uppercase tracking-wider font-bold bg-gradient-to-r from-purple-300 via-white to-purple-300 bg-clip-text text-transparent">
@@ -382,14 +382,14 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
           </div>
         </div>
 
-        <div className="relative -mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="relative">
           <button
             type="button"
             onClick={() => scrollUpcoming(-1)}
             aria-label="Phim trước"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 -ml-8 sm:-ml-12 text-white hover:text-gray-300 transition"
+            className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-left-8 xl:-left-12"
           >
-            <ChevronLeft className="h-8 w-8" />
+            <ChevronLeft className="h-6 w-6" />
           </button>
 
           <div
@@ -398,7 +398,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             id="upcoming-grid"
           >
           {upcoming.map((movie) => (
-            <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[280px]">
+            <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[calc((100%_-_4.5rem)/4)]">
               <MovieCard
                 movie={movie}
                 onSelect={onSelectMovie}
@@ -414,9 +414,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             type="button"
             onClick={() => scrollUpcoming(1)}
             aria-label="Phim sau"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 -mr-8 sm:-mr-12 text-white hover:text-gray-300 transition"
+            className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-right-8 xl:-right-12"
           >
-            <ChevronRight className="h-8 w-8" />
+            <ChevronRight className="h-6 w-6" />
           </button>
         </div>
 

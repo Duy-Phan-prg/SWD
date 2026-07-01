@@ -257,8 +257,8 @@ export default function Header({
 
       {/* Row 2: Navigation */}
       <div className="border-t border-white/5 bg-gradient-to-r from-indigo-950/40 via-black to-fuchsia-950/30">
-        <div className="mx-auto flex h-11 w-full max-w-5xl items-center px-4 sm:px-6 lg:px-8">
-          <nav className="flex min-w-0 items-center justify-start gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" id="main-nav-bar">
+        <div className="mx-auto flex h-11 w-full max-w-5xl items-center justify-center px-4 sm:px-6 lg:px-8">
+          <nav className="flex min-w-0 max-w-full items-center justify-start gap-1 overflow-x-auto [scrollbar-width:none] md:justify-center [&::-webkit-scrollbar]:hidden" id="main-nav-bar">
             <button
               onClick={() => onTabChange('home')}
               className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'home'
@@ -285,12 +285,12 @@ export default function Header({
 
             {!isAdminRole && (
               <button
-              onClick={() => onTabChange('my-tickets')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
-                ? 'text-white border-white font-bold'
-                : 'text-neutral-300 hover:text-white border-transparent'
-                }`}
-              id="nav-my-bookings"
+                onClick={() => onTabChange('my-tickets')}
+                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
+                  ? 'text-white border-white font-bold'
+                  : 'text-neutral-300 hover:text-white border-transparent'
+                  }`}
+                id="nav-my-bookings"
               >
                 <Ticket className="h-3.5 w-3.5" />
                 <span>VÉ CỦA TÔI</span>
@@ -311,17 +311,7 @@ export default function Header({
               </button>
             )}
 
-            <button
-              onClick={() => onTabChange('explore')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'explore'
-                ? 'text-white border-white font-bold'
-                : 'text-neutral-300 hover:text-white border-transparent'
-                }`}
-              id="nav-showtimes"
-            >
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>LỊCH CHIẾU</span>
-            </button>
+
 
             {isLoggedIn && (
               <button
@@ -339,6 +329,6 @@ export default function Header({
           </nav>
         </div>
       </div>
-    </header>
+    </header >
   );
 }
