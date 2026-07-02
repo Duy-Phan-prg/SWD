@@ -42,6 +42,7 @@ import com.sba301.cinemaai.service.QrTicketService;
 import com.sba301.cinemaai.service.TicketPricingService;
 import com.sba301.cinemaai.service.UserService;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -118,9 +119,10 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
+        BigDecimal discountAmount = applyLoyaltyDiscount(user, booking, request.loyaltyPointsToRedeem(), subtotal);
         booking.setSubtotal(subtotal);
-        booking.setDiscountAmount(BigDecimal.ZERO);
-        booking.setTotalAmount(subtotal);
+        booking.setDiscountAmount(discountAmount);
+        booking.setTotalAmount(subtotal.subtract(discountAmount));
         return toResponse(booking);
     }
 
@@ -153,9 +155,12 @@ public class BookingServiceImpl implements BookingService {
         bookingSeatRepository.findByBooking(booking)
                 .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.BOOKED));
         BigDecimal discount = booking.getDiscountAmount();
+        BigDecimal loyaltyDiscount = request.loyaltyPointsToRedeem() != null && request.loyaltyPointsToRedeem() > 0 && discount.signum() == 0
+                ? applyLoyaltyDiscount(user, booking, request.loyaltyPointsToRedeem(), subtotal)
+                : discount;
         booking.setSubtotal(subtotal);
-        booking.setDiscountAmount(discount);
-        booking.setTotalAmount(subtotal.subtract(discount));
+        booking.setDiscountAmount(loyaltyDiscount);
+        booking.setTotalAmount(subtotal.subtract(loyaltyDiscount));
         markPendingPayment(booking);
         return toResponse(booking);
     }
@@ -499,6 +504,7 @@ public class BookingServiceImpl implements BookingService {
 
     private void expireBooking(Booking booking) {
         releaseSeats(booking);
+        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         booking.setStatus(BookingStatus.EXPIRED);
     }
 
@@ -522,6 +528,10 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void cancel(Booking booking) {
+        if (booking.getStatus() == BookingStatus.PAID) {
+            loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
+        }
+        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         booking.setCancelledAt(LocalDateTime.now());
         booking.setStatus(BookingStatus.CANCELLED);
     }
@@ -541,8 +551,21 @@ public class BookingServiceImpl implements BookingService {
 
     private void markRefunded(Booking booking) {
         requireStatus(booking, BookingStatus.REFUND_REQUESTED, "Only refund requested booking can be marked as refunded");
+        loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
+        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         booking.setRefundedAt(LocalDateTime.now());
         booking.setStatus(BookingStatus.REFUNDED);
+    }
+
+    private BigDecimal applyLoyaltyDiscount(User user, Booking booking, Integer pointsToRedeem, BigDecimal subtotal) {
+        int requestedPoints = pointsToRedeem == null ? 0 : pointsToRedeem;
+        if (requestedPoints <= 0 || subtotal == null || subtotal.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        int maxRedeemablePoints = subtotal.setScale(0, RoundingMode.DOWN).intValue();
+        int points = Math.min(requestedPoints, maxRedeemablePoints);
+        int redeemed = loyaltyPointService.redeemPointsForBooking(user, booking, points);
+        return BigDecimal.valueOf(redeemed);
     }
 
     private void changeBookingSeatStatus(BookingSeat bookingSeat, SeatRuntimeStatus status) {

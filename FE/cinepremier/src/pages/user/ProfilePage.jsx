@@ -521,16 +521,7 @@ export default function ProfileView() {
                       ))}
                     </div>
 
-                    {/* Level progress info bar matching screenshot */}
-                    <div className="space-y-1.5 max-w-md mx-auto md:mx-0">
-                      <div className="flex justify-between text-[10px] uppercase tracking-widest text-neutral-400 font-bold">
-                        <span>TIẾN TRÌNH HẠNG TIẾP THEO</span>
-                        <span className="text-yellow-400 animate-pulse">85%</span>
-                      </div>
-                      <div className="h-[3px] w-full bg-neutral-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-yellow-500 to-amber-300" style={{ width: '85%' }}></div>
-                      </div>
-                    </div>
+
 
                     {/* Cinepoints & Watched points metrics cards mockup */}
                     <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto md:mx-0 pointer-events-none">

@@ -17,9 +17,11 @@ public record CreateBookingRequest(
         boolean holiday,
 
         @Valid
-        List<TicketSelectionRequest> tickets
+        List<TicketSelectionRequest> tickets,
+
+        Integer loyaltyPointsToRedeem
 ) {
     public CreateBookingRequest(Long holdBookingId, List<BookingFoodRequest> foods) {
-        this(holdBookingId, foods, null, false, null);
+        this(holdBookingId, foods, null, false, null, null);
     }
 }

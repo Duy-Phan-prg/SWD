@@ -4,6 +4,7 @@ import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus,
 import { expireAuthSession, getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
 import { paymentService } from '../../services/paymentService';
+import { loyaltyService } from '../../services/loyaltyService';
 import { useMovies } from '../../stores/useMovieStore';
 import { useUiStore } from '../../stores/useUiStore';
 
@@ -170,9 +171,29 @@ export default function BookingView() {
   const [holdBookingId, setHoldBookingId] = useState(null);
   const [holdExpiresAt, setHoldExpiresAt] = useState(null);
   const [holdSecondsLeft, setHoldSecondsLeft] = useState(null);
+  const [seatClockTick, setSeatClockTick] = useState(Date.now());
   const [isHolding, setIsHolding] = useState(false);
   const [paymentState, setPaymentState] = useState('booking');
   const [ticketPriceValidation, setTicketPriceValidation] = useState(null);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [loyaltyPointsInput, setLoyaltyPointsInput] = useState('');
+
+  useEffect(() => {
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      setLoyaltyPoints(0);
+      return;
+    }
+    let cancelled = false;
+    loyaltyService.getMyLoyalty(accessToken)
+      .then((loyalty) => {
+        if (!cancelled) setLoyaltyPoints(Number(loyalty?.points ?? 0));
+      })
+      .catch(() => {
+        if (!cancelled) setLoyaltyPoints(0);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // Load showtimes for this movie
   useEffect(() => {
@@ -315,9 +336,19 @@ export default function BookingView() {
       startColumn: s.startColumn ?? 1,
       type: s.seatType?.toLowerCase(),
       price: moneyValue(s.unitPrice) ?? 0,
+      runtimeStatus: s.runtimeStatus,
+      holdExpiresAt: s.holdExpiresAt || null,
       isBooked: s.runtimeStatus === 'HOLDING' || s.runtimeStatus === 'BOOKED' || s.runtimeStatus === 'CHECKED_IN' || s.seatStatus !== 'AVAILABLE'
     })).sort((a, b) => (a.displayOrder - b.displayOrder) || (a.displayColumn - b.displayColumn) || (a.col - b.col))
     : [];
+
+  useEffect(() => {
+    const hasActiveSeatHold = seatMapData?.seats?.some(seat => Boolean(seat.holdExpiresAt));
+    if (!hasActiveSeatHold) return undefined;
+
+    const intervalId = window.setInterval(() => setSeatClockTick(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [seatMapData]);
 
   const buildTicketSelections = () => {
     return selectedSeats.map((seat) => {
@@ -422,12 +453,82 @@ export default function BookingView() {
     return total + (item ? item.price * qty : 0);
   }, 0);
   const subTotal = priceTickets + priceCombos;
-  const discountAmount = 0;
-  const totalAmount = subTotal;
+  const requestedLoyaltyPoints = Math.max(0, Number(String(loyaltyPointsInput || '').replace(/\D/g, '')) || 0);
+  const loyaltyDiscountAmount = Math.min(requestedLoyaltyPoints, loyaltyPoints, Math.max(0, Math.floor(subTotal)));
+  const earnedPointsPreview = Math.floor(Math.max(0, subTotal - loyaltyDiscountAmount) * 0.01);
+  const discountAmount = loyaltyDiscountAmount;
+  const totalAmount = Math.max(0, subTotal - discountAmount);
+  const formatHoldSeconds = (seconds) => {
+    if (seconds === null || seconds === undefined) return '--:--';
+    const normalizedSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    return `${String(Math.floor(normalizedSeconds / 60)).padStart(2, '0')}:${String(normalizedSeconds % 60).padStart(2, '0')}`;
+  };
   const holdCountdownLabel = holdSecondsLeft === null
     ? '--:--'
-    : `${String(Math.floor(holdSecondsLeft / 60)).padStart(2, '0')}:${String(holdSecondsLeft % 60).padStart(2, '0')}`;
+    : formatHoldSeconds(holdSecondsLeft);
   const holdProgressPercent = holdSecondsLeft === null ? 100 : Math.max(0, Math.min(100, (holdSecondsLeft / 60) * 100));
+
+  const handleLoyaltyPointsInputChange = (event) => {
+    const nextValue = event.target.value.replace(/\D/g, '').slice(0, 9);
+    setLoyaltyPointsInput(nextValue);
+  };
+
+  const applyMaxLoyaltyPoints = () => {
+    const maxPoints = Math.min(loyaltyPoints, Math.max(0, Math.floor(subTotal)));
+    setLoyaltyPointsInput(String(maxPoints));
+  };
+
+  const clearLoyaltyPoints = () => setLoyaltyPointsInput('');
+
+  const renderLoyaltyRedeemPanel = () => (
+    <div className="border border-emerald-500/20 bg-emerald-950/10 p-3 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">CinePoints</p>
+          <p className="mt-1 text-[11px] font-mono text-neutral-500">
+            {loyaltyPoints.toLocaleString('vi-VN')} điểm khả dụng · 1 điểm = 1đ
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] uppercase tracking-widest text-neutral-500">Dự kiến cộng</p>
+          <p className="font-mono text-xs font-black text-emerald-300">+{earnedPointsPreview.toLocaleString('vi-VN')}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={loyaltyPointsInput}
+          onChange={handleLoyaltyPointsInputChange}
+          placeholder="Điểm muốn dùng"
+          disabled={loyaltyPoints <= 0 || subTotal <= 0}
+          className="min-w-0 border border-white/10 bg-black px-3 py-2 text-xs font-mono font-bold text-white outline-none focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <button
+          type="button"
+          onClick={applyMaxLoyaltyPoints}
+          disabled={loyaltyPoints <= 0 || subTotal <= 0}
+          className="border border-emerald-500/30 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-300 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Tối đa
+        </button>
+        <button
+          type="button"
+          onClick={clearLoyaltyPoints}
+          disabled={!loyaltyPointsInput}
+          className="border border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-neutral-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Xóa
+        </button>
+      </div>
+      {loyaltyDiscountAmount > 0 && (
+        <div className="flex justify-between border-t border-white/5 pt-2 text-[10px] font-mono uppercase tracking-wider text-emerald-300">
+          <span>Đang dùng</span>
+          <span>-{loyaltyDiscountAmount.toLocaleString('vi-VN')}đ</span>
+        </div>
+      )}
+    </div>
+  );
 
   const refreshSeatMap = async () => {
     if (!selectedShowtime?.id) return;
@@ -436,6 +537,17 @@ export default function BookingView() {
       setSeatMapData(data);
     } catch {
       // A later explicit seat-map load will recover this state.
+    }
+  };
+
+  const refreshLoyaltyBalance = async () => {
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) return;
+    try {
+      const loyalty = await loyaltyService.getMyLoyalty(accessToken);
+      setLoyaltyPoints(Number(loyalty?.points ?? 0));
+    } catch {
+      // Profile page will refresh the balance later if this lightweight sync fails.
     }
   };
 
@@ -456,6 +568,7 @@ export default function BookingView() {
       console.warn('[releaseHeldBooking] unable to cancel held booking:', err);
     } finally {
       refreshSeatMap();
+      refreshLoyaltyBalance();
     }
   };
 
@@ -507,13 +620,45 @@ export default function BookingView() {
     && selectedSeats.some((selectedSeat) => selectedSeat.id === seat.id)
   );
 
-  const renderSeatHoldCountdown = (seat) => (
-    isSeatHeldByCurrentUser(seat) ? (
-      <span className={`pointer-events-none absolute -top-2 left-1/2 z-20 -translate-x-1/2 border px-1 py-0.5 text-[7px] font-black leading-none shadow-lg ${holdSecondsLeft <= 15 ? 'border-red-400 bg-red-500 text-white' : 'border-emerald-300 bg-emerald-500 text-black'}`}>
-        {holdCountdownLabel}
+  const getSeatHoldSecondsLeft = (seat) => {
+    if (isSeatHeldByCurrentUser(seat)) {
+      return holdSecondsLeft;
+    }
+    if (!seat?.holdExpiresAt) {
+      return null;
+    }
+    const expiresAtMs = new Date(seat.holdExpiresAt).getTime();
+    if (Number.isNaN(expiresAtMs)) {
+      return null;
+    }
+    return Math.max(0, Math.ceil((expiresAtMs - seatClockTick) / 1000));
+  };
+
+  const renderSeatHoldCountdown = (seat) => {
+    const secondsLeft = getSeatHoldSecondsLeft(seat);
+    if (secondsLeft === null || secondsLeft <= 0) {
+      return null;
+    }
+    const isMine = isSeatHeldByCurrentUser(seat);
+    return (
+      <span className={`pointer-events-none absolute -bottom-3 left-1/2 z-20 min-w-[32px] -translate-x-1/2 border px-1 py-0.5 text-center text-[7px] font-black leading-none shadow-lg ${secondsLeft <= 15
+        ? 'border-red-400 bg-red-500 text-white'
+        : isMine
+          ? 'border-emerald-300 bg-emerald-500 text-black'
+          : 'border-amber-300 bg-amber-400 text-black'
+        }`}>
+        {formatHoldSeconds(secondsLeft)}
       </span>
-    ) : null
-  );
+    );
+  };
+
+  useEffect(() => {
+    const hasExpiredVisibleHold = seats.some(seat => seat.holdExpiresAt && getSeatHoldSecondsLeft(seat) === 0);
+    if (!hasExpiredVisibleHold) return undefined;
+
+    const timeoutId = window.setTimeout(() => refreshSeatMap(), 500);
+    return () => window.clearTimeout(timeoutId);
+  }, [seatClockTick, seatMapData]);
 
   const hasPartialCoupleSelection = () => {
     const selectedSeatIds = new Set(selectedSeats.map(seat => seat.id));
@@ -598,7 +743,8 @@ export default function BookingView() {
         seatIds: selectedSeats.map(s => s.seatId),
         holiday: false,
         tickets: buildTicketSelections(),
-        foods: buildFoodRequests()
+        foods: buildFoodRequests(),
+        loyaltyPointsToRedeem: loyaltyDiscountAmount
       });
       console.log('[holdSeats] result:', holdResult);
       setHoldBookingId(holdResult.id);
@@ -606,6 +752,9 @@ export default function BookingView() {
       setHoldSecondsLeft(holdResult.holdExpiresAt
         ? Math.max(0, Math.ceil((new Date(holdResult.holdExpiresAt).getTime() - Date.now()) / 1000))
         : 60);
+      if (loyaltyDiscountAmount > 0) {
+        setLoyaltyPoints(points => Math.max(0, points - loyaltyDiscountAmount));
+      }
 
       setPaymentState('payment_method');
     } catch (err) {
@@ -860,7 +1009,7 @@ export default function BookingView() {
                 })}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-emerald-400">
-                    <span>Giảm giá ({appliedPromo?.code})</span>
+                    <span>Giảm CinePoints</span>
                     <span>-{discountAmount.toLocaleString()}đ</span>
                   </div>
                 )}
@@ -1008,7 +1157,7 @@ export default function BookingView() {
                 )}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-400">
-                    <span>Mã giảm giá áp dụng:</span>
+                    <span>CinePoints áp dụng:</span>
                     <span>-{discountAmount.toLocaleString()}đ</span>
                   </div>
                 )}
@@ -1385,6 +1534,7 @@ export default function BookingView() {
                                     const s2Selected = !!selectedSeats.find(s => s.id === seat2.id);
                                     const isAnySelected = s1Selected || s2Selected;
                                     const isPairBooked = seat1.isBooked || seat2.isBooked;
+                                    const isPairHeld = getSeatHoldSecondsLeft(seat1) > 0 || getSeatHoldSecondsLeft(seat2) > 0;
 
                                     return (
                                       <div
@@ -1399,7 +1549,9 @@ export default function BookingView() {
                                           disabled={isPairBooked}
                                           onClick={() => handleSelectSeat(seat1)}
                                           className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${isPairBooked
-                                            ? 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
+                                            ? isPairHeld
+                                              ? 'bg-amber-950/30 text-amber-300 cursor-not-allowed border-transparent'
+                                              : 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
                                             : s1Selected
                                               ? 'bg-rose-500 text-white font-black'
                                               : 'bg-transparent text-rose-400 hover:bg-rose-950/20'
@@ -1414,7 +1566,9 @@ export default function BookingView() {
                                           disabled={isPairBooked}
                                           onClick={() => handleSelectSeat(seat2)}
                                           className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${isPairBooked
-                                            ? 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
+                                            ? isPairHeld
+                                              ? 'bg-amber-950/30 text-amber-300 cursor-not-allowed border-transparent'
+                                              : 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
                                             : s2Selected
                                               ? 'bg-rose-500 text-white font-black'
                                               : 'bg-transparent text-rose-400 hover:bg-rose-950/20'
@@ -1436,6 +1590,7 @@ export default function BookingView() {
                                     const ticketMeta = selectedSeat ? TICKET_TYPE_META[selectedSeat.ticketType] : null;
                                     const isVip = seat.type === 'vip';
                                     const isChild = selectedSeat?.ticketType === 'child';
+                                    const isHeldOnActiveBooking = getSeatHoldSecondsLeft(seat) > 0;
                                     const displayPrice = isSelected ? getSeatLineTotal(selectedSeat) : (getShowtimeTicketPrice(selectedShowtime, 'adult', seat.type) ?? seat.price);
 
                                     return (
@@ -1445,7 +1600,9 @@ export default function BookingView() {
                                         onClick={() => handleSelectSeat(seat)}
                                         title={isSelected ? `${ticketMeta?.label || 'Người lớn'} · ${formatVnd(displayPrice)}` : `${formatVnd(displayPrice)}`}
                                         className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-[11.5px] sm:text-[14.5px] font-black font-mono transition-all duration-150 rounded-none border ${seat.isBooked
-                                          ? 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
+                                          ? isHeldOnActiveBooking
+                                            ? 'bg-amber-950/30 border-amber-500/40 text-amber-300 cursor-not-allowed'
+                                            : 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
                                           : isSelected && isChild
                                             ? 'bg-amber-400 text-black border-amber-400 font-black scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
                                             : isSelected
@@ -1826,6 +1983,8 @@ export default function BookingView() {
 
           </div>
 
+          {renderLoyaltyRedeemPanel()}
+
           {/* Checkout receipts final value indicator */}
           <div className="space-y-3 pt-4 border-t border-white/5 text-[10px] uppercase tracking-wider font-sans text-neutral-400">
 
@@ -1849,19 +2008,12 @@ export default function BookingView() {
               </div>
             )}
 
-            <div className="flex justify-between">
-              <span>Hóa đơn ghế xem:</span>
-              <span className="font-mono text-zinc-300">{priceTickets.toLocaleString()}đ</span>
-            </div>
 
-            <div className="flex justify-between">
-              <span>Hóa đơn bắp hoa:</span>
-              <span className="font-mono text-zinc-300">{priceCombos.toLocaleString()}đ</span>
-            </div>
+
 
             {discountAmount > 0 && (
               <div className="flex justify-between text-emerald-400">
-                <span>Khẩu giảm coupon:</span>
+                <span>Giảm bằng CinePoints:</span>
                 <span className="font-mono">-{discountAmount.toLocaleString()}đ</span>
               </div>
             )}

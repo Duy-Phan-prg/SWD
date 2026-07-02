@@ -11,6 +11,8 @@ import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.repository.LoyaltyPointRepository;
 import com.sba301.cinemaai.repository.UserRepository;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LoyaltyPointServiceImpl implements LoyaltyPointService {
 
-    private static final int POINTS_PER_UNIT = 10_000;
+    private static final BigDecimal EARN_RATE = BigDecimal.valueOf(0.01);
 
     private final LoyaltyPointRepository loyaltyPointRepository;
     private final UserRepository userRepository;
@@ -75,7 +77,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
 
     @Transactional
     public void addPointsFromBooking(User user, Booking booking) {
-        int earned = booking.getTotalAmount().intValue() / POINTS_PER_UNIT;
+        int earned = calculateEarnedPoints(booking);
         if (earned <= 0) return;
 
         LoyaltyPoint lp = getOrCreate(user);
@@ -88,7 +90,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
 
     @Transactional
     public void revokePointsFromBooking(User user, Booking booking) {
-        int earned = booking.getTotalAmount().intValue() / POINTS_PER_UNIT;
+        int earned = calculateEarnedPoints(booking);
         if (earned <= 0) return;
 
         LoyaltyPoint lp = loyaltyPointRepository.findByUser(user).orElse(null);
@@ -101,6 +103,35 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
             log.info("Booking {} — revoked {} loyalty points from user {}",
                     booking.getBookingCode(), toRevoke, user.getEmail());
         }
+    }
+
+    @Transactional
+    public int redeemPointsForBooking(User user, Booking booking, int points) {
+        if (points <= 0) {
+            return 0;
+        }
+        LoyaltyPoint lp = getOrCreate(user);
+        if (lp.getPoints() < points) {
+            throw new BadRequestException(
+                    "Insufficient points. Available: " + lp.getPoints() + ", requested: " + points);
+        }
+        redeemPoints(lp, points);
+        loyaltyPointRepository.save(lp);
+        log.info("Booking {} — redeemed {} loyalty points from user {}",
+                booking.getBookingCode(), points, user.getEmail());
+        return points;
+    }
+
+    @Transactional
+    public void restoreRedeemedPointsFromBooking(User user, Booking booking) {
+        int redeemed = booking.getDiscountAmount() == null ? 0 : booking.getDiscountAmount().intValue();
+        if (redeemed <= 0) return;
+
+        LoyaltyPoint lp = getOrCreate(user);
+        restorePoints(lp, redeemed);
+        loyaltyPointRepository.save(lp);
+        log.info("Booking {} — restored {} redeemed loyalty points to user {}",
+                booking.getBookingCode(), redeemed, user.getEmail());
     }
 
     private LoyaltyPoint getOrCreate(User user) {
@@ -125,5 +156,19 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
 
     private void redeemPoints(LoyaltyPoint loyaltyPoint, int points) {
         loyaltyPoint.setPoints(loyaltyPoint.getPoints() - points);
+    }
+
+    private void restorePoints(LoyaltyPoint loyaltyPoint, int points) {
+        loyaltyPoint.setPoints(loyaltyPoint.getPoints() + points);
+    }
+
+    private int calculateEarnedPoints(Booking booking) {
+        if (booking.getTotalAmount() == null || booking.getTotalAmount().signum() <= 0) {
+            return 0;
+        }
+        return booking.getTotalAmount()
+                .multiply(EARN_RATE)
+                .setScale(0, RoundingMode.DOWN)
+                .intValue();
     }
 }

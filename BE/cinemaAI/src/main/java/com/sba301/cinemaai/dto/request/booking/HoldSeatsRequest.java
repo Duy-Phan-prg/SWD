@@ -21,9 +21,11 @@ public record HoldSeatsRequest(
         List<TicketSelectionRequest> tickets,
 
         @Valid
-        List<BookingFoodRequest> foods
+        List<BookingFoodRequest> foods,
+
+        Integer loyaltyPointsToRedeem
 ) {
     public HoldSeatsRequest(Long showtimeId, List<Long> seatIds) {
-        this(showtimeId, seatIds, null, false, null, null);
+        this(showtimeId, seatIds, null, false, null, null, null);
     }
 }
