@@ -82,6 +82,7 @@ public class CinemaMapper {
                 showtime.getStudentCouplePrice(),
                 showtime.isWeekendSurcharge(),
                 showtime.isHolidaySurcharge(),
+                showtime.getLateNightSurchargeAmount(),
                 showtime.getSurchargeAmount(),
                 showtime.getStatus(),
                 showtime.getCreatedAt(),

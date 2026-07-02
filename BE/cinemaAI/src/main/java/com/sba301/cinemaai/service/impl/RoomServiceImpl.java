@@ -121,8 +121,10 @@ public class RoomServiceImpl implements RoomService {
             throw new ConflictException("Room has no seats to replace; create seats first");
         }
         validateSeatLayout(room, request);
-        seatRepository.deleteByRoom(room);
-        seatRowRepository.deleteByRoom(room);
+        seatRepository.deleteAll(existingSeats);
+        seatRepository.flush();
+        seatRowRepository.deleteAll(seatRowRepository.findByRoom(room));
+        seatRowRepository.flush();
         applySeatLayout(room, request);
         return getSeats(roomId);
     }

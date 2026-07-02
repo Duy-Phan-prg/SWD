@@ -455,7 +455,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 request.childCouplePrice(),
                 request.studentCouplePrice(),
                 Boolean.TRUE.equals(request.weekendSurcharge()),
-                Boolean.TRUE.equals(request.holidaySurcharge())
+                Boolean.TRUE.equals(request.holidaySurcharge()),
+                request.lateNightSurchargeAmount()
         );
     }
 
@@ -473,7 +474,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 request.childCouplePrice(),
                 request.studentCouplePrice(),
                 Boolean.TRUE.equals(request.weekendSurcharge()),
-                Boolean.TRUE.equals(request.holidaySurcharge())
+                Boolean.TRUE.equals(request.holidaySurcharge()),
+                request.lateNightSurchargeAmount()
         );
     }
 
@@ -499,7 +501,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             java.math.BigDecimal childCouplePrice,
             java.math.BigDecimal studentCouplePrice,
             boolean weekendSurcharge,
-            boolean holidaySurcharge
+            boolean holidaySurcharge,
+            java.math.BigDecimal lateNightSurchargeAmount
     ) {
         java.math.BigDecimal adultStandard = defaultMoney(adultStandardPrice, showtime.getBasePrice());
         java.math.BigDecimal childStandard = defaultMoney(childStandardPrice, adultStandard);
@@ -522,6 +525,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         showtime.setStudentCouplePrice(studentCouple);
         showtime.setWeekendSurcharge(weekendSurcharge);
         showtime.setHolidaySurcharge(holidaySurcharge);
+        showtime.setLateNightSurchargeAmount(defaultMoney(lateNightSurchargeAmount, java.math.BigDecimal.valueOf(20_000)));
         showtime.setBasePrice(adultStandard);
         showtime.setVipPrice(adultVip);
         showtime.setCouplePrice(adultCouple);

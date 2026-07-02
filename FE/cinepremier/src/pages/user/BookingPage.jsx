@@ -10,7 +10,7 @@ import { useUiStore } from '../../stores/useUiStore';
 const TICKET_TYPE_META = {
   adult: { apiType: 'ADULT', age: 22, label: 'Người lớn', short: 'NL' },
   child: { apiType: 'CHILD', age: 10, label: 'Trẻ em', short: 'TE' },
-  student: { apiType: 'STUDENT', age: 18, label: 'Học sinh/SV', short: 'SV' }
+  student: { apiType: 'STUDENT', age: 18, label: 'Sinh viên', short: 'SV' }
 };
 
 const CHILD_TICKET_MAX_AGE = 12;
@@ -42,6 +42,17 @@ const normalizeSeatTypeKey = (seatType) => {
   if (normalized === 'VIP') return 'vip';
   if (normalized === 'COUPLE') return 'couple';
   return 'standard';
+};
+
+const getCoupleSeatPair = (seat, allSeats) => {
+  if (!seat || normalizeSeatTypeKey(seat.type) !== 'couple') return seat ? [seat] : [];
+  const rowSeats = allSeats
+    .filter(candidate => candidate.row === seat.row && normalizeSeatTypeKey(candidate.type) === 'couple')
+    .sort((a, b) => (a.displayColumn - b.displayColumn) || (a.col - b.col));
+  const seatIndex = rowSeats.findIndex(candidate => candidate.id === seat.id);
+  if (seatIndex < 0) return [seat];
+  const pairStart = seatIndex % 2 === 0 ? seatIndex : seatIndex - 1;
+  return rowSeats.slice(pairStart, pairStart + 2);
 };
 
 const ticketPriceField = (ticketType, seatType) => {
@@ -157,6 +168,8 @@ export default function BookingView() {
   // Booking & payment flow
   const [bookingStep, setBookingStep] = useState('seats');
   const [holdBookingId, setHoldBookingId] = useState(null);
+  const [holdExpiresAt, setHoldExpiresAt] = useState(null);
+  const [holdSecondsLeft, setHoldSecondsLeft] = useState(null);
   const [isHolding, setIsHolding] = useState(false);
   const [paymentState, setPaymentState] = useState('booking');
   const [ticketPriceValidation, setTicketPriceValidation] = useState(null);
@@ -251,23 +264,42 @@ export default function BookingView() {
   // Seat selection
   const handleSelectSeat = (seat) => {
     if (seat.isBooked) return;
-    const alreadySelected = selectedSeats.find(s => s.id === seat.id);
+    const seatGroup = getCoupleSeatPair(seat, seats);
+    const isCoupleSeat = normalizeSeatTypeKey(seat.type) === 'couple';
+    const isCoupleSelection = isCoupleSeat && seatGroup.length === 2;
+    if (isCoupleSeat && (seatGroup.length !== 2 || seatGroup.some(groupSeat => groupSeat.isBooked))) {
+      showToast('Ghế đôi phải chọn trọn cặp, hiện có ghế trong cặp không khả dụng.');
+      return;
+    }
+
+    const selectedSeatIds = new Set(selectedSeats.map(s => s.id));
+    const alreadySelected = seatGroup.some(groupSeat => selectedSeatIds.has(groupSeat.id));
     if (alreadySelected) {
-      setSelectedSeats(prev => prev.filter(s => s.id !== seat.id));
+      setSelectedSeats(prev => prev.filter(s => !seatGroup.some(groupSeat => groupSeat.id === s.id)));
     } else {
-      if (selectedSeats.length >= totalTickets) {
+      if (selectedSeats.length + seatGroup.length > totalTickets) {
+        if (isCoupleSelection) {
+          showToast('Ghế đôi cần chọn đủ 2 vé. Vui lòng tăng tổng số lượng vé trước khi chọn cặp ghế này.');
+          return;
+        }
         showToast(`Bạn đã chọn đủ ${totalTickets} vé. Tăng số lượng vé để chọn thêm ghế.`);
         return;
       }
       // Ticket type is selected independently from the seat type.
-      const currentAdults = selectedSeats.filter(s => s.ticketType === 'adult').length;
-      const currentChildren = selectedSeats.filter(s => s.ticketType === 'child').length;
-      const ticketType = currentAdults < adultCount
-        ? 'adult'
-        : currentChildren < childCount
-          ? 'child'
-          : 'student';
-      setSelectedSeats(prev => [...prev, { ...seat, ticketType }]);
+      setSelectedSeats(prev => {
+        const next = [...prev];
+        seatGroup.forEach(groupSeat => {
+          const currentAdults = next.filter(s => s.ticketType === 'adult').length;
+          const currentChildren = next.filter(s => s.ticketType === 'child').length;
+          const ticketType = currentAdults < adultCount
+            ? 'adult'
+            : currentChildren < childCount
+              ? 'child'
+              : 'student';
+          next.push({ ...groupSeat, ticketType });
+        });
+        return next;
+      });
     }
   };
 
@@ -392,6 +424,10 @@ export default function BookingView() {
   const subTotal = priceTickets + priceCombos;
   const discountAmount = 0;
   const totalAmount = subTotal;
+  const holdCountdownLabel = holdSecondsLeft === null
+    ? '--:--'
+    : `${String(Math.floor(holdSecondsLeft / 60)).padStart(2, '0')}:${String(holdSecondsLeft % 60).padStart(2, '0')}`;
+  const holdProgressPercent = holdSecondsLeft === null ? 100 : Math.max(0, Math.min(100, (holdSecondsLeft / 60) * 100));
 
   const refreshSeatMap = async () => {
     if (!selectedShowtime?.id) return;
@@ -409,6 +445,8 @@ export default function BookingView() {
 
     const { accessToken } = getStoredAuth();
     setHoldBookingId(null);
+    setHoldExpiresAt(null);
+    setHoldSecondsLeft(null);
     setTicketPriceValidation(null);
 
     if (!accessToken) return;
@@ -419,6 +457,71 @@ export default function BookingView() {
     } finally {
       refreshSeatMap();
     }
+  };
+
+  useEffect(() => {
+    if (!holdExpiresAt || !['payment_method', 'payment_processing', 'payment_failed'].includes(paymentState)) return undefined;
+
+    const tick = () => {
+      const expiresAtMs = new Date(holdExpiresAt).getTime();
+      if (Number.isNaN(expiresAtMs)) {
+        setHoldSecondsLeft(null);
+        return;
+      }
+      const secondsLeft = Math.max(0, Math.ceil((expiresAtMs - Date.now()) / 1000));
+      setHoldSecondsLeft(secondsLeft);
+
+      if (secondsLeft === 0) {
+        showToast('Thời gian giữ ghế đã hết. Vui lòng chọn ghế lại.');
+        setPaymentState('booking');
+        setBookingStep('seats');
+        releaseHeldBooking();
+      }
+    };
+
+    tick();
+    const intervalId = window.setInterval(tick, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [holdExpiresAt, paymentState]);
+
+  const isHoldActive = () => {
+    if (!holdBookingId) {
+      showToast('Không tìm thấy booking. Vui lòng chọn ghế lại.');
+      setPaymentState('booking');
+      return false;
+    }
+    if (holdExpiresAt && new Date(holdExpiresAt).getTime() <= Date.now()) {
+      showToast('Thời gian giữ ghế đã hết. Vui lòng chọn ghế lại.');
+      setPaymentState('booking');
+      setBookingStep('seats');
+      releaseHeldBooking();
+      return false;
+    }
+    return true;
+  };
+
+  const isSeatHeldByCurrentUser = (seat) => Boolean(
+    holdBookingId
+    && holdSecondsLeft !== null
+    && holdSecondsLeft > 0
+    && selectedSeats.some((selectedSeat) => selectedSeat.id === seat.id)
+  );
+
+  const renderSeatHoldCountdown = (seat) => (
+    isSeatHeldByCurrentUser(seat) ? (
+      <span className={`pointer-events-none absolute -top-2 left-1/2 z-20 -translate-x-1/2 border px-1 py-0.5 text-[7px] font-black leading-none shadow-lg ${holdSecondsLeft <= 15 ? 'border-red-400 bg-red-500 text-white' : 'border-emerald-300 bg-emerald-500 text-black'}`}>
+        {holdCountdownLabel}
+      </span>
+    ) : null
+  );
+
+  const hasPartialCoupleSelection = () => {
+    const selectedSeatIds = new Set(selectedSeats.map(seat => seat.id));
+    return selectedSeats.some(seat => {
+      if (normalizeSeatTypeKey(seat.type) !== 'couple') return false;
+      const pair = getCoupleSeatPair(seat, seats);
+      return pair.length !== 2 || pair.some(pairSeat => !selectedSeatIds.has(pairSeat.id));
+    });
   };
 
   const handleBackToBooking = async () => {
@@ -438,6 +541,10 @@ export default function BookingView() {
       showToast(`Vui lòng chọn đủ ${totalTickets} ghế theo số lượng vé.`);
       return false;
     }
+    if (hasPartialCoupleSelection()) {
+      showToast('Ghế đôi phải chọn đủ cả cặp.');
+      return false;
+    }
     return true;
   };
 
@@ -449,6 +556,10 @@ export default function BookingView() {
 
   // Proceed: hold seats on BE first
   const handleProceedToPayment = async () => {
+    if (hasPartialCoupleSelection()) {
+      showToast('Ghế đôi phải chọn đủ cả cặp.');
+      return;
+    }
     if (selectedSeats.length === 0) { showToast("Vui lòng chọn ít nhất một ghế."); return; }
     if (!selectedShowtime) { showToast("Vui lòng chọn suất chiếu."); return; }
     if (selectedSeats.length !== totalTickets) {
@@ -491,6 +602,10 @@ export default function BookingView() {
       });
       console.log('[holdSeats] result:', holdResult);
       setHoldBookingId(holdResult.id);
+      setHoldExpiresAt(holdResult.holdExpiresAt || holdResult.expiresAt || null);
+      setHoldSecondsLeft(holdResult.holdExpiresAt
+        ? Math.max(0, Math.ceil((new Date(holdResult.holdExpiresAt).getTime() - Date.now()) / 1000))
+        : 60);
 
       setPaymentState('payment_method');
     } catch (err) {
@@ -510,7 +625,7 @@ export default function BookingView() {
   };
 
   const handleMockPayment = async () => {
-    if (!holdBookingId) { showToast('Không tìm thấy booking.'); return; }
+    if (!isHoldActive()) return;
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
       showToast('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
@@ -529,11 +644,7 @@ export default function BookingView() {
 
   // Payment via VNPAY
   const handleVnpayPayment = async () => {
-    if (!holdBookingId) {
-      showToast('Không tìm thấy booking. Vui lòng chọn ghế lại.');
-      setPaymentState('booking');
-      return;
-    }
+    if (!isHoldActive()) return;
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
       showToast('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
@@ -618,7 +729,7 @@ export default function BookingView() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-lg font-serif italic text-red-500 uppercase tracking-wider font-bold">Thanh Toán Thất Bại</h3>
+              <h3 className="text-lg font-sans text-red-500 uppercase tracking-wide font-bold">Thanh Toán Thất Bại</h3>
               <p className="text-[11px] text-zinc-400 max-w-sm mx-auto leading-relaxed uppercase tracking-wider">
                 Giao dịch của bạn bị huỷ hoặc không thể kết nối tới tài khoản nguồn ngân hàng liên kết.
               </p>
@@ -667,7 +778,7 @@ export default function BookingView() {
               </div>
               <div>
                 <p className="text-[10px] font-mono tracking-[0.3em] text-emerald-400 uppercase font-black">Thanh toán thành công</p>
-                <h2 className="text-2xl font-serif italic text-white uppercase tracking-wider font-bold mt-1">Đặt Vé Thành Công!</h2>
+                <h2 className="text-2xl font-sans text-white uppercase tracking-wide font-bold mt-1">Đặt Vé Thành Công!</h2>
                 <p className="text-xs text-zinc-500 mt-1">Vé đã được xác nhận và lưu vào tài khoản của bạn</p>
               </div>
             </div>
@@ -688,7 +799,7 @@ export default function BookingView() {
                 />
                 <div className="space-y-2 min-w-0">
                   <span className="text-[8px] tracking-widest bg-red-950 text-red-400 px-2 py-0.5 border border-red-500/30 font-bold inline-block">{movie.ageRating}</span>
-                  <h3 className="text-base font-serif italic text-white uppercase font-black leading-tight">{movie.title}</h3>
+                  <h3 className="text-base font-sans text-white uppercase font-black leading-tight">{movie.title}</h3>
                   <p className="text-[10px] text-zinc-400 uppercase tracking-widest truncate">{movie.englishTitle}</p>
                 </div>
               </div>
@@ -733,7 +844,7 @@ export default function BookingView() {
                 )}
                 {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-sky-400">
-                    <span>Học sinh/SV ×{selectedSeats.filter(s => s.ticketType === 'student').length}</span>
+                    <span>Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}</span>
                     <span>{formatVnd(getSelectedSeatTotal('student'))}</span>
                   </div>
                 )}
@@ -810,7 +921,7 @@ export default function BookingView() {
                 />
                 <div className="space-y-1">
                   <span className="text-[8px] tracking-widest bg-red-950 text-red-400 px-1 py-0.5 border border-red-500/30 font-bold">{movie.ageRating}</span>
-                  <h4 className="text-xs font-serif italic text-white uppercase font-black tracking-wider leading-tight">{movie.title}</h4>
+                  <h4 className="text-xs font-sans text-white uppercase font-black tracking-wide leading-tight">{movie.title}</h4>
                   <p className="text-[10px] text-zinc-300 font-bold uppercase tracking-wider truncate">{movie.englishTitle}</p>
                 </div>
               </div>
@@ -833,6 +944,38 @@ export default function BookingView() {
                   <span>Số ghế đã chọn ({selectedSeats.length}):</span>
                   <span className="text-amber-400 font-bold">{selectedSeats.map(s => s.id).join(', ')}</span>
                 </div>
+                <div className="flex justify-between border-b border-white/5 pb-2">
+                  <span>Giữ ghế còn lại:</span>
+                  <span className={`font-black ${holdSecondsLeft !== null && holdSecondsLeft <= 15 ? 'text-red-400' : 'text-emerald-400'}`}>{holdCountdownLabel}</span>
+                </div>
+
+                {selectedSeats.length > 0 && (
+                  <div className="border-b border-white/5 pb-3">
+                    <span className="mb-2 block text-zinc-500">Vị trí đang giữ:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSeats.map((seat) => {
+                        const isCouple = normalizeSeatTypeKey(seat.type) === 'couple';
+                        const isVip = normalizeSeatTypeKey(seat.type) === 'vip';
+                        return (
+                          <div
+                            key={seat.id}
+                            className={`relative grid h-10 w-10 place-items-center border font-mono text-xs font-black ${isCouple
+                              ? 'border-rose-500/60 bg-rose-950/30 text-rose-300'
+                              : isVip
+                                ? 'border-yellow-500/60 bg-yellow-950/30 text-yellow-300'
+                                : 'border-white/30 bg-neutral-950 text-white'
+                              }`}
+                          >
+                            <span className={`absolute -top-2 left-1/2 -translate-x-1/2 border px-1 py-0.5 text-[7px] font-black leading-none ${holdSecondsLeft !== null && holdSecondsLeft <= 15 ? 'border-red-400 bg-red-500 text-white' : 'border-emerald-300 bg-emerald-500 text-black'}`}>
+                              {holdCountdownLabel}
+                            </span>
+                            {seat.id}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {Object.entries(selectedCombos).length > 0 && (
                   <div className="space-y-2 pt-2 text-[9px] font-sans tracking-tight text-zinc-500">
@@ -903,6 +1046,18 @@ export default function BookingView() {
                     <div><span className="text-zinc-600 block text-[12px]">SỐ TIỀN:</span><span className="text-white font-bold text-sm">{totalAmount.toLocaleString()}đ</span></div>
                     <div><span className="text-zinc-600 block text-[12px]">GHẾ:</span><span className="text-amber-400 font-bold">{selectedSeats.map(s => s.id).join(', ')}</span></div>
                   </div>
+                  <div className="border-t border-white/5 pt-3">
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider">
+                      <span className="text-zinc-500">Thời gian giữ ghế</span>
+                      <span className={`font-black ${holdSecondsLeft !== null && holdSecondsLeft <= 15 ? 'text-red-400' : 'text-emerald-400'}`}>{holdCountdownLabel}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden bg-neutral-900">
+                      <div
+                        className={`h-full transition-all duration-500 ${holdSecondsLeft !== null && holdSecondsLeft <= 15 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${holdProgressPercent}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -921,7 +1076,7 @@ export default function BookingView() {
 
                 </button>
                 <p className="text-[9px] text-zinc-600 text-center font-mono uppercase tracking-wider">
-                  Bạn sẽ được chuyển sang cổng VNPAY · Ghế giữ trong 2 phút
+                  Bạn sẽ được chuyển sang cổng VNPAY · Ghế giữ trong 1 phút
                 </p>
               </div>
 
@@ -948,7 +1103,7 @@ export default function BookingView() {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <h1 className="text-xl font-serif text-white uppercase tracking-wider font-light italic">Đặt Vé Trực Tuyến</h1>
+            <h1 className="text-xl font-sans text-white uppercase tracking-wide font-black">Đặt Vé Trực Tuyến</h1>
             <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-1">TÁC PHẨM: {movie.title} • {movie.ageRating}</p>
           </div>
         </div>
@@ -1082,26 +1237,28 @@ export default function BookingView() {
                       </div>
                     </div>
                     {/* Child */}
-                    <div className={`flex items-center gap-3 ${childTicketsAllowed ? '' : 'opacity-45'}`}>
-                      <div>
-                        <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Trẻ em</p>
-                        <p className="text-[9px] text-neutral-500 font-mono">
-                          {childTicketsAllowed
-                            ? `Từ ${getTicketStartingPrice('child') !== null ? formatVnd(getTicketStartingPrice('child')) : '—'}/vé`
-                            : `Không bán cho phim ${movie?.ageRating || '16+'}`}
-                        </p>
+                    {childTicketsAllowed && (
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Trẻ em</p>
+                          <p className="text-[9px] text-neutral-500 font-mono">
+                            {childTicketsAllowed
+                              ? `Từ ${getTicketStartingPrice('child') !== null ? formatVnd(getTicketStartingPrice('child')) : '—'}/vé`
+                              : `Không bán cho phim ${movie?.ageRating || '16+'}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 border border-amber-500/20 px-2 py-1 bg-black">
+                          <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">−</button>
+                          <span className="text-amber-400 font-mono font-bold w-5 text-center text-sm">{childCount}</span>
+                          <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.min(8 - adultCount - studentCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-amber-400 w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">+</button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 border border-amber-500/20 px-2 py-1 bg-black">
-                        <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">−</button>
-                        <span className="text-amber-400 font-mono font-bold w-5 text-center text-sm">{childCount}</span>
-                        <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.min(8 - adultCount - studentCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-amber-400 w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">+</button>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Student */}
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">Học sinh/SV</p>
+                        <p className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">Sinh viên</p>
                         <p className="text-[9px] text-neutral-500 font-mono">Từ {getTicketStartingPrice('student') !== null ? formatVnd(getTicketStartingPrice('student')) : '—'}/vé</p>
                       </div>
                       <div className="flex items-center gap-2 border border-sky-500/20 px-2 py-1 bg-black">
@@ -1227,6 +1384,7 @@ export default function BookingView() {
                                     const s1Selected = !!selectedSeats.find(s => s.id === seat1.id);
                                     const s2Selected = !!selectedSeats.find(s => s.id === seat2.id);
                                     const isAnySelected = s1Selected || s2Selected;
+                                    const isPairBooked = seat1.isBooked || seat2.isBooked;
 
                                     return (
                                       <div
@@ -1238,29 +1396,31 @@ export default function BookingView() {
                                       >
                                         {/* Left member seat with large clear sequence numbering */}
                                         <button
-                                          disabled={seat1.isBooked}
+                                          disabled={isPairBooked}
                                           onClick={() => handleSelectSeat(seat1)}
-                                          className={`h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${seat1.isBooked
+                                          className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${isPairBooked
                                             ? 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
                                             : s1Selected
                                               ? 'bg-rose-500 text-white font-black'
                                               : 'bg-transparent text-rose-400 hover:bg-rose-950/20'
                                             }`}
                                         >
+                                          {renderSeatHoldCountdown(seat1)}
                                           {seat1.col}
                                         </button>
                                         <div className="w-[1px] bg-rose-950 h-9 sm:h-10"></div>
                                         {/* Right member seat with large clear sequence numbering */}
                                         <button
-                                          disabled={seat2.isBooked}
+                                          disabled={isPairBooked}
                                           onClick={() => handleSelectSeat(seat2)}
-                                          className={`h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${seat2.isBooked
+                                          className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${isPairBooked
                                             ? 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
                                             : s2Selected
                                               ? 'bg-rose-500 text-white font-black'
                                               : 'bg-transparent text-rose-400 hover:bg-rose-950/20'
                                             }`}
                                         >
+                                          {renderSeatHoldCountdown(seat2)}
                                           {seat2.col}
                                         </button>
                                       </div>
@@ -1284,7 +1444,7 @@ export default function BookingView() {
                                         disabled={seat.isBooked}
                                         onClick={() => handleSelectSeat(seat)}
                                         title={isSelected ? `${ticketMeta?.label || 'Người lớn'} · ${formatVnd(displayPrice)}` : `${formatVnd(displayPrice)}`}
-                                        className={`h-9 w-9 sm:h-10.5 sm:w-10.5 text-[11.5px] sm:text-[14.5px] font-black font-mono transition-all duration-150 rounded-none border ${seat.isBooked
+                                        className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-[11.5px] sm:text-[14.5px] font-black font-mono transition-all duration-150 rounded-none border ${seat.isBooked
                                           ? 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
                                           : isSelected && isChild
                                             ? 'bg-amber-400 text-black border-amber-400 font-black scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
@@ -1295,6 +1455,7 @@ export default function BookingView() {
                                                 : 'border-white/15 bg-[#121212] text-neutral-200 hover:border-white/50 hover:text-white hover:scale-105'
                                           }`}
                                       >
+                                        {renderSeatHoldCountdown(seat)}
                                         {seat.col}
                                       </button>
                                     );
@@ -1373,7 +1534,7 @@ export default function BookingView() {
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
                   <div className="space-y-1.5">
-                    <h3 className="text-sm font-serif italic text-white uppercase tracking-widest flex items-center gap-2">
+                    <h3 className="text-sm font-sans text-white uppercase tracking-wide font-black flex items-center gap-2">
                       <ShoppingBag className="h-4 w-4 text-amber-500 animate-pulse" /> THỰC ĐƠN BẮP NƯỚC CINEPREMIER
                     </h3>
                     <p className="text-[10px] text-zinc-500 leading-normal">
@@ -1428,7 +1589,7 @@ export default function BookingView() {
                           {/* Concessions labels */}
                           <div className="space-y-1">
                             <span className="text-[7.5px] font-mono text-zinc-600 block tracking-widest uppercase">CINE-CONCESSION</span>
-                            <h4 className="text-[11.5px] font-serif italic font-bold text-white group-hover:text-amber-300 transition-colors leading-tight line-clamp-1">{item.name}</h4>
+                            <h4 className="text-[11.5px] font-sans font-bold text-white group-hover:text-amber-300 transition-colors leading-tight line-clamp-1">{item.name}</h4>
                             <p className="text-[9px] text-[#8e8e8e] leading-snug line-clamp-2 h-7">{item.description}</p>
                             <p className={`text-[8px] font-mono uppercase tracking-widest ${maxQuantity === 0 ? 'text-rose-400' : maxQuantity <= 2 ? 'text-amber-400' : 'text-emerald-400'}`}>
                               Còn {stockLimit.toLocaleString('vi-VN')} phần
@@ -1502,7 +1663,7 @@ export default function BookingView() {
 
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div>
-                  <h3 className="text-sm font-serif text-white uppercase flex items-center gap-2 italic">
+                  <h3 className="text-sm font-sans text-white uppercase tracking-wide font-black flex items-center gap-2">
                     <ShoppingBag className="h-4 w-4 text-white" /> CinePremier Concessions
                   </h3>
                   <p className="text-[11px] text-neutral-500 font-sans mt-0.5">Bắp sấy bơ Pháp nóng giòn và thức uống ga mạnh mát lạnh sảng khoái.</p>
@@ -1538,7 +1699,7 @@ export default function BookingView() {
 
                       <div className="flex-1 flex flex-col justify-between">
                         <div className="space-y-1">
-                          <h4 className="text-xs font-serif italic text-white group-hover:text-zinc-300 transition-colors leading-snug">{item.name}</h4>
+                          <h4 className="text-xs font-sans font-bold text-white group-hover:text-zinc-300 transition-colors leading-snug">{item.name}</h4>
                           <p className="text-[10px] text-neutral-500 leading-normal line-clamp-2">{item.description}</p>
                           <p className={`text-[8px] font-mono uppercase tracking-widest ${maxQuantity === 0 ? 'text-rose-400' : maxQuantity <= 2 ? 'text-amber-400' : 'text-emerald-400'}`}>
                             Còn {stockLimit.toLocaleString('vi-VN')} phần
@@ -1618,7 +1779,7 @@ export default function BookingView() {
             />
             <div className="min-w-0 space-y-1.5 pt-0.5">
               <span className="text-[8px] tracking-[0.1em] border border-red-500/50 bg-red-950/20 px-1.5 py-0.5 text-red-400 font-bold">{movie.ageRating}</span>
-              <h3 className="text-sm font-serif italic text-white truncate uppercase">{movie.title}</h3>
+              <h3 className="text-sm font-sans font-black text-white truncate uppercase">{movie.title}</h3>
               <p className="text-[9.5px] text-neutral-300 font-bold truncate leading-none uppercase tracking-widest">{movie.englishTitle}</p>
             </div>
           </div>
@@ -1683,7 +1844,7 @@ export default function BookingView() {
             )}
             {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
               <div className="flex justify-between">
-                <span className="text-sky-400">Học sinh/SV ×{selectedSeats.filter(s => s.ticketType === 'student').length}:</span>
+                <span className="text-sky-400">Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}:</span>
                 <span className="font-mono text-sky-400">{formatVnd(getSelectedSeatTotal('student'))}</span>
               </div>
             )}

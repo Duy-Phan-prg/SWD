@@ -1054,7 +1054,7 @@ export default function AdminDashboard({
 
     const computedStatus = resolveMovieStatusFromDates(formData.releaseDate, formData.endDate);
     const payload = {
-      title: formData.title.trim(),
+      title: formData.title.trim().toLocaleUpperCase('vi-VN'),
       englishTitle: formData.englishTitle.trim(),
       description: formData.synopsis.trim(),
       trailerUrl: formData.trailerUrl.trim(),

@@ -28,6 +28,7 @@ public record ShowtimeResponse(
         BigDecimal studentCouplePrice,
         boolean weekendSurcharge,
         boolean holidaySurcharge,
+        BigDecimal lateNightSurchargeAmount,
         BigDecimal surchargeAmount,
         ShowtimeStatus status,
         LocalDateTime createdAt,

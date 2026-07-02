@@ -53,6 +53,17 @@ const groupSeatsForDisplay = (rowSeats) => {
   return groups;
 };
 
+const getAdminCoupleSeatGroup = (seat, allSeats, forceCouple = false) => {
+  if (!seat || (seat.seatType !== 'COUPLE' && !forceCouple)) return seat ? [seat] : [];
+  const rowSeats = allSeats
+    .filter(candidate => candidate.rowLabel === seat.rowLabel && (forceCouple || candidate.seatType === 'COUPLE'))
+    .sort((a, b) => (a.displayColumn - b.displayColumn) || (a.seatNumber - b.seatNumber));
+  const seatIndex = rowSeats.findIndex(candidate => candidate.id === seat.id);
+  if (seatIndex < 0) return [seat];
+  const pairStart = seatIndex % 2 === 0 ? seatIndex : seatIndex - 1;
+  return rowSeats.slice(pairStart, pairStart + 2);
+};
+
 const rowLabelFromIndex = (index) => {
   let value = index;
   let label = '';
@@ -70,6 +81,49 @@ const buildLayoutRows = (room, seatType) => Array.from({ length: room?.rowCount 
   seatType,
   seatNumbers: Array.from({ length: room?.columnCount || 0 }, (_, seatIndex) => seatIndex + 1).join(', ')
 }));
+
+const buildSeatNumbers = (count) => Array.from({ length: Math.max(0, Number(count) || 0) }, (_, seatIndex) => seatIndex + 1).join(', ');
+
+const syncLayoutRowsToRoomSize = (rows, room, seatType) => {
+  const rowCount = Math.max(0, Number(room?.rowCount) || 0);
+  const columnCount = Math.max(0, Number(room?.columnCount) || 0);
+  const sourceRows = rows?.length ? rows : buildLayoutRows(room, seatType);
+  return Array.from({ length: rowCount }, (_, index) => {
+    const displayOrder = index + 1;
+    const existingRow = sourceRows.find((row) => Number(row.displayOrder) === displayOrder) || sourceRows[index];
+    return {
+      rowLabel: existingRow?.rowLabel || rowLabelFromIndex(index),
+      displayOrder,
+      startColumn: 1,
+      seatType: existingRow?.seatType || seatType,
+      seatNumbers: buildSeatNumbers(columnCount)
+    };
+  });
+};
+
+const buildPreviewSeatsFromLayoutRows = (rows) => rows
+  .flatMap((row) => {
+    const rowLabel = String(row.rowLabel || '').trim().toUpperCase();
+    const displayOrder = Number(row.displayOrder) || 1;
+    const startColumn = Number(row.startColumn) || 1;
+    return String(row.seatNumbers || '')
+      .split(',')
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isInteger(value) && value > 0)
+      .map((seatNumber, index) => ({
+        id: `draft-${rowLabel}-${seatNumber}-${index}`,
+        seatRowId: `draft-row-${displayOrder}`,
+        rowLabel,
+        displayOrder,
+        seatNumber,
+        displayColumn: startColumn + index,
+        startColumn,
+        seatType: row.seatType,
+        status: 'AVAILABLE',
+        isDraft: true
+      }));
+  })
+  .sort((a, b) => a.displayOrder - b.displayOrder || a.displayColumn - b.displayColumn);
 
 const buildLayoutRowsFromSeats = (currentSeats) => Object.values(currentSeats.reduce((groups, seat) => {
   if (!groups[seat.seatRowId]) {
@@ -102,15 +156,37 @@ export default function AdminRoomsPanel({ ctx }) {
   const [seatForm, setSeatForm] = useState({ seatType: 'NORMAL', status: 'AVAILABLE' });
   const [defaultSeatType, setDefaultSeatType] = useState('NORMAL');
   const [layoutRows, setLayoutRows] = useState([]);
+  const [isSeatLayoutDraft, setIsSeatLayoutDraft] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) || null;
-  const groupedSeats = useMemo(() => seats.reduce((groups, seat) => {
+  const visibleSeats = useMemo(
+    () => (isSeatLayoutDraft ? buildPreviewSeatsFromLayoutRows(layoutRows) : seats),
+    [isSeatLayoutDraft, layoutRows, seats]
+  );
+  const groupedSeats = useMemo(() => visibleSeats.reduce((groups, seat) => {
     (groups[seat.rowLabel] ||= []).push(seat);
     return groups;
-  }, {}), [seats]);
+  }, {}), [visibleSeats]);
+  const selectedSeatGroup = useMemo(
+    () => getAdminCoupleSeatGroup(selectedSeat, visibleSeats, seatForm.seatType === 'COUPLE'),
+    [selectedSeat, visibleSeats, seatForm.seatType]
+  );
+  const selectedSeatGroupIds = useMemo(
+    () => new Set(selectedSeatGroup.map(seat => seat.id)),
+    [selectedSeatGroup]
+  );
+  const selectedSeatLabel = selectedSeatGroup.length > 1
+    ? selectedSeatGroup.map(seat => `${seat.rowLabel}${seat.seatNumber}`).join(' - ')
+    : selectedSeat
+      ? `${selectedSeat.rowLabel}${selectedSeat.seatNumber}`
+      : '';
+  const layoutSeatCount = useMemo(
+    () => layoutRows.reduce((total, row) => total + countSeatNumbers(row.seatNumbers || ''), 0),
+    [layoutRows]
+  );
 
   const syncRoomForm = (room) => {
     setRoomForm(room ? {
@@ -129,6 +205,7 @@ export default function AdminRoomsPanel({ ctx }) {
       const data = await adminService.getAdminRoomSeats(token, roomId);
       setSeats(data || []);
       setLayoutRows(data?.length ? buildLayoutRowsFromSeats(data) : buildLayoutRows(room, defaultSeatType));
+      setIsSeatLayoutDraft(false);
       setSelectedSeat(null);
     } catch (error) {
       showToast(error.message || 'Không thể tải sơ đồ ghế.');
@@ -148,7 +225,10 @@ export default function AdminRoomsPanel({ ctx }) {
       setSelectedRoomId(nextId);
       syncRoomForm((data || []).find((room) => room.id === nextId) || null);
       if (nextId) await loadSeats(nextId, (data || []).find((room) => room.id === nextId));
-      else setSeats([]);
+      else {
+        setSeats([]);
+        setIsSeatLayoutDraft(false);
+      }
     } catch (error) {
       showToast(error.message || 'Không thể tải danh sách phòng chiếu.');
     } finally {
@@ -171,6 +251,7 @@ export default function AdminRoomsPanel({ ctx }) {
     syncRoomForm(null);
     setSeats([]);
     setLayoutRows([]);
+    setIsSeatLayoutDraft(false);
     setSelectedSeat(null);
   };
 
@@ -211,12 +292,25 @@ export default function AdminRoomsPanel({ ctx }) {
         const token = getAdminToken();
         if (!token) return;
         try {
+          const roomSizeChanged = selectedRoom
+            && (Number(selectedRoom.rowCount) !== payload.rowCount || Number(selectedRoom.columnCount) !== payload.columnCount);
           const saved = selectedRoom
             ? await adminService.updateAdminRoom(token, selectedRoom.id, payload)
             : await adminService.createAdminRoom(token, payload);
           addAuditLog(selectedRoom ? 'Cập nhật phòng chiếu' : 'Tạo phòng chiếu', saved.name);
           showToast(selectedRoom ? 'Đã cập nhật phòng chiếu.' : 'Đã tạo phòng chiếu.');
-          await loadRooms(saved.id);
+          if (!roomSizeChanged) {
+            await loadRooms(saved.id);
+          }
+          if (roomSizeChanged) {
+            setRooms((current) => current.map((room) => (room.id === saved.id ? saved : room)));
+            setSelectedRoomId(saved.id);
+            syncRoomForm(saved);
+            setLayoutRows((current) => syncLayoutRowsToRoomSize(current, saved, defaultSeatType));
+            setIsSeatLayoutDraft(true);
+            setSelectedSeat(null);
+            showToast('Đã đồng bộ phần sắp xếp ghế theo kích thước phòng mới. Hãy lưu cách sắp xếp mới để thay sơ đồ ghế.');
+          }
         } catch (error) {
           showToast(error.message || 'Không thể lưu phòng chiếu.');
         }
@@ -309,7 +403,9 @@ export default function AdminRoomsPanel({ ctx }) {
             : await adminService.createAdminRoomSeats(token, selectedRoom.id, payload);
           setSeats(data || []);
           setLayoutRows(buildLayoutRowsFromSeats(data || []));
+          setIsSeatLayoutDraft(false);
           setSelectedSeat(null);
+          await loadSeats(selectedRoom.id, selectedRoom);
           addAuditLog(replacing ? 'Lưu sơ đồ ghế mới' : 'Tạo sơ đồ ghế', selectedRoom.name);
           showToast(replacing ? 'Đã lưu sơ đồ ghế mới.' : 'Đã tạo sơ đồ ghế.');
         } catch (error) {
@@ -320,6 +416,8 @@ export default function AdminRoomsPanel({ ctx }) {
   };
 
   const updateLayoutRow = (index, field, value) => {
+    setIsSeatLayoutDraft(true);
+    setSelectedSeat(null);
     setLayoutRows((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
   };
 
@@ -329,6 +427,8 @@ export default function AdminRoomsPanel({ ctx }) {
       return;
     }
     setDefaultSeatType(seatType);
+    setIsSeatLayoutDraft(true);
+    setSelectedSeat(null);
     setLayoutRows((current) => current.map((row) => ({ ...row, seatType })));
     showToast(`Đã áp dụng loại ghế ${seatTypeLabel(seatType)} cho tất cả các hàng.`);
   };
@@ -346,7 +446,11 @@ export default function AdminRoomsPanel({ ctx }) {
     requestConfirm(
       `Bỏ hàng ghế ${row?.rowLabel || ''}?`,
       'Hàng này sẽ được bỏ khỏi phần thiết lập. Sơ đồ đang hoạt động chỉ thay đổi sau khi bạn lưu.',
-      async () => setLayoutRows((current) => current.filter((_, rowIndex) => rowIndex !== index))
+      async () => {
+        setIsSeatLayoutDraft(true);
+        setSelectedSeat(null);
+        setLayoutRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
+      }
     );
   };
 
@@ -503,7 +607,7 @@ export default function AdminRoomsPanel({ ctx }) {
                   <Armchair className="h-5 w-5 text-cyan-400" />
                   <div>
                     <h3 className="text-sm font-black uppercase text-white">Sơ đồ ghế · {selectedRoom.name}</h3>
-                    <p className="text-xs font-semibold text-neutral-400">{seats.length} ghế đang được sắp xếp</p>
+                    <p className="text-xs font-semibold text-neutral-400">{layoutSeatCount} ghế đang được sắp xếp</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-end gap-2">
@@ -572,7 +676,7 @@ export default function AdminRoomsPanel({ ctx }) {
                 )}
               </div>
 
-              {seats.length === 0 ? (
+              {visibleSeats.length === 0 ? (
                 <div className="my-8 border border-dashed border-white/10 p-8 text-center">
                   <Armchair className="mx-auto h-7 w-7 text-neutral-700" />
                   <p className="mt-3 text-xs font-bold text-neutral-400">Phòng chưa có sơ đồ ghế</p>
@@ -581,6 +685,12 @@ export default function AdminRoomsPanel({ ctx }) {
               ) : (
                 <div className="grid gap-5 pt-5 xl:grid-cols-[minmax(0,1fr)_300px]">
                   <div className="relative min-h-[430px] min-w-0 overflow-hidden border border-cyan-500/15 bg-[radial-gradient(circle_at_top,#07151a_0%,#030708_38%,#020202_72%)] p-7 pb-20">
+                    {isSeatLayoutDraft && (
+                      <div className="absolute right-0 top-0 z-20 flex items-center gap-2 border border-r-0 border-t-0 border-amber-400/35 bg-black/75 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-300 shadow-[0_0_18px_rgba(251,191,36,0.12)] backdrop-blur">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.75)]" />
+                        Chưa lưu sơ đồ mới
+                      </div>
+                    )}
                     <div className="pointer-events-none absolute left-1/2 top-12 h-72 w-[78%] -translate-x-1/2 bg-gradient-to-b from-cyan-300/[0.13] via-cyan-300/[0.035] to-transparent [clip-path:polygon(18%_0,82%_0,100%_100%,0_100%)]" />
                     <div className="relative mx-auto mb-14 max-w-2xl">
                       <div className="h-2 rounded-[50%] bg-cyan-100 shadow-[0_0_12px_3px_rgba(103,232,249,0.8),0_0_55px_18px_rgba(34,211,238,0.22)]" />
@@ -598,8 +708,8 @@ export default function AdminRoomsPanel({ ctx }) {
                                     <button
                                       key={seat.id}
                                       title={`${seat.rowLabel}${seat.seatNumber} · ${seatTypeLabel(seat.seatType)}`}
-                                      onClick={() => chooseSeat(seat)}
-                                      className={`h-8 w-8 text-[11px] font-black shadow-[0_4px_0_rgba(0,0,0,0.7)] transition hover:-translate-y-0.5 ${seatGroup.length === 2 ? 'border-pink-200/80 bg-pink-500/65 text-white first:rounded-l last:rounded-r hover:bg-pink-400' : 'border'} ${selectedSeat?.id === seat.id
+                                      onClick={() => !isSeatLayoutDraft && chooseSeat(seat)}
+                                      className={`h-8 w-8 text-[11px] font-black shadow-[0_4px_0_rgba(0,0,0,0.7)] transition ${isSeatLayoutDraft ? 'cursor-default' : 'hover:-translate-y-0.5'} ${seatGroup.length === 2 ? 'border-pink-200/80 bg-pink-500/65 text-white first:rounded-l last:rounded-r hover:bg-pink-400' : 'border'} ${selectedSeatGroupIds.has(seat.id)
                                         ? 'bg-white text-black'
                                         : seat.status === 'UNAVAILABLE'
                                           ? 'border-rose-500/30 bg-rose-500/10 text-rose-400'
@@ -632,7 +742,7 @@ export default function AdminRoomsPanel({ ctx }) {
                       <div className="space-y-4">
                         <div>
                           <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400">Ghế đang chọn</p>
-                          <p className="mt-1 text-2xl font-black text-white">{selectedSeat.rowLabel}{selectedSeat.seatNumber}</p>
+                          <p className="mt-1 text-2xl font-black text-white">{selectedSeatLabel}</p>
                         </div>
                         <label className="block space-y-1.5">
                           <span className="text-[11px] font-black uppercase text-neutral-400">Loại ghế</span>

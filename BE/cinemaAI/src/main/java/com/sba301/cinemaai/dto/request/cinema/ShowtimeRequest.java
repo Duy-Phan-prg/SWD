@@ -72,6 +72,10 @@ public record ShowtimeRequest(
 
         Boolean holidaySurcharge,
 
+        @DecimalMin(value = "10000", message = "Late night surcharge amount must be at least 10000")
+        @DecimalMax(value = "100000", message = "Late night surcharge amount must be at most 100000")
+        BigDecimal lateNightSurchargeAmount,
+
         ShowtimeStatus status
 ) {
     public ShowtimeRequest(
@@ -90,6 +94,7 @@ public record ShowtimeRequest(
                 basePrice,
                 vipPrice,
                 couplePrice,
+                null,
                 null,
                 null,
                 null,

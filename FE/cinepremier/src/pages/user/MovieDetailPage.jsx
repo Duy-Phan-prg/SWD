@@ -44,6 +44,11 @@ const isDirectVideoUrl = (url = '') => {
   return /\.(mp4|webm|mov)(\?|#|$)/.test(value) || value.includes('/video/upload/');
 };
 
+const splitDirectorNames = (value) => String(value || '')
+  .split(/[,\n;/]+/)
+  .map((item) => item.trim())
+  .filter(Boolean);
+
 const getTrailerEmbedSrc = (url = '') => {
   const youtubeId = extractYoutubeId(url);
   if (youtubeId) {
@@ -153,6 +158,7 @@ export default function DetailView() {
     : [];
   const mainCasts = currentCasts.filter((cast) => cast.isMain);
   const supportingCasts = currentCasts.filter((cast) => !cast.isMain);
+  const directorNames = splitDirectorNames(movie.director);
 
   return (
     <div className="pb-24 space-y-12">
@@ -205,9 +211,18 @@ export default function DetailView() {
               </p>
             </div>
 
-            <p className="text-[10px] text-white font-sans uppercase tracking-[0.15em]">
-              ĐẠO DIỄN: <span className="text-white font-bold">{movie.director}</span> • RA MẮT: {movie.releaseDate}
-            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-white font-sans uppercase tracking-[0.15em] md:justify-start">
+              <span>ĐẠO DIỄN:</span>
+              {directorNames.length ? directorNames.map((directorName) => (
+                <span key={directorName} className="border border-white/15 bg-black/50 px-2 py-1 font-bold text-white">
+                  {directorName}
+                </span>
+              )) : (
+                <span className="text-white font-bold">Đang cập nhật</span>
+              )}
+              <span className="text-neutral-500">•</span>
+              <span>RA MẮT: {movie.releaseDate}</span>
+            </div>
 
             {/* Book & Trailer Action trigger buttons */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-3">

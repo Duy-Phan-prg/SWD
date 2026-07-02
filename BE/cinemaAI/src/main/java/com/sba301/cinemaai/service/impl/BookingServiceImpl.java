@@ -62,7 +62,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private static final int HOLD_MINUTES = 10;
+    private static final int HOLD_MINUTES = 1;
     private static final List<SeatRuntimeStatus> BLOCKING_SEAT_STATUSES = List.of(
             SeatRuntimeStatus.HOLDING,
             SeatRuntimeStatus.BOOKED,
@@ -92,12 +92,15 @@ public class BookingServiceImpl implements BookingService {
             throw new BadRequestException("Showtime is not open for booking");
         }
 
+        List<Long> requestedSeatIds = request.seatIds().stream().distinct().toList();
+        List<Seat> requestedSeats = requestedSeatIds.stream().map(this::findSeat).toList();
+        validateCoupleSeatPairs(requestedSeats);
+
         Booking booking = bookingRepository.save(new Booking(newBookingCode(), user, showtime,
                 LocalDateTime.now().plusMinutes(HOLD_MINUTES)));
         BigDecimal subtotal = BigDecimal.ZERO;
 
-        for (Long seatId : request.seatIds().stream().distinct().toList()) {
-            Seat seat = findSeat(seatId);
+        for (Seat seat : requestedSeats) {
             validateSeatForShowtime(showtime, seat);
             BigDecimal unitPrice = showtime.getPriceForSeatType(seat.getSeatType());
             BookingSeat bookingSeat = bookingSeatRepository.save(new BookingSeat(booking, showtime, seat, unitPrice));
@@ -448,6 +451,41 @@ public class BookingServiceImpl implements BookingService {
         if (blocked) {
             throw new ConflictException("Seat is already held or booked");
         }
+    }
+
+    private void validateCoupleSeatPairs(List<Seat> seats) {
+        Set<Long> selectedSeatIds = seats.stream()
+                .map(Seat::getId)
+                .collect(Collectors.toSet());
+        for (Seat seat : seats) {
+            if (seat.getSeatType() != SeatType.COUPLE) {
+                continue;
+            }
+            Seat partner = findCouplePartner(seat);
+            if (partner.getSeatType() != SeatType.COUPLE || !selectedSeatIds.contains(partner.getId())) {
+                throw new BadRequestException("Couple seats must be selected as a pair");
+            }
+        }
+    }
+
+    private Seat findCouplePartner(Seat seat) {
+        List<Seat> rowSeats = seatRepository.findByRoom(seat.getRoom())
+                .stream()
+                .filter(candidate -> candidate.getSeatRow().getId().equals(seat.getSeatRow().getId()))
+                .sorted((a, b) -> Integer.compare(a.getDisplayColumn(), b.getDisplayColumn()))
+                .toList();
+        int seatIndex = rowSeats.stream()
+                .map(Seat::getId)
+                .toList()
+                .indexOf(seat.getId());
+        if (seatIndex < 0 || rowSeats.size() % 2 != 0) {
+            throw new BadRequestException("Couple seats must be selected as a pair");
+        }
+        int partnerIndex = seatIndex % 2 == 0 ? seatIndex + 1 : seatIndex - 1;
+        if (partnerIndex < 0 || partnerIndex >= rowSeats.size()) {
+            throw new BadRequestException("Couple seats must be selected as a pair");
+        }
+        return rowSeats.get(partnerIndex);
     }
 
     private boolean isBlockingSeat(BookingSeat bookingSeat) {

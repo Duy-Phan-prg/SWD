@@ -93,6 +93,10 @@ public record BulkShowtimeRequest(
 
         Boolean holidaySurcharge,
 
+        @DecimalMin(value = "10000", message = "Late night surcharge amount must be at least 10000")
+        @DecimalMax(value = "100000", message = "Late night surcharge amount must be at most 100000")
+        BigDecimal lateNightSurchargeAmount,
+
         /** Status applied to every slot that does not override it. Defaults to SCHEDULED. */
         ShowtimeStatus defaultStatus,
 
