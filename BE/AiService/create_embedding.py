@@ -1,31 +1,50 @@
 """
-Chạy script này 1 lần để tạo embeddings từ movies.csv
+Chạy 1 lần để build embeddings từ MySQL.
 Usage: python create_embedding.py
 """
-import pandas as pd
 import pickle
 import os
+from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
+from service.db import get_connection
+
+load_dotenv()
 
 MODEL_NAME = "all-MiniLM-L6-v2"
-MOVIES_PATH = "data/movies.csv"
 OUTPUT_PATH = "model/movie_embeddings.pkl"
 
-model = SentenceTransformer(MODEL_NAME)
-df = pd.read_csv(MOVIES_PATH)
+conn = get_connection()
+cursor = conn.cursor(dictionary=True)
 
+cursor.execute("""
+    SELECT m.id, m.title, m.description, m.director, m.main_actors, m.poster_url,
+           GROUP_CONCAT(DISTINCT g.name SEPARATOR ' ') as genres,
+           GROUP_CONCAT(DISTINCT a.name SEPARATOR ' ') as actors
+    FROM movies m
+    LEFT JOIN movie_genres mg ON mg.movie_id = m.id
+    LEFT JOIN genres g ON g.id = mg.genre_id
+    LEFT JOIN movie_actors ma ON ma.movie_id = m.id
+    LEFT JOIN actors a ON a.id = ma.actor_id
+    GROUP BY m.id
+""")
+movies = cursor.fetchall()
+cursor.close()
+conn.close()
+
+model = SentenceTransformer(MODEL_NAME)
 embeddings = {}
-for _, row in df.iterrows():
-    text = f"{row.get('description', '')} {row.get('director', '')} {row.get('actors', '')} {row.get('genres', '')}"
+
+for movie in movies:
+    text = f"{movie.get('description') or ''} {movie.get('director') or ''} {movie.get('actors') or ''} {movie.get('genres') or ''}"
     vec = model.encode(text, convert_to_numpy=True)
-    embeddings[int(row["movieId"])] = {
+    embeddings[movie["id"]] = {
         "embedding": vec,
-        "title": str(row["title"]),
-        "posterUrl": str(row.get("posterUrl", ""))
+        "title": movie["title"],
+        "posterUrl": movie.get("poster_url", "") or ""
     }
 
 os.makedirs("model", exist_ok=True)
 with open(OUTPUT_PATH, "wb") as f:
     pickle.dump(embeddings, f)
 
-print(f"Done: {len(embeddings)} movies embedded → {OUTPUT_PATH}")
+print(f"Done: {len(embeddings)} movies → {OUTPUT_PATH}")

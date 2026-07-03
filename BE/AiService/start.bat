@@ -9,4 +9,4 @@ if not exist "model\movie_embeddings.pkl" (
 )
 
 echo [INFO] Khoi dong FastAPI tren port 8000...
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

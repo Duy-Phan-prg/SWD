@@ -1,108 +1,140 @@
-import pandas as pd
 import numpy as np
-import os
-
-RATINGS_PATH = os.path.join(os.path.dirname(__file__), "../data/ratings.csv")
-MOVIES_PATH = os.path.join(os.path.dirname(__file__), "../data/movies.csv")
+from service.db import get_connection
 
 TOP_K = 10
+TOP_USERS = 20
 
 
-class CollaborativeRecommendService:
-    def __init__(self):
-        self.ratings_df = pd.read_csv(RATINGS_PATH)
-        self.movies_df = pd.read_csv(MOVIES_PATH)
+def get_user_ratings(user_id: int) -> dict:
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT movie_id, score FROM ratings WHERE user_id = %s
+        """, (user_id,))
+        return {r["movie_id"]: r["score"] for r in cursor.fetchall()}
+    finally:
+        cursor.close()
+        conn.close()
 
-    def recommend(self, request):
-        seen = set(request.watchedMovies + request.ratedMovies)
 
-        user_ratings = self.ratings_df[
-            self.ratings_df["userId"] == request.userId
-        ]
+def get_watched_ids(user_id: int) -> set:
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT movie_id FROM watch_history WHERE user_id = %s
+        """, (user_id,))
+        return {r["movie_id"] for r in cursor.fetchall()}
+    finally:
+        cursor.close()
+        conn.close()
 
-        if user_ratings.empty:
-            return self._fallback(seen)
 
-        user_vec = self._build_user_vector(user_ratings)
-        scores = self._score_movies(user_vec, seen)
-        return scores[:TOP_K]
+def get_all_ratings() -> dict:
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT user_id, movie_id, score FROM ratings")
+        result: dict[int, dict[int, float]] = {}
+        for r in cursor.fetchall():
+            uid = r["user_id"]
+            if uid not in result:
+                result[uid] = {}
+            result[uid][r["movie_id"]] = r["score"]
+        return result
+    finally:
+        cursor.close()
+        conn.close()
 
-    def _build_user_vector(self, user_ratings) -> dict:
-        return dict(zip(user_ratings["movieId"], user_ratings["score"]))
 
-    def _score_movies(self, user_vec: dict, seen: set) -> list:
-        similar_users = self._find_similar_users(user_vec)
+def get_movie_info(movie_ids: list) -> dict:
+    if not movie_ids:
+        return {}
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        fmt = ",".join(["%s"] * len(movie_ids))
+        cursor.execute(f"SELECT id, title, poster_url FROM movies WHERE id IN ({fmt})", movie_ids)
+        return {r["id"]: r for r in cursor.fetchall()}
+    finally:
+        cursor.close()
+        conn.close()
 
-        movie_scores: dict[int, float] = {}
-        for other_user_id, sim in similar_users:
-            other_ratings = self.ratings_df[
-                self.ratings_df["userId"] == other_user_id
-            ]
-            for _, row in other_ratings.iterrows():
-                mid = int(row["movieId"])
-                if mid in seen:
-                    continue
-                movie_scores[mid] = movie_scores.get(mid, 0) + sim * row["score"]
 
-        results = []
-        for movie_id, score in movie_scores.items():
-            movie = self.movies_df[self.movies_df["movieId"] == movie_id]
-            if movie.empty:
-                continue
-            results.append({
-                "movieId": movie_id,
-                "title": str(movie.iloc[0]["title"]),
-                "posterUrl": str(movie.iloc[0].get("posterUrl", "")),
-                "similarity": round(score, 4)
-            })
+def cosine_similarity_dicts(a: dict, b: dict) -> float:
+    common = set(a.keys()) & set(b.keys())
+    if not common:
+        return 0.0
+    dot = sum(a[k] * b[k] for k in common)
+    norm_a = np.sqrt(sum(v ** 2 for v in a.values()))
+    norm_b = np.sqrt(sum(v ** 2 for v in b.values()))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
 
-        results.sort(key=lambda x: x["similarity"], reverse=True)
-        return results
 
-    def _find_similar_users(self, user_vec: dict, top_n: int = 20) -> list:
-        other_users = self.ratings_df[
-            ~self.ratings_df["userId"].isin([])
-        ]["userId"].unique()
+def recommend_collaborative(user_id: int) -> list:
+    user_vec = get_user_ratings(user_id)
+    seen = get_watched_ids(user_id) | set(user_vec.keys())
 
-        sims = []
-        for uid in other_users:
-            other_ratings = self.ratings_df[self.ratings_df["userId"] == uid]
-            other_vec = dict(zip(other_ratings["movieId"], other_ratings["score"]))
-            sim = self._cosine_similarity_dicts(user_vec, other_vec)
-            if sim > 0:
-                sims.append((uid, sim))
+    all_ratings = get_all_ratings()
 
-        sims.sort(key=lambda x: x[1], reverse=True)
-        return sims[:top_n]
+    if not user_vec:
+        return _fallback(seen)
 
-    def _cosine_similarity_dicts(self, a: dict, b: dict) -> float:
-        common = set(a.keys()) & set(b.keys())
-        if not common:
-            return 0.0
-        dot = sum(a[k] * b[k] for k in common)
-        norm_a = np.sqrt(sum(v ** 2 for v in a.values()))
-        norm_b = np.sqrt(sum(v ** 2 for v in b.values()))
-        if norm_a == 0 or norm_b == 0:
-            return 0.0
-        return dot / (norm_a * norm_b)
+    similar_users = sorted(
+        [(uid, cosine_similarity_dicts(user_vec, vec))
+         for uid, vec in all_ratings.items() if uid != user_id],
+        key=lambda x: x[1], reverse=True
+    )[:TOP_USERS]
 
-    def _fallback(self, seen: set) -> list:
-        popular = self.ratings_df.groupby("movieId")["score"].mean().reset_index()
-        popular = popular.sort_values("score", ascending=False)
-        results = []
-        for _, row in popular.iterrows():
-            mid = int(row["movieId"])
+    movie_scores: dict[int, float] = {}
+    for uid, sim in similar_users:
+        for mid, score in all_ratings[uid].items():
             if mid in seen:
                 continue
-            movie = self.movies_df[self.movies_df["movieId"] == mid]
-            if movie.empty:
+            movie_scores[mid] = movie_scores.get(mid, 0) + sim * score
+
+    top_ids = sorted(movie_scores, key=movie_scores.get, reverse=True)[:TOP_K]
+    movies = get_movie_info(top_ids)
+
+    return [
+        {
+            "movieId": mid,
+            "title": movies[mid]["title"] if mid in movies else "",
+            "posterUrl": movies[mid].get("poster_url", "") if mid in movies else "",
+            "similarity": round(movie_scores[mid], 4)
+        }
+        for mid in top_ids if mid in movies
+    ]
+
+
+def _fallback(seen: set) -> list:
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT m.id, m.title, m.poster_url, AVG(r.score) as avg_score
+            FROM movies m
+            JOIN ratings r ON r.movie_id = m.id
+            GROUP BY m.id, m.title, m.poster_url
+            ORDER BY avg_score DESC
+            LIMIT %s
+        """, (TOP_K + len(seen),))
+        results = []
+        for row in cursor.fetchall():
+            if row["id"] in seen:
                 continue
             results.append({
-                "movieId": mid,
-                "title": str(movie.iloc[0]["title"]),
-                "posterUrl": str(movie.iloc[0].get("posterUrl", "")),
-                "similarity": round(float(row["score"]) / 5.0, 4)
+                "movieId": row["id"],
+                "title": row["title"],
+                "posterUrl": row.get("poster_url", ""),
+                "similarity": round(float(row["avg_score"]) / 5.0, 4)
             })
             if len(results) >= TOP_K:
                 break
         return results
+    finally:
+        cursor.close()
+        conn.close()

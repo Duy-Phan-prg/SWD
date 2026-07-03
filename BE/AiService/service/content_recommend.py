@@ -1,41 +1,78 @@
 import numpy as np
-from service.embedding_service import EmbeddingService
+from service.db import get_connection
+from service.embedding_service import get_embedding_service
 
 TOP_K = 10
 
 
-class ContentRecommendService:
-    def __init__(self):
-        self.embedding_service = EmbeddingService()
+def get_movie_data(movie_id: int) -> dict | None:
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT m.id, m.title, m.description, m.director, m.main_actors, m.poster_url
+            FROM movies m
+            WHERE m.id = %s
+        """, (movie_id,))
+        movie = cursor.fetchone()
+        if not movie:
+            return None
 
-    def recommend(self, request):
-        text = self._build_text(request)
-        query_vec = self.embedding_service.encode(text)
+        cursor.execute("""
+            SELECT g.name FROM genres g
+            JOIN movie_genres mg ON mg.genre_id = g.id
+            WHERE mg.movie_id = %s
+        """, (movie_id,))
+        genres = [r["name"] for r in cursor.fetchall()]
 
-        embeddings = self.embedding_service.load_embeddings()
+        cursor.execute("""
+            SELECT a.name FROM actors a
+            JOIN movie_actors ma ON ma.actor_id = a.id
+            WHERE ma.movie_id = %s
+        """, (movie_id,))
+        actors = [r["name"] for r in cursor.fetchall()]
 
-        scores = []
-        for movie_id, data in embeddings.items():
-            if movie_id == request.movieId:
-                continue
-            sim = self._cosine_similarity(query_vec, data["embedding"])
-            scores.append({
-                "movieId": movie_id,
-                "title": data["title"],
-                "posterUrl": data.get("posterUrl", ""),
-                "similarity": float(sim)
-            })
+        movie["genres"] = genres
+        movie["actors"] = actors
+        return movie
+    finally:
+        cursor.close()
+        conn.close()
 
-        scores.sort(key=lambda x: x["similarity"], reverse=True)
-        return scores[:TOP_K]
 
-    def _build_text(self, request) -> str:
-        genres = " ".join(request.genres)
-        return f"{request.description} {request.director} {request.actors} {genres}"
+def build_text(movie: dict) -> str:
+    genres = " ".join(movie.get("genres") or [])
+    actors = " ".join(movie.get("actors") or [])
+    return f"{movie.get('description') or ''} {movie.get('director') or ''} {actors} {genres}"
 
-    def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
-        norm_a = np.linalg.norm(a)
-        norm_b = np.linalg.norm(b)
-        if norm_a == 0 or norm_b == 0:
-            return 0.0
-        return float(np.dot(a, b) / (norm_a * norm_b))
+
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    norm_a, norm_b = np.linalg.norm(a), np.linalg.norm(b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return float(np.dot(a, b) / (norm_a * norm_b))
+
+
+def recommend_content(movie_id: int) -> list:
+    movie = get_movie_data(movie_id)
+    if not movie:
+        return []
+
+    svc = get_embedding_service()
+    query_vec = svc.encode(build_text(movie))
+    embeddings = svc.get_embeddings()
+
+    scores = []
+    for mid, data in embeddings.items():
+        if mid == movie_id:
+            continue
+        sim = cosine_similarity(query_vec, data["embedding"])
+        scores.append({
+            "movieId": mid,
+            "title": data["title"],
+            "posterUrl": data.get("posterUrl", ""),
+            "similarity": round(float(sim), 4)
+        })
+
+    scores.sort(key=lambda x: x["similarity"], reverse=True)
+    return scores[:TOP_K]

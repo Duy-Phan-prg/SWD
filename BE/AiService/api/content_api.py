@@ -1,18 +1,9 @@
-from fastapi import APIRouter
-from service.content_recommend import ContentRecommendService
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
+from service.content_recommend import recommend_content
 
 router = APIRouter()
-service = ContentRecommendService()
-
-
-class ContentRecommendRequest(BaseModel):
-    movieId: int
-    description: str
-    director: str
-    actors: str
-    genres: List[str]
 
 
 class RecommendMovieResponse(BaseModel):
@@ -22,6 +13,9 @@ class RecommendMovieResponse(BaseModel):
     similarity: float
 
 
-@router.post("/recommend/content", response_model=List[RecommendMovieResponse])
-def recommend_content(request: ContentRecommendRequest):
-    return service.recommend(request)
+@router.get("/recommend/content/{movie_id}", response_model=List[RecommendMovieResponse])
+def content(movie_id: int):
+    result = recommend_content(movie_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    return result
