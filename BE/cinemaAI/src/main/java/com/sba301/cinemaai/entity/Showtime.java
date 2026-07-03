@@ -111,6 +111,10 @@ public class Showtime extends BaseEntity {
     @Setter
     private boolean holidaySurcharge;
 
+    @Column(name = "late_night_surcharge_amount", nullable = false, precision = 12, scale = 2)
+    @Setter
+    private BigDecimal lateNightSurchargeAmount = BigDecimal.valueOf(20_000);
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Setter
@@ -163,7 +167,7 @@ public class Showtime extends BaseEntity {
             surcharge = surcharge.add(BigDecimal.valueOf(10_000));
         }
         if (isLateNight()) {
-            surcharge = surcharge.add(BigDecimal.valueOf(20_000));
+            surcharge = surcharge.add(defaultMoney(lateNightSurchargeAmount, BigDecimal.valueOf(20_000)));
         }
         return surcharge;
     }

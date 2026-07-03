@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
@@ -86,6 +86,7 @@ export default function AdminMoviesPanel({ ctx }) {
     changeAdminSection,
     validateGenreForm,
     fetchGenres,
+    fetchActors,
     resetGenreForm,
     handleGenreSubmit,
     handleEditGenre,
@@ -122,9 +123,19 @@ export default function AdminMoviesPanel({ ctx }) {
   const [isTrailerUploading, setIsTrailerUploading] = useState(false);
   const [createdActors, setCreatedActors] = useState([]);
   const [focusedDateField, setFocusedDateField] = useState(null);
+  const [isDirectorDropdownOpen, setIsDirectorDropdownOpen] = useState(false);
+  const [directorPickerSearch, setDirectorPickerSearch] = useState('');
   const [isActorDropdownOpen, setIsActorDropdownOpen] = useState(false);
   const [actorPickerSearch, setActorPickerSearch] = useState('');
   const isMovieMediaUploading = isPosterUploading || isBannerUploading || isTrailerUploading;
+
+  useEffect(() => {
+    if (!isDirectorDropdownOpen || typeof fetchActors !== 'function') return undefined;
+    const timeoutId = window.setTimeout(() => {
+      fetchActors(directorPickerSearch.trim());
+    }, 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [isDirectorDropdownOpen, directorPickerSearch, fetchActors]);
 
   const hasReleaseDatePassed = (value) => {
     if (!value) return false;
@@ -241,6 +252,63 @@ export default function AdminMoviesPanel({ ctx }) {
     }
     return true;
   };
+
+  const splitDirectorNames = (value) => String(value || '')
+    .split(/[,\n;/]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const uppercaseMovieTitle = (value) => String(value || '').toLocaleUpperCase('vi-VN');
+
+  const uniqueByName = (names) => {
+    const seen = new Set();
+    return names.filter((name) => {
+      const key = normalizeSearchText(name);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const selectedDirectorNames = uniqueByName(splitDirectorNames(formData.director));
+  const getActorDisplayName = (actor) => actor?.name || actor?.fullName || actor?.actorName || actor?.raw?.name || '';
+  const directorOptions = uniqueByName([
+    ...selectedDirectorNames,
+    ...(actors || []).map(getActorDisplayName).filter(Boolean)
+  ])
+    .filter((name) => fuzzyIncludes(name, directorPickerSearch))
+    .sort((left, right) => {
+      const leftSelected = selectedDirectorNames.some((name) => normalizeSearchText(name) === normalizeSearchText(left)) ? 0 : 1;
+      const rightSelected = selectedDirectorNames.some((name) => normalizeSearchText(name) === normalizeSearchText(right)) ? 0 : 1;
+      if (leftSelected !== rightSelected) return leftSelected - rightSelected;
+      return left.localeCompare(right, 'vi');
+    });
+
+  const setDirectorNames = (names) => {
+    const nextNames = uniqueByName(names);
+    const nextValue = nextNames.join(', ');
+    if (nextValue.length > 255) {
+      showToast?.('Danh sách đạo diễn tối đa 255 ký tự.');
+      return;
+    }
+    setFormData({ ...formData, director: nextValue });
+  };
+
+  const addDirectorName = (name) => {
+    const cleanName = String(name || '').trim();
+    if (!cleanName) return;
+    setDirectorNames([...selectedDirectorNames, cleanName]);
+    setDirectorPickerSearch('');
+    setIsDirectorDropdownOpen(true);
+  };
+
+  const removeDirectorName = (name) => {
+    const removeKey = normalizeSearchText(name);
+    setDirectorNames(selectedDirectorNames.filter((directorName) => normalizeSearchText(directorName) !== removeKey));
+  };
+
+  const typedDirectorExists = selectedDirectorNames.some((name) => normalizeSearchText(name) === normalizeSearchText(directorPickerSearch))
+    || directorOptions.some((name) => normalizeSearchText(name) === normalizeSearchText(directorPickerSearch));
 
   const selectedActorIds = (formData.actorIds || []).map(Number);
   const selectedMainActorIds = (formData.mainActorIds || []).map(Number);
@@ -536,7 +604,7 @@ export default function AdminMoviesPanel({ ctx }) {
                         placeholder="VD: CHIẾN BINH ÁNH SÁNG (tối đa 50 ký tự)"
                         maxLength={50}
                         value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, title: uppercaseMovieTitle(e.target.value) })}
                         className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
                       />
                     </div>
@@ -555,16 +623,109 @@ export default function AdminMoviesPanel({ ctx }) {
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 md:col-span-2">
                       <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Đạo diễn</label>
-                      <input
-                        type="text"
-                        placeholder="VD: Trần Anh Hùng (tối đa 50 ký tự)"
-                        maxLength={50}
-                        value={formData.director}
-                        onChange={(e) => setFormData({ ...formData, director: e.target.value })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
-                      />
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsDirectorDropdownOpen((open) => !open)}
+                          className="flex min-h-11 w-full items-center justify-between gap-3 border border-neutral-800 bg-black px-3 py-2 text-left text-xs text-white transition hover:border-amber-500/60 focus:outline-none focus:border-amber-400"
+                        >
+                          <span className="min-w-0 flex-1">
+                            {selectedDirectorNames.length ? (
+                              <span className="flex flex-wrap gap-1.5">
+                                {selectedDirectorNames.slice(0, 4).map((directorName) => (
+                                  <span key={directorName} className="inline-flex max-w-full items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-200">
+                                    <span className="truncate">{directorName}</span>
+                                  </span>
+                                ))}
+                                {selectedDirectorNames.length > 4 && (
+                                  <span className="border border-neutral-700 bg-black px-2 py-1 text-[10px] font-bold text-zinc-400">
+                                    +{selectedDirectorNames.length - 4}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-500">Chọn hoặc nhập đạo diễn</span>
+                            )}
+                          </span>
+                          <ChevronDown className={`h-4 w-4 shrink-0 text-amber-400 transition ${isDirectorDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isDirectorDropdownOpen && (
+                          <div className="absolute left-0 right-0 z-40 mt-2 border border-amber-500/40 bg-[#050505] shadow-2xl shadow-black/60">
+                            <div className="border-b border-neutral-850 p-2">
+                              <div className="flex items-center gap-2 border border-neutral-800 bg-black px-2">
+                                <Search className="h-3.5 w-3.5 text-neutral-500" />
+                                <input
+                                  type="text"
+                                  value={directorPickerSearch}
+                                  onChange={(event) => setDirectorPickerSearch(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== 'Enter') return;
+                                    event.preventDefault();
+                                    addDirectorName(directorPickerSearch);
+                                  }}
+                                  placeholder="Tìm gần đúng hoặc nhập tên đạo diễn rồi Enter..."
+                                  className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-neutral-600 focus:outline-none"
+                                  autoFocus
+                                />
+                              </div>
+                              {directorPickerSearch.trim() && !typedDirectorExists && (
+                                <button
+                                  type="button"
+                                  onClick={() => addDirectorName(directorPickerSearch)}
+                                  className="mt-2 w-full border border-amber-500/30 bg-amber-500/10 px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider text-amber-300 hover:bg-amber-500 hover:text-black"
+                                >
+                                  Thêm đạo diễn: {directorPickerSearch.trim()}
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="max-h-56 overflow-y-auto custom-scrollbar p-2">
+                              {directorOptions.length ? directorOptions.map((directorName) => {
+                                const isSelected = selectedDirectorNames.some((name) => normalizeSearchText(name) === normalizeSearchText(directorName));
+                                return (
+                                  <div
+                                    key={directorName}
+                                    className={`mb-1 grid grid-cols-[1fr_auto] items-center gap-2 border px-2 py-2 last:mb-0 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-neutral-850 bg-neutral-950'}`}
+                                  >
+                                    <button type="button" onClick={() => isSelected ? removeDirectorName(directorName) : addDirectorName(directorName)} className="min-w-0 text-left">
+                                      <span className="flex items-center gap-2">
+                                        <span className={`grid h-4 w-4 shrink-0 place-items-center border ${isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-transparent'}`}>
+                                          <Check className="h-3 w-3" />
+                                        </span>
+                                        <span className="block truncate text-xs font-bold text-white">{directorName}</span>
+                                      </span>
+                                    </button>
+                                    {isSelected && (
+                                      <button
+                                        type="button"
+                                        onClick={() => removeDirectorName(directorName)}
+                                        className="h-7 border border-rose-500/30 px-2 text-[9px] font-black uppercase text-rose-300 transition hover:bg-rose-500 hover:text-white"
+                                      >
+                                        Xóa
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              }) : (
+                                <p className="px-2 py-6 text-center text-[10px] text-neutral-500">Không tìm thấy đạo diễn phù hợp.</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {selectedDirectorNames.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedDirectorNames.map((directorName) => (
+                            <span key={directorName} className="inline-flex items-center gap-1.5 border border-neutral-700 bg-neutral-950 px-2 py-1 text-[10px] font-bold text-zinc-300">
+                              {directorName}
+                              <button type="button" onClick={() => removeDirectorName(directorName)} className="text-zinc-500 hover:text-rose-300">×</button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">

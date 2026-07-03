@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 
-/* ─── helpers ────────────────────────────────────────────── */
+/* bulk slot controls */
 const STATUS_META = {
   SCHEDULED: { label: 'Đã lên lịch', color: 'text-blue-400', bg: 'bg-blue-950/30 border-blue-500/30', dot: 'bg-blue-400' },
   OPEN: { label: 'Đang mở bán', color: 'text-emerald-400', bg: 'bg-emerald-950/30 border-emerald-500/30', dot: 'bg-emerald-400' },
@@ -80,6 +80,7 @@ const EMPTY_FORM = {
   adultVipPrice: '', childVipPrice: '', studentVipPrice: '',
   adultCouplePrice: '', childCouplePrice: '', studentCouplePrice: '',
   weekendSurcharge: false, holidaySurcharge: false,
+  lateNightSurchargeAmount: '20.000',
   status: 'SCHEDULED'
 };
 
@@ -89,6 +90,7 @@ const EMPTY_BULK = {
   adultVipPrice: '', childVipPrice: '', studentVipPrice: '',
   adultCouplePrice: '', childCouplePrice: '', studentCouplePrice: '',
   weekendSurcharge: false, holidaySurcharge: false,
+  lateNightSurchargeAmount: '20.000',
   defaultStatus: 'SCHEDULED',
   slots: [{ roomId: '', startTime: '', selected: true }]
 };
@@ -108,6 +110,8 @@ const PRICE_COLS = [
 const priceField = (row, col) => `${row}${col}Price`;
 const priceDigits = (value) => String(value ?? '').replace(/\D/g, '');
 const toPriceNumber = (value) => Number(priceDigits(value) || 0);
+const MIN_LATE_NIGHT_SURCHARGE = 10000;
+const MAX_LATE_NIGHT_SURCHARGE = 100000;
 const formatPriceInput = (value) => {
   const digits = priceDigits(value);
   return digits ? Number(digits).toLocaleString('vi-VN') : '';
@@ -137,6 +141,7 @@ const buildShowtimePayload = (formState, allowChildTickets = true) => ({
   studentCouplePrice: toPriceNumber(formState.studentCouplePrice) || toPriceNumber(formState.studentStandardPrice || formState.basePrice) + 30000,
   weekendSurcharge: Boolean(formState.weekendSurcharge),
   holidaySurcharge: Boolean(formState.holidaySurcharge),
+  lateNightSurchargeAmount: toPriceNumber(formState.lateNightSurchargeAmount || 20000),
 });
 
 const addMinutes = (value, minutes) => {
@@ -188,6 +193,14 @@ const clearChildPrices = (state) => ({
   childCouplePrice: '',
 });
 
+const validateLateNightSurcharge = (value) => {
+  const amount = toPriceNumber(value);
+  if (!amount) return 'Nhập phụ thu đêm';
+  if (amount < MIN_LATE_NIGHT_SURCHARGE) return 'Phụ thu đêm tối thiểu 10.000';
+  if (amount > MAX_LATE_NIGHT_SURCHARGE) return 'Phụ thu đêm tối đa 100.000';
+  return '';
+};
+
 /**
  * DateTimePicker
  * Renders a compact date <input> + manual time inputs.
@@ -195,22 +208,40 @@ const clearChildPrices = (state) => ({
  * onChange: (newValue: string) => void
  */
 function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpText }) {
+  const dateInputRef = React.useRef(null);
   const datePart = value ? value.split('T')[0] : '';
   const timePart = value && value.includes('T') ? value.split('T')[1].slice(0, 5) : '';
+  const today = toLocalDateInput();
+  const effectiveMinDate = maxDateInput(today, minDate);
+  const hasValidDateRange = !maxDate || !effectiveMinDate || effectiveMinDate <= maxDate;
+
+  const clampDateToRange = (dateValue) => {
+    if (!dateValue) return '';
+    if (effectiveMinDate && dateValue < effectiveMinDate) return effectiveMinDate;
+    if (maxDate && dateValue > maxDate) return maxDate;
+    return dateValue;
+  };
 
   const handleDate = (e) => {
-    const d = e.target.value;
+    const d = clampDateToRange(e.target.value);
     onChange(d ? `${d}T${timePart || '00:00'}` : '');
   };
 
   const handleTime = (t) => {
-    const d = datePart || toLocalDateInput();
+    if (!hasValidDateRange) return;
+    const d = clampDateToRange(datePart || effectiveMinDate || toLocalDateInput());
     onChange(`${d}T${t}`);
   };
 
-  // Today's date string for min attribute
-  const today = toLocalDateInput();
-  const effectiveMinDate = maxDateInput(today, minDate);
+  const openDatePicker = () => {
+    if (!hasValidDateRange) return;
+    const input = dateInputRef.current;
+    if (!input) return;
+    input.focus();
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -218,15 +249,32 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
         <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold block">{label}</label>
       )}
       {/* Date row */}
-      <input
-        type="date"
-        min={effectiveMinDate}
-        max={maxDate || undefined}
-        value={datePart}
-        onChange={handleDate}
-        className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
-      />
-      {helpText && <p className="text-[9px] text-zinc-500 font-bold">{helpText}</p>}
+      <div className="relative">
+        <input
+          ref={dateInputRef}
+          type="date"
+          min={effectiveMinDate || undefined}
+          max={maxDate || undefined}
+          value={datePart}
+          disabled={!hasValidDateRange}
+          onChange={handleDate}
+          className="h-11 w-full bg-black border border-zinc-800 py-2.5 pl-3 pr-11 text-xs text-white font-mono [color-scheme:dark] focus:outline-none focus:border-amber-400 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-11 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+        />
+        <button
+          type="button"
+          onClick={openDatePicker}
+          disabled={!hasValidDateRange}
+          title="Chọn ngày chiếu"
+          className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center border border-amber-500/30 bg-amber-500/10 text-amber-300 transition hover:bg-amber-500 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 pointer-events-none"
+        >
+          <Calendar className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {!hasValidDateRange ? (
+        <p className="text-[9px] font-bold text-rose-300">Không có ngày hợp lệ trong thời gian phát hành.</p>
+      ) : (
+        helpText && <p className="text-[9px] text-zinc-500 font-bold">{helpText}</p>
+      )}
       {/* Time inputs */}
       <div className="border border-zinc-800 bg-black p-3 mt-1">
         <p className="text-[9px] uppercase tracking-widest text-zinc-300 mb-2 font-bold">Nhập giờ chiếu</p>
@@ -236,6 +284,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
               type="number"
               min="0"
               max="23"
+              disabled={!hasValidDateRange}
               value={timePart ? parseInt(timePart.split(':')[0], 10) : ''}
               onChange={(e) => {
                 let hStr = e.target.value;
@@ -247,7 +296,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
                 handleTime(`${String(h).padStart(2, '0')}:${m}`);
               }}
               placeholder="Giờ (0-23)"
-              className="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-center text-white focus:border-amber-400 focus:outline-none font-mono"
+              className="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-center text-white focus:border-amber-400 focus:outline-none font-mono disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <span className="text-zinc-600 font-bold">:</span>
@@ -256,6 +305,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
               type="number"
               min="0"
               max="59"
+              disabled={!hasValidDateRange}
               value={timePart ? parseInt(timePart.split(':')[1], 10) : ''}
               onChange={(e) => {
                 let mStr = e.target.value;
@@ -267,7 +317,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
                 handleTime(`${h}:${String(m).padStart(2, '0')}`);
               }}
               placeholder="Phút (0-59)"
-              className="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-center text-white focus:border-amber-400 focus:outline-none font-mono"
+              className="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-center text-white focus:border-amber-400 focus:outline-none font-mono disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>
@@ -347,10 +397,33 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
           Phim {ageRatingLabel || '16+'} Không cho phép bán vé trẻ em, bảng giá mục này vô hiệu hóa!
         </p>
       )}
+      <div className="grid gap-2 border border-zinc-900 bg-black/40 p-3 sm:grid-cols-[1fr_180px] sm:items-end">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-orange-300">Phụ thu đêm</p>
+          <p className="mt-1 text-[10px] text-zinc-500">
+            Áp dụng cho suất bắt đầu từ 23:00 đến trước 05:00. Nhập trong khoảng 10.000 - 100.000.
+          </p>
+        </div>
+        <div>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={formatPriceInput(value.lateNightSurchargeAmount)}
+            onChange={e => onChange({ ...value, lateNightSurchargeAmount: formatPriceInput(e.target.value) })}
+            placeholder="20.000"
+            className="w-full bg-black border border-zinc-800 p-2 text-xs text-white font-mono focus:outline-none focus:border-orange-400"
+          />
+        </div>
+      </div>
       {['adultStandardPrice', ...(allowChildTickets ? ['childStandardPrice'] : []), 'studentStandardPrice'].map(field => (
         errors[`${prefix}${field}`] ? <p key={field} className="text-rose-400 text-[9px]">{errors[`${prefix}${field}`]}</p> : null
       ))}
-      <p className="text-[10px] text-zinc-400">Phụ thu đêm 23:00-04:59 được hệ thống tự cộng 20k/vé theo giờ bắt đầu suất chiếu.</p>
+      {errors[`${prefix}lateNightSurchargeAmount`] && (
+        <p className="text-rose-400 text-[9px]">{errors[`${prefix}lateNightSurchargeAmount`]}</p>
+      )}
+      <p className="text-[10px] text-zinc-400">
+        Phụ thu đêm 23:00-04:59 được cộng theo mức admin nhập: {formatPriceInput(value.lateNightSurchargeAmount || 20000)}đ/vé.
+      </p>
     </div>
   );
 }
@@ -391,6 +464,17 @@ export default function AdminShowtimesPanel({ ctx }) {
   const findUiMovie = useCallback((movieId) => (
     (moviesList || []).find(m => getMovieOptionId(m) === String(movieId))
   ), [moviesList]);
+
+  const findShowtimeMovie = useCallback((showtime) => {
+    const movieId = showtime?.movieId ?? showtime?.movie?.id ?? showtime?.movie?.backendId;
+    return findUiMovie(movieId) || showtime?.movie || null;
+  }, [findUiMovie]);
+
+  const allowsChildTicketsForShowtime = useCallback((showtime) => {
+    const movie = findShowtimeMovie(showtime);
+    const ageRating = movie?.ageRating ?? movie?.raw?.ageRating ?? showtime?.ageRating ?? showtime?.movieAgeRating ?? showtime?.movie?.ageRating;
+    return getAgeRatingMinimum(ageRating) <= CHILD_TICKET_MAX_AGE;
+  }, [findShowtimeMovie]);
 
   const getMovieReleaseWindow = useCallback((movie) => ({
     releaseDate: normalizeDateInput(movie?.releaseDate || movie?.raw?.releaseDate),
@@ -458,6 +542,8 @@ export default function AdminShowtimesPanel({ ctx }) {
     if (!form.adultStandardPrice && !form.basePrice) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
     if (allowChildTickets && !form.childStandardPrice) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
     if (!form.studentStandardPrice) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
+    const formLateNightError = validateLateNightSurcharge(form.lateNightSurchargeAmount);
+    if (formLateNightError) errs.lateNightSurchargeAmount = formLateNightError;
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     const payload = {
@@ -505,6 +591,8 @@ export default function AdminShowtimesPanel({ ctx }) {
     if (!bulkForm.adultStandardPrice && !bulkForm.basePrice) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
     if (allowChildTickets && !bulkForm.childStandardPrice) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
     if (!bulkForm.studentStandardPrice) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
+    const bulkLateNightError = validateLateNightSurcharge(bulkForm.lateNightSurchargeAmount);
+    if (bulkLateNightError) errs.lateNightSurchargeAmount = bulkLateNightError;
     const selectedSlots = bulkForm.slots.filter(s => s.selected !== false);
     if (!selectedSlots.length) errs.slot_selection = 'Chon it nhat mot khung gio';
     const seenRoomStartTimes = new Set();
@@ -570,6 +658,14 @@ export default function AdminShowtimesPanel({ ctx }) {
   };
 
   /* ── delete ── */
+  const handleConfirmCancel = async () => {
+    if (!confirmCancel?.id) return;
+    const showtimeId = confirmCancel.id;
+    setConfirmCancel(null);
+    setDetailModal(null);
+    await handleStatusChange(showtimeId, 'CANCELLED');
+  };
+
   const handleDelete = async (showtimeId) => {
     const token = getAdminToken();
     if (!token) return;
@@ -632,6 +728,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       studentCouplePrice: copySource.studentCouplePrice ?? null,
       weekendSurcharge: Boolean(copySource.weekendSurcharge),
       holidaySurcharge: Boolean(copySource.holidaySurcharge),
+      lateNightSurchargeAmount: copySource.lateNightSurchargeAmount ?? 20000,
       status: 'SCHEDULED',
     };
 
@@ -675,6 +772,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       studentCouplePrice: st.studentCouplePrice ?? '',
       weekendSurcharge: Boolean(st.weekendSurcharge),
       holidaySurcharge: Boolean(st.holidaySurcharge),
+      lateNightSurchargeAmount: formatPriceInput(st.lateNightSurchargeAmount ?? 20000),
       status: st.status ?? 'SCHEDULED',
     });
     setErrors({});
@@ -789,10 +887,10 @@ export default function AdminShowtimesPanel({ ctx }) {
     }
     setBulkForm({ ...bulkForm, slots });
     setEditingBulkSlotIndex(0);
-    showToast?.(`Đã tạo ${slots.length} khung giờ trong ngày.`, 'success');
+  /* ════════════════════════════════════════════════ */
   };
 
-  /* ════════════════════════════════════════════════════════ */
+  /* bulk slot controls */
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1013,7 +1111,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                   <div className="min-w-[160px] border border-amber-500/20 bg-amber-500/10 p-3 text-[9px] text-zinc-300">
                     <p className="uppercase tracking-widest text-amber-300 font-black">Bước nhảy</p>
                     <p className="mt-1 font-mono text-white">{bulkMovieDuration || '--'} phút phim + 15 phút</p>
-                    <p className="mt-2 text-zinc-350">Suất bắt đầu từ 23:00 đến trước 05:00 được BE cộng +20k/vé.</p>
+                    <p className="mt-2 text-zinc-350">Suất bắt đầu từ 23:00 đến trước 05:00 được cộng +{formatPriceInput(bulkForm.lateNightSurchargeAmount || 20000)}đ/vé.</p>
                   </div>
                 </div>
 
@@ -1050,7 +1148,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                         </div>
                         <div className="absolute right-2 top-2 flex gap-1">
                           {activeBulkSlotIndex === i && <span className="rounded bg-sky-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Sửa</span>}
-                          {night && <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-orange-600">Đêm +20k</span>}
+                          {night && <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-orange-600">Đêm +{formatPriceInput(bulkForm.lateNightSurchargeAmount || 20000)}đ</span>}
                           {selected && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Chọn</span>}
                         </div>
                         <span
@@ -1259,7 +1357,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                               </button>
                             )}
                             {(st.status === 'SCHEDULED' || st.status === 'OPEN') && (
-                              <button onClick={() => handleStatusChange(st.id, 'CANCELLED')} title="Hủy suất chiếu"
+                              <button onClick={() => setConfirmCancel(st)} title="Hủy suất chiếu"
                                 className="p-1 text-amber-500 hover:text-amber-300 hover:bg-amber-950/30 rounded transition">
                                 <Ban className="w-3 h-3" />
                               </button>
@@ -1340,7 +1438,39 @@ export default function AdminShowtimesPanel({ ctx }) {
         )}
       </AnimatePresence>
 
-      {/* ── DETAIL MODAL ── */}
+      {/* Cancel confirmation modal */}
+      <AnimatePresence>
+        {confirmCancel && (
+          <motion.div key="cancel-confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+              className="bg-zinc-950 border border-amber-500/30 p-6 max-w-sm w-full space-y-4">
+              <div className="flex items-center gap-2 text-amber-400">
+                <AlertCircle className="w-4 h-4" />
+                <h3 className="text-xs font-black uppercase tracking-wider">Xác nhận hủy suất chiếu</h3>
+              </div>
+              <p className="text-[11px] text-zinc-400">
+                Bạn có chắc muốn hủy suất chiếu
+                <span className="mx-1 font-bold text-zinc-200">#{confirmCancel.id}</span>
+                của phim <span className="font-bold text-white">{confirmCancel.movieTitle ?? confirmCancel.movie?.title ?? 'này'}</span>?
+                Thao tác này sẽ chặn khách đặt vé cho suất chiếu đó.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmCancel(null)}
+                  className="flex-1 py-2.5 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase hover:border-zinc-500 transition">
+                  Quay lại
+                </button>
+                <button onClick={handleConfirmCancel}
+                  className="flex-1 py-2.5 bg-amber-500 text-black text-[10px] font-black uppercase hover:bg-amber-400 transition">
+                  Xác nhận hủy
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail modal */}
       <AnimatePresence>
         {detailModal && (
           <motion.div key="detail-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1354,24 +1484,27 @@ export default function AdminShowtimesPanel({ ctx }) {
                 <button onClick={() => setDetailModal(null)} className="text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               <div className="space-y-2 text-[11px]">
-                {[
+                {(() => {
+                  const showChildPrices = allowsChildTicketsForShowtime(detailModal);
+                  return [
                   ['Phim', detailModal.movieTitle ?? detailModal.movie?.title],
                   ['Phòng', detailModal.roomName ?? detailModal.room?.name],
                   ['Bắt đầu', fmt(detailModal.startTime)],
                   ['Kết thúc', fmt(detailModal.endTime)],
                   ['Người lớn - thường', fmtPrice(detailModal.adultStandardPrice ?? detailModal.basePrice)],
-                  ['Trẻ em - thường', fmtPrice(detailModal.childStandardPrice)],
+                  ...(showChildPrices ? [['Trẻ em - thường', fmtPrice(detailModal.childStandardPrice)]] : []),
                   ['Sinh viên - thường', fmtPrice(detailModal.studentStandardPrice)],
                   ['Người lớn - VIP', fmtPrice(detailModal.adultVipPrice ?? detailModal.vipPrice)],
                   ['Người lớn - ghế đôi', fmtPrice(detailModal.adultCouplePrice ?? detailModal.couplePrice)],
                   ['Phụ thu áp dụng', fmtPrice(detailModal.surchargeAmount)],
                   ['Trạng thái', STATUS_META[detailModal.status]?.label ?? detailModal.status],
-                ].map(([label, val]) => (
-                  <div key={label} className="flex justify-between border-b border-zinc-900 pb-1.5">
-                    <span className="text-zinc-500 font-bold">{label}</span>
-                    <span className="text-zinc-200 font-mono">{val ?? '—'}</span>
-                  </div>
-                ))}
+                  ].map(([label, val]) => (
+                    <div key={label} className="flex justify-between border-b border-zinc-900 pb-1.5">
+                      <span className="text-zinc-500 font-bold">{label}</span>
+                      <span className="text-zinc-200 font-mono">{val ?? '—'}</span>
+                    </div>
+                  ));
+                })()}
               </div>
               {/* Quick status actions in detail */}
               {(detailModal.status === 'SCHEDULED' || detailModal.status === 'OPEN') && (
@@ -1382,7 +1515,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                       Mở bán ngay
                     </button>
                   )}
-                  <button onClick={() => { handleStatusChange(detailModal.id, 'CANCELLED'); setDetailModal(null); }}
+                  <button onClick={() => { setConfirmCancel(detailModal); setDetailModal(null); }}
                     className="flex-1 py-2 bg-rose-900 text-rose-300 text-[10px] font-black uppercase hover:bg-rose-800 transition">
                     Hủy suất chiếu
                   </button>

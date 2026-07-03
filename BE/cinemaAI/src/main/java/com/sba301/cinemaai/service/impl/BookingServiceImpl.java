@@ -42,6 +42,7 @@ import com.sba301.cinemaai.service.QrTicketService;
 import com.sba301.cinemaai.service.TicketPricingService;
 import com.sba301.cinemaai.service.UserService;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -62,7 +63,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private static final int HOLD_MINUTES = 10;
+    private static final int HOLD_MINUTES = 1;
     private static final List<SeatRuntimeStatus> BLOCKING_SEAT_STATUSES = List.of(
             SeatRuntimeStatus.HOLDING,
             SeatRuntimeStatus.BOOKED,
@@ -92,12 +93,15 @@ public class BookingServiceImpl implements BookingService {
             throw new BadRequestException("Showtime is not open for booking");
         }
 
+        List<Long> requestedSeatIds = request.seatIds().stream().distinct().toList();
+        List<Seat> requestedSeats = requestedSeatIds.stream().map(this::findSeat).toList();
+        validateCoupleSeatPairs(requestedSeats);
+
         Booking booking = bookingRepository.save(new Booking(newBookingCode(), user, showtime,
                 LocalDateTime.now().plusMinutes(HOLD_MINUTES)));
         BigDecimal subtotal = BigDecimal.ZERO;
 
-        for (Long seatId : request.seatIds().stream().distinct().toList()) {
-            Seat seat = findSeat(seatId);
+        for (Seat seat : requestedSeats) {
             validateSeatForShowtime(showtime, seat);
             BigDecimal unitPrice = showtime.getPriceForSeatType(seat.getSeatType());
             BookingSeat bookingSeat = bookingSeatRepository.save(new BookingSeat(booking, showtime, seat, unitPrice));
@@ -115,9 +119,10 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
+        BigDecimal discountAmount = applyLoyaltyDiscount(user, booking, request.loyaltyPointsToRedeem(), subtotal);
         booking.setSubtotal(subtotal);
-        booking.setDiscountAmount(BigDecimal.ZERO);
-        booking.setTotalAmount(subtotal);
+        booking.setDiscountAmount(discountAmount);
+        booking.setTotalAmount(subtotal.subtract(discountAmount));
         return toResponse(booking);
     }
 
@@ -150,9 +155,12 @@ public class BookingServiceImpl implements BookingService {
         bookingSeatRepository.findByBooking(booking)
                 .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.BOOKED));
         BigDecimal discount = booking.getDiscountAmount();
+        BigDecimal loyaltyDiscount = request.loyaltyPointsToRedeem() != null && request.loyaltyPointsToRedeem() > 0 && discount.signum() == 0
+                ? applyLoyaltyDiscount(user, booking, request.loyaltyPointsToRedeem(), subtotal)
+                : discount;
         booking.setSubtotal(subtotal);
-        booking.setDiscountAmount(discount);
-        booking.setTotalAmount(subtotal.subtract(discount));
+        booking.setDiscountAmount(loyaltyDiscount);
+        booking.setTotalAmount(subtotal.subtract(loyaltyDiscount));
         markPendingPayment(booking);
         return toResponse(booking);
     }
@@ -450,6 +458,41 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
+    private void validateCoupleSeatPairs(List<Seat> seats) {
+        Set<Long> selectedSeatIds = seats.stream()
+                .map(Seat::getId)
+                .collect(Collectors.toSet());
+        for (Seat seat : seats) {
+            if (seat.getSeatType() != SeatType.COUPLE) {
+                continue;
+            }
+            Seat partner = findCouplePartner(seat);
+            if (partner.getSeatType() != SeatType.COUPLE || !selectedSeatIds.contains(partner.getId())) {
+                throw new BadRequestException("Couple seats must be selected as a pair");
+            }
+        }
+    }
+
+    private Seat findCouplePartner(Seat seat) {
+        List<Seat> rowSeats = seatRepository.findByRoom(seat.getRoom())
+                .stream()
+                .filter(candidate -> candidate.getSeatRow().getId().equals(seat.getSeatRow().getId()))
+                .sorted((a, b) -> Integer.compare(a.getDisplayColumn(), b.getDisplayColumn()))
+                .toList();
+        int seatIndex = rowSeats.stream()
+                .map(Seat::getId)
+                .toList()
+                .indexOf(seat.getId());
+        if (seatIndex < 0 || rowSeats.size() % 2 != 0) {
+            throw new BadRequestException("Couple seats must be selected as a pair");
+        }
+        int partnerIndex = seatIndex % 2 == 0 ? seatIndex + 1 : seatIndex - 1;
+        if (partnerIndex < 0 || partnerIndex >= rowSeats.size()) {
+            throw new BadRequestException("Couple seats must be selected as a pair");
+        }
+        return rowSeats.get(partnerIndex);
+    }
+
     private boolean isBlockingSeat(BookingSeat bookingSeat) {
         Booking booking = bookingSeat.getBooking();
         if (bookingSeat.getStatus() == SeatRuntimeStatus.HOLDING && booking.getStatus() == BookingStatus.HOLDING) {
@@ -461,6 +504,7 @@ public class BookingServiceImpl implements BookingService {
 
     private void expireBooking(Booking booking) {
         releaseSeats(booking);
+        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         booking.setStatus(BookingStatus.EXPIRED);
     }
 
@@ -484,6 +528,10 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void cancel(Booking booking) {
+        if (booking.getStatus() == BookingStatus.PAID) {
+            loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
+        }
+        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         booking.setCancelledAt(LocalDateTime.now());
         booking.setStatus(BookingStatus.CANCELLED);
     }
@@ -503,8 +551,21 @@ public class BookingServiceImpl implements BookingService {
 
     private void markRefunded(Booking booking) {
         requireStatus(booking, BookingStatus.REFUND_REQUESTED, "Only refund requested booking can be marked as refunded");
+        loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
+        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         booking.setRefundedAt(LocalDateTime.now());
         booking.setStatus(BookingStatus.REFUNDED);
+    }
+
+    private BigDecimal applyLoyaltyDiscount(User user, Booking booking, Integer pointsToRedeem, BigDecimal subtotal) {
+        int requestedPoints = pointsToRedeem == null ? 0 : pointsToRedeem;
+        if (requestedPoints <= 0 || subtotal == null || subtotal.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        int maxRedeemablePoints = subtotal.setScale(0, RoundingMode.DOWN).intValue();
+        int points = Math.min(requestedPoints, maxRedeemablePoints);
+        int redeemed = loyaltyPointService.redeemPointsForBooking(user, booking, points);
+        return BigDecimal.valueOf(redeemed);
     }
 
     private void changeBookingSeatStatus(BookingSeat bookingSeat, SeatRuntimeStatus status) {

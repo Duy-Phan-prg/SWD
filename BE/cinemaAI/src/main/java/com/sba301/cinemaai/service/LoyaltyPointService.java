@@ -18,6 +18,10 @@ public interface LoyaltyPointService {
 
         void addPointsFromBooking(User user, Booking booking);
 
+        int redeemPointsForBooking(User user, Booking booking, int points);
+
+        void restoreRedeemedPointsFromBooking(User user, Booking booking);
+
         /** Revoke points that were previously earned from a booking (e.g. when showtime is cancelled). */
         void revokePointsFromBooking(User user, Booking booking);
 }

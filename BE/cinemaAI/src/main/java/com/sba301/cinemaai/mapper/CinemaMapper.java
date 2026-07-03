@@ -9,6 +9,7 @@ import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Showtime;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -82,6 +83,7 @@ public class CinemaMapper {
                 showtime.getStudentCouplePrice(),
                 showtime.isWeekendSurcharge(),
                 showtime.isHolidaySurcharge(),
+                showtime.getLateNightSurchargeAmount(),
                 showtime.getSurchargeAmount(),
                 showtime.getStatus(),
                 showtime.getCreatedAt(),
@@ -89,7 +91,7 @@ public class CinemaMapper {
         );
     }
 
-    public ShowtimeSeatResponse toShowtimeSeatResponse(Seat seat, String runtimeStatus, Showtime showtime) {
+    public ShowtimeSeatResponse toShowtimeSeatResponse(Seat seat, String runtimeStatus, LocalDateTime holdExpiresAt, Showtime showtime) {
         return new ShowtimeSeatResponse(
                 seat.getId(),
                 seat.getSeatRow().getId(),
@@ -101,6 +103,7 @@ public class CinemaMapper {
                 seat.getSeatType(),
                 seat.getStatus(),
                 runtimeStatus,
+                holdExpiresAt,
                 showtime.getPriceForSeatType(seat.getSeatType())
         );
     }

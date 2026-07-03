@@ -256,7 +256,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 .toList();
         Map<Long, BookingSeat> runtimeSeats = bookingSeatRepository.findByShowtime(showtime)
                 .stream()
-                .filter(bookingSeat -> bookingSeat.getStatus() != SeatRuntimeStatus.RELEASED)
+                .filter(this::isSeatMapBlockingSeat)
                 .collect(Collectors.toMap(
                         bookingSeat -> bookingSeat.getSeat().getId(),
                         Function.identity(),
@@ -264,7 +264,15 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 ));
 
         List<ShowtimeSeatResponse> seatResponses = seats.stream()
-                .map(seat -> cinemaMapper.toShowtimeSeatResponse(seat, resolveRuntimeStatus(seat, runtimeSeats), showtime))
+                .map(seat -> {
+                    BookingSeat bookingSeat = runtimeSeats.get(seat.getId());
+                    return cinemaMapper.toShowtimeSeatResponse(
+                            seat,
+                            resolveRuntimeStatus(seat, runtimeSeats),
+                            resolveHoldExpiresAt(bookingSeat),
+                            showtime
+                    );
+                })
                 .toList();
         return new ShowtimeSeatMapResponse(
                 cinemaMapper.toShowtimeResponse(showtime),
@@ -434,6 +442,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         booking.setRefundedAt(java.time.LocalDateTime.now());
         booking.setRefundReason("Showtime cancelled by admin due to operational incident");
         loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
+        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
     }
 
@@ -455,7 +464,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 request.childCouplePrice(),
                 request.studentCouplePrice(),
                 Boolean.TRUE.equals(request.weekendSurcharge()),
-                Boolean.TRUE.equals(request.holidaySurcharge())
+                Boolean.TRUE.equals(request.holidaySurcharge()),
+                request.lateNightSurchargeAmount()
         );
     }
 
@@ -473,7 +483,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 request.childCouplePrice(),
                 request.studentCouplePrice(),
                 Boolean.TRUE.equals(request.weekendSurcharge()),
-                Boolean.TRUE.equals(request.holidaySurcharge())
+                Boolean.TRUE.equals(request.holidaySurcharge()),
+                request.lateNightSurchargeAmount()
         );
     }
 
@@ -499,7 +510,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             java.math.BigDecimal childCouplePrice,
             java.math.BigDecimal studentCouplePrice,
             boolean weekendSurcharge,
-            boolean holidaySurcharge
+            boolean holidaySurcharge,
+            java.math.BigDecimal lateNightSurchargeAmount
     ) {
         java.math.BigDecimal adultStandard = defaultMoney(adultStandardPrice, showtime.getBasePrice());
         java.math.BigDecimal childStandard = defaultMoney(childStandardPrice, adultStandard);
@@ -522,6 +534,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         showtime.setStudentCouplePrice(studentCouple);
         showtime.setWeekendSurcharge(weekendSurcharge);
         showtime.setHolidaySurcharge(holidaySurcharge);
+        showtime.setLateNightSurchargeAmount(defaultMoney(lateNightSurchargeAmount, java.math.BigDecimal.valueOf(20_000)));
         showtime.setBasePrice(adultStandard);
         showtime.setVipPrice(adultVip);
         showtime.setCouplePrice(adultCouple);
@@ -551,6 +564,33 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             return "AVAILABLE";
         }
         return bookingSeat.getStatus().name();
+    }
+
+    private LocalDateTime resolveHoldExpiresAt(BookingSeat bookingSeat) {
+        if (bookingSeat == null) {
+            return null;
+        }
+        Booking booking = bookingSeat.getBooking();
+        boolean holdLikeBooking = booking.getStatus() == BookingStatus.HOLDING
+                || booking.getStatus() == BookingStatus.PENDING_PAYMENT;
+        boolean holdLikeSeat = bookingSeat.getStatus() == SeatRuntimeStatus.HOLDING
+                || bookingSeat.getStatus() == SeatRuntimeStatus.BOOKED;
+        if (!holdLikeBooking || !holdLikeSeat || booking.getHoldExpiresAt() == null) {
+            return null;
+        }
+        return booking.getHoldExpiresAt().isAfter(LocalDateTime.now()) ? booking.getHoldExpiresAt() : null;
+    }
+
+    private boolean isSeatMapBlockingSeat(BookingSeat bookingSeat) {
+        if (bookingSeat.getStatus() == SeatRuntimeStatus.RELEASED) {
+            return false;
+        }
+        Booking booking = bookingSeat.getBooking();
+        if (booking.getStatus() == BookingStatus.HOLDING || booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            return booking.getHoldExpiresAt() == null || booking.getHoldExpiresAt().isAfter(LocalDateTime.now());
+        }
+        return bookingSeat.getStatus() == SeatRuntimeStatus.BOOKED
+                || bookingSeat.getStatus() == SeatRuntimeStatus.CHECKED_IN;
     }
 
     private Movie findMovie(Long movieId) {

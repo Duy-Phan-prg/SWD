@@ -270,10 +270,11 @@ class BookingIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateBookingRequest(
                                 holdBookingId,
-                                null,
+                                List.of(),
                                 null,
                                 false,
-                                List.of(new TicketSelectionRequest(TicketType.ADULT, 22, 1))
+                                List.of(new TicketSelectionRequest(TicketType.ADULT, 20, 1)),
+                                null
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
