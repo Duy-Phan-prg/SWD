@@ -46,8 +46,10 @@ Nguồn sự thật ưu tiên: service implementation + enum + integration test.
 - Không complete trước thời điểm kết thúc.
 - Hủy showtime xử lý booking:
   - `HOLDING`, `PENDING_PAYMENT` -> `CANCELLED`;
-  - `PAID`, `REFUND_REQUESTED` -> refund flow -> `REFUNDED`;
+  - `PAID`, `USED` -> `REFUND_REQUESTED` -> VNPay/MOCK -> `REFUNDED` hoặc `REFUND_FAILED`;
   - terminal state khác được bỏ qua.
+- Chỉ ADMIN/STAFF được hủy suất chiếu và kích hoạt hoàn tiền; CUSTOMER không được request refund booking đã thanh toán.
+- Hoàn đúng `Booking.totalAmount`; loyalty chỉ điều chỉnh sau khi hoàn tiền thành công (VNPay mã `00` hoặc staff xác nhận thủ công).
 
 ## 5. Seat hold và booking
 
@@ -65,7 +67,7 @@ HOLDING
   -> USED
 
 HOLDING/PENDING_PAYMENT -> CANCELLED hoặc EXPIRED
-PAID/CANCELLED -> REFUND_REQUESTED -> REFUNDED
+PAID/USED -> REFUND_REQUESTED -> REFUNDED | REFUND_FAILED
 ```
 
 - Create booking chỉ từ booking `HOLDING` chưa hết hạn.
@@ -75,8 +77,7 @@ PAID/CANCELLED -> REFUND_REQUESTED -> REFUNDED
 - Food selection phải chọn đúng một trong `foodItemId` hoặc `foodComboId`; quantity > 0; item/combo phải `ACTIVE`.
 - Booking `USED` không được cancel.
 - Chỉ booking `PAID` được check-in; QR nếu truyền phải khớp booking; sau check-in thành `USED`.
-- Chỉ booking `PAID` hoặc `CANCELLED` được request refund theo code hiện tại.
-- Chỉ `REFUND_REQUESTED` được mark `REFUNDED`.
+- Booking `REFUND_FAILED` chỉ được staff/admin xác nhận hoàn thủ công qua `confirm-manual-refund`.
 
 ## 6. Ticket pricing
 

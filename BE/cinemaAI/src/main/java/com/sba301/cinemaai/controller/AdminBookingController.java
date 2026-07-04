@@ -2,11 +2,11 @@ package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.booking.BookingResponse;
 import com.sba301.cinemaai.dto.request.booking.CheckInRequest;
-import com.sba301.cinemaai.dto.request.booking.RefundRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.service.BookingService;
+import com.sba301.cinemaai.service.RefundService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminBookingController {
 
     private final BookingService bookingService;
+    private final RefundService refundService;
 
     @GetMapping
     public ApiResponse<PageResponse<BookingResponse>> getBookings(
@@ -57,19 +58,16 @@ public class AdminBookingController {
         return ApiResponse.success(bookingService.checkInAdmin(bookingId, qrCode), "Booking checked in successfully");
     }
 
-    @PostMapping("/{bookingId}/refund-request")
-    public ApiResponse<BookingResponse> requestRefund(
+    @PostMapping("/{bookingId}/confirm-manual-refund")
+    public ApiResponse<BookingResponse> confirmManualRefund(
             @PathVariable Long bookingId,
-            @Valid @RequestBody RefundRequest request
+            @RequestParam String staffName,
+            @RequestParam String notes
     ) {
+        refundService.confirmManualRefund(bookingId, staffName, notes);
         return ApiResponse.success(
-                bookingService.requestRefundAdmin(bookingId, request.reason()),
-                "Refund requested successfully"
+                bookingService.getAdminBooking(bookingId),
+                "Manual refund confirmed successfully"
         );
-    }
-
-    @PostMapping("/{bookingId}/mark-refunded")
-    public ApiResponse<BookingResponse> markRefunded(@PathVariable Long bookingId) {
-        return ApiResponse.success(bookingService.markRefunded(bookingId), "Booking marked as refunded successfully");
     }
 }

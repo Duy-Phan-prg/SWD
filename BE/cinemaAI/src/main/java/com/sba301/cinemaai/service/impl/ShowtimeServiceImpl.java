@@ -6,7 +6,6 @@ import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
-import com.sba301.cinemaai.dto.response.refund.VnpRefundResponse;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Movie;
@@ -19,8 +18,7 @@ import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.CinemaMapper;
 import com.sba301.cinemaai.repository.*;
-import com.sba301.cinemaai.service.LoyaltyPointService;
-import com.sba301.cinemaai.service.NotificationService;
+import com.sba301.cinemaai.service.RefundService;
 import com.sba301.cinemaai.service.RoomService;
 import com.sba301.cinemaai.service.ShowtimeService;
 import java.time.LocalDate;
@@ -39,8 +37,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.sba301.cinemaai.entity.Payment;
-import com.sba301.cinemaai.service.VNPayService;
 
 @Service
 @RequiredArgsConstructor
@@ -62,10 +58,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final BookingSeatRepository bookingSeatRepository;
     private final RoomService roomService;
     private final CinemaMapper cinemaMapper;
-    private final LoyaltyPointService loyaltyPointService;
-    private final NotificationService notificationService;
-    private final PaymentRepository paymentRepository;
-    private final VNPayService vnpayService;
+    private final RefundService refundService;
 
 
     // -------------------------------------------------------------------------
@@ -223,10 +216,19 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         Showtime showtime = findById(id);
         validateStatusTransition(showtime, status);
         if (status == ShowtimeStatus.CANCELLED) {
-            // Auto-handle all bookings when admin cancels a showtime
-            cancelShowtimeBookings(showtime);
+            refundService.processShowtimeCancellation(showtime, null);
         }
         showtime.setStatus(status);
+        return cinemaMapper.toShowtimeResponse(showtime);
+    }
+
+    @Transactional
+    @Override
+    public ShowtimeResponse cancelShowtime(Long id, String reason) {
+        Showtime showtime = findById(id);
+        validateStatusTransition(showtime, ShowtimeStatus.CANCELLED);
+        refundService.processShowtimeCancellation(showtime, reason);
+        showtime.setStatus(ShowtimeStatus.CANCELLED);
         return cinemaMapper.toShowtimeResponse(showtime);
     }
 
@@ -414,37 +416,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         return bookingRepository.existsByShowtimeAndStatusIn(showtime, ACTIVE_BOOKING_STATUSES);
     }
 
-    /**
-     * Cascade-cancels all non-terminal bookings when admin cancels a showtime due to incident.
-     * <ul>
-     *   <li>HOLDING / PENDING_PAYMENT  → CANCELLED  (no money collected)</li>
-     *   <li>PAID  → REFUNDED: mark refunded, revoke loyalty, send notification</li>
-     *   <li>REFUND_REQUESTED → REFUNDED: complete the pending refund</li>
-     *   <li>USED / CANCELLED / REFUNDED / EXPIRED → skipped (terminal)</li>
-     * </ul>
-     */
-    private void cancelShowtimeBookings(Showtime showtime) {
-        bookingRepository.findByShowtime(showtime).forEach(booking -> {
-            switch (booking.getStatus()) {
-                case HOLDING, PENDING_PAYMENT -> {
-                    cancelBooking(booking);
-                    notificationService.notifyBookingCancelled(booking);
-                }
-                case PAID, REFUND_REQUESTED -> processShowtimeRefund(booking, showtime);
-                default -> { /* already terminal — no action */ }
-            }
-        });
-    }
-
-    private void processShowtimeRefund(Booking booking, Showtime showtime) {
-        booking.setStatus(BookingStatus.REFUNDED);
-        booking.setRefundedAt(java.time.LocalDateTime.now());
-        booking.setRefundReason("Showtime cancelled by admin due to operational incident");
-        loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
-        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
-        notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
-    }
-
     private LocalDateTime calculateEndTime(Movie movie, LocalDateTime startTime) {
         return startTime.plusMinutes(movie.getDurationMinutes()).plusMinutes(CLEANUP_MINUTES);
     }
@@ -543,17 +514,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         return value != null ? value : fallback;
     }
 
-    private void cancelBooking(com.sba301.cinemaai.entity.Booking booking) {
-        booking.setCancelledAt(LocalDateTime.now());
-        booking.setStatus(BookingStatus.CANCELLED);
-    }
-
-    private void requestRefund(com.sba301.cinemaai.entity.Booking booking, String reason) {
-        booking.setRefundRequestedAt(LocalDateTime.now());
-        booking.setRefundReason(reason);
-        booking.setStatus(BookingStatus.REFUND_REQUESTED);
-    }
-
     private String resolveRuntimeStatus(Seat seat, Map<Long, BookingSeat> runtimeSeats) {
         if (seat.getStatus() != SeatStatus.AVAILABLE) {
             return "UNAVAILABLE";
@@ -602,94 +562,4 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 .orElseThrow(() -> new NotFoundException("Showtime not found"));
     }
 
-    @Transactional
-    @Override
-    public void cancelShowtimeAndBulkRefund(Long showtimeId, String reason) {
-        Showtime showtime = showtimeRepository.findById(showtimeId)
-                .orElseThrow(() -> new IllegalArgumentException("Showtime not found: " + showtimeId));
-        showtime.setStatus(ShowtimeStatus.CANCELLED);
-        showtimeRepository.save(showtime);
-
-        List<Booking> targetBookings = bookingRepository.findByShowtimeIdAndStatusForUpdate(showtimeId, BookingStatus.PAID);
-
-        log.info("Found {} PAID bookings for canceled showtime {}", targetBookings.size(), showtimeId);
-
-        for (Booking booking : targetBookings) {
-            try {
-                booking.setStatus(BookingStatus.REFUND_REQUESTED);
-                booking.setRefundReason("Hủy suất chiếu do sự cố: " + reason);
-                booking.setRefundRequestedAt(LocalDateTime.now());
-                bookingRepository.save(booking);
-
-                Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
-                        .orElse(null);
-
-                if (payment == null) {
-                    log.error("Payment not found for PAID booking: {}", booking.getBookingCode());
-                    booking.setStatus(BookingStatus.REFUND_FAILED);
-                    bookingRepository.save(booking);
-                    continue;
-                }
-
-                VnpRefundResponse vnpResponse = vnpayService.requestRefund(payment, booking.getTotalAmount());
-
-                if ("00".equals(vnpResponse.getResponseCode())) {
-                    loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
-                    loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
-
-                    booking.setStatus(BookingStatus.REFUNDED);
-                    booking.setRefundedAt(LocalDateTime.now());
-
-                    payment.setStatus(PaymentStatus.REFUNDED);
-                    payment.setRefundAmount(booking.getTotalAmount());
-                    payment.setRefundedAt(LocalDateTime.now());
-                    payment.setRefundTransactionNo(vnpResponse.getRefundTransactionNo());
-                    payment.setRefundMethod("VNPAY");
-                    paymentRepository.save(payment);
-                } else {
-                    booking.setStatus(BookingStatus.REFUND_FAILED);
-                    payment.setStatus(PaymentStatus.FAILED);
-                    paymentRepository.save(payment);
-                }
-            } catch (Exception e) {
-                log.error("Error processing bulk refund for booking: {}", booking.getBookingCode(), e);
-                booking.setStatus(BookingStatus.REFUND_FAILED);
-            }
-            bookingRepository.save(booking);
-        }
-    }
-
-    @Transactional
-    @Override
-    public void confirmManualRefund(Long bookingId, String staffName, String notes) {
-        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy đơn hàng với ID: " + bookingId));
-
-        if (booking.getStatus() != BookingStatus.REFUND_FAILED) {
-            throw new BadRequestException("Chỉ có thể xử lý thủ công đối với các đơn hàng bị lỗi REFUND_FAILED");
-        }
-
-        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
-        loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking); // Gọi hàm revoke đã đồng bộ
-
-        booking.setStatus(BookingStatus.REFUNDED);
-        booking.setRefundedAt(LocalDateTime.now());
-        booking.setRefundReason(booking.getRefundReason() + " | Đã hoàn tay bởi Staff: " + staffName + ". Ghi chú: " + notes);
-        bookingRepository.save(booking);
-
-        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.FAILED)
-                .orElse(null);
-
-        if (payment != null) {
-            payment.setStatus(PaymentStatus.REFUNDED);
-            payment.setRefundAmount(booking.getTotalAmount());
-            payment.setRefundedAt(LocalDateTime.now());
-            payment.setRefundMethod("MANUAL_BANK_TRANSFER");
-            payment.setRefundTransactionNo("OFFLINE_BY_" + staffName.toUpperCase()); 
-            paymentRepository.save(payment);
-        }
-
-        log.info("Staff {} đã kích hoạt giải cứu thành công đơn hàng lỗi {}. Ví điểm đã được cân bằng.",
-                staffName, booking.getBookingCode());
-    }
 }

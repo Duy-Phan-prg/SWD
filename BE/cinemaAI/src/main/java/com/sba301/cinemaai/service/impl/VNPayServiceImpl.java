@@ -29,7 +29,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class VNPayServiceImpl implements VNPayService {
 
-    @Value("${https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}")
+    @Value("${vnpay.api-query-url}")
     private String vnpRefundApiUrl;
 
     @Value("${vnpay.tmn-code}")
@@ -110,55 +110,65 @@ public class VNPayServiceImpl implements VNPayService {
     @Override
     public VnpRefundResponse requestRefund(Payment payment, BigDecimal amount) {
         try {
-            // 1. Chuẩn bị định dạng thời gian theo chuẩn VNPay (yyyyMMddHHmmss)
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-            String vnp_TxnRef = payment.getBooking().getId().toString(); // Dùng chính BookingId làm mã đối soát gốc
+            String vnp_TxnRef = payment.getBooking().getId().toString();
             String vnp_CreateDate = LocalDateTime.now().format(formatter);
 
-            // Số tiền hoàn cần nhân 100 và chuyển thành chuỗi không chứa dấu chấm thập phân
-            String vnp_Amount = amount.multiply(BigDecimal.valueOf(100)).setScale(0).toString();
+            // Số tiền hoàn (Chuỗi phục vụ cho việc tạo chuỗi Hash)
+            String vnp_AmountStr = amount.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).toPlainString();
+            // Số tiền hoàn (Kiểu Long phục vụ cho payload JSON)
+            Long vnp_AmountLong = Long.parseLong(vnp_AmountStr);
 
-            // 2. Gom các tham số nghiệp vụ bắt buộc của VNPay Refund API
-            Map<String, String> params = new HashMap<>();
-            params.put("vnp_RequestId", String.valueOf(System.currentTimeMillis()));
-            params.put("vnp_Version", "2.1.0");
-            params.put("vnp_Command", "refund");
-            params.put("vnp_TmnCode", vnpTmnCode);
-            params.put("vnp_TransactionType", "02"); // 02: Hoàn trả toàn bộ (Full Refund)
-            params.put("vnp_TxnRef", vnp_TxnRef);
-            params.put("vnp_Amount", vnp_Amount);
-            params.put("vnp_OrderInfo", "Hoan tien tu dong su co suat chieu cho Booking ID: " + vnp_TxnRef);
-            params.put("vnp_TransactionNo", payment.getTransactionId()); // Mã giao dịch gốc thu được từ VNPay lúc khách mua vé
-            params.put("vnp_TransactionDate", payment.getPaidAt().format(formatter)); // Thời điểm khách thanh toán đơn gốc
-            params.put("vnp_CreateBy", "System_Admin_Bulk_Refund");
-            params.put("vnp_CreateDate", vnp_CreateDate);
-            params.put("vnp_IpAddr", "127.0.0.1");
+            // Khởi tạo các giá trị cố định trước
+            String requestId = String.valueOf(System.currentTimeMillis());
+            String transactionDate = payment.getPaidAt().format(formatter); // Kiểm tra xem có đúng định dạng yyyyMMddHHmmss không (VD: 20260704212328)
+            String orderInfo = "Hoan tien tu dong su co suat chieu cho Booking ID: " + vnp_TxnRef;
 
-            // 3. Tiến hành tạo chuỗi mã hóa bảo mật Checksum (vnp_SecureHash)
+// 1. Tạo chuỗi Hash (CÁC TRƯỜNG PHẢI PHÂN CÁCH BẰNG DẤU GẠCH ĐỨNG | )
             String rawHashData = String.join("|",
-                    params.get("vnp_RequestId"),
-                    params.get("vnp_Version"),
-                    params.get("vnp_Command"),
-                    params.get("vnp_TmnCode"),
-                    params.get("vnp_TransactionType"),
-                    params.get("vnp_TxnRef"),
-                    params.get("vnp_Amount"),
-                    params.get("vnp_TransactionNo"),
-                    params.get("vnp_TransactionDate"),
-                    params.get("vnp_CreateBy"),
-                    params.get("vnp_CreateDate"),
-                    params.get("vnp_IpAddr"),
-                    params.get("vnp_OrderInfo")
+                    requestId,                  // vnp_RequestId
+                    "2.1.0",                    // vnp_Version
+                    "refund",                   // vnp_Command
+                    vnpTmnCode,                 // vnp_TmnCode
+                    "02",                       // vnp_TransactionType
+                    vnp_TxnRef,                 // vnp_TxnRef
+                    vnp_AmountStr,              // vnp_Amount (Dạng chuỗi, ví dụ: "5000000")
+                    payment.getTransactionId(), // vnp_TransactionNo
+                    transactionDate,            // vnp_TransactionDate
+                    "System_Admin_Bulk_Refund", // vnp_CreateBy
+                    vnp_CreateDate,             // vnp_CreateDate
+                    "127.0.0.1",                // vnp_IpAddr
+                    orderInfo                   // vnp_OrderInfo
             );
 
-            // Gọi hàm băm dữ liệu HMAC-SHA512 bằng SecretKey của rạp
             String vnp_SecureHash = hmacSHA512(vnpHashSecret, rawHashData);
-            params.put("vnp_SecureHash", vnp_SecureHash);
+            // 1. Chuẩn bị chuỗi dữ liệu băm (Raw Hash Data) theo đúng thứ tự tài liệu VNPay quy định
 
-            // 4. Chuyển Map dữ liệu thành chuỗi JSON Payload
-            String jsonRequestBody = objectMapper.writeValueAsString(params);
 
-            // 5. Khởi tạo đối tượng HttpRequest bắn sang cổng VNPay Sandbox
+
+            // 2. Gom các tham số vào Map<String, Object> để đảm bảo đúng kiểu dữ liệu JSON
+            Map<String, Object> jsonParams = new HashMap<>();
+            // Lấy vnp_RequestId giống hệt chuỗi đã dùng để băm phía trên
+
+            jsonParams.put("vnp_RequestId", requestId);
+            jsonParams.put("vnp_Version", "2.1.0");
+            jsonParams.put("vnp_Command", "refund");
+            jsonParams.put("vnp_TmnCode", vnpTmnCode);
+            jsonParams.put("vnp_TransactionType", "02");
+            jsonParams.put("vnp_TxnRef", vnp_TxnRef);
+            jsonParams.put("vnp_Amount", vnp_AmountLong); // ÉP KIỂU SỐ (NUMBER) Ở ĐÂY
+            jsonParams.put("vnp_OrderInfo", "Hoan tien tu dong su co suat chieu cho Booking ID: " + vnp_TxnRef);
+            jsonParams.put("vnp_TransactionNo", payment.getTransactionId());
+            jsonParams.put("vnp_TransactionDate", payment.getPaidAt().format(formatter));
+            jsonParams.put("vnp_CreateBy", "System_Admin_Bulk_Refund");
+            jsonParams.put("vnp_CreateDate", vnp_CreateDate);
+            jsonParams.put("vnp_IpAddr", "127.0.0.1");
+            jsonParams.put("vnp_SecureHash", vnp_SecureHash);
+
+            // 3. Chuyển thành JSON Payload
+            String jsonRequestBody = objectMapper.writeValueAsString(jsonParams);
+
+            // 4. Gửi HTTP Request tới VNPay
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(vnpRefundApiUrl))
                     .header("Content-Type", "application/json")
@@ -167,12 +177,9 @@ public class VNPayServiceImpl implements VNPayService {
 
             log.info("Sending refund request to VNPay for Booking Code: {} with payload: {}", vnp_TxnRef, jsonRequestBody);
 
-            // Thực thi gửi request đồng bộ và chờ kết quả phản hồi
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
             log.info("Received response from VNPay for Booking Code {}: {}", vnp_TxnRef, response.body());
 
-            // 6. Đọc dữ liệu JSON trả về từ VNPay và bóc tách map vào DTO
             Map<String, Object> responseMap = objectMapper.readValue(response.body(), Map.class);
             String responseCode = (String) responseMap.get("vnp_ResponseCode");
             String refundTxnNo = (String) responseMap.get("vnp_RefundTransactionNo");

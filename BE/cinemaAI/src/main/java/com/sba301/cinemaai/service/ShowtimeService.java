@@ -6,8 +6,6 @@ import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -34,9 +32,5 @@ public interface ShowtimeService {
 
     ShowtimeSeatMapResponse getSeatMap(Long showtimeId);
 
-    @Transactional
-    void cancelShowtimeAndBulkRefund(Long showtimeId, String reason);
-
-    @Transactional
-    void confirmManualRefund(Long bookingId, String staffName, String notes);
+    ShowtimeResponse cancelShowtime(Long id, String reason);
 }

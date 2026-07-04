@@ -23,12 +23,6 @@ public interface BookingService {
 
     BookingResponse cancel(String email, Long bookingId);
 
-    BookingResponse requestRefund(String email, Long bookingId, String reason);
-
-    BookingResponse requestRefundAdmin(Long bookingId, String reason);
-
-    BookingResponse markRefunded(Long bookingId);
-
     BookingResponse cancelAdmin(Long bookingId);
 
     BookingResponse checkIn(String qrCode);
