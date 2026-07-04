@@ -2,24 +2,21 @@ package com.sba301.cinemaai.service.impl;
 
 import com.sba301.cinemaai.dto.response.refund.VnpRefundResponse;
 import com.sba301.cinemaai.entity.Booking;
-import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.PaymentProvider;
 import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
-import com.sba301.cinemaai.exception.BadRequestException;
-import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.service.LoyaltyPointService;
+import com.sba301.cinemaai.service.MailService;
 import com.sba301.cinemaai.service.NotificationService;
 import com.sba301.cinemaai.service.RefundService;
 import com.sba301.cinemaai.service.VNPayService;
 import java.time.LocalDateTime;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +32,7 @@ public class RefundServiceImpl implements RefundService {
     private final PaymentRepository paymentRepository;
     private final LoyaltyPointService loyaltyPointService;
     private final NotificationService notificationService;
+    private final MailService mailService;
     private final VNPayService vnpayService;
 
     @Override
@@ -54,37 +52,6 @@ public class RefundServiceImpl implements RefundService {
         });
     }
 
-    @Override
-    @Transactional
-    public void confirmManualRefund(Long bookingId, String staffName, String notes) {
-        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy đơn hàng với ID: " + bookingId));
-
-        if (booking.getStatus() != BookingStatus.REFUND_FAILED) {
-            throw new BadRequestException("Chỉ có thể xử lý thủ công đối với các đơn hàng bị lỗi REFUND_FAILED");
-        }
-
-        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
-                .orElse(null);
-
-        String refundTxnNo = "OFFLINE_BY_" + staffName.toUpperCase();
-        completeSuccessfulRefund(
-                booking,
-                payment,
-                booking.getTotalAmount(),
-                refundTxnNo,
-                "MANUAL_BANK_TRANSFER"
-        );
-
-        String manualNote = " | Đã hoàn tay bởi Staff: " + staffName + ". Ghi chú: " + notes;
-        booking.setRefundReason(
-                booking.getRefundReason() == null ? manualNote.trim() : booking.getRefundReason() + manualNote
-        );
-        bookingRepository.save(booking);
-
-        log.info("Staff {} đã xác nhận hoàn tiền thủ công cho đơn {}.", staffName, booking.getBookingCode());
-    }
-
     private void processPaidBookingRefund(Booking booking, Showtime showtime, String refundReason) {
         booking.setStatus(BookingStatus.REFUND_REQUESTED);
         booking.setRefundReason(refundReason);
@@ -96,8 +63,7 @@ public class RefundServiceImpl implements RefundService {
 
         if (payment == null) {
             log.error("Payment SUCCESS not found for refundable booking: {}", booking.getBookingCode());
-            booking.setStatus(BookingStatus.REFUND_FAILED);
-            bookingRepository.save(booking);
+            markRefundFailed(booking, refundReason);
             return;
         }
 
@@ -113,16 +79,25 @@ public class RefundServiceImpl implements RefundService {
                 );
                 notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
             } else {
-                booking.setStatus(BookingStatus.REFUND_FAILED);
-                bookingRepository.save(booking);
+                markRefundFailed(booking, refundReason);
                 log.warn("Refund failed for booking {} — responseCode={}",
                         booking.getBookingCode(), attempt.responseCode());
             }
         } catch (Exception exception) {
             log.error("Error processing refund for booking: {}", booking.getBookingCode(), exception);
-            booking.setStatus(BookingStatus.REFUND_FAILED);
-            bookingRepository.save(booking);
+            markRefundFailed(booking, refundReason);
         }
+    }
+
+    private void markRefundFailed(Booking booking, String refundReason) {
+        booking.setStatus(BookingStatus.REFUND_FAILED);
+        bookingRepository.save(booking);
+        mailService.sendRefundFailedNotice(
+                booking.getUser().getEmail(),
+                booking.getBookingCode(),
+                booking.getTotalAmount(),
+                refundReason
+        );
     }
 
     private RefundAttempt attemptProviderRefund(Payment payment, Booking booking) {
@@ -139,6 +114,7 @@ public class RefundServiceImpl implements RefundService {
             return new RefundAttempt(false, "UNSUPPORTED_PROVIDER", null, null);
         }
 
+        // VNPay hoàn về đúng tài khoản/phương thức đã dùng khi thanh toán gốc.
         VnpRefundResponse response = vnpayService.requestRefund(payment, booking.getTotalAmount());
         boolean success = "00".equals(response.getResponseCode());
         return new RefundAttempt(
@@ -160,6 +136,7 @@ public class RefundServiceImpl implements RefundService {
         loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
 
         releaseSeats(booking);
+        booking.setQrCode(null);
         booking.setStatus(BookingStatus.REFUNDED);
         booking.setRefundedAt(LocalDateTime.now());
         bookingRepository.save(booking);
@@ -170,6 +147,8 @@ public class RefundServiceImpl implements RefundService {
             payment.setRefundedAt(LocalDateTime.now());
             payment.setRefundTransactionNo(refundTransactionNo);
             payment.setRefundMethod(refundMethod);
+            payment.setPaymentAccountLabel(null);
+            payment.setCallbackPayload(null);
             paymentRepository.save(payment);
         }
     }

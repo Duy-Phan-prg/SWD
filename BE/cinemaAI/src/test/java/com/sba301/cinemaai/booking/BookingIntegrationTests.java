@@ -301,7 +301,9 @@ class BookingIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("REFUNDED"))
                 .andExpect(jsonPath("$.data.refundedAt").isNotEmpty())
-                .andExpect(jsonPath("$.data.refundReason").value("Hủy suất chiếu do sự cố: Cúp điện trong rạp"));
+                .andExpect(jsonPath("$.data.refundReason").value("Hủy suất chiếu do sự cố: Cúp điện trong rạp"))
+                .andExpect(jsonPath("$.data.qrCode").doesNotExist())
+                .andExpect(jsonPath("$.data.paymentAccount").doesNotExist());
     }
 
     private Long createFoodItem(String adminToken) throws Exception {

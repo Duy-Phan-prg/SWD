@@ -28,6 +28,7 @@ public record BookingResponse(
         LocalDateTime refundedAt,
         String refundReason,
         String qrCode,
+        String paymentAccount,
         List<BookingSeatResponse> seats,
         List<BookingTicketResponse> tickets,
         List<BookingFoodResponse> foods

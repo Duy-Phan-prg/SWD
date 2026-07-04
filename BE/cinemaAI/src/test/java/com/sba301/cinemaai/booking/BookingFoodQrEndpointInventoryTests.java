@@ -30,8 +30,7 @@ class BookingFoodQrEndpointInventoryTests {
                 "@getmapping",
                 "@getmapping(\"/{bookingid}\")",
                 "@deletemapping(\"/{bookingid}\")",
-                "@postmapping(\"/{bookingid}/check-in\")",
-                "@postmapping(\"/{bookingid}/confirm-manual-refund\")"
+                "@postmapping(\"/{bookingid}/check-in\")"
         )) {
             assertTrue(adminBooking.contains(endpoint), "AdminBookingController must expose " + endpoint);
         }

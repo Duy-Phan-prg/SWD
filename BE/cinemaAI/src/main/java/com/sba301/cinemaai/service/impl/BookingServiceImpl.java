@@ -14,11 +14,13 @@ import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.BookingTicket;
 import com.sba301.cinemaai.entity.FoodCombo;
 import com.sba301.cinemaai.entity.FoodItem;
+import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.FoodItemStatus;
+import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.enums.SeatStatus;
@@ -31,6 +33,7 @@ import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.BookingTicketRepository;
+import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
@@ -82,6 +85,7 @@ public class BookingServiceImpl implements BookingService {
     private final QrTicketService qrTicketService;
     private final BookingMapper bookingMapper;
     private final LoyaltyPointService loyaltyPointService;
+    private final PaymentRepository paymentRepository;
     private final ReviewRepository reviewRepository;
 
     @Transactional
@@ -539,8 +543,18 @@ public class BookingServiceImpl implements BookingService {
                 booking,
                 bookingSeatRepository.findByBooking(booking),
                 bookingTicketRepository.findByBooking(booking),
-                bookingFoodItemRepository.findByBooking(booking)
+                bookingFoodItemRepository.findByBooking(booking),
+                resolvePaymentAccount(booking)
         );
+    }
+
+    private String resolvePaymentAccount(Booking booking) {
+        if (booking.getStatus() == BookingStatus.REFUNDED) {
+            return null;
+        }
+        return paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
+                .map(Payment::getPaymentAccountLabel)
+                .orElse(null);
     }
 
     private void validateOwner(Booking booking, User user) {

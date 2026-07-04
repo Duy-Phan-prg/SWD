@@ -6,7 +6,6 @@ import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.service.BookingService;
-import com.sba301.cinemaai.service.RefundService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,7 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminBookingController {
 
     private final BookingService bookingService;
-    private final RefundService refundService;
 
     @GetMapping
     public ApiResponse<PageResponse<BookingResponse>> getBookings(
@@ -56,18 +54,5 @@ public class AdminBookingController {
     ) {
         String qrCode = request == null ? null : request.qrCode();
         return ApiResponse.success(bookingService.checkInAdmin(bookingId, qrCode), "Booking checked in successfully");
-    }
-
-    @PostMapping("/{bookingId}/confirm-manual-refund")
-    public ApiResponse<BookingResponse> confirmManualRefund(
-            @PathVariable Long bookingId,
-            @RequestParam String staffName,
-            @RequestParam String notes
-    ) {
-        refundService.confirmManualRefund(bookingId, staffName, notes);
-        return ApiResponse.success(
-                bookingService.getAdminBooking(bookingId),
-                "Manual refund confirmed successfully"
-        );
     }
 }

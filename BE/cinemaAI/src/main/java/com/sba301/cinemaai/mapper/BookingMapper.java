@@ -18,8 +18,10 @@ public class BookingMapper {
             Booking booking,
             List<BookingSeat> seats,
             List<BookingTicket> tickets,
-            List<BookingFoodItem> foods
+            List<BookingFoodItem> foods,
+            String paymentAccount
     ) {
+        boolean hideSensitiveOrderInfo = booking.getStatus() == com.sba301.cinemaai.enums.BookingStatus.REFUNDED;
         return new BookingResponse(
                 booking.getId(),
                 booking.getBookingCode(),
@@ -42,7 +44,8 @@ public class BookingMapper {
                 booking.getRefundRequestedAt(),
                 booking.getRefundedAt(),
                 booking.getRefundReason(),
-                booking.getQrCode(),
+                hideSensitiveOrderInfo ? null : booking.getQrCode(),
+                hideSensitiveOrderInfo ? null : paymentAccount,
                 seats.stream().map(this::toSeatResponse).toList(),
                 tickets.stream().map(this::toTicketResponse).toList(),
                 foods.stream().map(this::toFoodResponse).toList()

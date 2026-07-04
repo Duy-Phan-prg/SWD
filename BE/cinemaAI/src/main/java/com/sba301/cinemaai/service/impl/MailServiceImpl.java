@@ -10,9 +10,12 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import com.sba301.cinemaai.service.MailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import com.sba301.cinemaai.service.MailService;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +52,60 @@ public class MailServiceImpl implements MailService {
         } catch (MailException | MessagingException exception) {
             throw new BadRequestException("Could not send OTP email");
         }
+    }
+
+    @Override
+    public void sendRefundFailedNotice(String to, String bookingCode, BigDecimal amount, String reason) {
+        if (!mailProperties.isEnabled()) {
+            log.warn("Refund failure email was not sent because MAIL_ENABLED/app.mail.enabled is false");
+            return;
+        }
+        if (to == null || to.isBlank()) {
+            log.warn("Refund failure email skipped because recipient email is blank for booking {}", bookingCode);
+            return;
+        }
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null || mailProperties.getFrom() == null || mailProperties.getFrom().isBlank()) {
+            log.warn("Refund failure email skipped because mail sender is not configured for booking {}", bookingCode);
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+            helper.setFrom(mailProperties.getFrom());
+            helper.setTo(to);
+            helper.setSubject("CinemaAI - Thông báo hoàn tiền chưa thành công");
+            helper.setText(buildRefundFailedEmail(bookingCode, amount, reason), true);
+            mailSender.send(message);
+        } catch (MailException | MessagingException exception) {
+            log.error("Could not send refund failure email for booking {}", bookingCode, exception);
+        }
+    }
+
+    private String buildRefundFailedEmail(String bookingCode, BigDecimal amount, String reason) {
+        String formattedAmount = amount == null
+                ? "N/A"
+                : NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN")).format(amount) + " VND";
+        String safeReason = reason == null || reason.isBlank() ? "Suất chiếu bị hủy do sự cố vận hành" : reason;
+
+        return """
+                <!doctype html>
+                <html lang="vi">
+                <body style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+                    <h2>Thông báo hoàn tiền chưa thành công</h2>
+                    <p>Xin chào,</p>
+                    <p>Suất chiếu của bạn đã bị hủy và hệ thống đã cố gắng hoàn tiền về đúng tài khoản/phương thức bạn đã dùng khi thanh toán, nhưng giao dịch hoàn tiền tự động chưa thành công.</p>
+                    <ul>
+                        <li><strong>Mã đơn:</strong> %s</li>
+                        <li><strong>Số tiền:</strong> %s</li>
+                        <li><strong>Lý do:</strong> %s</li>
+                    </ul>
+                    <p>Đội ngũ rạp sẽ liên hệ với bạn qua email này để hỗ trợ xử lý tiếp. Bạn không cần thực hiện thêm thao tác trên hệ thống.</p>
+                    <p>Trân trọng,<br>CinemaAI</p>
+                </body>
+                </html>
+                """.formatted(bookingCode, formattedAmount, safeReason);
     }
 
     private String buildOtpEmail(String purpose, String otp) {

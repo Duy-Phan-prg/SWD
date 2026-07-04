@@ -208,7 +208,6 @@ Ticket-pricing admin endpoints đang `@Hidden` trong Swagger nhưng vẫn tồn 
 | `GET /bookings/{bookingId}` | path | `BookingResponse` | `200` |
 | `DELETE /bookings/{bookingId}` | path | `BookingResponse` | `200` |
 | `POST /bookings/{bookingId}/check-in` | optional `CheckInRequest` | `BookingResponse` | `200` |
-| `POST /bookings/{bookingId}/confirm-manual-refund` | query `staffName,notes` | `BookingResponse` | `200` |
 | `GET /users` | — | `List<UserProfileResponse>` | `200` |
 | `GET /users/{userId}` | path | `UserProfileResponse` | `200` |
 | `POST /users/staff` | `AdminStaffCreateRequest` | `UserProfileResponse` | `200` |

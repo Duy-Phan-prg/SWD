@@ -61,6 +61,10 @@ public class Payment extends BaseEntity {
     private String callbackPayload;
 
     @Setter
+    @Column(name = "payment_account_label", length = 100)
+    private String paymentAccountLabel;
+
+    @Setter
     @Column(name = "refund_amount", precision = 12, scale = 2)
     private BigDecimal refundAmount; // Số tiền thực tế bồi thường (Bằng booking.totalAmount)
 

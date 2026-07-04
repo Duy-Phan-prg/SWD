@@ -77,7 +77,8 @@ PAID/USED -> REFUND_REQUESTED -> REFUNDED | REFUND_FAILED
 - Food selection phải chọn đúng một trong `foodItemId` hoặc `foodComboId`; quantity > 0; item/combo phải `ACTIVE`.
 - Booking `USED` không được cancel.
 - Chỉ booking `PAID` được check-in; QR nếu truyền phải khớp booking; sau check-in thành `USED`.
-- Booking `REFUND_FAILED` chỉ được staff/admin xác nhận hoàn thủ công qua `confirm-manual-refund`.
+- Booking `REFUND_FAILED`: hệ thống gửi email thông báo cho khách; không có luồng hoàn tiền mặt/chuyển khoản thủ công trong API.
+- Sau `REFUNDED`: `qrCode` và `paymentAccount` không còn hiển thị trong `BookingResponse`.
 
 ## 6. Ticket pricing
 
