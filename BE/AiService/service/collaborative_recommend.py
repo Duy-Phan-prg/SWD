@@ -1,4 +1,5 @@
 import numpy as np
+import psycopg2.extras
 from service.db import get_connection
 
 TOP_K = 10
@@ -7,7 +8,7 @@ TOP_USERS = 20
 
 def get_user_ratings(user_id: int) -> dict:
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
             SELECT movie_id, score FROM ratings WHERE user_id = %s
@@ -20,7 +21,7 @@ def get_user_ratings(user_id: int) -> dict:
 
 def get_watched_ids(user_id: int) -> set:
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
             SELECT movie_id FROM watch_history WHERE user_id = %s
@@ -33,7 +34,7 @@ def get_watched_ids(user_id: int) -> set:
 
 def get_all_ratings() -> dict:
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("SELECT user_id, movie_id, score FROM ratings")
         result: dict[int, dict[int, float]] = {}
@@ -52,11 +53,13 @@ def get_movie_info(movie_ids: list) -> dict:
     if not movie_ids:
         return {}
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        fmt = ",".join(["%s"] * len(movie_ids))
-        cursor.execute(f"SELECT id, title, poster_url FROM movies WHERE id IN ({fmt})", movie_ids)
-        return {r["id"]: r for r in cursor.fetchall()}
+        cursor.execute(
+            "SELECT id, title, poster_url FROM movies WHERE id = ANY(%s)",
+            (movie_ids,)
+        )
+        return {r["id"]: dict(r) for r in cursor.fetchall()}
     finally:
         cursor.close()
         conn.close()
@@ -112,7 +115,7 @@ def recommend_collaborative(user_id: int) -> list:
 
 def _fallback(seen: set) -> list:
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
             SELECT m.id, m.title, m.poster_url, AVG(r.score) as avg_score

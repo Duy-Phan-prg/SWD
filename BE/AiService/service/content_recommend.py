@@ -1,4 +1,5 @@
 import numpy as np
+import psycopg2.extras
 from service.db import get_connection
 from service.embedding_service import get_embedding_service
 
@@ -7,7 +8,7 @@ TOP_K = 10
 
 def get_movie_data(movie_id: int) -> dict | None:
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
             SELECT m.id, m.title, m.description, m.director, m.main_actors, m.poster_url
@@ -17,6 +18,8 @@ def get_movie_data(movie_id: int) -> dict | None:
         movie = cursor.fetchone()
         if not movie:
             return None
+
+        movie = dict(movie)
 
         cursor.execute("""
             SELECT g.name FROM genres g
