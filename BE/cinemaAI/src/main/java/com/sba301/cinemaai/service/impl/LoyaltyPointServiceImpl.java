@@ -1,6 +1,5 @@
 package com.sba301.cinemaai.service.impl;
 
-
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import com.sba301.cinemaai.dto.request.loyalty.LoyaltyAddRequest;
 import com.sba301.cinemaai.dto.response.loyalty.LoyaltyResponse;
@@ -28,13 +27,15 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
     private final LoyaltyPointRepository loyaltyPointRepository;
     private final UserRepository userRepository;
 
-    @Transactional
+    @Override
+    @Transactional(readOnly = true)
     public LoyaltyResponse getMyPoints(String email) {
         User user = resolveUserByEmail(email);
         LoyaltyPoint lp = getOrCreate(user);
         return LoyaltyResponse.from(lp);
     }
 
+    @Override
     @Transactional
     public LoyaltyResponse addPoints(LoyaltyAddRequest request) {
         User user = resolveUserById(request.getUserId());
@@ -50,6 +51,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         return LoyaltyResponse.from(lp);
     }
 
+    @Override
     @Transactional
     public LoyaltyResponse redeemPoints(Long userId, int points) {
         if (points <= 0) {
@@ -70,11 +72,13 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         return LoyaltyResponse.from(lp);
     }
 
+    @Override
     @Transactional
     public LoyaltyResponse redeemMyPoints(String email, int points) {
         return redeemPoints(resolveUserByEmail(email).getId(), points);
     }
 
+    @Override
     @Transactional
     public void addPointsFromBooking(User user, Booking booking) {
         int earned = calculateEarnedPoints(booking);
@@ -88,23 +92,24 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
                 booking.getBookingCode(), earned, user.getEmail());
     }
 
+    @Override
     @Transactional
     public void revokePointsFromBooking(User user, Booking booking) {
         int earned = calculateEarnedPoints(booking);
         if (earned <= 0) return;
 
-        LoyaltyPoint lp = loyaltyPointRepository.findByUser(user).orElse(null);
-        if (lp == null) return;
+        LoyaltyPoint lp = loyaltyPointRepository.findByUser(user)
+                .orElseThrow(() -> new NotFoundException("Loyalty account not found for user: " + user.getId()));
 
-        int toRevoke = Math.min(earned, lp.getPoints());
-        if (toRevoke > 0) {
-            lp.setPoints(lp.getPoints() - toRevoke);
-            loyaltyPointRepository.save(lp);
-            log.info("Booking {} — revoked {} loyalty points from user {}",
-                    booking.getBookingCode(), toRevoke, user.getEmail());
-        }
+        // Trừ trực tiếp số điểm đã kiếm (Không dùng Math.min để tránh việc chặn điểm âm)
+        lp.setPoints(lp.getPoints() - earned);
+        loyaltyPointRepository.save(lp);
+
+        log.info("Booking {} — revoked {} earned loyalty points from user {}. New balance: {}",
+                booking.getBookingCode(), earned, user.getEmail(), lp.getPoints());
     }
 
+    @Override
     @Transactional
     public int redeemPointsForBooking(User user, Booking booking, int points) {
         if (points <= 0) {
@@ -122,6 +127,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         return points;
     }
 
+    @Override
     @Transactional
     public void restoreRedeemedPointsFromBooking(User user, Booking booking) {
         int redeemed = booking.getDiscountAmount() == null ? 0 : booking.getDiscountAmount().intValue();
@@ -130,9 +136,12 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         LoyaltyPoint lp = getOrCreate(user);
         restorePoints(lp, redeemed);
         loyaltyPointRepository.save(lp);
+
         log.info("Booking {} — restored {} redeemed loyalty points to user {}",
                 booking.getBookingCode(), redeemed, user.getEmail());
     }
+
+    // --- Các hàm Utility hỗ trợ xử lý nội bộ ---
 
     private LoyaltyPoint getOrCreate(User user) {
         return loyaltyPointRepository.findByUser(user)
@@ -168,7 +177,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         }
         return booking.getTotalAmount()
                 .multiply(EARN_RATE)
-                .setScale(0, RoundingMode.DOWN)
+                .setScale(0, RoundingMode.DOWN) // Ép buộc làm tròn xuống thành số nguyên nguyên bản
                 .intValue();
     }
 }

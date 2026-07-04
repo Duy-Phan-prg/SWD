@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -265,5 +266,27 @@ public class AdminShowtimeController {
     })
     public void deleteShowtime(@PathVariable Long showtimeId) {
         showtimeService.delete(showtimeId);
+    }
+
+    
+    @PostMapping("/showtimes/{showtimeId}/cancel-and-refund")
+    public ResponseEntity<String> cancelAndRefund(
+            @PathVariable Long showtimeId,
+            @RequestParam String reason) {
+
+        showtimeService.cancelShowtimeAndBulkRefund(showtimeId, reason);
+        return ResponseEntity.ok("Suất chiếu ID " + showtimeId + " đã được hủy thành công. " +
+                "Hệ thống đang tiến hành chạy vòng lặp bồi thường tiền và cân bằng điểm Loyalty cho toàn bộ vé PAID ngầm...");
+    }
+
+    @PostMapping("/bookings/{bookingId}/confirm-manual-refund")
+    public ResponseEntity<String> confirmManual(
+            @PathVariable Long bookingId,
+            @RequestParam String staffName,
+            @RequestParam String notes) {
+
+        showtimeService.confirmManualRefund(bookingId, staffName, notes);
+        return ResponseEntity.ok("Xác nhận bồi thường thủ công ngoài hệ thống thành công cho đơn hàng ID: " + bookingId + ". " +
+                "Trạng thái đơn đã đóng và ví điểm Loyalty của khách đã quay về mốc huề vốn hoàn hảo.");
     }
 }

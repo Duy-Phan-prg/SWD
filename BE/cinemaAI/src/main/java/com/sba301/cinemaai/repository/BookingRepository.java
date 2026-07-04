@@ -9,9 +9,12 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -62,4 +65,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             GROUP BY s.room.id, s.room.name, s.room.rowCount, s.room.columnCount
             """)
     List<Object[]> occupancyByRoom(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE) // Sinh lệnh khóa dòng dữ liệu trong SQL Server
+    @Query("SELECT b FROM Booking b WHERE b.showtime.id = :showtimeId AND b.status = :status")
+    List<Booking> findByShowtimeIdAndStatusForUpdate(
+            @Param("showtimeId") Long showtimeId,
+            @Param("status") BookingStatus status
+    );
+
+    // 2. Hàm tìm và KHÓA ĐƠN LẺ (Dùng cho Staff khi bấm duyệt xử lý lỗi thủ công offline)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Booking b WHERE b.id = :id")
+    Optional<Booking> findByIdForUpdate(@Param("id") Long id);
 }

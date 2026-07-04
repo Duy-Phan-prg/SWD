@@ -60,6 +60,22 @@ public class Payment extends BaseEntity {
     @Column(name = "callback_payload", columnDefinition = "TEXT")
     private String callbackPayload;
 
+    @Setter
+    @Column(name = "refund_amount", precision = 12, scale = 2)
+    private BigDecimal refundAmount; // Số tiền thực tế bồi thường (Bằng booking.totalAmount)
+
+    @Setter
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt; // Thời điểm giao dịch hoàn tiền hoàn tất
+
+    @Setter
+    @Column(name = "refund_transaction_no", length = 100)
+    private String refundTransactionNo; // Mã đối soát của VNPay hoặc mã Staff xử lý tay
+
+    @Setter
+    @Column(name = "refund_method", length = 50)
+    private String refundMethod;
+
     public Payment(Booking booking, PaymentProvider provider, BigDecimal amount) {
         this.booking = booking;
         this.provider = provider;
