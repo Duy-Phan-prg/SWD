@@ -888,11 +888,25 @@ export default function AuthModal({
                     <div className="flex-1 h-px bg-neutral-900"></div>
                   </div>
 
-                  {/* Google Authenticator */}
-                  <div className="google-signin-shell relative h-[52px] w-full overflow-hidden bg-white shadow-md">
+                  {/* Google Authenticator — house-styled visual layer, real GIS button overlaid invisibly on top */}
+                  <div className="google-signin-shell group relative h-[52px] w-full overflow-hidden border border-white/15 bg-black transition-colors duration-300 hover:border-white/50 hover:bg-white/5">
+                    {!googleButtonError && (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 flex items-center justify-center gap-3 px-4 text-xs font-sans font-black uppercase tracking-[0.2em] text-white"
+                      >
+                        <svg className="h-4 w-4 shrink-0" viewBox="0 0 48 48" aria-hidden="true">
+                          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                        </svg>
+                        Đăng Nhập Bằng Google
+                      </span>
+                    )}
                     <div
                       ref={bindGoogleButtonHost}
-                      className="google-signin-button absolute inset-0 flex h-[52px] w-full items-center justify-center overflow-hidden bg-black [&>div]:flex [&>div]:w-full [&>div]:justify-center [&_iframe]:mx-auto [&_iframe]:w-full [&_iframe]:max-w-full"
+                      className="google-signin-button absolute inset-0 h-[52px] w-full overflow-hidden opacity-0 [&>div]:flex [&>div]:w-full [&>div]:justify-center [&_iframe]:mx-auto [&_iframe]:w-full [&_iframe]:max-w-full"
                       aria-live="polite"
                     />
                     {!googleButtonReady && !googleButtonError && (
@@ -900,17 +914,15 @@ export default function AuthModal({
                         type="button"
                         onClick={handleGoogleSignIn}
                         disabled={isSubmitting}
-                        className="google-signin-fallback absolute inset-0 flex h-[52px] w-full items-center justify-center gap-3 bg-white px-4 text-xs font-black uppercase tracking-[0.15em] text-neutral-800"
-                      >
-                        <span className="flex h-5 w-5 items-center justify-center text-base font-black text-blue-600">G</span>
-                        Đăng nhập bằng Google
-                      </button>
+                        aria-label="Đăng nhập bằng Google"
+                        className="google-signin-fallback absolute inset-0 h-[52px] w-full cursor-pointer bg-transparent disabled:cursor-not-allowed"
+                      />
                     )}
                     {googleButtonError && (
                       <button
                         type="button"
                         onClick={handleGoogleSignIn}
-                        className="flex min-h-[52px] w-full items-center justify-center gap-2 bg-white px-4 py-3 text-center text-[11px] font-black uppercase tracking-[0.12em] text-red-700"
+                        className="relative flex min-h-[52px] w-full items-center justify-center gap-2 bg-black px-4 py-3 text-center text-[11px] font-sans font-bold uppercase tracking-[0.12em] text-red-400"
                       >
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         {googleButtonError}

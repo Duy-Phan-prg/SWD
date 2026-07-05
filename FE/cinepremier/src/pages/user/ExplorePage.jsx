@@ -31,7 +31,7 @@ export default function ExploreView() {
   ));
   const [sortBy, setSortBy] = useState('rating'); // rating, newest, duration
   const [localPage, setLocalPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 10; // keep in sync with useMovieStore moviePagination.size
   const currentPage = pagination ? (Number(pagination.page) || 0) + 1 : localPage;
 
   // Filter and sort logical step
