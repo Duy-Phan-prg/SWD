@@ -49,4 +49,4 @@ os.makedirs("model", exist_ok=True)
 with open(OUTPUT_PATH, "wb") as f:
     pickle.dump(embeddings, f)
 
-print(f"Done: {len(embeddings)} movies → {OUTPUT_PATH}")
+print(f"Done: {len(embeddings)} movies -> {OUTPUT_PATH}")
