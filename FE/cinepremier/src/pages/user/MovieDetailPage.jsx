@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Star, Clock, Heart, Loader2 } from 'lucide-react';
 import { useMovies } from '../../stores/useMovieStore';
@@ -6,6 +7,7 @@ import { getStoredAuth } from '../../services/authService';
 import { adminService } from '../../services/adminService';
 import { movieService } from '../../services/movieService';
 import { reviewService } from '../../services/reviewService';
+import { recommendationService } from '../../services/recommendationService';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const extractYoutubeId = (url = '') => {
@@ -100,6 +102,7 @@ export default function DetailView() {
   const [reviews, setReviews] = useState([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [likedReviews, setLikedReviews] = useState({});
+  const [similarMovies, setSimilarMovies] = useState([]);
   const isBookable = movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
   const isWatchlisted = movie && watchlist.some((item) => (
     String(item.backendId || item.movieId || item.id) === String(movie.backendId || movie.movieId || movie.id)
@@ -124,6 +127,31 @@ export default function DetailView() {
       })
       .finally(() => {
         if (!cancelled) setIsLoadingReviews(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detailMovieId]);
+
+  // Close the trailer modal with the Escape key.
+  useEffect(() => {
+    if (!showTrailer) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setShowTrailer(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showTrailer]);
+
+  useEffect(() => {
+    if (!detailMovieId) return;
+    let cancelled = false;
+    recommendationService.getContentRecommendations(detailMovieId)
+      .then((items) => {
+        if (!cancelled) setSimilarMovies(Array.isArray(items) ? items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSimilarMovies([]);
       });
     return () => {
       cancelled = true;
@@ -438,19 +466,64 @@ export default function DetailView() {
         </div>
       </section>
 
-      {/* 3. VIDEO TRAILER DIALOG COMPONENT MODAL */}
-      {showTrailer && trailerUrl && (
+      {/* 3. SIMILAR MOVIES (content-based AI recommendation) */}
+      {similarMovies.length > 0 && (
+        <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-4" id="similar-movies-section">
+          <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">
+            PHIM TƯƠNG TỰ
+            <span className="ml-3 font-light normal-case tracking-normal text-neutral-500">Dựa trên nội dung, thể loại và ê-kíp</span>
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="similar-movies-grid">
+            {similarMovies.slice(0, 10).map((rec) => (
+              <button
+                key={rec.id}
+                type="button"
+                onClick={() => navigate(`/movies/${rec.backendId || rec.id}`)}
+                className="group relative text-left bg-neutral-950 border border-white/10 hover:border-white/40 transition overflow-hidden cursor-pointer"
+              >
+                <div className="aspect-[2/3] w-full overflow-hidden bg-black">
+                  {rec.posterUrl ? (
+                    <img
+                      src={rec.posterUrl}
+                      alt={rec.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
+                  )}
+                </div>
+                {typeof rec.similarity === 'number' && (
+                  <span className="absolute top-2 right-2 bg-black/80 border border-white/20 px-2 py-1 text-[9px] font-sans font-bold tracking-wider text-white">
+                    {Math.round(rec.similarity * 100)}% TƯƠNG ĐỒNG
+                  </span>
+                )}
+                <div className="p-3">
+                  <p className="text-xs font-serif text-white leading-snug line-clamp-2">{rec.title}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 4. VIDEO TRAILER DIALOG COMPONENT MODAL — portaled to <body> to escape the page's stacking context (sticky header is z-[100]) */}
+      {showTrailer && trailerUrl && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 transition duration-300"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 p-4 transition duration-300"
           id="trailer-modal"
+          onClick={() => setShowTrailer(false)}
         >
-          <div className="relative w-full max-w-4xl border border-white/20 bg-neutral-950 shadow-2xl">
+          <div
+            className="relative w-full max-w-4xl border border-white/20 bg-neutral-950 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <button
               onClick={() => setShowTrailer(false)}
               className="absolute top-4 right-4 z-10 bg-black/70 hover:bg-black text-white p-2.5 border border-white/15 transition text-xs font-sans cursor-pointer"
               id="close-trailer-modal"
             >
-              ✕ ĐÓNG
+              ✕ ĐÓNG <span className="text-neutral-500 ml-1">ESC</span>
             </button>
 
             {/* Aspect box iframe */}
@@ -480,7 +553,8 @@ export default function DetailView() {
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 
