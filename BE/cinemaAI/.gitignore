@@ -41,3 +41,5 @@ build/
 # Project docs ignored
 **/cinemaAI/ROLE_BASED_BUSINESS_FLOWS.md
 **/cinemaAI/SRS_CINEMA_SYSTEM_COMPLETE.md
+# Logs
+*.log

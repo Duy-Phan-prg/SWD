@@ -18,13 +18,19 @@ public class GenreSeeder implements Seeder {
     @Override
     @Transactional
     public void seed() {
-        Map<String, String> genres = Map.of(
-                "Action", "Action movies",
-                "Drama", "Drama movies",
-                "Comedy", "Comedy movies",
-                "Horror", "Horror movies",
-                "Romance", "Romance movies",
-                "Sci-Fi", "Science fiction movies"
+        Map<String, String> genres = Map.ofEntries(
+                Map.entry("Action", "Action movies"),
+                Map.entry("Drama", "Drama movies"),
+                Map.entry("Comedy", "Comedy movies"),
+                Map.entry("Horror", "Horror movies"),
+                Map.entry("Romance", "Romance movies"),
+                Map.entry("Sci-Fi", "Science fiction movies"),
+                Map.entry("Thriller", "Thriller movies"),
+                Map.entry("Adventure", "Adventure movies"),
+                Map.entry("Animation", "Animated movies"),
+                Map.entry("Family", "Family friendly movies"),
+                Map.entry("Crime", "Crime movies"),
+                Map.entry("Musical", "Musical movies")
         );
 
         genres.forEach((name, description) -> {
