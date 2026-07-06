@@ -31,4 +31,6 @@ public interface ShowtimeService {
     void delete(Long id);
 
     ShowtimeSeatMapResponse getSeatMap(Long showtimeId);
+
+    ShowtimeResponse cancelShowtime(Long id, String reason);
 }

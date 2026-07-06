@@ -7,7 +7,6 @@ import com.sba301.cinemaai.dto.request.booking.BookingFoodRequest;
 import com.sba301.cinemaai.dto.request.booking.CheckInRequest;
 import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
 import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
-import com.sba301.cinemaai.dto.request.booking.RefundRequest;
 import com.sba301.cinemaai.dto.request.food.FoodItemRequest;
 import com.sba301.cinemaai.dto.request.ticket.TicketPricingRuleRequest;
 import com.sba301.cinemaai.dto.request.ticket.TicketSelectionRequest;
@@ -291,19 +290,20 @@ class BookingIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("SUCCESS"));
 
-        mockMvc.perform(post("/api/v1/bookings/{bookingId}/refund-request", bookingId)
-                        .header("Authorization", "Bearer " + customerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RefundRequest("Cúp điện trong rạp"))))
+        mockMvc.perform(post("/api/v1/admin/showtimes/{showtimeId}/cancel", showtime.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("reason", "Cúp điện trong rạp"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("REFUND_REQUESTED"))
-                .andExpect(jsonPath("$.data.refundReason").value("Cúp điện trong rạp"));
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
 
-        mockMvc.perform(post("/api/v1/admin/bookings/{bookingId}/mark-refunded", bookingId)
+        mockMvc.perform(get("/api/v1/admin/bookings/{bookingId}", bookingId)
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("REFUNDED"))
-                .andExpect(jsonPath("$.data.refundedAt").isNotEmpty());
+                .andExpect(jsonPath("$.data.refundedAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.refundReason").value("Hủy suất chiếu do sự cố: Cúp điện trong rạp"))
+                .andExpect(jsonPath("$.data.qrCode").doesNotExist())
+                .andExpect(jsonPath("$.data.paymentAccount").doesNotExist());
     }
 
     private Long createFoodItem(String adminToken) throws Exception {

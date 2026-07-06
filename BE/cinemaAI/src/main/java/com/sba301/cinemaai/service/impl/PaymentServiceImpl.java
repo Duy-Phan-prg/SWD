@@ -8,6 +8,7 @@ import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.PaymentProvider;
+import com.sba301.cinemaai.util.PaymentAccountSupport;
 import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
@@ -158,7 +159,7 @@ public class PaymentServiceImpl implements PaymentService {
     private void confirmPayment(Payment payment, String transactionNo, Map<String, String> params) {
         if (payment.getStatus() == PaymentStatus.SUCCESS) return;
 
-        markPaymentSuccess(payment, transactionNo, toJson(params));
+        markPaymentSuccess(payment, transactionNo, toJson(params), params);
         Booking booking = payment.getBooking();
         bookingSeatRepository.findByBooking(booking)
                 .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.BOOKED));
@@ -180,11 +181,12 @@ public class PaymentServiceImpl implements PaymentService {
         booking.setStatus(BookingStatus.PAID);
     }
 
-    private void markPaymentSuccess(Payment payment, String transactionId, String callbackPayload) {
+    private void markPaymentSuccess(Payment payment, String transactionId, String callbackPayload, Map<String, String> params) {
         payment.setTransactionId(transactionId);
         payment.setCallbackPayload(callbackPayload);
         payment.setPaidAt(LocalDateTime.now());
         payment.setStatus(PaymentStatus.SUCCESS);
+        payment.setPaymentAccountLabel(PaymentAccountSupport.resolveFromCallback(payment.getProvider(), params));
     }
 
     private void markPaymentFailed(Payment payment, String callbackPayload) {

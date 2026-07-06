@@ -12,23 +12,13 @@ import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Showtime;
-import com.sba301.cinemaai.enums.BookingStatus;
-import com.sba301.cinemaai.enums.MovieStatus;
-import com.sba301.cinemaai.enums.RoomStatus;
-import com.sba301.cinemaai.enums.SeatRuntimeStatus;
-import com.sba301.cinemaai.enums.SeatStatus;
-import com.sba301.cinemaai.enums.ShowtimeStatus;
+import com.sba301.cinemaai.enums.*;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.CinemaMapper;
-import com.sba301.cinemaai.repository.BookingRepository;
-import com.sba301.cinemaai.repository.BookingSeatRepository;
-import com.sba301.cinemaai.repository.MovieRepository;
-import com.sba301.cinemaai.repository.SeatRepository;
-import com.sba301.cinemaai.repository.ShowtimeRepository;
-import com.sba301.cinemaai.service.LoyaltyPointService;
-import com.sba301.cinemaai.service.NotificationService;
+import com.sba301.cinemaai.repository.*;
+import com.sba301.cinemaai.service.RefundService;
 import com.sba301.cinemaai.service.RoomService;
 import com.sba301.cinemaai.service.ShowtimeService;
 import java.time.LocalDate;
@@ -41,6 +31,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -49,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ShowtimeServiceImpl implements ShowtimeService {
 
     private static final int CLEANUP_MINUTES = 15;
@@ -66,8 +58,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final BookingSeatRepository bookingSeatRepository;
     private final RoomService roomService;
     private final CinemaMapper cinemaMapper;
-    private final LoyaltyPointService loyaltyPointService;
-    private final NotificationService notificationService;
+    private final RefundService refundService;
+
 
     // -------------------------------------------------------------------------
     // PUBLIC (customer-facing)
@@ -224,10 +216,19 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         Showtime showtime = findById(id);
         validateStatusTransition(showtime, status);
         if (status == ShowtimeStatus.CANCELLED) {
-            // Auto-handle all bookings when admin cancels a showtime
-            cancelShowtimeBookings(showtime);
+            refundService.processShowtimeCancellation(showtime, null);
         }
         showtime.setStatus(status);
+        return cinemaMapper.toShowtimeResponse(showtime);
+    }
+
+    @Transactional
+    @Override
+    public ShowtimeResponse cancelShowtime(Long id, String reason) {
+        Showtime showtime = findById(id);
+        validateStatusTransition(showtime, ShowtimeStatus.CANCELLED);
+        refundService.processShowtimeCancellation(showtime, reason);
+        showtime.setStatus(ShowtimeStatus.CANCELLED);
         return cinemaMapper.toShowtimeResponse(showtime);
     }
 
@@ -415,37 +416,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         return bookingRepository.existsByShowtimeAndStatusIn(showtime, ACTIVE_BOOKING_STATUSES);
     }
 
-    /**
-     * Cascade-cancels all non-terminal bookings when admin cancels a showtime due to incident.
-     * <ul>
-     *   <li>HOLDING / PENDING_PAYMENT  → CANCELLED  (no money collected)</li>
-     *   <li>PAID  → REFUNDED: mark refunded, revoke loyalty, send notification</li>
-     *   <li>REFUND_REQUESTED → REFUNDED: complete the pending refund</li>
-     *   <li>USED / CANCELLED / REFUNDED / EXPIRED → skipped (terminal)</li>
-     * </ul>
-     */
-    private void cancelShowtimeBookings(Showtime showtime) {
-        bookingRepository.findByShowtime(showtime).forEach(booking -> {
-            switch (booking.getStatus()) {
-                case HOLDING, PENDING_PAYMENT -> {
-                    cancelBooking(booking);
-                    notificationService.notifyBookingCancelled(booking);
-                }
-                case PAID, REFUND_REQUESTED -> processShowtimeRefund(booking, showtime);
-                default -> { /* already terminal — no action */ }
-            }
-        });
-    }
-
-    private void processShowtimeRefund(Booking booking, Showtime showtime) {
-        booking.setStatus(BookingStatus.REFUNDED);
-        booking.setRefundedAt(java.time.LocalDateTime.now());
-        booking.setRefundReason("Showtime cancelled by admin due to operational incident");
-        loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
-        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
-        notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
-    }
-
     private LocalDateTime calculateEndTime(Movie movie, LocalDateTime startTime) {
         return startTime.plusMinutes(movie.getDurationMinutes()).plusMinutes(CLEANUP_MINUTES);
     }
@@ -544,17 +514,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         return value != null ? value : fallback;
     }
 
-    private void cancelBooking(com.sba301.cinemaai.entity.Booking booking) {
-        booking.setCancelledAt(LocalDateTime.now());
-        booking.setStatus(BookingStatus.CANCELLED);
-    }
-
-    private void requestRefund(com.sba301.cinemaai.entity.Booking booking, String reason) {
-        booking.setRefundRequestedAt(LocalDateTime.now());
-        booking.setRefundReason(reason);
-        booking.setStatus(BookingStatus.REFUND_REQUESTED);
-    }
-
     private String resolveRuntimeStatus(Seat seat, Map<Long, BookingSeat> runtimeSeats) {
         if (seat.getStatus() != SeatStatus.AVAILABLE) {
             return "UNAVAILABLE";
@@ -602,4 +561,5 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         return showtimeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Showtime not found"));
     }
+
 }

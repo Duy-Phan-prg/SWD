@@ -24,4 +24,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = 'SUCCESS' AND p.paidAt BETWEEN :from AND :to")
     long countSuccessfulPayments(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    Optional<Payment> findByBookingIdAndStatus(Long bookingId, PaymentStatus status);
 }

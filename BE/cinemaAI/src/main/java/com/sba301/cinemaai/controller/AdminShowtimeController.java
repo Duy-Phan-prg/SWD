@@ -235,9 +235,34 @@ public class AdminShowtimeController {
     })
     public ApiResponse<ShowtimeResponse> updateStatus(
             @PathVariable Long showtimeId,
-            @RequestParam ShowtimeStatus status
+            @RequestParam ShowtimeStatus status,
+            @RequestParam(required = false) String reason
     ) {
+        if (status == ShowtimeStatus.CANCELLED && reason != null && !reason.isBlank()) {
+            return ApiResponse.success(
+                    showtimeService.cancelShowtime(showtimeId, reason),
+                    "Showtime cancelled and refund process initiated"
+            );
+        }
         return ApiResponse.success(showtimeService.updateStatus(showtimeId, status), "Showtime status updated successfully");
+    }
+
+    @PostMapping("/{showtimeId}/cancel")
+    @Operation(
+            summary = "Cancel showtime and trigger automatic refunds (Admin)",
+            description = """
+                    Cancels the showtime and automatically processes refunds for PAID/USED bookings.
+                    HOLDING/PENDING_PAYMENT bookings are cancelled without refund.
+                    """
+    )
+    public ApiResponse<ShowtimeResponse> cancelShowtime(
+            @PathVariable Long showtimeId,
+            @RequestParam String reason
+    ) {
+        return ApiResponse.success(
+                showtimeService.cancelShowtime(showtimeId, reason),
+                "Showtime cancelled and refund process initiated"
+        );
     }
 
     // -------------------------------------------------------------------------

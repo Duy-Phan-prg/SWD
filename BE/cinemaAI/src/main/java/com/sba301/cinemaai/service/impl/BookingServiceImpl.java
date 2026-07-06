@@ -14,11 +14,13 @@ import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.BookingTicket;
 import com.sba301.cinemaai.entity.FoodCombo;
 import com.sba301.cinemaai.entity.FoodItem;
+import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.FoodItemStatus;
+import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.enums.SeatStatus;
@@ -31,6 +33,7 @@ import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.BookingTicketRepository;
+import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
@@ -87,6 +90,7 @@ public class BookingServiceImpl implements BookingService {
     private final QrTicketService qrTicketService;
     private final BookingMapper bookingMapper;
     private final LoyaltyPointService loyaltyPointService;
+    private final PaymentRepository paymentRepository;
     private final ReviewRepository reviewRepository;
 
     @Transactional
@@ -203,36 +207,6 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = findBooking(bookingId);
         validateOwner(booking, user);
         return cancelBooking(booking);
-    }
-
-    @Transactional
-    public BookingResponse requestRefund(String email, Long bookingId, String reason) {
-        User user = userService.getByEmail(email);
-        Booking booking = findBooking(bookingId);
-        validateOwner(booking, user);
-        validateRefundable(booking);
-        requestRefund(booking, reason);
-        releaseSeats(booking);
-        return toResponse(booking);
-    }
-
-    @Transactional
-    public BookingResponse requestRefundAdmin(Long bookingId, String reason) {
-        Booking booking = findBooking(bookingId);
-        validateRefundable(booking);
-        requestRefund(booking, reason);
-        releaseSeats(booking);
-        return toResponse(booking);
-    }
-
-    @Transactional
-    public BookingResponse markRefunded(Long bookingId) {
-        Booking booking = findBooking(bookingId);
-        if (booking.getStatus() != BookingStatus.REFUND_REQUESTED) {
-            throw new BadRequestException("Only refund requested booking can be marked as refunded");
-        }
-        markRefunded(booking);
-        return toResponse(booking);
     }
 
     @Transactional
@@ -529,15 +503,6 @@ public class BookingServiceImpl implements BookingService {
                 .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.RELEASED));
     }
 
-    private void validateRefundable(Booking booking) {
-        if (booking.getStatus() != BookingStatus.PAID && booking.getStatus() != BookingStatus.CANCELLED) {
-            throw new BadRequestException("Only paid or cancelled booking can request refund");
-        }
-        if (reviewRepository.existsByUserAndMovie(booking.getUser(), booking.getShowtime().getMovie())) {
-            throw new BadRequestException("Reviewed movie cannot request refund");
-        }
-    }
-
     private void markPendingPayment(Booking booking) {
         requireStatus(booking, BookingStatus.HOLDING, "Only holding booking can move to pending payment");
         booking.setStatus(BookingStatus.PENDING_PAYMENT);
@@ -560,21 +525,6 @@ public class BookingServiceImpl implements BookingService {
         }
         booking.setCheckedInAt(LocalDateTime.now());
         booking.setStatus(BookingStatus.USED);
-    }
-
-    private void requestRefund(Booking booking, String reason) {
-        validateRefundable(booking);
-        booking.setRefundRequestedAt(LocalDateTime.now());
-        booking.setRefundReason(reason);
-        booking.setStatus(BookingStatus.REFUND_REQUESTED);
-    }
-
-    private void markRefunded(Booking booking) {
-        requireStatus(booking, BookingStatus.REFUND_REQUESTED, "Only refund requested booking can be marked as refunded");
-        loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
-        loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
-        booking.setRefundedAt(LocalDateTime.now());
-        booking.setStatus(BookingStatus.REFUNDED);
     }
 
     private BigDecimal applyLoyaltyDiscount(User user, Booking booking, Integer pointsToRedeem, BigDecimal subtotal) {
@@ -613,8 +563,18 @@ public class BookingServiceImpl implements BookingService {
                 booking,
                 bookingSeatRepository.findByBooking(booking),
                 bookingTicketRepository.findByBooking(booking),
-                bookingFoodItemRepository.findByBooking(booking)
+                bookingFoodItemRepository.findByBooking(booking),
+                resolvePaymentAccount(booking)
         );
+    }
+
+    private String resolvePaymentAccount(Booking booking) {
+        if (booking.getStatus() == BookingStatus.REFUNDED) {
+            return null;
+        }
+        return paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
+                .map(Payment::getPaymentAccountLabel)
+                .orElse(null);
     }
 
     private void validateOwner(Booking booking, User user) {

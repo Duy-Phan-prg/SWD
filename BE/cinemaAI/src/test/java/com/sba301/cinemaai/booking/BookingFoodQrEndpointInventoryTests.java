@@ -19,8 +19,7 @@ class BookingFoodQrEndpointInventoryTests {
                 "@postmapping",
                 "@getmapping",
                 "@getmapping(\"/{bookingid}\")",
-                "@deletemapping(\"/{bookingid}\")",
-                "@postmapping(\"/{bookingid}/refund-request\")"
+                "@deletemapping(\"/{bookingid}\")"
         )) {
             assertTrue(booking.contains(endpoint), "BookingController must expose " + endpoint);
         }
@@ -31,9 +30,7 @@ class BookingFoodQrEndpointInventoryTests {
                 "@getmapping",
                 "@getmapping(\"/{bookingid}\")",
                 "@deletemapping(\"/{bookingid}\")",
-                "@postmapping(\"/{bookingid}/check-in\")",
-                "@postmapping(\"/{bookingid}/refund-request\")",
-                "@postmapping(\"/{bookingid}/mark-refunded\")"
+                "@postmapping(\"/{bookingid}/check-in\")"
         )) {
             assertTrue(adminBooking.contains(endpoint), "AdminBookingController must expose " + endpoint);
         }

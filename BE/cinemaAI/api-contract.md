@@ -83,7 +83,6 @@ Status chung:
 | `GET /bookings` | Auth | query `status,page,size` | `PageResponse<BookingResponse>` | `200` |
 | `GET /bookings/{bookingId}` | Auth/owner | path | `BookingResponse` | `200` |
 | `DELETE /bookings/{bookingId}` | Auth/owner | path | `BookingResponse` | `200` |
-| `POST /bookings/{bookingId}/refund-request` | Auth/owner | `RefundRequest` | `BookingResponse` | `200` |
 | `POST /payments/vnpay/create` | Auth/owner | `VNPayPaymentRequest` | `PaymentResponse` | `200` |
 | `GET /payments/vnpay/return` | Public | VNPay query params | redirect, no body | `302` |
 | `GET /payments/vnpay/ipn` | Public | VNPay query params | provider result string | `200` |
@@ -123,6 +122,7 @@ Hai alias dùng cùng contract:
 | Method + path | Access | Request | Response | Success |
 |---|---|---|---|---|
 | `POST /staff/check-in` | Staff/Admin | `CheckInRequest` | `BookingResponse` | `200` |
+| `POST /staff/showtimes/{showtimeId}/cancel` | Staff/Admin | query `reason` | `ShowtimeResponse` | `200` |
 | `POST /admin/check-in` | Admin | `CheckInRequest` | `BookingResponse` | `200` |
 
 ## 5. Admin
@@ -173,7 +173,8 @@ Tất cả endpoint dưới đây có prefix `/api/v1/admin` và yêu cầu role
 | `POST /showtimes` | `ShowtimeRequest` | `ShowtimeResponse` | `201` |
 | `POST /showtimes/bulk` | `BulkShowtimeRequest` | `List<ShowtimeResponse>` | `201` |
 | `PUT /showtimes/{showtimeId}` | `ShowtimeRequest` | `ShowtimeResponse` | `200` |
-| `PATCH /showtimes/{showtimeId}/status` | query `status` | `ShowtimeResponse` | `200` |
+| `PATCH /showtimes/{showtimeId}/status` | query `status`, optional `reason` when cancelling | `ShowtimeResponse` | `200` |
+| `POST /showtimes/{showtimeId}/cancel` | query `reason` | `ShowtimeResponse` | `200` |
 | `DELETE /showtimes/{showtimeId}` | path | — | `204` |
 
 ### Food và ticket pricing
@@ -207,8 +208,6 @@ Ticket-pricing admin endpoints đang `@Hidden` trong Swagger nhưng vẫn tồn 
 | `GET /bookings/{bookingId}` | path | `BookingResponse` | `200` |
 | `DELETE /bookings/{bookingId}` | path | `BookingResponse` | `200` |
 | `POST /bookings/{bookingId}/check-in` | optional `CheckInRequest` | `BookingResponse` | `200` |
-| `POST /bookings/{bookingId}/refund-request` | `RefundRequest` | `BookingResponse` | `200` |
-| `POST /bookings/{bookingId}/mark-refunded` | path | `BookingResponse` | `200` |
 | `GET /users` | — | `List<UserProfileResponse>` | `200` |
 | `GET /users/{userId}` | path | `UserProfileResponse` | `200` |
 | `POST /users/staff` | `AdminStaffCreateRequest` | `UserProfileResponse` | `200` |

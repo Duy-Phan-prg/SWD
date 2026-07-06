@@ -3,7 +3,6 @@ package com.sba301.cinemaai.controller;
 import com.sba301.cinemaai.dto.response.booking.BookingResponse;
 import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
 import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
-import com.sba301.cinemaai.dto.request.booking.RefundRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
@@ -72,17 +71,5 @@ public class BookingController {
             @PathVariable Long bookingId
     ) {
         return ApiResponse.success(bookingService.cancel(user.getUsername(), bookingId), "Booking cancelled successfully");
-    }
-
-    @PostMapping("/{bookingId}/refund-request")
-    public ApiResponse<BookingResponse> requestRefund(
-            @AuthenticationPrincipal AuthenticatedUser user,
-            @PathVariable Long bookingId,
-            @Valid @RequestBody RefundRequest request
-    ) {
-        return ApiResponse.success(
-                bookingService.requestRefund(user.getUsername(), bookingId, request.reason()),
-                "Refund requested successfully"
-        );
     }
 }
