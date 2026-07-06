@@ -1,9 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Sparkles, MessageSquare, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import MovieCard from '@/components/common/MovieCard';
 import cinema1 from "@/assets/banners/cinema1.png";
 import cinema2 from "@/assets/banners/cinema2.png";
 import { useMovies } from '../../stores/useMovieStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { getStoredAuth } from '../../services/authService';
+import { movieService } from '../../services/movieService';
+import { recommendationService } from '../../services/recommendationService';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
   const trimmed = url.trim();
@@ -72,10 +76,9 @@ const banners = [cinema1, cinema2];
 export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [] }) {
    const [currentIndex, setCurrentIndex] = useState(0);
   const { watchlist = [], handleToggleWatchlist } = useMovies();
-  const [selectedMood, setSelectedMood] = useState('#Đỉnh_Cao_Thị_Giác');
-  const [userPrompt, setUserPrompt] = useState('');
-  const [suggestionResponse, setSuggestionResponse] = useState(null);
-  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const [personalRecs, setPersonalRecs] = useState([]);
 
   // Filter movies for "Now Playing" and "Upcoming"
   const sourceMovies = Array.isArray(moviesList) ? moviesList : [];
@@ -199,44 +202,49 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
     setCurrentHeroIndex((prev) => (prev === heroMovies.length - 1 ? 0 : prev + 1));
   };
 
-  // Mood tags
-  const moodTags = [
-    { tag: '#Đỉnh_Cao_Thị_Giác', desc: 'Mãn nhãn hình ảnh, hiệu ứng đỉnh cao kịch liệt' },
-    { tag: '#Căng_Não', desc: 'Tình tiết hack não, giải mật mã lượng tử bất ngờ' },
-    { tag: '#Hành_Động_Kịch_Tính', desc: 'Đánh đấm bạo liệt, rượt đuổi nghẹt thở góc tối' },
-    { tag: '#Sâu_Lắng_Lấy_Nước_Mắt', desc: 'Cảm xúc tình yêu u sầu, âm nhạc lay động tâm hồn' },
-    { tag: '#Trẻ_Trung_Kỳ_Ảo', desc: 'Kỳ ảo lung linh đầy mộng mơ tươi đẹp trên chín tầng mây' }
-  ];
-
-  const recommendedMovie = nowPlaying[0] || publicMovies[0] || null;
   const isMovieBookable = (movie) => movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
   const isMovieWatchlisted = (movie) => watchlist.some((item) => (
     String(item.backendId || item.movieId || item.id) === String(movie?.backendId || movie?.movieId || movie?.id)
   ));
 
-  const findRecommendedMovie = () => recommendedMovie || publicMovies[0] || null;
-
-  const handleSuggest = (e) => {
-    e.preventDefault();
-    if (!userPrompt.trim()) return;
-
-    setLoadingSuggestion(true);
-    setSuggestionResponse(null);
-
-    setTimeout(() => {
-      const liveRecommendedMovie = findRecommendedMovie();
-      setSuggestionResponse({
-        reply: liveRecommendedMovie
-          ? `Dựa trên mô tả của bạn, CinePremier gợi ý "${liveRecommendedMovie.title}" từ danh sách phim hiện có trong hệ thống.`
-          : 'Chưa có phim khả dụng từ hệ thống để gợi ý. Vui lòng kiểm tra lại dữ liệu phim trong backend.',
-        recommendedMovieId: liveRecommendedMovie?.id || '',
-        recommendedMovie: liveRecommendedMovie,
-        matchRate: liveRecommendedMovie ? 96 : 0
+  // Personalized recommendations from the AI service (collaborative filtering).
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.id) {
+      setPersonalRecs([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const { accessToken } = getStoredAuth();
+    recommendationService.getCollaborativeRecommendations(currentUser.id, accessToken)
+      .then(async (items) => {
+        if (cancelled) return;
+        const list = Array.isArray(items) ? [...items] : [];
+        // The featured card shows synopsis/director, which the slim rec payload lacks —
+        // fetch the full detail for the top recommendation (pagination-independent).
+        if (list.length) {
+          try {
+            const detail = await movieService.getMovieDetail(list[0].backendId || list[0].id);
+            if (detail?.id) list[0] = { ...detail, similarity: list[0].similarity };
+          } catch { /* keep the slim rec if the detail call fails */ }
+        }
+        if (!cancelled) setPersonalRecs(list);
+      })
+      .catch(() => {
+        if (!cancelled) setPersonalRecs([]);
       });
-      setLoadingSuggestion(false);
-    }, 500);
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn, currentUser?.id]);
+
+  // Enrich a recommendation item with full movie data (synopsis, status…) when we already have it.
+  const enrichRecommendation = (rec) => {
+    const full = publicMovies.find((m) => (
+      String(m.backendId || m.movieId || m.id) === String(rec.backendId || rec.id)
+    ));
+    return full ? { ...full, similarity: rec.similarity } : rec;
   };
- 
+
   const genresList = [
     { title: 'CINEMATIC NOIR', tags: 'Kịch Tính • Tăm Tối', bg: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10' },
     { title: 'SCI-FI CYBER', tags: 'Tương Lai • Lượng Tử', bg: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10' },
@@ -429,87 +437,87 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
           </button>
         </div>
       </section>
-      {/* 3. PERSONALIZED HIGHLIGHTS */}
-      <section className="bg-gradient-to-b from-purple-950/20 via-black to-purple-950/20 border-y border-purple-500/20 py-16 relative" id="personalized-highlights-section">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.1),transparent_50%)]" />
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      {/* 3. PERSONALIZED RECOMMENDATIONS — real data from collaborative AI */}
+      {isLoggedIn && personalRecs.length > 0 && (() => {
+        const [featuredRec, ...otherRecs] = personalRecs.map(enrichRecommendation);
+        return (
+          <section className="bg-gradient-to-b from-purple-950/20 via-black to-purple-950/20 border-y border-purple-500/20 py-16 relative" id="personalized-highlights-section">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.1),transparent_50%)]" />
+            <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10 space-y-10">
 
-            {/* Left Box: Mood Selectors & Recommendations */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center space-x-1.5 border border-purple-500/30 bg-purple-950/50 px-3 py-1 text-[9px] text-purple-200 tracking-[0.2em] uppercase font-sans">
-                <Sparkles className="h-3 w-3 text-purple-300" />
-                <span>GỢI Ý THEO TÂM TRẠNG</span>
+              <div className="space-y-5">
+                <div className="inline-flex items-center space-x-1.5 border border-purple-500/30 bg-purple-950/50 px-3 py-1 text-[9px] text-purple-200 tracking-[0.2em] uppercase font-sans">
+                  <Sparkles className="h-3 w-3 text-purple-300" />
+                  <span>ĐỀ XUẤT CHO BẠN</span>
+                </div>
+
+                <h2 className="text-5xl sm:text-6xl font-serif font-light text-white tracking-wide leading-tight">
+                  Chọn Riêng Cho <br />
+                  <span className="font-serif italic text-neutral-200">Gu Xem Của Bạn</span>
+                </h2>
+
+                <p className="text-lg text-neutral-200 leading-relaxed max-w-xl font-sans">
+                  Mức phù hợp bên dưới được tính trực tiếp từ lịch sử đặt vé và đánh giá của những
+                  khán giả có gu xem tương tự bạn — dữ liệu thật từ hệ thống, không phải con số trang trí.
+                </p>
               </div>
 
-              <h2 className="text-5xl sm:text-6xl font-serif font-light text-white tracking-wide leading-tight">
-                Gợi Ý Khớp Nhịp Tim <br />
-                <span className="font-serif italic text-neutral-200">
-                  CinePremier Mood Selector
-                </span>
-              </h2>
-
-              <p className="text-lg text-neutral-200 leading-relaxed max-w-xl font-sans">
-                Chọn tâm trạng nghệ thuật hoặc nhập cảm giác xem phim mong muốn. CinePremier sẽ đề xuất một lựa chọn phù hợp từ danh sách phim hiện có.
-              </p>
-
-              {/* Mood Filter chips */}
-              <div className="flex flex-wrap gap-2 pt-2">
-                {moodTags.map((mt) => (
-                  <button
-                    key={mt.tag}
-                    onClick={() => {
-                      setSelectedMood(mt.tag);
-                      setSuggestionResponse(null);
-                    }}
-                    className={`px-4 py-2 text-[10px] font-sans tracking-[0.1em] uppercase transition-all duration-300 ${selectedMood === mt.tag && !suggestionResponse
-                      ? 'bg-purple-600 text-white border border-purple-400'
-                      : 'bg-black border border-purple-500/20 text-purple-200 hover:text-white hover:border-purple-400'
-                      }`}
-                  >
-                    {mt.tag.replace('#', '')}
-                  </button>
-                ))}
-              </div>
-
-              {/* Dynamic recommendation card */}
-              {!suggestionResponse && recommendedMovie && (
+              {/* Featured recommendation with real match score */}
+              {featuredRec && (
                 <div className="relative bg-gradient-to-br from-purple-950/30 to-black border border-purple-500/20 p-6 flex flex-col md:flex-row gap-6 hover:border-purple-400/40 transition-all duration-300">
                   <div className="w-full md:w-32 aspect-[2/3] overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
-                    <img
-                      src={recommendedMovie.posterUrl}
-                      alt={recommendedMovie.title}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                    {featuredRec.posterUrl ? (
+                      <img
+                        src={featuredRec.posterUrl}
+                        alt={featuredRec.title}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
+                    )}
                   </div>
 
                   <div className="space-y-4 flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-sans tracking-[0.15em] text-neutral-200 uppercase">GỢI Ý DUY NHẤT</span>
-                        <span className="text-[10px] text-white font-mono font-bold bg-neutral-900 px-2 py-0.5 border border-white/10">
-                          99% RES
-                        </span>
+                        <span className="text-[10px] font-sans tracking-[0.15em] text-neutral-200 uppercase">PHÙ HỢP NHẤT VỚI BẠN</span>
+                        {typeof featuredRec.similarity === 'number' && (
+                          <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/20 px-2 py-0.5 border border-emerald-500/20">
+                            ✓ KHỚP {Math.round(featuredRec.similarity * 100)}%
+                          </span>
+                        )}
                       </div>
-                      <h4 className="text-xl font-serif text-white mt-2 italic">{recommendedMovie.title}</h4>
-                      <p className="text-[10px] text-neutral-300 font-bold uppercase tracking-widest">{recommendedMovie.englishTitle}</p>
+                      <h4 className="text-xl font-serif text-white mt-2 italic">{featuredRec.title}</h4>
+                      {featuredRec.englishTitle && (
+                        <p className="text-[10px] text-neutral-300 font-bold uppercase tracking-widest">{featuredRec.englishTitle}</p>
+                      )}
+                      {featuredRec.director && (
+                        <p className="text-[10px] text-neutral-300 mt-1.5 font-sans uppercase tracking-widest">
+                          Đạo diễn: <span className="text-white font-bold">{featuredRec.director}</span>
+                        </p>
+                      )}
 
-                      <p className="text-xs text-neutral-200 mt-3 leading-relaxed font-sans line-clamp-3">
-                        {recommendedMovie.synopsis}
+                      {featuredRec.synopsis && (
+                        <p className="text-xs text-neutral-200 mt-3 leading-relaxed font-sans line-clamp-3">
+                          {featuredRec.synopsis}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-neutral-400 mt-3 font-sans italic">
+                        Điểm khớp tính từ đánh giá của khán giả có lịch sử xem giống bạn.
                       </p>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
                       <button
-                        onClick={() => onSelectMovie(recommendedMovie.id)}
+                        onClick={() => onSelectMovie(featuredRec.id)}
                         className="text-[10px] font-sans tracking-wider uppercase text-neutral-200 hover:text-white underline underline-offset-4 decoration-white/30"
                       >
-                        VÌ SAO PHÙ HỢP? →
+                        XEM CHI TIẾT →
                       </button>
                       <button
-                        disabled={!isMovieBookable(recommendedMovie)}
-                        onClick={() => isMovieBookable(recommendedMovie) && onBookMovie(recommendedMovie)}
+                        disabled={!isMovieBookable(featuredRec)}
+                        onClick={() => isMovieBookable(featuredRec) && onBookMovie(featuredRec)}
                         className="bg-purple-600 text-white px-5 py-2 text-[10px] uppercase tracking-wider font-sans font-bold hover:bg-purple-500 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         ĐẶT NGAY
@@ -519,107 +527,46 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 </div>
               )}
 
-              {/* Suggestion response box after custom typing */}
-              {suggestionResponse && (
-                <div className="bg-gradient-to-br from-purple-950/40 to-black border border-purple-400/30 p-6 space-y-4 transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 text-white font-sans text-[10px] uppercase tracking-[0.2em]">
-                      <Sparkles className="h-3.5 w-3.5 text-white" />
-                      <span>GỢI Ý CINEPHILE</span>
-                    </div>
-                    <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/20 px-2 py-0.5 border border-emerald-500/20 flex items-center gap-1">
-                      ✓ KHỚP {suggestionResponse.matchRate}%
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-neutral-300 leading-relaxed italic border-l border-white/30 pl-3.5 font-sans">
-                    "{suggestionResponse.reply}"
-                  </p>
-
-                  {/* recommended detailed card from custom prompt */}
-                  {suggestionResponse.recommendedMovie && (
-                    <div className="flex items-center space-x-4 bg-neutral-950 p-4 border border-white/5">
-                      <img
-                        src={suggestionResponse.recommendedMovie.posterUrl}
-                        alt="Recom"
-                        className="h-16 w-11 object-cover border border-white/5"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h5 className="text-xs font-serif text-white truncate italic">
-                          {suggestionResponse.recommendedMovie.title}
-                        </h5>
-                        <p className="text-[9px] text-neutral-300 uppercase tracking-widest truncate">
-                          {suggestionResponse.recommendedMovie.englishTitle}
-                        </p>
-                        <button
-                          onClick={() => onSelectMovie(suggestionResponse.recommendedMovie.id)}
-                          className="text-[9px] uppercase tracking-widest text-neutral-200 hover:text-white font-sans mt-2 block hover:underline"
-                        >
-                          XEM CHI TIẾT →
-                        </button>
+              {/* Remaining recommendations */}
+              {otherRecs.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="personalized-recs-grid">
+                  {otherRecs.slice(0, 10).map((rec) => (
+                    <button
+                      key={rec.id}
+                      type="button"
+                      onClick={() => onSelectMovie(rec.id)}
+                      className="group relative text-left bg-neutral-950 border border-white/10 hover:border-purple-400/40 transition overflow-hidden cursor-pointer"
+                    >
+                      <div className="aspect-[2/3] w-full overflow-hidden bg-black">
+                        {rec.posterUrl ? (
+                          <img
+                            src={rec.posterUrl}
+                            alt={rec.title}
+                            loading="lazy"
+                            className="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
+                        )}
                       </div>
-                      <button
-                        onClick={() => {
-                          if (suggestionResponse.recommendedMovie) onBookMovie(suggestionResponse.recommendedMovie);
-                        }}
-                        className="bg-white text-black px-4 py-2 text-[9px] uppercase tracking-wider font-sans font-bold hover:bg-neutral-200 transition"
-                      >
-                        Đặt Vé
-                      </button>
-                    </div>
-                  )}
+                      {typeof rec.similarity === 'number' && (
+                        <span className="absolute top-2 right-2 bg-black/80 border border-purple-400/30 px-2 py-1 text-[9px] font-sans font-bold tracking-wider text-purple-200">
+                          {Math.round(rec.similarity * 100)}% KHỚP
+                        </span>
+                      )}
+                      <div className="p-3">
+                        <p className="text-xs font-serif text-white leading-snug line-clamp-2">{rec.title}</p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
 
             </div>
-
-            {/* Right Box: Prompt Input Interactive Terminal */}
-            <div className="lg:col-span-5 border border-purple-500/30 bg-gradient-to-br from-purple-950/50 to-black p-6 space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2 border-b border-white/5 pb-3">
-                  <MessageSquare className="h-4 w-4 text-white" />
-                  <h3 className="text-[10px] font-sans uppercase tracking-[0.2em] text-neutral-200">
-                    Gợi Ý Theo Cảm Xúc
-                  </h3>
-                </div>
-
-                <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                  Điền tâm trạng của bạn đêm nay, ví dụ: <i>"Tôi đang mỏi mệt, cần tìm sự thảnh thơi nhẹ lòng"</i> hoặc <i>"Thèm rượt đuổi giật gân bùng nổ rạp"</i>.
-                </p>
-
-                <form onSubmit={handleSuggest} className="space-y-4">
-                  <textarea
-                    rows={4}
-                    value={userPrompt}
-                    onChange={(e) => setUserPrompt(e.target.value)}
-                    placeholder="Mô tả tâm trạng mong muốn của bạn..."
-                    className="w-full border border-white/10 bg-neutral-950 p-3 text-xs text-white placeholder-neutral-700 font-sans focus:border-white focus:outline-none"
-                    id="mood-textarea"
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={loadingSuggestion || !userPrompt.trim()}
-                    className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white py-3.5 text-[10px] uppercase tracking-[0.2em] font-sans font-bold hover:bg-purple-500 border border-purple-400 disabled:opacity-30 disabled:hover:bg-purple-600 transition-all"
-                    id="mood-suggest-submit"
-                  >
-                    <Sparkles className={`h-3.5 w-3.5 ${loadingSuggestion ? 'animate-spin' : ''}`} />
-                    <span>{loadingSuggestion ? 'ĐANG GỢI Ý...' : 'GỢI Ý KHỚP VÉ'}</span>
-                  </button>
-                </form>
-
-                <div className="text-[9px] text-neutral-600 flex items-center gap-1.5 justify-center font-sans uppercase tracking-wider">
-                  <HelpCircle className="h-3 w-3" />
-                  <span>CinePremier Mood Recommendation</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
+          </section>
+        );
+      })()}
 
       {/* 5. DISCOVER GENRES ARTWORK */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8" id="genres-section">

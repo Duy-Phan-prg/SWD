@@ -45,11 +45,17 @@ public class CinemaScheduleSeeder implements Seeder {
                         "0900000000"
                 )));
 
-        Room room = roomRepository.findByCinemaAndNameIgnoreCase(cinema, "Room A")
+        Room roomA = roomRepository.findByCinemaAndNameIgnoreCase(cinema, "Room A")
                 .orElseGet(() -> roomRepository.save(new Room(cinema, "Room A", RoomType.TWO_D, 5, 8)));
+        Room roomB = roomRepository.findByCinemaAndNameIgnoreCase(cinema, "Room B")
+                .orElseGet(() -> roomRepository.save(new Room(cinema, "Room B", RoomType.THREE_D, 5, 8)));
+        Room roomC = roomRepository.findByCinemaAndNameIgnoreCase(cinema, "Room C")
+                .orElseGet(() -> roomRepository.save(new Room(cinema, "Room C", RoomType.IMAX, 5, 8)));
 
-        seedSeats(room);
-        seedShowtimes(room);
+        seedSeats(roomA);
+        seedSeats(roomB);
+        seedSeats(roomC);
+        seedShowtimes(java.util.List.of(roomA, roomB, roomC));
     }
 
     private void seedSeats(Room room) {
@@ -73,13 +79,28 @@ public class CinemaScheduleSeeder implements Seeder {
         }
     }
 
-    private void seedShowtimes(Room room) {
-        movieRepository.findByTitle("The Last Orbit").ifPresent(movie ->
-                seedShowtime(room, movie, LocalDateTime.now().plusDays(1).withHour(18).withMinute(30).withSecond(0).withNano(0))
-        );
-        movieRepository.findByTitle("Saigon Midnight").ifPresent(movie ->
-                seedShowtime(room, movie, LocalDateTime.now().plusDays(2).withHour(20).withMinute(0).withSecond(0).withNano(0))
-        );
+    private void seedShowtimes(java.util.List<Room> rooms) {
+        java.util.List<Movie> nowShowing = movieRepository.findAll().stream()
+                .filter(movie -> movie.getStatus() == com.sba301.cinemaai.enums.MovieStatus.NOW_SHOWING)
+                .toList();
+        if (nowShowing.isEmpty()) {
+            return;
+        }
+
+        // 4 fixed daily slots per room; slots are >200 minutes apart so even the longest movie never overlaps.
+        int[][] slots = {{9, 30}, {13, 0}, {16, 30}, {20, 30}};
+        int movieIndex = 0;
+        for (int day = 1; day <= 5; day++) {
+            for (Room room : rooms) {
+                for (int[] slot : slots) {
+                    Movie movie = nowShowing.get(movieIndex % nowShowing.size());
+                    movieIndex++;
+                    LocalDateTime startTime = LocalDateTime.now()
+                            .plusDays(day).withHour(slot[0]).withMinute(slot[1]).withSecond(0).withNano(0);
+                    seedShowtime(room, movie, startTime);
+                }
+            }
+        }
     }
 
     private void seedShowtime(Room room, Movie movie, LocalDateTime startTime) {

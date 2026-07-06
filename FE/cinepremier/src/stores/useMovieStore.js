@@ -31,7 +31,7 @@ export const useMovieStore = create((set, get) => ({
   moviesList: [],
   moviePagination: {
     page: 0,
-    size: 8,
+    size: 10,
     totalPages: 1,
     totalElements: 0,
   },

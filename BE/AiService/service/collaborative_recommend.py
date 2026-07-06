@@ -11,9 +11,9 @@ def get_user_ratings(user_id: int) -> dict:
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
-            SELECT movie_id, score FROM ratings WHERE user_id = %s
+            SELECT movie_id, rating FROM reviews WHERE user_id = %s
         """, (user_id,))
-        return {r["movie_id"]: r["score"] for r in cursor.fetchall()}
+        return {r["movie_id"]: r["rating"] for r in cursor.fetchall()}
     finally:
         cursor.close()
         conn.close()
@@ -24,7 +24,10 @@ def get_watched_ids(user_id: int) -> set:
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
-            SELECT movie_id FROM watch_history WHERE user_id = %s
+            SELECT DISTINCT s.movie_id
+            FROM bookings b
+            JOIN showtimes s ON s.id = b.showtime_id
+            WHERE b.user_id = %s AND b.status = 'PAID'
         """, (user_id,))
         return {r["movie_id"] for r in cursor.fetchall()}
     finally:
@@ -36,13 +39,13 @@ def get_all_ratings() -> dict:
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        cursor.execute("SELECT user_id, movie_id, score FROM ratings")
+        cursor.execute("SELECT user_id, movie_id, rating FROM reviews")
         result: dict[int, dict[int, float]] = {}
         for r in cursor.fetchall():
             uid = r["user_id"]
             if uid not in result:
                 result[uid] = {}
-            result[uid][r["movie_id"]] = r["score"]
+            result[uid][r["movie_id"]] = r["rating"]
         return result
     finally:
         cursor.close()
@@ -92,12 +95,24 @@ def recommend_collaborative(user_id: int) -> list:
         key=lambda x: x[1], reverse=True
     )[:TOP_USERS]
 
-    movie_scores: dict[int, float] = {}
+    # Predicted rating = sum(sim * rating) / sum(sim), normalized to 0..1 by /5
+    weighted: dict[int, float] = {}
+    sim_sums: dict[int, float] = {}
     for uid, sim in similar_users:
-        for mid, score in all_ratings[uid].items():
+        if sim <= 0:
+            continue
+        for mid, rating in all_ratings[uid].items():
             if mid in seen:
                 continue
-            movie_scores[mid] = movie_scores.get(mid, 0) + sim * score
+            weighted[mid] = weighted.get(mid, 0) + sim * rating
+            sim_sums[mid] = sim_sums.get(mid, 0) + sim
+
+    movie_scores = {
+        mid: min(weighted[mid] / sim_sums[mid] / 5.0, 1.0)
+        for mid in weighted if sim_sums[mid] > 0
+    }
+    if not movie_scores:
+        return _fallback(seen)
 
     top_ids = sorted(movie_scores, key=movie_scores.get, reverse=True)[:TOP_K]
     movies = get_movie_info(top_ids)
@@ -114,13 +129,14 @@ def recommend_collaborative(user_id: int) -> list:
 
 
 def _fallback(seen: set) -> list:
+    """Tier 1: top movies by average review rating. Tier 2: popularity by PAID bookings."""
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
-            SELECT m.id, m.title, m.poster_url, AVG(r.score) as avg_score
+            SELECT m.id, m.title, m.poster_url, AVG(r.rating) as avg_score
             FROM movies m
-            JOIN ratings r ON r.movie_id = m.id
+            JOIN reviews r ON r.movie_id = m.id
             GROUP BY m.id, m.title, m.poster_url
             ORDER BY avg_score DESC
             LIMIT %s
@@ -137,7 +153,31 @@ def _fallback(seen: set) -> list:
             })
             if len(results) >= TOP_K:
                 break
-        return results
+        if results:
+            return results
+
+        cursor.execute("""
+            SELECT m.id, m.title, m.poster_url, COUNT(b.id) as booking_count
+            FROM movies m
+            JOIN showtimes s ON s.movie_id = m.id
+            JOIN bookings b ON b.showtime_id = s.id AND b.status = 'PAID'
+            GROUP BY m.id, m.title, m.poster_url
+            ORDER BY booking_count DESC
+            LIMIT %s
+        """, (TOP_K + len(seen),))
+        rows = [r for r in cursor.fetchall() if r["id"] not in seen]
+        if not rows:
+            return []
+        max_count = max(r["booking_count"] for r in rows)
+        return [
+            {
+                "movieId": row["id"],
+                "title": row["title"],
+                "posterUrl": row.get("poster_url", ""),
+                "similarity": round(row["booking_count"] / max_count, 4)
+            }
+            for row in rows[:TOP_K]
+        ]
     finally:
         cursor.close()
         conn.close()

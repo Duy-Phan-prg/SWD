@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
@@ -819,10 +819,41 @@ export default function AdminDashboard({
     });
   };
 
-  // Consolidated simulated metrics
-  const totalBookingsCount = bookedTickets.length + 342; // standard offset
-  const calculatedRevenue = (bookedTickets.reduce((acc, ticket) => acc + ticket.totalAmount, 0) + 42450000);
-  const averageFillRate = 78.4;
+  // Real headline metrics from /api/v1/admin/reports (last 30 days) — replaces the old simulated numbers.
+  const [overviewMetrics, setOverviewMetrics] = useState({ revenue: 0, tickets: 0, fillRate: 0 });
+  useEffect(() => {
+    const token = getAdminToken(false);
+    if (!token) return undefined;
+    let cancelled = false;
+    const to = new Date().toISOString().slice(0, 10);
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - 30);
+    const from = fromDate.toISOString().slice(0, 10);
+    Promise.all([
+      adminService.getRevenueReport(token, { from, to }),
+      adminService.getRoomOccupancy(token, { from, to })
+    ])
+      .then(([revenue, rooms]) => {
+        if (cancelled) return;
+        const occupancyList = Array.isArray(rooms) ? rooms : [];
+        const avgFill = occupancyList.length
+          ? occupancyList.reduce((acc, room) => acc + (room.occupancyRate || 0), 0) / occupancyList.length
+          : 0;
+        setOverviewMetrics({
+          revenue: Number(revenue?.totalRevenue || 0),
+          tickets: Number(revenue?.totalTicketsSold || 0),
+          fillRate: Math.round(avgFill * 10) / 10
+        });
+      })
+      .catch(() => { /* keep zeros — cards render real (empty) data, never fake numbers */ });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const totalBookingsCount = overviewMetrics.tickets;
+  const calculatedRevenue = overviewMetrics.revenue;
+  const averageFillRate = overviewMetrics.fillRate;
 
   const normalizeDateInput = (value) => {
     if (!value) return '';
