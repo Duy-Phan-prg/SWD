@@ -16,7 +16,6 @@ public class FoodMapper {
                 foodItem.getDescription(),
                 foodItem.getPrice(),
                 foodItem.getImageUrl(),
-                stockOrZero(foodItem.getStockQuantity()),
                 foodItem.getStatus()
         );
     }
@@ -28,12 +27,7 @@ public class FoodMapper {
                 foodCombo.getDescription(),
                 foodCombo.getPrice(),
                 foodCombo.getImageUrl(),
-                stockOrZero(foodCombo.getStockQuantity()),
                 foodCombo.getStatus()
         );
-    }
-
-    private Integer stockOrZero(Integer stockQuantity) {
-        return stockQuantity == null ? 0 : stockQuantity;
     }
 }

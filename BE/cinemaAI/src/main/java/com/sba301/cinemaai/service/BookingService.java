@@ -37,6 +37,8 @@ public interface BookingService {
 
     BookingResponse lookupForCheckIn(String bookingCode, String qrCode);
 
+    List<BookingResponse> getRecentStaffCheckInBookings(int limit);
+
     List<BookingResponse> getStaffBookingsByShowtime(Long showtimeId);
 
     int releaseExpiredHolds();

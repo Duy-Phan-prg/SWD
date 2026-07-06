@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
+  Camera,
+  CameraOff,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -14,12 +16,31 @@ import {
   Ticket,
   XCircle,
 } from 'lucide-react';
+import jsQR from 'jsqr';
 import { motion } from 'motion/react';
 import { getStoredAuth } from '../../services/authService';
 import { staffService } from '../../services/staffService';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const FOOD_PAGE_SIZE = 10;
+const CHECK_IN_LEAD_MINUTES = 30;
+
+const FOOD_STATUS_META = {
+  ACTIVE: { label: 'Mở bán', className: 'bg-emerald-400/10 text-emerald-300' },
+  LOW_STOCK: { label: 'Sắp hết', className: 'bg-purple-500/10 text-purple-300' },
+  OUT_OF_STOCK: { label: 'Hết', className: 'bg-rose-500/10 text-rose-300' },
+  INACTIVE: { label: 'Hết', className: 'bg-rose-500/10 text-rose-300' },
+};
+
+const getFoodStatusMeta = (status) => FOOD_STATUS_META[status] || FOOD_STATUS_META.OUT_OF_STOCK;
+
+const normalizeSearchText = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/đ/g, 'd')
+  .replace(/Đ/g, 'D')
+  .toLowerCase()
+  .trim();
 
 const formatDateTime = (value) => {
   if (!value) return '--';
@@ -32,6 +53,32 @@ const formatSeats = (booking) => {
   const seats = booking?.seats || [];
   if (!seats.length) return 'Chưa có ghế';
   return seats.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ');
+};
+
+const getCheckInOpenAt = (booking) => {
+  if (!booking?.showtimeStart) return null;
+  const showtimeStart = new Date(booking.showtimeStart);
+  if (Number.isNaN(showtimeStart.getTime())) return null;
+  return new Date(showtimeStart.getTime() - CHECK_IN_LEAD_MINUTES * 60 * 1000);
+};
+
+const isBookingCheckInOpen = (booking) => {
+  if (String(booking?.status || '').toUpperCase() !== 'PAID') return false;
+  const checkInOpenAt = getCheckInOpenAt(booking);
+  return !checkInOpenAt || Date.now() >= checkInOpenAt.getTime();
+};
+
+const getCheckInWindowMessage = (booking) => {
+  const checkInOpenAt = getCheckInOpenAt(booking);
+  if (!checkInOpenAt) return 'Check-in chỉ mở trong vòng 30 phút trước giờ chiếu.';
+  return `Check-in chỉ mở từ ${checkInOpenAt.toLocaleString('vi-VN')} (30 phút trước giờ chiếu).`;
+};
+
+const parseQrOrBookingCode = (value) => {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return { qrCode: '', bookingCode: '' };
+  if (trimmed.toUpperCase().startsWith('CINEAI:')) return { qrCode: trimmed, bookingCode: '' };
+  return { qrCode: '', bookingCode: trimmed };
 };
 
 const getBookingStatusMeta = (status = '') => {
@@ -132,17 +179,28 @@ export default function StaffCheckInPage() {
   const [result, setResult] = useState(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [scannerError, setScannerError] = useState('');
+  const [scannerMessage, setScannerMessage] = useState('');
   const [showtimeId, setShowtimeId] = useState('');
   const [isLoadingShowtime, setIsLoadingShowtime] = useState(false);
   const [showtimeError, setShowtimeError] = useState('');
   const [showtimeBookings, setShowtimeBookings] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
+  const [isLoadingRecentBookings, setIsLoadingRecentBookings] = useState(false);
+  const [recentBookingsError, setRecentBookingsError] = useState('');
   const [staffFoodItems, setStaffFoodItems] = useState([]);
   const [staffFoodCombos, setStaffFoodCombos] = useState([]);
   const [staffFoodError, setStaffFoodError] = useState('');
   const [isLoadingStaffFoods, setIsLoadingStaffFoods] = useState(false);
   const [savingStaffFoodKey, setSavingStaffFoodKey] = useState('');
   const [staffFoodPage, setStaffFoodPage] = useState(1);
+  const [staffFoodSearch, setStaffFoodSearch] = useState('');
+  const qrVideoRef = useRef(null);
+  const qrCanvasRef = useRef(null);
+  const qrStreamRef = useRef(null);
+  const qrScanTimerRef = useRef(null);
+  const lastScannedQrRef = useRef('');
 
   const visibleBookings = showtimeBookings.length > 0 ? showtimeBookings : recentBookings;
   const isShowingShowtimeBookings = showtimeBookings.length > 0;
@@ -150,22 +208,32 @@ export default function StaffCheckInPage() {
     ...staffFoodCombos.map((item) => ({ ...item, kind: 'combo' })),
     ...staffFoodItems.map((item) => ({ ...item, kind: 'item' })),
   ], [staffFoodCombos, staffFoodItems]);
+  const filteredStaffFoods = useMemo(() => {
+    const keyword = normalizeSearchText(staffFoodSearch);
+    if (!keyword) return staffFoods;
+    return staffFoods.filter((food) => normalizeSearchText(food.name).includes(keyword));
+  }, [staffFoodSearch, staffFoods]);
 
   const foodStats = useMemo(() => {
-    const outOfStock = staffFoods.filter((item) => item.status === 'OUT_OF_STOCK' || Number(item.stockQuantity || 0) === 0).length;
+    const outOfStock = staffFoods.filter((item) => item.status === 'OUT_OF_STOCK' || item.status === 'INACTIVE').length;
+    const lowStock = staffFoods.filter((item) => item.status === 'LOW_STOCK').length;
     const active = staffFoods.filter((item) => item.status === 'ACTIVE').length;
-    return { active, outOfStock, total: staffFoods.length };
+    return { active, lowStock, outOfStock, total: staffFoods.length };
   }, [staffFoods]);
-  const staffFoodTotalPages = Math.max(1, Math.ceil(staffFoods.length / FOOD_PAGE_SIZE));
+  const staffFoodTotalPages = Math.max(1, Math.ceil(filteredStaffFoods.length / FOOD_PAGE_SIZE));
   const safeStaffFoodPage = Math.min(staffFoodPage, staffFoodTotalPages);
   const staffFoodStartIndex = (safeStaffFoodPage - 1) * FOOD_PAGE_SIZE;
-  const paginatedStaffFoods = staffFoods.slice(staffFoodStartIndex, staffFoodStartIndex + FOOD_PAGE_SIZE);
-  const staffFoodDisplayStart = staffFoods.length === 0 ? 0 : staffFoodStartIndex + 1;
-  const staffFoodDisplayEnd = Math.min(staffFoodStartIndex + FOOD_PAGE_SIZE, staffFoods.length);
+  const paginatedStaffFoods = filteredStaffFoods.slice(staffFoodStartIndex, staffFoodStartIndex + FOOD_PAGE_SIZE);
+  const staffFoodDisplayStart = filteredStaffFoods.length === 0 ? 0 : staffFoodStartIndex + 1;
+  const staffFoodDisplayEnd = Math.min(staffFoodStartIndex + FOOD_PAGE_SIZE, filteredStaffFoods.length);
 
   useEffect(() => {
     setStaffFoodPage((page) => Math.min(page, staffFoodTotalPages));
   }, [staffFoodTotalPages]);
+
+  useEffect(() => {
+    setStaffFoodPage(1);
+  }, [staffFoodSearch]);
 
   const stats = useMemo(() => {
     const checked = visibleBookings.filter((booking) => booking.status === 'USED').length;
@@ -178,6 +246,90 @@ export default function StaffCheckInPage() {
     return accessToken;
   };
 
+  const stopQrScanner = () => {
+    if (qrScanTimerRef.current) {
+      window.clearInterval(qrScanTimerRef.current);
+      qrScanTimerRef.current = null;
+    }
+    if (qrStreamRef.current) {
+      qrStreamRef.current.getTracks().forEach((track) => track.stop());
+      qrStreamRef.current = null;
+    }
+    if (qrVideoRef.current) {
+      qrVideoRef.current.srcObject = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const startQrScanner = async () => {
+    setScannerError('');
+    setScannerMessage('');
+    lastScannedQrRef.current = '';
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setScannerError('Trình duyệt không hỗ trợ mở camera. Hãy dán mã QR thủ công.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      });
+      qrStreamRef.current = stream;
+      setIsCameraOpen(true);
+      setScannerMessage('Đưa QR của khách vào khung camera để hệ thống tự đọc.');
+
+      window.requestAnimationFrame(async () => {
+        const video = qrVideoRef.current;
+        if (!video || qrStreamRef.current !== stream) return;
+        video.srcObject = stream;
+        await video.play();
+
+        qrScanTimerRef.current = window.setInterval(async () => {
+          if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+
+          try {
+            const canvas = qrCanvasRef.current;
+            const width = video.videoWidth;
+            const height = video.videoHeight;
+            if (!canvas || !width || !height) return;
+
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            if (!context) return;
+
+            context.drawImage(video, 0, 0, width, height);
+            const imageData = context.getImageData(0, 0, width, height);
+            const detected = jsQR(imageData.data, width, height, {
+              inversionAttempts: 'attemptBoth',
+            });
+            const rawValue = detected?.data?.trim();
+            if (!rawValue || rawValue === lastScannedQrRef.current) return;
+
+            lastScannedQrRef.current = rawValue;
+            setQrCode(rawValue);
+            setScannerMessage('Đã quét QR. Đang tra cứu booking...');
+            stopQrScanner();
+            void lookupBooking({ preferQr: true, qrValue: rawValue });
+          } catch (error) {
+            setScannerError(error.message || 'Không thể đọc QR từ camera.');
+          }
+        }, 350);
+      });
+    } catch (error) {
+      stopQrScanner();
+      setScannerError(error.name === 'NotAllowedError'
+        ? 'Bạn cần cấp quyền camera để quét QR.'
+        : error.message || 'Không thể mở camera để quét QR.');
+    }
+  };
+
   const rememberBooking = (booking) => {
     if (!booking?.id) return;
     setShowtimeBookings((current) => current.map((item) => (
@@ -187,6 +339,30 @@ export default function StaffCheckInPage() {
       booking,
       ...current.filter((item) => String(item.id) !== String(booking.id)),
     ].slice(0, 8));
+  };
+
+  const loadRecentBookings = async (seedBooking = null) => {
+    const token = getToken();
+    if (!token) {
+      setRecentBookingsError('Vui lòng đăng nhập bằng tài khoản STAFF.');
+      return;
+    }
+
+    setIsLoadingRecentBookings(true);
+    setRecentBookingsError('');
+    try {
+      const bookings = await staffService.getRecentStaffCheckInBookings(token, 8);
+      const source = Array.isArray(bookings) ? bookings : [];
+      const merged = seedBooking
+        ? [seedBooking, ...source.filter((item) => String(item.id) !== String(seedBooking.id))]
+        : source;
+      setRecentBookings(merged.slice(0, 8));
+    } catch (error) {
+      if (seedBooking) rememberBooking(seedBooking);
+      setRecentBookingsError(error.message || 'Không thể tải booking vừa tra cứu/check-in từ API.');
+    } finally {
+      setIsLoadingRecentBookings(false);
+    }
   };
 
   const loadStaffFoods = async () => {
@@ -240,13 +416,16 @@ export default function StaffCheckInPage() {
   };
 
   useEffect(() => {
+    loadRecentBookings();
     loadStaffFoods();
   }, []);
 
-  const lookupBooking = async ({ preferQr = false } = {}) => {
+  useEffect(() => () => stopQrScanner(), []);
+
+  const lookupBooking = async ({ preferQr = false, qrValue = '', bookingValue = '' } = {}) => {
     const token = getToken();
-    const trimmedQr = qrCode.trim();
-    const trimmedCode = bookingCode.trim();
+    const trimmedQr = String(qrValue || qrCode).trim();
+    const trimmedCode = String(bookingValue || bookingCode).trim();
     if (!token) {
       setResult({ type: 'error', title: 'Phiên đăng nhập không hợp lệ.', message: 'Vui lòng đăng nhập bằng tài khoản STAFF.' });
       return null;
@@ -258,19 +437,25 @@ export default function StaffCheckInPage() {
 
     setIsLookingUp(true);
     try {
+      const parsedQrInput = parseQrOrBookingCode(trimmedQr);
       const booking = await staffService.lookupStaffCheckInBooking(token, {
-        qrCode: preferQr ? trimmedQr : '',
-        bookingCode: preferQr ? '' : trimmedCode,
+        qrCode: preferQr ? parsedQrInput.qrCode : '',
+        bookingCode: preferQr ? parsedQrInput.bookingCode : trimmedCode,
       });
       rememberBooking(booking);
+      const canCheckIn = isBookingCheckInOpen(booking);
+      const isPaid = booking.status === 'PAID';
       setResult({
-        type: booking.status === 'PAID' ? 'warning' : booking.status === 'USED' ? 'success' : 'error',
-        title: booking.status === 'PAID' ? 'Booking hợp lệ, chờ check-in.' : booking.status === 'USED' ? 'Booking đã check-in.' : 'Booking chưa đủ điều kiện.',
-        message: booking.status === 'PAID'
-          ? 'Có thể xác nhận check-in bằng mã QR của booking này.'
+        type: isPaid ? 'warning' : booking.status === 'USED' ? 'success' : 'error',
+        title: isPaid
+          ? canCheckIn ? 'Booking hợp lệ, chờ check-in.' : 'Chưa đến giờ check-in.'
+          : booking.status === 'USED' ? 'Booking đã check-in.' : 'Booking chưa đủ điều kiện.',
+        message: isPaid
+          ? canCheckIn ? 'Có thể xác nhận check-in bằng mã QR của booking này.' : getCheckInWindowMessage(booking)
           : `Trạng thái hiện tại: ${booking.status}.`,
         booking,
       });
+      void loadRecentBookings(booking);
       return booking;
     } catch (error) {
       setResult({ type: 'error', title: 'Không tìm thấy booking.', message: error.message || 'Không thể tra cứu booking từ hệ thống.' });
@@ -294,7 +479,21 @@ export default function StaffCheckInPage() {
 
     setIsCheckingIn(true);
     try {
-      const booking = await staffService.checkInStaffBooking(token, trimmedQr);
+      const parsedInput = parseQrOrBookingCode(trimmedQr);
+      let qrForCheckIn = parsedInput.qrCode;
+
+      if (!qrForCheckIn && parsedInput.bookingCode) {
+        const foundBooking = await staffService.lookupStaffCheckInBooking(token, {
+          bookingCode: parsedInput.bookingCode,
+          qrCode: '',
+        });
+        qrForCheckIn = foundBooking?.qrCode || '';
+        if (!qrForCheckIn) {
+          throw new Error('Booking này chưa có QR check-in. Vui lòng kiểm tra trạng thái thanh toán.');
+        }
+      }
+
+      const booking = await staffService.checkInStaffBooking(token, qrForCheckIn);
       rememberBooking(booking);
       setResult({
         type: 'success',
@@ -302,6 +501,7 @@ export default function StaffCheckInPage() {
         message: 'Booking đã được xác nhận. Có thể hướng dẫn khách vào phòng chiếu.',
         booking,
       });
+      void loadRecentBookings(booking);
     } catch (error) {
       setResult({ type: 'error', title: 'Không thể check-in.', message: error.message || 'Booking không đủ điều kiện check-in.' });
     } finally {
@@ -381,12 +581,41 @@ export default function StaffCheckInPage() {
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-400">Quét/Xác nhận QR</p>
                   <h3 className="mt-2 text-xl font-black uppercase text-white">Check-in bằng mã QR</h3>
-                  <p className="mt-2 text-xs leading-6 text-neutral-500">Dán chuỗi QR dạng `CINEAI:...` từ vé khách hàng để xác nhận check-in.</p>
+                  <p className="mt-2 text-xs leading-6 text-neutral-500">Quét QR trên vé, hoặc dán chuỗi `CINEAI:...` / mã booking `BK...` để tra cứu và check-in.</p>
+                </div>
+                <div className="space-y-3 border border-neutral-800 bg-black p-3">
+                  <button
+                    type="button"
+                    onClick={isCameraOpen ? stopQrScanner : startQrScanner}
+                    className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-[#070707] px-4 py-3 text-[9px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-emerald-400 hover:text-white"
+                  >
+                    {isCameraOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                    {isCameraOpen ? 'Tắt camera' : 'Mở camera quét QR'}
+                  </button>
+                  {isCameraOpen && (
+                    <div className="relative overflow-hidden border border-emerald-400/30 bg-neutral-950">
+                      <video
+                        ref={qrVideoRef}
+                        className="aspect-video w-full object-cover"
+                        muted
+                        playsInline
+                      />
+                      <canvas ref={qrCanvasRef} className="hidden" />
+                      <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                        <div className="h-40 w-40 border-2 border-emerald-300/80 shadow-[0_0_0_999px_rgba(0,0,0,0.35)]" />
+                      </div>
+                    </div>
+                  )}
+                  {(scannerMessage || scannerError) && (
+                    <p className={`text-[10px] font-bold leading-5 ${scannerError ? 'text-rose-400' : 'text-emerald-300'}`}>
+                      {scannerError || scannerMessage}
+                    </p>
+                  )}
                 </div>
                 <textarea
                   value={qrCode}
                   onChange={(event) => setQrCode(event.target.value)}
-                  placeholder="Dán mã QR booking tại đây..."
+                  placeholder="Dán mã QR CINEAI:... hoặc mã booking BK..."
                   rows={6}
                   className="w-full resize-none border border-neutral-800 bg-black p-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
                 />
@@ -397,7 +626,7 @@ export default function StaffCheckInPage() {
                     disabled={isLookingUp || !qrCode.trim()}
                     className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
                   >
-                    {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Kiểm tra QR
+                    {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Kiểm tra mã
                   </button>
                   <button
                     type="button"
@@ -433,7 +662,7 @@ export default function StaffCheckInPage() {
                 >
                   {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tra cứu booking
                 </button>
-                {result?.booking?.qrCode && result.booking.status === 'PAID' && (
+                {result?.booking?.qrCode && result.booking.status === 'PAID' && isBookingCheckInOpen(result.booking) && (
                   <button
                     type="button"
                     onClick={() => checkInByQr(result.booking.qrCode)}
@@ -497,7 +726,7 @@ export default function StaffCheckInPage() {
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400">Quầy bắp nước</p>
               <h3 className="mt-1 text-lg font-black uppercase text-white">Trạng thái món/combo</h3>
               <p className="mt-2 text-xs leading-6 text-neutral-500">
-                STAFF có thể đổi nhanh trạng thái khi món hết đột ngột. Số lượng tồn sẽ tự giảm khi khách tạo booking có bắp nước.
+                STAFF có thể đổi nhanh trạng thái bắp nước theo quầy: mở bán, sắp hết hoặc hết.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -505,7 +734,10 @@ export default function StaffCheckInPage() {
                 {foodStats.active}/{foodStats.total} đang bán
               </span>
               <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
-                {foodStats.outOfStock} hết hàng
+                {foodStats.lowStock} sắp hết
+              </span>
+              <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
+                {foodStats.outOfStock} hết
               </span>
               <button
                 type="button"
@@ -520,12 +752,28 @@ export default function StaffCheckInPage() {
 
           {staffFoodError && <p className="mt-3 text-xs font-bold text-rose-400">{staffFoodError}</p>}
 
+          <div className="mt-4 flex flex-col gap-2 border border-neutral-800 bg-black p-3 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-3 border border-neutral-800 bg-[#070707] px-3 py-2.5 focus-within:border-purple-400">
+              <Search className="h-4 w-4 shrink-0 text-neutral-500" />
+              <input
+                type="search"
+                value={staffFoodSearch}
+                onChange={(event) => setStaffFoodSearch(event.target.value)}
+                placeholder="Tìm gần đúng theo tên món/combo..."
+                className="w-full bg-transparent text-xs font-bold text-white outline-none placeholder:text-neutral-600"
+              />
+            </div>
+            <span className="shrink-0 px-1 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500">
+              {filteredStaffFoods.length}/{staffFoods.length} kết quả
+            </span>
+          </div>
+
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {isLoadingStaffFoods ? (
               <div className="border border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">Đang tải danh sách bắp nước...</div>
-            ) : staffFoods.length > 0 ? paginatedStaffFoods.map((food) => {
+            ) : filteredStaffFoods.length > 0 ? paginatedStaffFoods.map((food) => {
               const foodKey = `${food.kind}-${food.id}`;
-              const stock = Number(food.stockQuantity || 0);
+              const statusMeta = getFoodStatusMeta(food.status);
               return (
                 <div key={foodKey} className="border border-neutral-800 bg-black p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -533,8 +781,8 @@ export default function StaffCheckInPage() {
                       <p className="truncate text-sm font-black uppercase text-white">{food.name}</p>
                       <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-neutral-500">{food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
                     </div>
-                    <span className={`px-2 py-1 text-[9px] font-black uppercase ${stock === 0 ? 'bg-rose-500/10 text-rose-300' : stock <= 5 ? 'bg-purple-500/10 text-purple-300' : 'bg-emerald-400/10 text-emerald-300'}`}>
-                      Tồn {stock.toLocaleString('vi-VN')}
+                    <span className={`px-2 py-1 text-[9px] font-black uppercase ${statusMeta.className}`}>
+                      {statusMeta.label}
                     </span>
                   </div>
                   <select
@@ -543,19 +791,21 @@ export default function StaffCheckInPage() {
                     disabled={savingStaffFoodKey === foodKey}
                     className="mt-4 w-full border border-neutral-800 bg-[#070707] px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-purple-400 disabled:opacity-50"
                   >
-                    <option value="ACTIVE">ACTIVE - Đang bán</option>
-                    <option value="OUT_OF_STOCK">OUT_OF_STOCK - Hết hàng</option>
-                    <option value="INACTIVE">INACTIVE - Tạm ẩn</option>
+                    <option value="ACTIVE">Mở bán</option>
+                    <option value="LOW_STOCK">Sắp hết</option>
+                    <option value="OUT_OF_STOCK">Hết</option>
                   </select>
                 </div>
               );
             }) : (
-              <div className="border border-dashed border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">Chưa có món bắp nước nào.</div>
+              <div className="border border-dashed border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">
+                {staffFoodSearch.trim() ? 'Không tìm thấy món/combo phù hợp.' : 'Chưa có món bắp nước nào.'}
+              </div>
             )}
           </div>
           <div className="mt-4 flex flex-col gap-3 border border-neutral-800 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Hiển thị {staffFoodDisplayStart}-{staffFoodDisplayEnd}/{staffFoods.length} món - Trang {safeStaffFoodPage}/{staffFoodTotalPages}
+              Hiển thị {staffFoodDisplayStart}-{staffFoodDisplayEnd}/{filteredStaffFoods.length} món - Trang {safeStaffFoodPage}/{staffFoodTotalPages}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -581,11 +831,14 @@ export default function StaffCheckInPage() {
         <section className="overflow-hidden border border-neutral-800 bg-[#070707]">
           <div className="border-b border-neutral-800 p-5">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
-              {isShowingShowtimeBookings ? 'Dữ liệu showtime từ API' : 'Dữ liệu phiên làm việc'}
+              {isShowingShowtimeBookings ? 'Dữ liệu showtime từ API' : 'Dữ liệu recent từ API'}
             </p>
             <h3 className="mt-1 text-lg font-black uppercase text-white">
               {isShowingShowtimeBookings ? `Booking của showtime #${showtimeId}` : 'Booking vừa tra cứu/check-in'}
             </h3>
+            {!isShowingShowtimeBookings && recentBookingsError && (
+              <p className="mt-2 text-xs font-bold text-rose-400">{recentBookingsError}</p>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left">
@@ -600,25 +853,41 @@ export default function StaffCheckInPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-900">
-                {visibleBookings.length > 0 ? visibleBookings.map((booking) => (
-                  <tr key={booking.id} className="transition hover:bg-emerald-400/5">
-                    <td className="px-5 py-4"><p className="font-mono text-[11px] font-black text-white">{booking.bookingCode}</p><p className="mt-1 font-mono text-[8px] text-neutral-600">#{booking.id}</p></td>
-                    <td className="px-3 py-4 text-xs font-bold text-neutral-300">{booking.movieTitle}</td>
-                    <td className="px-3 py-4 text-[10px] font-bold text-neutral-500">{formatDateTime(booking.showtimeStart)}</td>
-                    <td className="px-3 py-4 text-xs font-black text-white">{formatSeats(booking)}</td>
-                    <td className="px-3 py-4"><StatusBadge status={booking.status} /></td>
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => checkInByQr(booking.qrCode)}
-                        disabled={booking.status !== 'PAID' || !booking.qrCode || isCheckingIn}
-                        className="border border-neutral-700 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-emerald-300 disabled:border-neutral-900 disabled:text-neutral-700"
-                      >
-                        {booking.status === 'USED' ? 'Đã xác nhận' : 'Check-in'}
-                      </button>
+                {!isShowingShowtimeBookings && isLoadingRecentBookings ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center">
+                      <RefreshCw className="mx-auto h-8 w-8 animate-spin text-emerald-400/70" />
+                      <p className="mt-3 text-xs font-bold text-neutral-500">Đang tải booking gần đây từ API...</p>
                     </td>
                   </tr>
-                )) : (
+                ) : visibleBookings.length > 0 ? visibleBookings.map((booking) => {
+                  const canCheckIn = isBookingCheckInOpen(booking);
+                  return (
+                    <tr key={booking.id} className="transition hover:bg-emerald-400/5">
+                      <td className="px-5 py-4"><p className="font-mono text-[11px] font-black text-white">{booking.bookingCode}</p><p className="mt-1 font-mono text-[8px] text-neutral-600">#{booking.id}</p></td>
+                      <td className="px-3 py-4 text-xs font-bold text-neutral-300">{booking.movieTitle}</td>
+                      <td className="px-3 py-4 text-[10px] font-bold text-neutral-500">
+                        {formatDateTime(booking.showtimeStart)}
+                        {booking.status === 'PAID' && !canCheckIn && (
+                          <p className="mt-1 text-[8px] font-black uppercase tracking-wider text-purple-300">Mở check-in trước 30 phút</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-4 text-xs font-black text-white">{formatSeats(booking)}</td>
+                      <td className="px-3 py-4"><StatusBadge status={booking.status} /></td>
+                      <td className="px-5 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => checkInByQr(booking.qrCode)}
+                          disabled={!canCheckIn || !booking.qrCode || isCheckingIn}
+                          title={booking.status === 'PAID' && !canCheckIn ? getCheckInWindowMessage(booking) : undefined}
+                          className="border border-neutral-700 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-emerald-300 disabled:border-neutral-900 disabled:text-neutral-700"
+                        >
+                          {booking.status === 'USED' ? 'Đã xác nhận' : booking.status === 'PAID' && !canCheckIn ? 'Chưa mở' : 'Check-in'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                }) : (
                   <tr>
                     <td colSpan={6} className="px-5 py-12 text-center">
                       <Ticket className="mx-auto h-8 w-8 text-neutral-700" />
@@ -631,8 +900,8 @@ export default function StaffCheckInPage() {
             </table>
           </div>
           <div className="flex flex-col justify-between gap-3 border-t border-neutral-800 px-5 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-500 sm:flex-row sm:items-center">
-            <span>{isShowingShowtimeBookings ? 'Danh sách booking lấy trực tiếp theo showtimeId' : 'Hiển thị tối đa 8 booking gần nhất trong phiên làm việc'}</span>
-            <span className="flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Cập nhật theo API backend</span>
+            <span>{isShowingShowtimeBookings ? 'Danh sách booking lấy trực tiếp theo showtimeId' : 'Hiển thị tối đa 10 booking gần nhất từ API staff/check-in/recent'}</span>
+
           </div>
         </section>
       </main>

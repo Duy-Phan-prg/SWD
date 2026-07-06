@@ -86,6 +86,16 @@ const getShowtimeRoomKey = (showtime) => {
 };
 
 const CONCESSIONS_PAGE_SIZE = 6;
+const HOLD_DURATION_SECONDS = 3 * 60;
+const FOOD_STATUS_META = {
+  ACTIVE: { label: 'Mở bán', className: 'text-emerald-400' },
+  LOW_STOCK: { label: 'Sắp hết', className: 'text-amber-400' },
+  OUT_OF_STOCK: { label: 'Hết', className: 'text-rose-400' },
+  INACTIVE: { label: 'Hết', className: 'text-rose-400' },
+};
+
+const getFoodStatusMeta = (status) => FOOD_STATUS_META[status] || FOOD_STATUS_META.OUT_OF_STOCK;
+const isFoodSelectable = (item) => item?.status === 'ACTIVE' || item?.status === 'LOW_STOCK';
 
 const sortShowtimes = (showtimes) => [...showtimes].sort((a, b) => {
   const timeDiff = new Date(a.startTime || 0) - new Date(b.startTime || 0);
@@ -431,14 +441,12 @@ export default function BookingView() {
   // Food combos
   const handleModifyCombo = (id, operator) => {
     const product = concessions.find((item) => item.id === id);
-    const stockLimit = Number.isFinite(Number(product?.stockQuantity)) ? Number(product.stockQuantity) : 3;
-    const maxQuantity = Math.min(3, Math.max(0, stockLimit));
+    const maxQuantity = isFoodSelectable(product) ? 3 : 0;
     setSelectedCombos(prev => {
       const qty = prev[id] || 0;
       let next = operator === '+' ? Math.min(maxQuantity, qty + 1) : Math.max(0, qty - 1);
       if (operator === '+' && qty >= 3) showToast('Tối đa 3 phần mỗi sản phẩm.');
-      if (operator === '+' && maxQuantity === 0) showToast('Món này đã hết hàng.');
-      if (operator === '+' && maxQuantity > 0 && maxQuantity < 3 && qty >= maxQuantity) showToast(`Chỉ còn ${maxQuantity} phần trong kho.`);
+      if (operator === '+' && maxQuantity === 0) showToast('Món này đang hết.');
       const updated = { ...prev };
       if (next === 0) delete updated[id]; else updated[id] = next;
       return updated;
@@ -466,7 +474,7 @@ export default function BookingView() {
   const holdCountdownLabel = holdSecondsLeft === null
     ? '--:--'
     : formatHoldSeconds(holdSecondsLeft);
-  const holdProgressPercent = holdSecondsLeft === null ? 100 : Math.max(0, Math.min(100, (holdSecondsLeft / 60) * 100));
+  const holdProgressPercent = holdSecondsLeft === null ? 100 : Math.max(0, Math.min(100, (holdSecondsLeft / HOLD_DURATION_SECONDS) * 100));
 
   const handleLoyaltyPointsInputChange = (event) => {
     const nextValue = event.target.value.replace(/\D/g, '').slice(0, 9);
@@ -751,7 +759,7 @@ export default function BookingView() {
       setHoldExpiresAt(holdResult.holdExpiresAt || holdResult.expiresAt || null);
       setHoldSecondsLeft(holdResult.holdExpiresAt
         ? Math.max(0, Math.ceil((new Date(holdResult.holdExpiresAt).getTime() - Date.now()) / 1000))
-        : 60);
+        : HOLD_DURATION_SECONDS);
       if (loyaltyDiscountAmount > 0) {
         setLoyaltyPoints(points => Math.max(0, points - loyaltyDiscountAmount));
       }
@@ -1708,8 +1716,8 @@ export default function BookingView() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="inline-combos-grid">
                   {paginatedConcessions.map((item) => {
                     const qty = selectedCombos[item.id] || 0;
-                    const stockLimit = Number.isFinite(Number(item.stockQuantity)) ? Number(item.stockQuantity) : 3;
-                    const maxQuantity = Math.min(3, Math.max(0, stockLimit));
+                    const statusMeta = getFoodStatusMeta(item.status);
+                    const maxQuantity = isFoodSelectable(item) ? 3 : 0;
 
                     return (
                       <div
@@ -1748,8 +1756,8 @@ export default function BookingView() {
                             <span className="text-[7.5px] font-mono text-zinc-600 block tracking-widest uppercase">CINE-CONCESSION</span>
                             <h4 className="text-[11.5px] font-sans font-bold text-white group-hover:text-amber-300 transition-colors leading-tight line-clamp-1">{item.name}</h4>
                             <p className="text-[9px] text-[#8e8e8e] leading-snug line-clamp-2 h-7">{item.description}</p>
-                            <p className={`text-[8px] font-mono uppercase tracking-widest ${maxQuantity === 0 ? 'text-rose-400' : maxQuantity <= 2 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                              Còn {stockLimit.toLocaleString('vi-VN')} phần
+                            <p className={`text-[8px] font-mono uppercase tracking-widest ${statusMeta.className}`}>
+                              {statusMeta.label}
                             </p>
                           </div>
 
@@ -1837,8 +1845,8 @@ export default function BookingView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6" id="combos-list">
                 {paginatedConcessions.map((item) => {
                   const qty = selectedCombos[item.id] || 0;
-                  const stockLimit = Number.isFinite(Number(item.stockQuantity)) ? Number(item.stockQuantity) : 3;
-                  const maxQuantity = Math.min(3, Math.max(0, stockLimit));
+                  const statusMeta = getFoodStatusMeta(item.status);
+                  const maxQuantity = isFoodSelectable(item) ? 3 : 0;
 
                   return (
                     <div
@@ -1858,8 +1866,8 @@ export default function BookingView() {
                         <div className="space-y-1">
                           <h4 className="text-xs font-sans font-bold text-white group-hover:text-zinc-300 transition-colors leading-snug">{item.name}</h4>
                           <p className="text-[10px] text-neutral-500 leading-normal line-clamp-2">{item.description}</p>
-                          <p className={`text-[8px] font-mono uppercase tracking-widest ${maxQuantity === 0 ? 'text-rose-400' : maxQuantity <= 2 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                            Còn {stockLimit.toLocaleString('vi-VN')} phần
+                          <p className={`text-[8px] font-mono uppercase tracking-widest ${statusMeta.className}`}>
+                            {statusMeta.label}
                           </p>
                         </div>
 

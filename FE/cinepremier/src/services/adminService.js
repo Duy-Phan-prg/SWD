@@ -18,6 +18,19 @@ const foodItemsApi   = createCrudApi('/api/v1/admin/foods/items');
 const foodCombosApi  = createCrudApi('/api/v1/admin/foods/combos');
 const bookingsApi    = createCrudApi('/api/v1/admin/bookings');
 
+const normalizePageResponse = (payload = {}) => {
+  const items = unwrapListPayload(payload);
+  return {
+    items,
+    page: Number(payload.page ?? payload.number ?? 0),
+    size: Number(payload.size ?? payload.pageSize ?? items.length),
+    totalPages: Math.max(1, Number(payload.totalPages ?? payload.pageCount ?? 1)),
+    totalItems: Number(payload.totalItems ?? payload.totalElements ?? payload.total ?? items.length),
+    first: Boolean(payload.first),
+    last: Boolean(payload.last)
+  };
+};
+
 // ─── Admin Service ──────────────────────────────────────────────────────────
 export const adminService = {
 
@@ -32,6 +45,7 @@ export const adminService = {
 
   // ── Actors ─────────────────────────────────────────────────────────────────
   getAdminActors:   (token, params = {}) => actorsApi.getAll(token, params).then(unwrapListPayload),
+  getAdminActorsPage: (token, params = {}) => actorsApi.getAll(token, params).then(normalizePageResponse),
   createAdminActor: (token, payload)     => actorsApi.create(token, payload),
   updateAdminActor: (token, id, payload) => actorsApi.update(token, id, payload),
   deleteAdminActor: (token, id)          => actorsApi.remove(token, id),

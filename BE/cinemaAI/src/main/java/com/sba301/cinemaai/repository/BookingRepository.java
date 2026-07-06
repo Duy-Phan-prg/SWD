@@ -43,6 +43,19 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT b FROM Booking b WHERE b.showtime = :showtime AND b.status = :status")
     List<Booking> findByShowtimeAndStatus(@Param("showtime") Showtime showtime, @Param("status") BookingStatus status);
 
+    @Query("""
+            SELECT b FROM Booking b
+            WHERE b.status IN :statuses
+            ORDER BY
+                CASE
+                    WHEN b.checkedInAt IS NOT NULL THEN b.checkedInAt
+                    WHEN b.paidAt IS NOT NULL THEN b.paidAt
+                    ELSE b.createdAt
+                END DESC,
+                b.id DESC
+            """)
+    List<Booking> findRecentForCheckIn(@Param("statuses") Collection<BookingStatus> statuses, Pageable pageable);
+
     @Query("SELECT COUNT(bs) FROM BookingSeat bs JOIN bs.booking b WHERE b.status IN ('PAID','USED') AND b.paidAt BETWEEN :from AND :to")
     long countTicketsSold(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 

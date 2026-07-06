@@ -9,7 +9,6 @@ public record FoodItemResponse(
         String description,
         BigDecimal price,
         String imageUrl,
-        Integer stockQuantity,
         FoodItemStatus status
 ) {
 }

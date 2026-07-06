@@ -9,6 +9,15 @@ import {
 
 const FOOD_PAGE_SIZE = 10;
 
+const FOOD_STATUS_META = {
+  ACTIVE: { label: 'Mở bán', className: 'text-emerald-300' },
+  LOW_STOCK: { label: 'Sắp hết', className: 'text-amber-300' },
+  OUT_OF_STOCK: { label: 'Hết', className: 'text-rose-300' },
+  INACTIVE: { label: 'Hết', className: 'text-rose-300' },
+};
+
+const getFoodStatusMeta = (status) => FOOD_STATUS_META[status] || FOOD_STATUS_META.OUT_OF_STOCK;
+
 export default function AdminFoodsPanel({ ctx }) {
   const {
     activeTab,
@@ -216,28 +225,11 @@ export default function AdminFoodsPanel({ ctx }) {
                     onChange={(e) => setFoodForm((prev) => ({ ...prev, status: e.target.value }))}
                     className="w-full bg-black border border-neutral-800 p-3 text-sm text-white focus:outline-none rounded-none font-bold focus:border-amber-400"
                   >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="INACTIVE">INACTIVE</option>
-                    <option value="OUT_OF_STOCK">OUT_OF_STOCK</option>
+                    <option value="ACTIVE">Mở bán</option>
+                    <option value="LOW_STOCK">Sắp hết</option>
+                    <option value="OUT_OF_STOCK">Hết</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Số lượng tồn kho</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={foodForm.stockQuantity}
-                  onChange={(e) => {
-                    setFoodForm((prev) => ({ ...prev, stockQuantity: e.target.value }));
-                    if (foodErrors.stockQuantity) setFoodErrors((prev) => ({ ...prev, stockQuantity: undefined }));
-                  }}
-                  placeholder="VD: 120"
-                  className={`w-full bg-black border p-3 text-sm text-white focus:outline-none rounded-none font-bold ${foodErrors.stockQuantity ? 'border-rose-500' : 'border-neutral-800 focus:border-amber-400'}`}
-                />
-                {foodErrors.stockQuantity && <p className="text-[10px] text-rose-400 font-bold">{foodErrors.stockQuantity}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -348,9 +340,6 @@ export default function AdminFoodsPanel({ ctx }) {
                                 />
                                 <div className="min-w-0">
                                   <div className="font-black text-white text-sm uppercase tracking-wide truncate">{item.name}</div>
-                                  <div className={`text-[10px] font-black uppercase tracking-wider ${Number(item.stockQuantity || 0) === 0 ? 'text-rose-300' : Number(item.stockQuantity || 0) <= 5 ? 'text-amber-300' : 'text-emerald-300'}`}>
-                                    Tồn kho: {Number(item.stockQuantity || 0).toLocaleString('vi-VN')}
-                                  </div>
                                   <div className="text-[10px] text-neutral-500 truncate">{item.description || 'Chưa có mô tả'}</div>
                                 </div>
                               </div>
@@ -358,8 +347,8 @@ export default function AdminFoodsPanel({ ctx }) {
                             <td className="py-3.5 px-3 text-xs font-black uppercase text-amber-300 truncate">{item.kind === 'combo' ? 'Combo' : 'Món lẻ'}</td>
                             <td className="py-3.5 px-3 text-xs font-mono text-white truncate">{Number(item.price).toLocaleString()}đ</td>
                             <td className="py-3.5 px-3">
-                              <span className={`text-[10px] font-black uppercase ${item.status === 'ACTIVE' ? 'text-emerald-300' : item.status === 'OUT_OF_STOCK' ? 'text-amber-300' : 'text-rose-300'}`}>
-                                {item.status}
+                              <span className={`text-[10px] font-black uppercase ${getFoodStatusMeta(item.status).className}`}>
+                                {getFoodStatusMeta(item.status).label}
                               </span>
                             </td>
                             <td className="py-3.5 px-3">
@@ -376,9 +365,9 @@ export default function AdminFoodsPanel({ ctx }) {
                                   type="button"
                                   onClick={() => handleToggleFoodStatus(item, item.kind)}
                                   className="p-2 text-rose-400 border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500 hover:text-black transition"
-                                  title={item.status === 'ACTIVE' ? 'Ẩn khỏi khách hàng' : 'Bật bán cho khách hàng'}
+                                  title={item.status === 'OUT_OF_STOCK' ? 'Mở bán cho khách hàng' : 'Đánh dấu hết'}
                                 >
-                                  {item.status === 'ACTIVE' ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  {item.status === 'OUT_OF_STOCK' ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                                 </button>
                               </div>
                             </td>

@@ -2,7 +2,6 @@ package com.sba301.cinemaai.dto.request.food;
 
 import com.sba301.cinemaai.enums.FoodItemStatus;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -21,9 +20,6 @@ public record FoodItemRequest(
 
         @Size(max = 500, message = "Image URL must be at most 500 characters")
         String imageUrl,
-
-        @Min(value = 0, message = "Stock quantity must be at least 0")
-        Integer stockQuantity,
 
         FoodItemStatus status
 ) {

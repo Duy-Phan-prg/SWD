@@ -128,7 +128,7 @@ export default function WishlistView() {
       {filteredItems.length === 0 ? (
         <div className="border border-dashed border-white/10 bg-black px-6 py-14 text-center">
           <Film className="mx-auto h-9 w-9 text-neutral-600" />
-          <h2 className="mt-5 text-xl font-serif italic tracking-wider text-white">
+          <h2 className="text-xl sm:text-2xl font-sans font-bold text-white">
             Danh sách yêu thích đang trống
           </h2>
           <p className="mx-auto mt-3 max-w-md text-xs leading-6 text-neutral-500">

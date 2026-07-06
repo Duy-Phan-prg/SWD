@@ -4,7 +4,7 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 export default function PaymentCallbackPage() {
   const navigate = useNavigate();
-  const onGoHome = () => navigate('/');
+  const onGoTickets = () => navigate('/tickets');
   const [status, setStatus] = useState('loading');
   const [info, setInfo] = useState({});
 
@@ -76,10 +76,10 @@ export default function PaymentCallbackPage() {
         )}
 
         <button
-          onClick={onGoHome}
+          onClick={onGoTickets}
           className="w-full bg-white text-black hover:bg-neutral-200 py-3 text-xs font-bold uppercase tracking-widest transition"
         >
-          Về trang chủ
+          Về vé của tôi
         </button>
 
       </div>

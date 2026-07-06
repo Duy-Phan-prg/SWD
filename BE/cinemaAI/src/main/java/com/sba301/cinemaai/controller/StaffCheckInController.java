@@ -50,6 +50,12 @@ public class StaffCheckInController {
         return ApiResponse.success(bookingService.lookupForCheckIn(bookingCode, qrCode), "Booking found");
     }
 
+    @GetMapping("/recent")
+    @Operation(summary = "List recent check-in bookings (Staff/Admin)", description = "Get recent paid or checked-in bookings for the staff check-in workspace")
+    public ApiResponse<List<BookingResponse>> recentBookings(@RequestParam(defaultValue = "8") int limit) {
+        return ApiResponse.success(bookingService.getRecentStaffCheckInBookings(limit), "Recent bookings retrieved");
+    }
+
     @GetMapping("/showtimes/{showtimeId}/bookings")
     @Operation(summary = "List bookings by showtime (Staff/Admin)", description = "Get all bookings of a showtime for check-in")
     public ApiResponse<List<BookingResponse>> bookingsByShowtime(@PathVariable Long showtimeId) {

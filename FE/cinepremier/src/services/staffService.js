@@ -7,6 +7,8 @@ export const staffService = {
     if (qrCode) params.set('qrCode', qrCode);
     return request(`/api/v1/staff/check-in/lookup?${params.toString()}`, { token });
   },
+  getRecentStaffCheckInBookings: (token, limit = 8) =>
+    request(`/api/v1/staff/check-in/recent?limit=${encodeURIComponent(limit)}`, { token }),
   getStaffShowtimeBookings: (token, showtimeId) => request(`/api/v1/staff/check-in/showtimes/${encodeURIComponent(showtimeId)}/bookings`, { token }),
   checkInStaffBooking: (token, qrCode) => request('/api/v1/staff/check-in', {
     method: 'POST',

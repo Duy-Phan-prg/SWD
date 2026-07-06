@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Check, Edit3, ImageUp, Plus, Search, Trash2, UserRound } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Edit3, ImageUp, Plus, Search, Trash2, UserRound } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 
 export default function AdminActorsPanel({ ctx }) {
   const {
     actorSearch, setActorSearch, actorForm, setActorForm, actorErrors, setActorErrors,
     editingActorId, isActorLoading, isActorSaving, actors, filteredActors,
+    actorPagination, setActorPagination,
     resetActorForm, handleActorSubmit, handleEditActor, handleDeleteActor,
     getAdminToken, showToast
   } = ctx;
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const { page = 0, totalPages = 1, totalItems = actors.length } = actorPagination || {};
+
+  const handleActorSearchChange = (event) => {
+    setActorPagination((prev) => ({ ...prev, page: 0 }));
+    setActorSearch(event.target.value);
+  };
+
+  const goToActorPage = (nextPage) => {
+    const safePage = Math.max(0, Math.min(nextPage, Math.max(totalPages - 1, 0)));
+    setActorPagination((prev) => ({ ...prev, page: safePage }));
+  };
 
   const updateField = (field, value) => {
     setActorForm((prev) => ({ ...prev, [field]: value }));
@@ -89,10 +101,10 @@ export default function AdminActorsPanel({ ctx }) {
 
         <div className="border border-neutral-850 bg-neutral-950 overflow-hidden">
           <div className="p-3 border-b border-neutral-850 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-black uppercase text-white">{actors.length} diễn viên</h3>
+            <h3 className="text-sm font-black uppercase text-white">{totalItems} diễn viên</h3>
             <div className="relative w-full max-w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-600" />
-              <input value={actorSearch} onChange={(event) => setActorSearch(event.target.value)} placeholder="Tìm diễn viên..." className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-amber-400" />
+              <input value={actorSearch} onChange={handleActorSearchChange} placeholder="Tìm diễn viên..." className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-amber-400" />
             </div>
           </div>
 
@@ -111,6 +123,55 @@ export default function AdminActorsPanel({ ctx }) {
                 <button type="button" onClick={() => handleDeleteActor(actor)} className="p-2 text-rose-400 border border-rose-500/20"><Trash2 className="h-4 w-4" /></button>
               </div>
             )) : <div className="p-10 text-center text-neutral-500">Không tìm thấy diễn viên.</div>}
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-neutral-850 bg-[#060606] px-4 py-3">
+            <span className="text-[10px] font-mono text-neutral-500">
+              Trang <span className="text-amber-400 font-black">{page + 1}</span> / {totalPages}
+              <span className="ml-2 text-neutral-600">({totalItems} diễn viên, 10 bản ghi/trang)</span>
+            </span>
+
+            <div className="flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                disabled={page === 0 || isActorLoading}
+                onClick={() => goToActorPage(page - 1)}
+                className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-[10px] font-black uppercase text-neutral-400 hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft className="h-3 w-3" /> Trước
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i).map((i) => {
+                const isNear = Math.abs(i - page) <= 1 || i === 0 || i === totalPages - 1;
+                if (!isNear && Math.abs(i - page) === 2) {
+                  return <span key={`actor-ellipsis-${i}`} className="px-1 text-neutral-700 text-xs select-none">...</span>;
+                }
+                if (!isNear) return null;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={isActorLoading}
+                    onClick={() => goToActorPage(i)}
+                    className={`min-w-[30px] h-[30px] border text-[10px] font-black transition ${i === page
+                      ? 'border-amber-500 bg-amber-500 text-black'
+                      : 'border-neutral-800 bg-black text-neutral-400 hover:border-amber-500/50 hover:text-amber-300'
+                      }`}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                disabled={page >= totalPages - 1 || isActorLoading}
+                onClick={() => goToActorPage(page + 1)}
+                className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-[10px] font-black uppercase text-neutral-400 hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                Tiếp <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

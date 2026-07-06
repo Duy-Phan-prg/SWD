@@ -1,19 +1,36 @@
 import { request, unwrapListPayload } from './authService';
 import { normalizeMovie } from './movieService';
 
-const normalizeRecommendation = (item = {}) => ({
-  ...normalizeMovie({
-    id: item.movieId,
-    movieId: item.movieId,
-    title: item.title,
-    posterUrl: item.posterUrl
-  }, {
-    id: item.movieId,
-    backendId: item.movieId,
-    posterUrl: item.posterUrl
-  }),
-  similarity: typeof item.similarity === 'number' ? item.similarity : null
-});
+const getRecommendationMovie = (item = {}) => item.movie || item.movieInfo || item.film || item;
+
+const normalizeRecommendation = (item = {}) => {
+  const source = getRecommendationMovie(item);
+  const movieId = item.movieId ?? item.movie_id ?? source.id ?? source.movieId;
+  const posterUrl = item.posterUrl
+    || item.poster_url
+    || item.moviePosterUrl
+    || item.imageUrl
+    || source.posterUrl
+    || source.poster_url
+    || source.moviePosterUrl
+    || source.imageUrl
+    || source.thumbnailUrl;
+
+  return {
+    ...normalizeMovie({
+      ...source,
+      id: movieId,
+      movieId,
+      title: item.title || source.title || source.name,
+      posterUrl
+    }, {
+      id: movieId,
+      backendId: movieId,
+      posterUrl
+    }),
+    similarity: typeof item.similarity === 'number' ? item.similarity : null
+  };
+};
 
 export const normalizeRecommendationResponse = (payload) =>
   unwrapListPayload(payload).map(normalizeRecommendation);

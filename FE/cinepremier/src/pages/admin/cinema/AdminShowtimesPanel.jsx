@@ -23,6 +23,8 @@ const fmt = (dt) => {
 };
 
 const fmtPrice = (n) => n ? Number(n).toLocaleString('vi-VN') + 'đ' : '—';
+const hasDetailPrice = (value) => value !== null && value !== undefined && value !== '';
+const fmtDetailPrice = (value) => hasDetailPrice(value) ? `${Number(value).toLocaleString('vi-VN')}đ` : null;
 
 const toInputDatetime = (dt) => {
   if (!dt) return '';
@@ -110,6 +112,12 @@ const PRICE_COLS = [
 const priceField = (row, col) => `${row}${col}Price`;
 const priceDigits = (value) => String(value ?? '').replace(/\D/g, '');
 const toPriceNumber = (value) => Number(priceDigits(value) || 0);
+const hasPriceInput = (value) => priceDigits(value).length > 0;
+const canAutoDeriveSeatPrice = (value) => {
+  if (!hasPriceInput(value)) return false;
+  const price = toPriceNumber(value);
+  return price >= 10000;
+};
 const MIN_LATE_NIGHT_SURCHARGE = 10000;
 const MAX_LATE_NIGHT_SURCHARGE = 100000;
 const formatPriceInput = (value) => {
@@ -117,28 +125,68 @@ const formatPriceInput = (value) => {
   return digits ? Number(digits).toLocaleString('vi-VN') : '';
 };
 const withDerivedSeatPrices = (next, rowKey) => {
-  const standard = toPriceNumber(next[priceField(rowKey, 'Standard')]);
-  if (!standard) return next;
+  const standardField = priceField(rowKey, 'Standard');
+  const vipField = priceField(rowKey, 'Vip');
+  const coupleField = priceField(rowKey, 'Couple');
+  const standard = toPriceNumber(next[standardField]);
+  if (!canAutoDeriveSeatPrice(next[standardField])) {
+    return {
+      ...next,
+      [vipField]: '',
+      [coupleField]: '',
+    };
+  }
   return {
     ...next,
-    [priceField(rowKey, 'Vip')]: formatPriceInput(standard + 20000),
-    [priceField(rowKey, 'Couple')]: formatPriceInput(standard + 30000),
+    [vipField]: formatPriceInput(standard + 20000),
+    [coupleField]: formatPriceInput(standard + 30000),
   };
 };
 
+const priceOrFallback = (value, fallbackValue) => (
+  hasPriceInput(value) ? toPriceNumber(value) : toPriceNumber(fallbackValue)
+);
+
+const priceOrNull = (value) => (
+  hasPriceInput(value) ? toPriceNumber(value) : null
+);
+
+const seatPriceOrDerived = (value, standardValue, addon) => (
+  hasPriceInput(value) && toPriceNumber(value) >= toPriceNumber(standardValue)
+    ? toPriceNumber(value)
+    : toPriceNumber(standardValue) + addon
+);
+
+const displaySeatPrice = (matrixValue, rowKey, colKey) => {
+  const currentValue = matrixValue?.[priceField(rowKey, colKey)];
+  if (colKey === 'Standard') return formatPriceInput(currentValue);
+  const standardValue = matrixValue?.[priceField(rowKey, 'Standard')];
+  if (!canAutoDeriveSeatPrice(standardValue)) return '';
+
+  const derivedValue = toPriceNumber(standardValue) + (colKey === 'Vip' ? 20000 : 30000);
+  if (!hasPriceInput(currentValue) || toPriceNumber(currentValue) < toPriceNumber(standardValue)) {
+    return formatPriceInput(derivedValue);
+  }
+  return formatPriceInput(currentValue);
+};
+
+const validateStandardTicketPrice = (value, message) => (
+  hasPriceInput(value) && !canAutoDeriveSeatPrice(value) ? message : null
+);
+
 const buildShowtimePayload = (formState, allowChildTickets = true) => ({
-  basePrice: toPriceNumber(formState.adultStandardPrice || formState.basePrice),
-  vipPrice: toPriceNumber(formState.adultVipPrice) ? toPriceNumber(formState.adultVipPrice) : null,
-  couplePrice: toPriceNumber(formState.adultCouplePrice) ? toPriceNumber(formState.adultCouplePrice) : null,
-  adultStandardPrice: toPriceNumber(formState.adultStandardPrice || formState.basePrice),
-  childStandardPrice: allowChildTickets ? toPriceNumber(formState.childStandardPrice || formState.basePrice) : null,
-  studentStandardPrice: toPriceNumber(formState.studentStandardPrice || formState.basePrice),
-  adultVipPrice: toPriceNumber(formState.adultVipPrice) || toPriceNumber(formState.adultStandardPrice || formState.basePrice) + 20000,
-  childVipPrice: allowChildTickets ? toPriceNumber(formState.childVipPrice) || toPriceNumber(formState.childStandardPrice || formState.basePrice) + 20000 : null,
-  studentVipPrice: toPriceNumber(formState.studentVipPrice) || toPriceNumber(formState.studentStandardPrice || formState.basePrice) + 20000,
-  adultCouplePrice: toPriceNumber(formState.adultCouplePrice) || toPriceNumber(formState.adultStandardPrice || formState.basePrice) + 30000,
-  childCouplePrice: allowChildTickets ? toPriceNumber(formState.childCouplePrice) || toPriceNumber(formState.childStandardPrice || formState.basePrice) + 30000 : null,
-  studentCouplePrice: toPriceNumber(formState.studentCouplePrice) || toPriceNumber(formState.studentStandardPrice || formState.basePrice) + 30000,
+  basePrice: priceOrFallback(formState.adultStandardPrice, formState.basePrice),
+  vipPrice: priceOrNull(formState.adultVipPrice),
+  couplePrice: priceOrNull(formState.adultCouplePrice),
+  adultStandardPrice: priceOrFallback(formState.adultStandardPrice, formState.basePrice),
+  childStandardPrice: allowChildTickets ? priceOrFallback(formState.childStandardPrice, formState.basePrice) : null,
+  studentStandardPrice: priceOrFallback(formState.studentStandardPrice, formState.basePrice),
+  adultVipPrice: seatPriceOrDerived(formState.adultVipPrice, priceOrFallback(formState.adultStandardPrice, formState.basePrice), 20000),
+  childVipPrice: allowChildTickets ? seatPriceOrDerived(formState.childVipPrice, priceOrFallback(formState.childStandardPrice, formState.basePrice), 20000) : null,
+  studentVipPrice: seatPriceOrDerived(formState.studentVipPrice, priceOrFallback(formState.studentStandardPrice, formState.basePrice), 20000),
+  adultCouplePrice: seatPriceOrDerived(formState.adultCouplePrice, priceOrFallback(formState.adultStandardPrice, formState.basePrice), 30000),
+  childCouplePrice: allowChildTickets ? seatPriceOrDerived(formState.childCouplePrice, priceOrFallback(formState.childStandardPrice, formState.basePrice), 30000) : null,
+  studentCouplePrice: seatPriceOrDerived(formState.studentCouplePrice, priceOrFallback(formState.studentStandardPrice, formState.basePrice), 30000),
   weekendSurcharge: Boolean(formState.weekendSurcharge),
   holidaySurcharge: Boolean(formState.holidaySurcharge),
   lateNightSurchargeAmount: toPriceNumber(formState.lateNightSurchargeAmount || 20000),
@@ -166,6 +214,23 @@ const getRoomCapacity = (room) => {
   const columns = Number(room?.columns ?? room?.cols);
   return Number.isFinite(rows) && Number.isFinite(columns) ? rows * columns : 0;
 };
+
+const getBulkSlotIndexFromError = (message) => {
+  const normalizedMessage = String(message || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/Ä'/g, 'd')
+    .replace(/Đ/g, 'D');
+  const match = normalizedMessage.match(/thoi gian so\s*(\d+)/i);
+  const slotNumber = match ? Number(match[1]) : 0;
+  return Number.isFinite(slotNumber) && slotNumber > 0 ? slotNumber - 1 : null;
+};
+
+const getShowtimeRoomId = (showtime) => showtime?.roomId ?? showtime?.room?.id;
+
+const intervalsOverlap = (startA, endA, startB, endB) => (
+  startA < endB && startB < endA
+);
 
 const isNightSlot = (value) => {
   if (!value) return false;
@@ -380,7 +445,7 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
                   const field = priceField(row.key, col.key);
                   return (
                     <td key={field} className="py-2 px-2">
-                      <input type="text" inputMode="numeric" value={formatPriceInput(value[field])}
+                      <input type="text" inputMode="numeric" value={displaySeatPrice(value, row.key, col.key)}
                         onChange={e => setPrice(field, e.target.value)}
                         placeholder={col.addon ? `+${formatPriceInput(col.addon)}` : '90.000'}
                         className="w-full bg-black border border-zinc-800 p-2 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
@@ -421,7 +486,7 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
       {errors[`${prefix}lateNightSurchargeAmount`] && (
         <p className="text-rose-400 text-[9px]">{errors[`${prefix}lateNightSurchargeAmount`]}</p>
       )}
-      <p className="text-[10px] text-zinc-400">
+      <p className="text-[11px] text-zinc-400">
         Phụ thu đêm 23:00-04:59 được cộng theo mức admin nhập: {formatPriceInput(value.lateNightSurchargeAmount || 20000)}đ/vé.
       </p>
     </div>
@@ -460,6 +525,7 @@ export default function AdminShowtimesPanel({ ctx }) {
   const [copyDate, setCopyDate] = useState('');
   const [isCopying, setIsCopying] = useState(false);
   const [detailModal, setDetailModal] = useState(null); // showtime object
+  const [roomSeatTypesById, setRoomSeatTypesById] = useState({});
 
   const findUiMovie = useCallback((movieId) => (
     (moviesList || []).find(m => getMovieOptionId(m) === String(movieId))
@@ -503,6 +569,24 @@ export default function AdminShowtimesPanel({ ctx }) {
     }).catch(() => { });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const roomId = getShowtimeRoomId(detailModal);
+    if (!roomId || roomSeatTypesById[roomId]) return;
+
+    const token = getTokenRef.current?.();
+    if (!token) return;
+
+    adminService.getAdminRoomSeats(token, roomId)
+      .then(data => {
+        const seats = Array.isArray(data) ? data : (data?.content || data?.items || []);
+        const seatTypes = [...new Set(seats.map(seat => seat.seatType).filter(Boolean))];
+        setRoomSeatTypesById(current => ({ ...current, [roomId]: seatTypes }));
+      })
+      .catch(() => {
+        setRoomSeatTypesById(current => ({ ...current, [roomId]: [] }));
+      });
+  }, [detailModal, roomSeatTypesById]);
+
   /* fetch showtimes */
   const fetchShowtimes = useCallback(async (p = 0) => {
     const token = getTokenRef.current?.();
@@ -539,9 +623,15 @@ export default function AdminShowtimesPanel({ ctx }) {
     if (!form.startTime || isNaN(new Date(form.startTime).getTime())) errs.startTime = 'Nhập thời gian hợp lệ';
     const formWindowError = selectedMovie && form.startTime ? getShowtimeWindowError(selectedMovie, form.startTime) : null;
     if (formWindowError) errs.startTime = formWindowError;
-    if (!form.adultStandardPrice && !form.basePrice) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
-    if (allowChildTickets && !form.childStandardPrice) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
-    if (!form.studentStandardPrice) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
+    if (!hasPriceInput(form.adultStandardPrice) && !hasPriceInput(form.basePrice)) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
+    if (allowChildTickets && !hasPriceInput(form.childStandardPrice)) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
+    if (!hasPriceInput(form.studentStandardPrice)) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
+    const adultStandardError = validateStandardTicketPrice(form.adultStandardPrice || form.basePrice, 'Giá người lớn phải là 0 hoặc từ 10.000');
+    const childStandardError = allowChildTickets ? validateStandardTicketPrice(form.childStandardPrice, 'Giá trẻ em phải là 0 hoặc từ 10.000') : null;
+    const studentStandardError = validateStandardTicketPrice(form.studentStandardPrice, 'Giá sinh viên phải là 0 hoặc từ 10.000');
+    if (adultStandardError) errs.adultStandardPrice = adultStandardError;
+    if (childStandardError) errs.childStandardPrice = childStandardError;
+    if (studentStandardError) errs.studentStandardPrice = studentStandardError;
     const formLateNightError = validateLateNightSurcharge(form.lateNightSurchargeAmount);
     if (formLateNightError) errs.lateNightSurchargeAmount = formLateNightError;
     if (Object.keys(errs).length) { setErrors(errs); return; }
@@ -573,7 +663,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       setEditingStatus('');
       fetchShowtimes(0);
     } catch (e) {
-      showToast?.('Lỗi: ' + e.message, 'error');
+      showToast?.('Lá»—i: ' + e.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -588,33 +678,120 @@ export default function AdminShowtimesPanel({ ctx }) {
     const selectedMovie = findUiMovie(bulkForm.movieId);
     const allowChildTickets = allowsChildTicketsForMovie(selectedMovie);
     if (!bulkForm.movieId) errs.movieId = 'Chọn phim';
-    if (!bulkForm.adultStandardPrice && !bulkForm.basePrice) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
-    if (allowChildTickets && !bulkForm.childStandardPrice) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
-    if (!bulkForm.studentStandardPrice) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
+    if (!hasPriceInput(bulkForm.adultStandardPrice) && !hasPriceInput(bulkForm.basePrice)) errs.adultStandardPrice = 'Nhập giá người lớn ghế thường';
+    if (allowChildTickets && !hasPriceInput(bulkForm.childStandardPrice)) errs.childStandardPrice = 'Nhập giá trẻ em ghế thường';
+    if (!hasPriceInput(bulkForm.studentStandardPrice)) errs.studentStandardPrice = 'Nhập giá sinh viên ghế thường';
+    const bulkAdultStandardError = validateStandardTicketPrice(bulkForm.adultStandardPrice || bulkForm.basePrice, 'Giá người lớn phải là 0 hoặc từ 10.000');
+    const bulkChildStandardError = allowChildTickets ? validateStandardTicketPrice(bulkForm.childStandardPrice, 'Giá trẻ em phải là 0 hoặc từ 10.000') : null;
+    const bulkStudentStandardError = validateStandardTicketPrice(bulkForm.studentStandardPrice, 'Giá sinh viên phải là 0 hoặc từ 10.000');
+    if (bulkAdultStandardError) errs.adultStandardPrice = bulkAdultStandardError;
+    if (bulkChildStandardError) errs.childStandardPrice = bulkChildStandardError;
+    if (bulkStudentStandardError) errs.studentStandardPrice = bulkStudentStandardError;
     const bulkLateNightError = validateLateNightSurcharge(bulkForm.lateNightSurchargeAmount);
     if (bulkLateNightError) errs.lateNightSurchargeAmount = bulkLateNightError;
-    const selectedSlots = bulkForm.slots.filter(s => s.selected !== false);
+    const selectedSlotIndexes = bulkForm.slots
+      .map((slot, index) => (slot.selected !== false ? index : null))
+      .filter(index => index !== null);
+    const selectedSlots = selectedSlotIndexes.map(index => bulkForm.slots[index]);
     if (!selectedSlots.length) errs.slot_selection = 'Chon it nhat mot khung gio';
     const seenRoomStartTimes = new Set();
     selectedSlots.forEach((s, i) => {
-      if (!s.roomId) errs[`slot_room_${i}`] = 'Chọn phòng';
+      const slotIndex = selectedSlotIndexes[i];
+      if (!s.roomId) errs[`slot_room_${slotIndex}`] = 'Chọn phòng';
       if (!s.startTime || isNaN(new Date(s.startTime).getTime())) {
-        errs[`slot_time_${i}`] = 'Nhập thời gian hợp lệ';
+        errs[`slot_time_${slotIndex}`] = 'Nhập thời gian hợp lệ';
         return;
       }
       const slotWindowError = selectedMovie ? getShowtimeWindowError(selectedMovie, s.startTime) : null;
       if (slotWindowError) {
-        errs[`slot_time_${i}`] = slotWindowError;
+        errs[`slot_time_${slotIndex}`] = slotWindowError;
         return;
       }
       const normalizedStart = toApiLocalDateTime(s.startTime).slice(0, 16);
       const roomStartKey = `${s.roomId}|${normalizedStart}`;
       if (seenRoomStartTimes.has(roomStartKey)) {
-        errs[`slot_time_${i}`] = 'Phòng này đã có slot khác cùng giờ trong danh sách đang chọn';
+        errs[`slot_time_${slotIndex}`] = 'Phòng này đã có slot khác cùng giờ trong danh sách đang chọn';
       }
       seenRoomStartTimes.add(roomStartKey);
     });
+    if (bulkStepMinutes) {
+      selectedSlots.forEach((slot, slotPosition) => {
+        const slotIndex = selectedSlotIndexes[slotPosition];
+        if (!slot.roomId || !slot.startTime || Number.isNaN(new Date(slot.startTime).getTime())) return;
+        const slotStart = new Date(slot.startTime);
+        const slotEnd = addMinutes(slot.startTime, bulkStepMinutes);
+        if (!slotEnd) return;
+
+        selectedSlots.forEach((otherSlot, otherPosition) => {
+          if (otherPosition <= slotPosition) return;
+          const otherIndex = selectedSlotIndexes[otherPosition];
+          if (String(slot.roomId) !== String(otherSlot.roomId)) return;
+          if (!otherSlot.startTime || Number.isNaN(new Date(otherSlot.startTime).getTime())) return;
+
+          const otherStart = new Date(otherSlot.startTime);
+          const otherEnd = addMinutes(otherSlot.startTime, bulkStepMinutes);
+          if (!otherEnd) return;
+
+          if (intervalsOverlap(slotStart, slotEnd, otherStart, otherEnd)) {
+            const message = 'Slot này trùng thời gian với slot khác cùng phòng trong danh sách đang chọn';
+            errs[`slot_time_${slotIndex}`] = message;
+            errs[`slot_time_${otherIndex}`] = message;
+          }
+        });
+      });
+    }
     if (Object.keys(errs).length) { setErrors(errs); return; }
+
+    const conflictErrs = {};
+    const slotDates = [...new Set(selectedSlots
+      .map(slot => normalizeDateInput(slot.startTime))
+      .filter(Boolean))];
+    try {
+      const existingByDate = await Promise.all(slotDates.map(async (date) => {
+        const data = await adminService.getAdminShowtimes(token, { page: 0, size: 500, date });
+        const items = data?.content || data?.items || (Array.isArray(data) ? data : []);
+        return items.map(item => ({ ...item, __date: date }));
+      }));
+      const existingShowtimes = existingByDate.flat()
+        .filter(item => String(item.status || '').toUpperCase() !== 'CANCELLED');
+
+      selectedSlots.forEach((slot, slotPosition) => {
+        const slotIndex = selectedSlotIndexes[slotPosition];
+        const slotStart = new Date(slot.startTime);
+        const slotEnd = addMinutes(slot.startTime, bulkStepMinutes || bulkMovieDuration || 0);
+        if (!slot.roomId || Number.isNaN(slotStart.getTime()) || !slotEnd) return;
+
+        const hasExistingConflict = existingShowtimes.some((showtime) => {
+          if (String(getShowtimeRoomId(showtime)) !== String(slot.roomId)) return false;
+          if (normalizeDateInput(showtime.startTime) !== normalizeDateInput(slot.startTime)) return false;
+
+          const existingStart = new Date(showtime.startTime);
+          const rawExistingEnd = showtime.endTime
+            ? new Date(showtime.endTime)
+            : addMinutes(showtime.startTime, bulkMovieDuration || 0);
+          const existingEnd = rawExistingEnd instanceof Date
+            ? addMinutes(rawExistingEnd, 15)
+            : null;
+          if (Number.isNaN(existingStart.getTime()) || !existingEnd) return false;
+          return intervalsOverlap(slotStart, slotEnd, existingStart, existingEnd);
+        });
+
+        if (hasExistingConflict) {
+          conflictErrs[`slot_time_${slotIndex}`] = 'Slot này trùng thời gian với suất chiếu đã tồn tại trong phòng này';
+        }
+      });
+    } catch (error) {
+      showToast?.('Không thể kiểm tra trùng lịch trước khi tạo: ' + error.message, 'error');
+    }
+
+    if (Object.keys(conflictErrs).length) {
+      const firstConflictIndex = Number(Object.keys(conflictErrs)[0].replace('slot_time_', ''));
+      setErrors(conflictErrs);
+      setEditingBulkSlotIndex(Number.isFinite(firstConflictIndex) ? firstConflictIndex : 0);
+      showToast?.(`Có ${Object.keys(conflictErrs).length} khung giờ bị trùng thời gian. Các ô lỗi đã được đánh viền đỏ.`, 'error');
+      return;
+    }
+
     setErrors({});
 
     const payload = {
@@ -638,7 +815,17 @@ export default function AdminShowtimesPanel({ ctx }) {
       setEditingStatus('');
       fetchShowtimes(0);
     } catch (e) {
-      showToast?.('Lỗi: ' + e.message, 'error');
+      const errorMessage = e.message || '';
+      const errorSlotIndex = getBulkSlotIndexFromError(errorMessage);
+      if (errorSlotIndex !== null) {
+        const actualSlotIndex = selectedSlotIndexes[errorSlotIndex] ?? errorSlotIndex;
+        setErrors(prev => ({
+          ...prev,
+          [`slot_time_${actualSlotIndex}`]: errorMessage,
+        }));
+        setEditingBulkSlotIndex(actualSlotIndex);
+      }
+      showToast?.('Lá»—i: ' + e.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -653,7 +840,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       showToast?.('Cập nhật trạng thái thành công', 'success');
       fetchShowtimes(page);
     } catch (e) {
-      showToast?.('Lỗi: ' + e.message, 'error');
+      showToast?.('Lá»—i: ' + e.message, 'error');
     }
   };
 
@@ -675,7 +862,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       setConfirmDelete(null);
       fetchShowtimes(page);
     } catch (e) {
-      showToast?.('Lỗi: ' + e.message, 'error');
+      showToast?.('Lá»—i: ' + e.message, 'error');
       setConfirmDelete(null);
     }
   };
@@ -741,7 +928,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       setErrors({});
       fetchShowtimes(page);
     } catch (e) {
-      showToast?.('Lỗi: ' + e.message, 'error');
+      showToast?.('Lá»—i: ' + e.message, 'error');
     } finally {
       setIsCopying(false);
     }
@@ -887,7 +1074,7 @@ export default function AdminShowtimesPanel({ ctx }) {
     }
     setBulkForm({ ...bulkForm, slots });
     setEditingBulkSlotIndex(0);
-  /* ════════════════════════════════════════════════ */
+    /* ════════════════════════════════════════════════ */
   };
 
   /* bulk slot controls */
@@ -914,7 +1101,7 @@ export default function AdminShowtimesPanel({ ctx }) {
         {mode !== 'list' && (
           <button onClick={() => { setMode('list'); setEditingId(null); setEditingStatus(''); setErrors({}); }}
             className="flex items-center gap-1.5 px-3 py-2 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase tracking-wider hover:border-zinc-500 transition">
-            <X className="w-3 h-3" /> Hủy
+            <X className="w-3 h-3" /> Há»§y
           </button>
         )}
       </div>
@@ -1123,6 +1310,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                     const endTime = getBulkSlotEnd(slot.startTime);
                     const capacity = getBulkSlotCapacity(slot);
                     const night = isNightSlot(slot.startTime);
+                    const slotError = errors[`slot_time_${i}`] || errors[`slot_room_${i}`];
                     return (
                       <div key={`${slot.startTime}-${i}`}
                         role="button"
@@ -1133,7 +1321,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                           e.preventDefault();
                           setEditingBulkSlotIndex(i);
                         }}
-                        className={`relative min-h-[132px] overflow-hidden rounded-lg border-2 bg-white text-left shadow-sm transition ${activeBulkSlotIndex === i ? 'border-sky-400 ring-2 ring-sky-400/40' : selected ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-zinc-300 opacity-45 hover:opacity-80'}`}>
+                        className={`relative min-h-[132px] overflow-hidden rounded-lg border-2 bg-white text-left shadow-sm transition ${slotError ? 'border-rose-500 ring-2 ring-rose-500/50' : activeBulkSlotIndex === i ? 'border-sky-400 ring-2 ring-sky-400/40' : selected ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-zinc-300 opacity-45 hover:opacity-80'}`}>
                         <div className="px-5 py-4">
                           <div className="flex items-baseline gap-1">
                             <span className="text-3xl font-black tracking-normal text-zinc-950 font-mono">{formatTimeOnly(slot.startTime)}</span>
@@ -1147,7 +1335,8 @@ export default function AdminShowtimesPanel({ ctx }) {
                           Còn {capacity || '--'}/{capacity || '--'}
                         </div>
                         <div className="absolute right-2 top-2 flex gap-1">
-                          {activeBulkSlotIndex === i && <span className="rounded bg-sky-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Sửa</span>}
+                          {slotError && <span className="rounded bg-rose-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white">Lá»—i</span>}
+                          {activeBulkSlotIndex === i && <span className="rounded bg-sky-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Sá»­a</span>}
                           {night && <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-orange-600">Đêm +{formatPriceInput(bulkForm.lateNightSurchargeAmount || 20000)}đ</span>}
                           {selected && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Chọn</span>}
                         </div>
@@ -1485,20 +1674,41 @@ export default function AdminShowtimesPanel({ ctx }) {
               </div>
               <div className="space-y-2 text-[11px]">
                 {(() => {
+                  const roomId = getShowtimeRoomId(detailModal);
+                  const seatTypes = roomSeatTypesById[roomId] || [];
                   const showChildPrices = allowsChildTicketsForShowtime(detailModal);
-                  return [
-                  ['Phim', detailModal.movieTitle ?? detailModal.movie?.title],
-                  ['Phòng', detailModal.roomName ?? detailModal.room?.name],
-                  ['Bắt đầu', fmt(detailModal.startTime)],
-                  ['Kết thúc', fmt(detailModal.endTime)],
-                  ['Người lớn - thường', fmtPrice(detailModal.adultStandardPrice ?? detailModal.basePrice)],
-                  ...(showChildPrices ? [['Trẻ em - thường', fmtPrice(detailModal.childStandardPrice)]] : []),
-                  ['Sinh viên - thường', fmtPrice(detailModal.studentStandardPrice)],
-                  ['Người lớn - VIP', fmtPrice(detailModal.adultVipPrice ?? detailModal.vipPrice)],
-                  ['Người lớn - ghế đôi', fmtPrice(detailModal.adultCouplePrice ?? detailModal.couplePrice)],
-                  ['Phụ thu áp dụng', fmtPrice(detailModal.surchargeAmount)],
-                  ['Trạng thái', STATUS_META[detailModal.status]?.label ?? detailModal.status],
-                  ].map(([label, val]) => (
+                  const hasVipSeats = seatTypes.includes('VIP');
+                  const hasCoupleSeats = seatTypes.includes('COUPLE');
+                  const rows = [
+                    ['Phim', detailModal.movieTitle ?? detailModal.movie?.title],
+                    ['Phòng', detailModal.roomName ?? detailModal.room?.name],
+                    ['Bắt đầu', fmt(detailModal.startTime)],
+                    ['Kết thúc', fmt(detailModal.endTime)],
+                  ];
+                  const addPriceRow = (label, value) => {
+                    const formatted = fmtDetailPrice(value);
+                    if (formatted) rows.push([label, formatted]);
+                  };
+
+                  addPriceRow('Người lớn - thường', detailModal.adultStandardPrice ?? detailModal.basePrice);
+                  if (showChildPrices) addPriceRow('Trẻ em - thường', detailModal.childStandardPrice);
+                  addPriceRow('Sinh viên - thường', detailModal.studentStandardPrice);
+
+                  if (hasVipSeats) {
+                    addPriceRow('Người lớn - VIP', detailModal.adultVipPrice ?? detailModal.vipPrice);
+                    if (showChildPrices) addPriceRow('Trẻ em - VIP', detailModal.childVipPrice);
+                    addPriceRow('Sinh viên - VIP', detailModal.studentVipPrice);
+                  }
+
+                  if (hasCoupleSeats) {
+                    addPriceRow('Người lớn - ghế đôi', detailModal.adultCouplePrice ?? detailModal.couplePrice);
+                    if (showChildPrices) addPriceRow('Trẻ em - ghế đôi', detailModal.childCouplePrice);
+                    addPriceRow('Sinh viên - ghế đôi', detailModal.studentCouplePrice);
+                  }
+
+                  addPriceRow('Phụ thu áp dụng', detailModal.surchargeAmount);
+                  rows.push(['Trạng thái', STATUS_META[detailModal.status]?.label ?? detailModal.status]);
+                  return rows.map(([label, val]) => (
                     <div key={label} className="flex justify-between border-b border-zinc-900 pb-1.5">
                       <span className="text-zinc-500 font-bold">{label}</span>
                       <span className="text-zinc-200 font-mono">{val ?? '—'}</span>

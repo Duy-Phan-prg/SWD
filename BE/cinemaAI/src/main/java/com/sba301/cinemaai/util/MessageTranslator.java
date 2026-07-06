@@ -112,6 +112,7 @@ public final class MessageTranslator {
             entry("Only refund requested booking can be marked as refunded", "Chỉ đặt vé đã yêu cầu hoàn tiền mới có thể đánh dấu đã hoàn tiền"),
             entry("Checked-in booking cannot be cancelled", "Không thể hủy đặt vé đã check-in"),
             entry("Only paid booking can be checked in", "Chỉ đặt vé đã thanh toán mới có thể check-in"),
+            entry("Check-in opens 30 minutes before showtime", "Check-in chỉ mở trong vòng 30 phút trước giờ chiếu"),
             entry("QR code does not match booking", "Mã QR không khớp với đặt vé"),
             entry("Choose exactly one food item or combo", "Chỉ được chọn một món ăn hoặc một combo"),
             entry("Quantity must be positive", "Số lượng phải lớn hơn 0"),

@@ -214,7 +214,7 @@ class BookingIntegrationTests {
         mockMvc.perform(delete("/api/v1/admin/foods/items/{itemId}", foodItemId)
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("INACTIVE"));
+                .andExpect(jsonPath("$.data.status").value("OUT_OF_STOCK"));
     }
 
     @Test
@@ -315,7 +315,6 @@ class BookingIntegrationTests {
                                 "Booking test snack",
                                 BigDecimal.valueOf(30000),
                                 "https://example.com/popcorn.jpg",
-                                10,
                                 FoodItemStatus.ACTIVE
                         ))))
                 .andExpect(status().isCreated())

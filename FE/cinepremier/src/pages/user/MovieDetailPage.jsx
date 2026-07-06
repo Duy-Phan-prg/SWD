@@ -59,6 +59,14 @@ const getTrailerEmbedSrc = (url = '') => {
   return url;
 };
 
+const hasSourcePoster = (movie = {}) => Boolean(
+  movie.raw?.posterUrl
+  || movie.raw?.poster
+  || movie.raw?.posterImageUrl
+  || movie.raw?.imageUrl
+  || movie.raw?.thumbnailUrl
+);
+
 export default function DetailView() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -147,8 +155,31 @@ export default function DetailView() {
     if (!detailMovieId) return;
     let cancelled = false;
     recommendationService.getContentRecommendations(detailMovieId)
-      .then((items) => {
-        if (!cancelled) setSimilarMovies(Array.isArray(items) ? items : []);
+      .then(async (items) => {
+        if (cancelled) return;
+        const list = Array.isArray(items) ? items : [];
+        const enriched = await Promise.all(list.map(async (rec) => {
+          const recId = rec.backendId || rec.movieId || rec.id;
+          if (!recId) return rec;
+
+          const localMovie = moviesList.find((m) => (
+            String(m.backendId || m.movieId || m.id) === String(recId)
+          ));
+
+          if (localMovie?.posterUrl) {
+            return { ...rec, ...localMovie, similarity: rec.similarity };
+          }
+
+          if (hasSourcePoster(rec)) return rec;
+
+          try {
+            const detail = await movieService.getMovieDetail(recId);
+            return detail?.id ? { ...rec, ...detail, similarity: rec.similarity } : rec;
+          } catch {
+            return rec;
+          }
+        }));
+        if (!cancelled) setSimilarMovies(enriched);
       })
       .catch(() => {
         if (!cancelled) setSimilarMovies([]);
@@ -156,7 +187,7 @@ export default function DetailView() {
     return () => {
       cancelled = true;
     };
-  }, [detailMovieId]);
+  }, [detailMovieId, moviesList]);
 
   const handleLikeReview = (id) => {
     setLikedReviews(prev => {
@@ -471,7 +502,7 @@ export default function DetailView() {
         <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-4" id="similar-movies-section">
           <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">
             PHIM TƯƠNG TỰ
-            <span className="ml-3 font-light normal-case tracking-normal text-neutral-500">Dựa trên nội dung, thể loại và ê-kíp</span>
+            <span className="ml-3 font-light normal-case tracking-normal text-neutral-300">Dựa trên nội dung, thể loại và ê-kíp</span>
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="similar-movies-grid">
             {similarMovies.slice(0, 10).map((rec) => (

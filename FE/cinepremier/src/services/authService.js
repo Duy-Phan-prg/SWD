@@ -41,6 +41,16 @@ const resolveRole = (roles = []) => {
   return 'user';
 };
 
+const resolveAccessTokenExpiresAt = (authData = {}) => {
+  const expiresInMs = Number(authData.expiresInMs);
+  if (Number.isFinite(expiresInMs) && expiresInMs > 0) {
+    return Date.now() + expiresInMs;
+  }
+
+  const tokenPayload = parseJwtPayload(authData.accessToken);
+  return tokenPayload?.exp ? tokenPayload.exp * 1000 : null;
+};
+
 export const normalizeUser = (user, roles = user?.roles || []) => {
   if (!user) return null;
   const resolvedRoles = roles?.length ? roles : user.roles || [];
@@ -60,7 +70,15 @@ export const saveAuthSession = (authData) => {
 
   const user = normalizeUser(authData.user, authData.roles);
   localStorage.setItem(STORAGE_KEYS.accessToken, authData.accessToken);
-  localStorage.setItem(STORAGE_KEYS.refreshToken, authData.refreshToken);
+  const accessTokenExpiresAt = resolveAccessTokenExpiresAt(authData);
+  if (accessTokenExpiresAt) {
+    localStorage.setItem(STORAGE_KEYS.accessTokenExpiresAt, String(accessTokenExpiresAt));
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.accessTokenExpiresAt);
+  }
+  if (authData.refreshToken) {
+    localStorage.setItem(STORAGE_KEYS.refreshToken, authData.refreshToken);
+  }
   localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
   localStorage.setItem(STORAGE_KEYS.roles, JSON.stringify(authData.roles || user?.roles || []));
 
@@ -78,12 +96,20 @@ export const expireAuthSession = () => {
 
 export const getStoredAuth = () => {
   const accessToken = localStorage.getItem(STORAGE_KEYS.accessToken);
+  const accessTokenExpiresAt = Number(localStorage.getItem(STORAGE_KEYS.accessTokenExpiresAt) || 0) || null;
   const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
   const roles = JSON.parse(localStorage.getItem(STORAGE_KEYS.roles) || '[]');
   const storedUser = localStorage.getItem(STORAGE_KEYS.user);
   const user = storedUser ? normalizeUser(JSON.parse(storedUser), roles) : null;
 
-  return { accessToken, refreshToken, roles, user };
+  return { accessToken, accessTokenExpiresAt, refreshToken, roles, user };
+};
+
+const isAccessTokenExpired = (accessToken, accessTokenExpiresAt) => {
+  if (!accessToken) return true;
+  if (accessTokenExpiresAt) return accessTokenExpiresAt <= Date.now();
+  const tokenPayload = parseJwtPayload(accessToken);
+  return tokenPayload?.exp ? tokenPayload.exp * 1000 <= Date.now() : false;
 };
 
 const createApiError = (payload, status) => {
@@ -124,7 +150,7 @@ const tryRefreshToken = async () => {
     });
     const data = unwrapResponse(response);
     if (data?.accessToken) {
-      localStorage.setItem(STORAGE_KEYS.accessToken, data.accessToken);
+      saveAuthSession(data);
       return data.accessToken;
     }
   } catch { /* ignore */ }
@@ -137,8 +163,17 @@ const getDedupeKey = (path, token) => `${token ? `auth:${token}` : 'public'}:${p
 
 const performRequest = async (path, { method = 'GET', body, token } = {}) => {
   const isFormData = body instanceof FormData;
+  const hadToken = Boolean(token);
+  let effectiveToken = token;
+  if (effectiveToken) {
+    const { accessTokenExpiresAt } = getStoredAuth();
+    if (isAccessTokenExpired(effectiveToken, accessTokenExpiresAt)) {
+      effectiveToken = await tryRefreshToken();
+    }
+  }
+
   const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (effectiveToken) headers.Authorization = `Bearer ${effectiveToken}`;
 
   try {
     const response = await apiClient.request({
@@ -151,7 +186,7 @@ const performRequest = async (path, { method = 'GET', body, token } = {}) => {
     return unwrapResponse(response);
   } catch (requestError) {
     const status = requestError?.response?.status;
-    if (!(token && (status === 401 || status === 403))) {
+    if (!(hadToken && (status === 401 || status === 403))) {
       throw normalizeAxiosError(requestError);
     }
 

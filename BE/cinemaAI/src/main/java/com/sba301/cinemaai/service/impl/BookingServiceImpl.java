@@ -63,11 +63,16 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private static final int HOLD_MINUTES = 1;
+    private static final int HOLD_MINUTES = 3;
+    private static final int CHECK_IN_LEAD_MINUTES = 30;
     private static final List<SeatRuntimeStatus> BLOCKING_SEAT_STATUSES = List.of(
             SeatRuntimeStatus.HOLDING,
             SeatRuntimeStatus.BOOKED,
             SeatRuntimeStatus.CHECKED_IN
+    );
+    private static final List<FoodItemStatus> SELLABLE_FOOD_STATUSES = List.of(
+            FoodItemStatus.ACTIVE,
+            FoodItemStatus.LOW_STOCK
     );
 
     private final BookingRepository bookingRepository;
@@ -319,6 +324,17 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Transactional(readOnly = true)
+    public List<BookingResponse> getRecentStaffCheckInBookings(int limit) {
+        Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        return bookingRepository.findRecentForCheckIn(
+                List.of(BookingStatus.PAID, BookingStatus.USED),
+                pageable
+        ).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<BookingResponse> getStaffBookingsByShowtime(Long showtimeId) {
         Showtime showtime = findShowtime(showtimeId);
         return bookingRepository.findByShowtime(showtime)
@@ -430,13 +446,13 @@ public class BookingServiceImpl implements BookingService {
         }
         if (request.foodItemId() != null) {
             FoodItem foodItem = foodService.findItem(request.foodItemId());
-            if (foodItem.getStatus() != FoodItemStatus.ACTIVE) {
+            if (!SELLABLE_FOOD_STATUSES.contains(foodItem.getStatus())) {
                 throw new BadRequestException("Food item is not available");
             }
             return new BookingFoodItem(booking, foodItem, null, request.quantity(), foodItem.getPrice());
         }
         FoodCombo foodCombo = foodService.findCombo(request.foodComboId());
-        if (foodCombo.getStatus() != FoodItemStatus.ACTIVE) {
+        if (!SELLABLE_FOOD_STATUSES.contains(foodCombo.getStatus())) {
             throw new BadRequestException("Food combo is not available");
         }
         return new BookingFoodItem(booking, null, foodCombo, request.quantity(), foodCombo.getPrice());
@@ -538,6 +554,10 @@ public class BookingServiceImpl implements BookingService {
 
     private void checkIn(Booking booking) {
         requireStatus(booking, BookingStatus.PAID, "Only paid booking can be checked in");
+        LocalDateTime checkInOpenAt = booking.getShowtime().getStartTime().minusMinutes(CHECK_IN_LEAD_MINUTES);
+        if (LocalDateTime.now().isBefore(checkInOpenAt)) {
+            throw new BadRequestException("Check-in opens 30 minutes before showtime");
+        }
         booking.setCheckedInAt(LocalDateTime.now());
         booking.setStatus(BookingStatus.USED);
     }

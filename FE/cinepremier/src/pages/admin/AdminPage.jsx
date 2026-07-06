@@ -135,6 +135,7 @@ export default function AdminDashboard({
   const [editingActorId, setEditingActorId] = useState(null);
   const [isActorLoading, setIsActorLoading] = useState(false);
   const [isActorSaving, setIsActorSaving] = useState(false);
+  const [actorPagination, setActorPagination] = useState({ page: 0, size: 10, totalPages: 1, totalItems: 0 });
   const [foodItems, setFoodItems] = useState([]);
   const [foodCombos, setFoodCombos] = useState([]);
   const [foodSearch, setFoodSearch] = useState('');
@@ -145,7 +146,6 @@ export default function AdminDashboard({
     description: '',
     price: '',
     imageUrl: '',
-    stockQuantity: '',
     status: 'ACTIVE'
   });
   const [foodErrors, setFoodErrors] = useState({});
@@ -264,7 +264,7 @@ export default function AdminDashboard({
   };
 
   const resetFoodForm = () => {
-    setFoodForm({ name: '', description: '', price: '', imageUrl: '', stockQuantity: '', status: 'ACTIVE' });
+    setFoodForm({ name: '', description: '', price: '', imageUrl: '', status: 'ACTIVE' });
     setFoodErrors({});
     setEditingFood(null);
     setFoodKind('item');
@@ -276,7 +276,6 @@ export default function AdminDashboard({
     const description = foodForm.description.trim();
     const price = Number(foodForm.price);
     const imageUrl = foodForm.imageUrl.trim();
-    const stockQuantity = Number(foodForm.stockQuantity);
 
     if (!name) errors.name = 'Tên món là bắt buộc.';
     if (name.length > 255) errors.name = 'Tên món tối đa 255 ký tự.';
@@ -284,9 +283,6 @@ export default function AdminDashboard({
     if (!foodForm.price) errors.price = 'Giá bán là bắt buộc.';
     if (!Number.isFinite(price) || price <= 0) errors.price = 'Giá bán phải lớn hơn 0.';
     if (imageUrl.length > 500) errors.imageUrl = 'URL hình ảnh tối đa 500 ký tự.';
-
-    if (foodForm.stockQuantity === '') errors.stockQuantity = 'Số lượng tồn kho là bắt buộc.';
-    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) errors.stockQuantity = 'Số lượng tồn kho phải là số nguyên từ 0 trở lên.';
 
     const allFoods = foodKind === 'item' ? foodItems : foodCombos;
     const duplicate = allFoods.some((item) => (
@@ -335,7 +331,6 @@ export default function AdminDashboard({
       description: foodForm.description.trim(),
       price: Number(foodForm.price),
       imageUrl: foodForm.imageUrl.trim(),
-      stockQuantity: Number(foodForm.stockQuantity),
       status: foodForm.status
     };
 
@@ -377,14 +372,13 @@ export default function AdminDashboard({
       description: food.description || '',
       price: food.price || '',
       imageUrl: food.imageUrl || '',
-      stockQuantity: food.stockQuantity ?? '',
       status: food.status || 'ACTIVE'
     });
     setFoodErrors({});
   };
 
   const handleToggleFoodStatus = async (food, kind) => {
-    const nextStatus = food.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const nextStatus = food.status === 'OUT_OF_STOCK' ? 'ACTIVE' : 'OUT_OF_STOCK';
     const token = getAdminToken();
     if (!token) return;
 
@@ -393,7 +387,6 @@ export default function AdminDashboard({
       description: food.description || '',
       price: Number(food.price),
       imageUrl: food.imageUrl || '',
-      stockQuantity: Number(food.stockQuantity ?? 0),
       status: nextStatus
     };
 
@@ -407,7 +400,7 @@ export default function AdminDashboard({
       } else {
         setFoodItems((prev) => prev.map((item) => (item.id === food.id ? saved : item)));
       }
-      showToast(`${nextStatus === 'ACTIVE' ? 'Đã bật bán' : 'Đã ẩn'} món: ${food.name}`);
+      showToast(`${nextStatus === 'ACTIVE' ? 'Đã mở bán' : 'Đã đánh dấu hết'} món: ${food.name}`);
       onFoodCatalogChanged();
     } catch (error) {
       showToast(error.message || 'Không thể đổi trạng thái món.');
@@ -537,14 +530,28 @@ export default function AdminDashboard({
     }
   };
 
-  const fetchActors = async (keyword = '') => {
+  const fetchActors = async (
+    keyword = '',
+    page = 0,
+    size = activeTab === 'actors' ? actorPagination.size : 100,
+    syncPagination = activeTab === 'actors'
+  ) => {
     const token = getAdminToken();
     if (!token) return;
 
     setIsActorLoading(true);
     try {
-      const data = await adminService.getAdminActors(token, { keyword: keyword.trim(), limit: 50 });
-      setActors(Array.isArray(data) ? data : []);
+      const data = await adminService.getAdminActorsPage(token, { keyword: keyword.trim(), page, size });
+      const actorList = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      setActors(actorList);
+      if (syncPagination && data && !Array.isArray(data)) {
+        setActorPagination({
+          page: data.page ?? page,
+          size: data.size ?? size,
+          totalPages: data.totalPages ?? 1,
+          totalItems: data.totalItems ?? actorList.length
+        });
+      }
     } catch (error) {
       showToast(error.message || 'Không thể tải danh sách diễn viên.');
     } finally {
@@ -651,7 +658,7 @@ export default function AdminDashboard({
       fetchGenres();
     }
     if (activeTab === 'movies') {
-      fetchActors('');
+      fetchActors('', 0, 100, false);
     }
     if (activeTab === 'foods') {
       fetchFoods();
@@ -663,9 +670,11 @@ export default function AdminDashboard({
 
   React.useEffect(() => {
     if (activeTab !== 'actors') return undefined;
-    const timeoutId = setTimeout(() => fetchActors(actorSearch), 300);
+    const timeoutId = setTimeout(() => {
+      fetchActors(actorSearch, actorPagination.page, actorPagination.size, true);
+    }, 300);
     return () => clearTimeout(timeoutId);
-  }, [activeTab, actorSearch]);
+  }, [activeTab, actorSearch, actorPagination.page, actorPagination.size]);
 
   const resetGenreForm = () => {
     setGenreForm({ name: '', description: '' });
@@ -712,9 +721,15 @@ export default function AdminDashboard({
       const savedActor = editingActorId
         ? await adminService.updateAdminActor(token, editingActorId, payload)
         : await adminService.createAdminActor(token, payload);
-      setActors((prev) => editingActorId
-        ? prev.map((actor) => String(actor.id) === String(editingActorId) ? savedActor : actor)
-        : [savedActor, ...prev]);
+      if (activeTab === 'actors') {
+        const nextPage = editingActorId ? actorPagination.page : 0;
+        setActorPagination((prev) => ({ ...prev, page: nextPage }));
+        await fetchActors(actorSearch, nextPage, actorPagination.size, true);
+      } else {
+        setActors((prev) => editingActorId
+          ? prev.map((actor) => String(actor.id) === String(editingActorId) ? savedActor : actor)
+          : [savedActor, ...prev]);
+      }
       addAuditLog(editingActorId ? 'Cập nhật diễn viên' : 'Tạo diễn viên', savedActor.name);
       showToast(editingActorId ? `Đã cập nhật diễn viên: ${savedActor.name}` : `Đã tạo diễn viên: ${savedActor.name}`);
       resetActorForm();
@@ -740,7 +755,15 @@ export default function AdminDashboard({
     if (!token) return;
     try {
       await adminService.deleteAdminActor(token, actor.id);
-      setActors((prev) => prev.filter((item) => String(item.id) !== String(actor.id)));
+      if (activeTab === 'actors') {
+        const nextTotalItems = Math.max(0, actorPagination.totalItems - 1);
+        const nextLastPage = Math.max(0, Math.ceil(nextTotalItems / actorPagination.size) - 1);
+        const nextPage = Math.min(actorPagination.page, nextLastPage);
+        setActorPagination((prev) => ({ ...prev, page: nextPage }));
+        await fetchActors(actorSearch, nextPage, actorPagination.size, true);
+      } else {
+        setActors((prev) => prev.filter((item) => String(item.id) !== String(actor.id)));
+      }
       addAuditLog('Xóa diễn viên', actor.name);
       showToast(`Đã xóa diễn viên: ${actor.name}`);
       if (String(editingActorId) === String(actor.id)) resetActorForm();
@@ -1287,7 +1310,7 @@ export default function AdminDashboard({
     );
   });
 
-  const filteredActors = actors.filter((actor) => {
+  const filteredActors = activeTab === 'actors' ? actors : actors.filter((actor) => {
     const query = actorSearch.trim().toLowerCase();
     return !query || actor.name?.toLowerCase().includes(query) || actor.biography?.toLowerCase().includes(query);
   });
@@ -1346,6 +1369,8 @@ export default function AdminDashboard({
     setEditingActorId,
     isActorLoading,
     isActorSaving,
+    actorPagination,
+    setActorPagination,
     foodItems,
     setFoodItems,
     foodCombos,
@@ -1677,7 +1702,7 @@ export default function AdminDashboard({
             <div className="h-[1px] bg-neutral-900 my-3"></div>
 
             {/* Quick action: Làm mới trang */}
-            <button
+            {/* <button
               onClick={() => {
                 playPulseSound(300, 'sine', 0.15);
                 showToast("Hệ thống: Rời khỏi phiên làm việc Quản trị viên.");
@@ -1687,7 +1712,7 @@ export default function AdminDashboard({
             >
               <RefreshCw className="h-3.5 w-3.5 text-rose-500 animate-spin-slow" />
               <span>LÀM MỚI TRANG</span>
-            </button>
+            </button> */}
           </div>
 
 

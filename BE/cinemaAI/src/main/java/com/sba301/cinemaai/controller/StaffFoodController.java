@@ -45,7 +45,7 @@ public class StaffFoodController {
     }
 
     @PatchMapping("/items/{itemId}/status")
-    @Operation(summary = "Update food item status for staff", description = "Quickly mark a food item as active, out of stock, or inactive")
+    @Operation(summary = "Update food item status for staff", description = "Quickly mark a food item as active, low stock, or out of stock")
     public ApiResponse<FoodItemResponse> updateItemStatus(
             @PathVariable Long itemId,
             @RequestParam FoodItemStatus status
@@ -54,7 +54,7 @@ public class StaffFoodController {
     }
 
     @PatchMapping("/combos/{comboId}/status")
-    @Operation(summary = "Update food combo status for staff", description = "Quickly mark a food combo as active, out of stock, or inactive")
+    @Operation(summary = "Update food combo status for staff", description = "Quickly mark a food combo as active, low stock, or out of stock")
     public ApiResponse<FoodComboResponse> updateComboStatus(
             @PathVariable Long comboId,
             @RequestParam FoodItemStatus status

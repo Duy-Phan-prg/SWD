@@ -39,7 +39,7 @@ export const useAuthStore = create((set, get) => ({
 
   restoreSession: async () => {
     try {
-      const { accessToken, refreshToken, user } = getStoredAuth();
+      const { accessToken, accessTokenExpiresAt, refreshToken, user } = getStoredAuth();
       if (user) {
         const restoredRole = hasBackendAdminAccess(accessToken, user) ? 'admin' : user.role || 'user';
         get().setAuthSession({ ...user, role: restoredRole }, restoredRole);
@@ -47,6 +47,13 @@ export const useAuthStore = create((set, get) => ({
       if (!accessToken && !refreshToken) return;
 
       let token = accessToken;
+      if (token && accessTokenExpiresAt && accessTokenExpiresAt <= Date.now() && refreshToken) {
+        const refreshed = await authService.refresh(refreshToken);
+        const refreshedUser = saveAuthSession(refreshed);
+        token = refreshed.accessToken;
+        get().setAuthSession(refreshedUser, refreshedUser.role || 'user');
+      }
+
       if (!token && refreshToken) {
         const refreshed = await authService.refresh(refreshToken);
         const refreshedUser = saveAuthSession(refreshed);
