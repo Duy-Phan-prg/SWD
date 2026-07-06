@@ -5,10 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @Component
@@ -19,11 +21,73 @@ public class ReviewSchemaCleanup {
 
     @EventListener(ApplicationReadyEvent.class)
     public void allowOneReviewPerUsedTicket() {
-        dropUniqueIndexesOnUserMovieFromReviews();
-        createUniqueIndexOnBookingId();
+        String database = databaseProductName();
+        if (isPostgreSql(database)) {
+            dropPostgresUniqueIndexesOnUserMovieFromReviews();
+            createPostgresUniqueIndexOnBookingId();
+            return;
+        }
+        if (isMySql(database)) {
+            dropMySqlUniqueIndexesOnUserMovieFromReviews();
+            createMySqlUniqueIndexOnBookingId();
+            return;
+        }
+        log.warn("Skipping review schema cleanup for unsupported database: {}", database);
     }
 
-    private void dropUniqueIndexesOnUserMovieFromReviews() {
+    private void dropPostgresUniqueIndexesOnUserMovieFromReviews() {
+        execute("ALTER TABLE reviews DROP CONSTRAINT IF EXISTS reviews_user_id_movie_id_key");
+        execute("ALTER TABLE reviews DROP CONSTRAINT IF EXISTS uk_reviews_user_movie");
+        execute("""
+                DO $$
+                DECLARE
+                    constraint_record RECORD;
+                BEGIN
+                    FOR constraint_record IN
+                        SELECT n.nspname, c.conname
+                        FROM pg_constraint c
+                        JOIN pg_class t ON t.oid = c.conrelid
+                        JOIN pg_namespace n ON n.oid = t.relnamespace
+                        WHERE t.relname = 'reviews'
+                          AND c.contype = 'u'
+                          AND (
+                              SELECT array_agg(a.attname::text ORDER BY a.attname::text)
+                              FROM unnest(c.conkey) key(attnum)
+                              JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = key.attnum
+                          ) = ARRAY['movie_id', 'user_id']
+                    LOOP
+                        EXECUTE format('ALTER TABLE %I.%I DROP CONSTRAINT %I', constraint_record.nspname, 'reviews', constraint_record.conname);
+                    END LOOP;
+                END $$
+                """);
+        execute("""
+                DO $$
+                DECLARE
+                    index_record RECORD;
+                BEGIN
+                    FOR index_record IN
+                        SELECT schemaname, indexname
+                        FROM pg_indexes
+                        WHERE tablename = 'reviews'
+                          AND indexdef ILIKE '%unique%'
+                          AND indexdef ILIKE '%user_id%'
+                          AND indexdef ILIKE '%movie_id%'
+                    LOOP
+                        EXECUTE format('DROP INDEX IF EXISTS %I.%I', index_record.schemaname, index_record.indexname);
+                    END LOOP;
+                END $$
+                """);
+    }
+
+    private void createPostgresUniqueIndexOnBookingId() {
+        execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uk_reviews_booking_active
+                ON reviews(booking_id)
+                WHERE booking_id IS NOT NULL AND status <> 'DELETED'
+                """);
+    }
+
+    private void dropMySqlUniqueIndexesOnUserMovieFromReviews() {
         try {
             List<String> indexes = jdbcTemplate.queryForList("""
                     SELECT DISTINCT INDEX_NAME
@@ -54,7 +118,7 @@ public class ReviewSchemaCleanup {
         }
     }
 
-    private void createUniqueIndexOnBookingId() {
+    private void createMySqlUniqueIndexOnBookingId() {
         try {
             Integer count = jdbcTemplate.queryForObject("""
                     SELECT COUNT(*) FROM information_schema.STATISTICS
@@ -68,6 +132,28 @@ public class ReviewSchemaCleanup {
         } catch (DataAccessException ex) {
             log.warn("Could not create review booking index: {}", ex.getMessage());
         }
+    }
+
+    private String databaseProductName() {
+        try {
+            return jdbcTemplate.execute((ConnectionCallback<String>) connection ->
+                    connection.getMetaData().getDatabaseProductName());
+        } catch (DataAccessException ex) {
+            log.warn("Could not determine database product name: {}", ex.getMessage());
+            return "";
+        }
+    }
+
+    private boolean isPostgreSql(String database) {
+        return database != null && database.toLowerCase(Locale.ROOT).contains("postgresql");
+    }
+
+    private boolean isMySql(String database) {
+        if (database == null) {
+            return false;
+        }
+        String normalized = database.toLowerCase(Locale.ROOT);
+        return normalized.contains("mysql") || normalized.contains("mariadb");
     }
 
     private void execute(String sql) {

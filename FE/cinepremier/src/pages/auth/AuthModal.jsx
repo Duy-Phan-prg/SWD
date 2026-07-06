@@ -11,7 +11,9 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import {
   MAX_NAME_LENGTH,
   NAME_VALIDATION_MESSAGE,
+  PASSWORD_VALIDATION_MESSAGE,
   PHONE_VALIDATION_MESSAGE,
+  isStrongPassword,
   isValidVietnamPhone,
   normalizeNameInput,
   normalizePhoneInput
@@ -368,8 +370,8 @@ export default function AuthModal({
       showToast('error', PHONE_VALIDATION_MESSAGE);
       return;
     }
-    if (regPassword.length < 8) {
-      showToast('error', 'Mật khẩu cần tối thiểu 8 ký tự để khớp yêu cầu từ BE.');
+    if (!isStrongPassword(regPassword)) {
+      showToast('error', PASSWORD_VALIDATION_MESSAGE);
       return;
     }
     setIsSubmitting(true);
@@ -522,10 +524,38 @@ export default function AuthModal({
       const tokenData = await authService.requestPasswordReset(cleanEmail);
       setGeneratedForgotOtp(tokenData?.token || '');
       setForgotEmail(cleanEmail);
+      setForgotOtp('');
+      setForgotNewPass('');
+      setForgotConfirmPass('');
       setForgotStep(2);
       showToast('success', 'Đã gửi mã OTP đặt lại mật khẩu. Vui lòng kiểm tra email và nhập mã OTP.');
     } catch (error) {
       showToast('error', error.message || 'Không thể gửi mã OTP đặt lại mật khẩu.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyForgotOtp = async (e) => {
+    e.preventDefault();
+    if (!/^[0-9]{6}$/.test(forgotOtp.trim())) {
+      showToast('error', 'Mã OTP phải gồm đúng 6 chữ số.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await authService.verifyPasswordResetOtp({
+        email: forgotEmail.trim(),
+        otp: forgotOtp.trim()
+      });
+      setForgotNewPass('');
+      setForgotConfirmPass('');
+      setForgotStep(3);
+      playPing(660, 'sine', 0.18);
+      showToast('success', 'OTP hợp lệ. Vui lòng thiết lập mật khẩu mới.');
+    } catch (error) {
+      showToast('error', error.message || 'OTP không hợp lệ hoặc đã hết hạn.');
     } finally {
       setIsSubmitting(false);
     }
@@ -537,8 +567,8 @@ export default function AuthModal({
       showToast('error', 'Mã OTP phải gồm đúng 6 chữ số.');
       return;
     }
-    if (!forgotNewPass || forgotNewPass.length < 8) {
-      showToast('error', 'Mật khẩu mới cần tối thiểu 8 ký tự.');
+    if (!isStrongPassword(forgotNewPass)) {
+      showToast('error', PASSWORD_VALIDATION_MESSAGE);
       return;
     }
 
@@ -1165,7 +1195,7 @@ export default function AuthModal({
                           <input
                             type={showRegPassword ? "text" : "password"}
                             required
-                            placeholder="Cực kì an tâm..."
+                            placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt..."
                             value={regPassword}
                             onChange={(e) => setRegPassword(e.target.value)}
                             className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-850"
@@ -1238,15 +1268,15 @@ export default function AuthModal({
                 <div className="flex justify-between items-center bg-[#09090c] border border-neutral-900 p-3 text-[10.5px] font-mono mb-2">
                   <span className={forgotStep >= 1 ? "text-amber-400 font-extrabold" : "text-neutral-500"}>1. Nhập Email {forgotStep > 1 && '✓'}</span>
                   <span className="text-neutral-700">➔</span>
-                  <span className={forgotStep >= 2 ? "text-amber-400 font-extrabold" : "text-neutral-500"}>2. OTP & Mật Khẩu Mới</span>
+                  <span className={forgotStep >= 2 ? "text-amber-400 font-extrabold" : "text-neutral-500"}>2. Xác Nhận OTP</span>
                   <span className="text-neutral-700">➔</span>
                   <span className={forgotStep >= 3 ? "text-amber-400 font-extrabold" : "text-neutral-500"}>3. Mật Khẩu Mới</span>
                 </div>
 
                 <p className="text-xs text-neutral-300 font-light leading-relaxed">
                   {forgotStep === 1 && "Nhập địa chỉ Email VIP liên kết để bảo lưu tài khoản hội viên và gửi tín hiệu kích hoạt mã bảo an."}
-                  {forgotStep === 2 && "Nhập mã OTP và mật khẩu mới. Hệ thống sẽ gọi API xác nhận OTP trước khi đổi mật khẩu."}
-                  {forgotStep === 3 && "Nhập mật khẩu VIP mới bảo mật tối thiểu 8 ký tự để đồng bộ cập nhật vào hệ thống."}
+                  {forgotStep === 2 && "Nhập mã OTP 6 chữ số được gửi đến email. Sau khi xác nhận OTP, bạn mới có thể thiết lập mật khẩu mới."}
+                  {forgotStep === 3 && PASSWORD_VALIDATION_MESSAGE}
                 </p>
 
                 {forgotStep === 1 && (
@@ -1283,10 +1313,10 @@ export default function AuthModal({
                 )}
 
                 {forgotStep === 2 && (
-                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                  <form onSubmit={handleVerifyForgotOtp} className="space-y-4">
                     <div className="bg-[#0c0a05] border border-amber-500/20 p-4 text-xs space-y-1.5 text-amber-300 rounded mb-2">
                       <p className="font-bold text-amber-400">Đã gửi mã OTP đặt lại mật khẩu</p>
-                      <p className="opacity-90">Nhập mã OTP 6 chữ số được gửi đến email của bạn. API BE sẽ xác nhận OTP cùng mật khẩu mới.</p>
+                      <p className="opacity-90">Nhập mã OTP 6 chữ số được gửi đến email của bạn.</p>
                       <div className="flex items-center gap-2 pt-1">
                         {/* {generatedForgotOtp && (
                           <span className="font-mono font-black text-amber-400 bg-amber-500/15 px-3 py-1.5 border border-amber-500/40 text-[10px] rounded break-all">
@@ -1312,6 +1342,31 @@ export default function AuthModal({
                       />
                     </div>
 
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => { playPing(300, 'sine', 0.1); setForgotStep(1); }}
+                        className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans tracking-widest py-3.5 hover:text-white transition cursor-pointer"
+                      >
+                        Quay Lại
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="flex-1 bg-amber-500 text-black hover:bg-amber-400 font-sans font-black text-xs uppercase tracking-[0.2em] py-3.5 transition flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        {isSubmitting ? (
+                          <span className="h-4 w-4 border-2 border-black border-t-transparent animate-spin rounded-full inline-block"></span>
+                        ) : (
+                          'TIẾP TỤC ĐẶT MẬT KHẨU'
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {forgotStep === 3 && (
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
                     <div className="space-y-1.5 focus-within:text-white">
                       <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
                         Thiết lập mật khẩu mới
@@ -1321,7 +1376,7 @@ export default function AuthModal({
                         <input
                           type={showForgotConfirmPass ? "text" : "password"}
                           required
-                          placeholder="Nhập mật khẩu mới tối thiểu 8 ký tự..."
+                          placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt..."
                           value={forgotNewPass}
                           onChange={(e) => setForgotNewPass(e.target.value)}
                           className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-500"
@@ -1356,80 +1411,23 @@ export default function AuthModal({
                     <div className="flex gap-3 pt-2">
                       <button
                         type="button"
-                        onClick={() => { playPing(300, 'sine', 0.1); setForgotStep(1); }}
+                        onClick={() => { playPing(300, 'sine', 0.1); setForgotStep(2); }}
                         className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans tracking-widest py-3.5 hover:text-white transition cursor-pointer"
                       >
-                        Quay Lại
+                        Quay Lại OTP
                       </button>
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="flex-1 bg-amber-500 text-black hover:bg-amber-400 font-sans font-black text-xs uppercase tracking-[0.2em] py-3.5 transition flex items-center justify-center gap-1 cursor-pointer"
+                        className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black border border-emerald-500 font-sans font-black text-xs uppercase tracking-[0.2em] py-3.5 transition flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_15px_rgba(16,185,129,0.2)]"
                       >
                         {isSubmitting ? (
                           <span className="h-4 w-4 border-2 border-black border-t-transparent animate-spin rounded-full inline-block"></span>
                         ) : (
-                          'XÁC NHẬN OTP & ĐỔI MẬT KHẨU'
+                          <>XÁC NHẬN ĐẶT LẠI MẬT KHẨU <Check className="h-3.5 w-3.5" /></>
                         )}
                       </button>
                     </div>
-                  </form>
-                )}
-
-                {forgotStep === 3 && (
-                  <form onSubmit={handleUpdatePassword} className="space-y-4">
-                    <div className="space-y-1.5 focus-within:text-white">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
-                        Thiết lập mật khẩu mới
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-600" />
-                        <input
-                          type={showForgotConfirmPass ? "text" : "password"}
-                          required
-                          placeholder="Nhập mật khẩu mới tối thiểu 8 ký tự..."
-                          value={forgotNewPass}
-                          onChange={(e) => setForgotNewPass(e.target.value)}
-                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => { playPing(400, 'sine', 0.05); setShowForgotConfirmPass(!showForgotConfirmPass); }}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white p-1"
-                        >
-                          {showForgotConfirmPass ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5 focus-within:text-white">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
-                        Xác nhận mật khẩu mới
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-600" />
-                        <input
-                          type={showForgotConfirmPass ? "text" : "password"}
-                          required
-                          placeholder="Nhập lại mật khẩu mới..."
-                          value={forgotConfirmPass}
-                          onChange={(e) => setForgotConfirmPass(e.target.value)}
-                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-500"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full bg-emerald-500 hover:bg-emerald-400 text-black border border-emerald-500 font-sans font-black text-xs uppercase tracking-[0.2em] py-4 transition flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_15px_rgba(16,185,129,0.2)]"
-                    >
-                      {isSubmitting ? (
-                        <span className="h-4 w-4 border-2 border-black border-t-transparent animate-spin rounded-full inline-block"></span>
-                      ) : (
-                        <>XÁC NHẬN ĐẶT LẠI MẬT KHẨU <Check className="h-3.5 w-3.5" /></>
-                      )}
-                    </button>
                   </form>
                 )}
                 {/* Subtext info logs */}

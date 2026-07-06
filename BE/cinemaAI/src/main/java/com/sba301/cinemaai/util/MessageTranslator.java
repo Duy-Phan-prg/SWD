@@ -150,6 +150,7 @@ public final class MessageTranslator {
             entry("Main actor ids must be included in actor ids", "Danh sách diễn viên chính phải nằm trong danh sách diễn viên"),
             entry("Points to redeem must be positive", "Số điểm đổi phải lớn hơn 0"),
             entry("Confirm password does not match", "Mật khẩu xác nhận không khớp"),
+            entry("Password must contain uppercase, lowercase, number, and special character", "Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt"),
             entry("Password reset OTP is expired or already used", "Mã OTP đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng"),
             entry("Invalid password reset OTP", "Mã OTP đặt lại mật khẩu không đúng"),
             entry("Old password is incorrect", "Mật khẩu cũ không đúng"),

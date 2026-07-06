@@ -19,6 +19,7 @@ import {
   UserX,
   X
 } from 'lucide-react';
+import { PASSWORD_VALIDATION_MESSAGE, isStrongPassword } from '../../../utils/validation';
 
 const USER_STATUS_OPTIONS = ['ACTIVE', 'DISABLED', 'PENDING_VERIFICATION'];
 const STAFF_PROFILE_STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
@@ -202,7 +203,7 @@ export default function AdminUsersPanel({ ctx }) {
     if (!email) errors.email = 'Email là bắt buộc.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Email không hợp lệ.';
     if (!fullName) errors.fullName = 'Họ tên là bắt buộc.';
-    if (staffForm.password.length < 8) errors.password = 'Mật khẩu cần ít nhất 8 ký tự.';
+    if (!isStrongPassword(staffForm.password)) errors.password = PASSWORD_VALIDATION_MESSAGE;
     if (phone && !/^\+?[0-9]{10,15}$/.test(phone)) errors.phone = 'Số điện thoại gồm 10-15 chữ số.';
     if (birthYear && (birthYear < 1900 || birthYear > 2100)) errors.birthYear = 'Năm sinh không hợp lệ.';
 
@@ -336,7 +337,7 @@ export default function AdminUsersPanel({ ctx }) {
                   type={showStaffPassword ? 'text' : 'password'}
                   value={staffForm.password}
                   onChange={(event) => updateStaffForm('password', event.target.value)}
-                  placeholder="Tối thiểu 8 ký tự"
+                  placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt"
                   className={`w-full border bg-black px-3 py-2.5 pr-10 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400 ${staffFormErrors.password ? 'border-rose-500' : 'border-neutral-800'}`}
                 />
                 <button

@@ -8,6 +8,7 @@ import com.sba301.cinemaai.dto.request.auth.GoogleOtpVerifyRequest;
 import com.sba301.cinemaai.dto.request.auth.LoginRequest;
 import com.sba301.cinemaai.dto.request.auth.LogoutRequest;
 import com.sba301.cinemaai.dto.request.auth.PasswordResetConfirmRequest;
+import com.sba301.cinemaai.dto.request.auth.PasswordResetOtpVerifyRequest;
 import com.sba301.cinemaai.dto.request.auth.PasswordResetRequest;
 import com.sba301.cinemaai.dto.request.auth.RefreshTokenRequest;
 import com.sba301.cinemaai.dto.request.auth.RegisterRequest;
@@ -81,6 +82,12 @@ public class AuthController {
                 new TokenResponse(passwordResetService.request(request.email()).getToken()),
                 "Password reset OTP sent"
         );
+    }
+
+    @PostMapping("/password-reset/verify")
+    public ApiResponse<Void> verifyPasswordResetOtp(@Valid @RequestBody PasswordResetOtpVerifyRequest request) {
+        passwordResetService.verifyOtp(request.email(), request.otp());
+        return ApiResponse.success(null, "Password reset OTP verified");
     }
 
     @PostMapping("/password-reset/confirm")

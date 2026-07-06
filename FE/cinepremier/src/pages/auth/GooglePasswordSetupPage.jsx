@@ -5,6 +5,7 @@ import { clearAuthSession, getStoredAuth } from '../../services/authService';
 import { userService } from '../../services/userService';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUiStore } from '../../stores/useUiStore';
+import { PASSWORD_VALIDATION_MESSAGE, isStrongPassword } from '../../utils/validation';
 
 export default function GooglePasswordSetupPage() {
   const navigate = useNavigate();
@@ -37,8 +38,8 @@ export default function GooglePasswordSetupPage() {
       showToast('Vui lòng nhập đầy đủ mật khẩu tạm, mật khẩu mới và xác nhận mật khẩu.');
       return;
     }
-    if (newPassword.length < 8) {
-      showToast('Mật khẩu mới cần tối thiểu 8 ký tự.');
+    if (!isStrongPassword(newPassword)) {
+      showToast(PASSWORD_VALIDATION_MESSAGE);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -144,7 +145,7 @@ export default function GooglePasswordSetupPage() {
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 className="mt-2 w-full border border-white/15 bg-black px-4 py-3 text-sm text-white outline-none transition focus:border-white"
-                placeholder="Tối thiểu 8 ký tự..."
+                placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt..."
               />
             </label>
 

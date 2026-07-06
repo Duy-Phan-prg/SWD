@@ -246,6 +246,10 @@ export const authService = {
     method: 'POST',
     body: { email }
   }),
+  verifyPasswordResetOtp: ({ email, otp }) => request('/api/v1/auth/password-reset/verify', {
+    method: 'POST',
+    body: { email, otp }
+  }),
   confirmPasswordReset: ({ email, otp, newPassword, confirmPassword }) => request('/api/v1/auth/password-reset/confirm', {
     method: 'POST',
     body: { email, otp, newPassword, confirmPassword }

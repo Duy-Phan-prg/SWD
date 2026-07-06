@@ -48,15 +48,25 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             throw new BadRequestException("Confirm password does not match");
         }
 
+        PasswordResetToken resetToken = findValidResetToken(email, otp);
+
+        resetToken.getUser().setPasswordHash(passwordEncoder.encode(newPassword));
+        resetToken.setUsed(true);
+    }
+
+    @Transactional(readOnly = true)
+    public void verifyOtp(String email, String otp) {
+        findValidResetToken(email, otp);
+    }
+
+    private PasswordResetToken findValidResetToken(String email, String otp) {
         PasswordResetToken resetToken = passwordResetTokenRepository
                 .findFirstByUserEmailAndTokenAndUsedFalseOrderByCreatedAtDesc(email, otp)
                 .orElseThrow(() -> new BadRequestException("Invalid password reset OTP"));
         if (resetToken.isUsed() || resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Password reset OTP is expired or already used");
         }
-
-        resetToken.getUser().setPasswordHash(passwordEncoder.encode(newPassword));
-        resetToken.setUsed(true);
+        return resetToken;
     }
 
     private String generateOtp() {
