@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import AppRoutes from './routes/AppRoutes';
 import { useAuthStore } from './stores/useAuthStore';
 import { useMovieStore } from './stores/useMovieStore';
@@ -60,6 +61,15 @@ export default function App() {
     <>
       <AuthBootstrap />
       <MovieBootstrap />
+      <Toaster
+        position="top-right"
+        theme="dark"
+        richColors={false}
+        expand
+        visibleToasts={3}
+        className="cine-sonner-center"
+        toastOptions={{ duration: 6000 }}
+      />
       <AppRoutes />
     </>
   );

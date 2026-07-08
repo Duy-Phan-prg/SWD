@@ -25,6 +25,40 @@ import { useMovies } from '../../stores/useMovieStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUiStore } from '../../stores/useUiStore';
 
+const DEFAULT_LOYALTY_CONFIG = {
+  expiryMonth: 12,
+  expiryDay: 31,
+  expiryTime: '23:59:59',
+  lastExpiredAt: null,
+  lastResetAt: null,
+  lastResetSource: null
+};
+
+const formatDateTimeVi = (value) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
+const buildLoyaltyExpiryDateTime = (config = DEFAULT_LOYALTY_CONFIG) => {
+  const month = Math.max(1, Math.min(12, Number(config.expiryMonth || 12)));
+  const maxDay = new Date(new Date().getFullYear(), month, 0).getDate();
+  const day = Math.max(1, Math.min(maxDay, Number(config.expiryDay || 31)));
+  const [hour = 23, minute = 59, second = 59] = String(config.expiryTime || '23:59:59').split(':').map(Number);
+  const now = new Date();
+  const candidate = new Date(now.getFullYear(), month - 1, day, hour || 0, minute || 0, second || 0);
+  if (candidate.getTime() < now.getTime()) candidate.setFullYear(candidate.getFullYear() + 1);
+  return candidate;
+};
+
 export default function ProfileView() {
   const navigate = useNavigate();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -60,6 +94,7 @@ export default function ProfileView() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [recentBookings, setRecentBookings] = useState([]);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [loyaltyConfig, setLoyaltyConfig] = useState(DEFAULT_LOYALTY_CONFIG);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   // Settings - Payment card states
@@ -104,9 +139,10 @@ export default function ProfileView() {
     Promise.all([
       userService.getMyProfile(accessToken),
       bookingService.getMyBookings(accessToken),
-      loyaltyService.getMyLoyalty(accessToken).catch(() => null)
+      loyaltyService.getMyLoyalty(accessToken).catch(() => null),
+      loyaltyService.getConfiguration(accessToken).catch(() => null)
     ])
-      .then(([profile, bookings, loyalty]) => {
+      .then(([profile, bookings, loyalty, loyaltyConfiguration]) => {
         if (cancelled) return;
         const nextUser = normalizeUser(profile, profile.roles || currentUser?.roles || []);
         localStorage.setItem('cinepremier_auth_user', JSON.stringify(nextUser));
@@ -114,6 +150,7 @@ export default function ProfileView() {
         const bookingList = Array.isArray(bookings) ? bookings : (bookings?.items ?? bookings?.content ?? []);
         setRecentBookings(bookingList);
         setLoyaltyPoints(Number(loyalty?.points ?? 0));
+        setLoyaltyConfig({ ...DEFAULT_LOYALTY_CONFIG, ...(loyaltyConfiguration || {}) });
       })
       .catch((error) => {
         if (!cancelled) showToast(error.message || 'Không thể tải dữ liệu hồ sơ từ hệ thống.');
@@ -238,6 +275,10 @@ export default function ProfileView() {
     .sort((a, b) => new Date(b.paidAt || b.showtimeStart || 0) - new Date(a.paidAt || a.showtimeStart || 0))
     .slice(0, 3);
   const watchedCount = recentBookings.filter((booking) => booking.status === 'USED').length;
+  const loyaltyResetScheduleLabel = formatDateTimeVi(buildLoyaltyExpiryDateTime(loyaltyConfig));
+  const loyaltyAdminResetAt = loyaltyConfig.lastResetSource === 'ADMIN'
+    ? formatDateTimeVi(loyaltyConfig.lastResetAt || loyaltyConfig.lastExpiredAt)
+    : '';
   const memberSince = currentUser?.createdAt
     ? new Date(currentUser.createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
     : 'Đang cập nhật';
@@ -529,8 +570,8 @@ export default function ProfileView() {
                     <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto md:mx-0 pointer-events-none">
 
                       <div className="border border-white/5 bg-black/60 p-4 flex flex-col justify-center items-start">
-                        <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold flex items-center gap-1">
-                          <Flame className="h-3.5 w-3.5 text-neutral-500" /> CinePoints
+                        <span className="text-[10px] uppercase tracking-widest font-black flex items-center gap-1 bg-[linear-gradient(90deg,#ff3b7f,#ffb703,#38ef7d,#00c2ff,#8b5cf6)] bg-clip-text text-transparent">
+                          <Flame className="h-3.5 w-3.5 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.75)]" /> CinePoints
                         </span>
                         <span className="text-2xl font-mono font-bold text-white mt-1">{loyaltyPoints.toLocaleString()}</span>
                       </div>
@@ -545,6 +586,21 @@ export default function ProfileView() {
                       </div>
 
                     </div>
+
+                    {(loyaltyResetScheduleLabel || loyaltyAdminResetAt) && (
+                      <div className="max-w-sm mx-auto md:mx-0 border border-emerald-500/15 bg-emerald-950/10 px-4 py-3 text-left">
+                        {loyaltyResetScheduleLabel && (
+                          <p className="text-[12px] font-mono text-white/70">
+                            Điểm sẽ được reset vào thời gian: {loyaltyResetScheduleLabel}
+                          </p>
+                        )}
+                        {loyaltyAdminResetAt && (
+                          <p className="mt-2 border-l border-amber-400/40 pl-2 text-[10px] font-bold leading-snug text-amber-300">
+                            Quản trị viên đã reset điểm lúc {loyaltyAdminResetAt}.
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                   </div>
 

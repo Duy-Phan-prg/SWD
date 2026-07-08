@@ -70,7 +70,7 @@ public class VNPayServiceImpl implements VNPayService {
         String secureHash = VNPayUtil.hashAllFields(vnpParams, vnPayConfig.getHashSecret());
         String queryString = buildEncodedQueryString(vnpParams);
 
-        log.info("VNPay payment created for txnRef={}", txnRef);
+        log.info("VNPay payment created for txnRef={} amount={}", txnRef, amount);
         return vnPayConfig.getPaymentUrl() + "?" + queryString + "&vnp_SecureHash=" + secureHash;
     }
 

@@ -3,5 +3,8 @@ package com.sba301.cinemaai.enums;
 public enum LoyaltyPointType {
     EARN,
     REDEEM,
-    ADJUST
+    ADJUST,
+    EXPIRE,
+    RESTORE,
+    REVOKE
 }

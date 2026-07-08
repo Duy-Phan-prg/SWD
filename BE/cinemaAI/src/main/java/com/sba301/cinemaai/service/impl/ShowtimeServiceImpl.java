@@ -6,6 +6,7 @@ import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatResponse;
+import com.sba301.cinemaai.dto.response.refund.BulkRefundResponse;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingSeat;
 import com.sba301.cinemaai.entity.Movie;
@@ -21,6 +22,7 @@ import com.sba301.cinemaai.repository.*;
 import com.sba301.cinemaai.service.RefundService;
 import com.sba301.cinemaai.service.RoomService;
 import com.sba301.cinemaai.service.ShowtimeService;
+import com.sba301.cinemaai.service.BulkRefundService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -59,6 +61,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final RoomService roomService;
     private final CinemaMapper cinemaMapper;
     private final RefundService refundService;
+    private final BulkRefundService bulkRefundService;
 
 
     // -------------------------------------------------------------------------
@@ -216,6 +219,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         Showtime showtime = findById(id);
         validateStatusTransition(showtime, status);
         if (status == ShowtimeStatus.CANCELLED) {
+            applyShowtimeCancellation(showtime, null);
             refundService.processShowtimeCancellation(showtime, null);
         }
         showtime.setStatus(status);
@@ -227,9 +231,21 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     public ShowtimeResponse cancelShowtime(Long id, String reason) {
         Showtime showtime = findById(id);
         validateStatusTransition(showtime, ShowtimeStatus.CANCELLED);
+        applyShowtimeCancellation(showtime, reason);
         refundService.processShowtimeCancellation(showtime, reason);
         showtime.setStatus(ShowtimeStatus.CANCELLED);
         return cinemaMapper.toShowtimeResponse(showtime);
+    }
+
+    @Transactional
+    @Override
+    public BulkRefundResponse cancelShowtimeAndRefund(Long id, String reason) {
+        Showtime showtime = showtimeRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NotFoundException("Showtime not found"));
+        validateStatusTransition(showtime, ShowtimeStatus.CANCELLED);
+        applyShowtimeCancellation(showtime, reason);
+        showtime.setStatus(ShowtimeStatus.CANCELLED);
+        return bulkRefundService.processBulkRefund(showtime, reason);
     }
 
     /**
@@ -560,6 +576,11 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private Showtime findById(Long id) {
         return showtimeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Showtime not found"));
+    }
+
+    private void applyShowtimeCancellation(Showtime showtime, String reason) {
+        showtime.setCancellationReason(reason == null || reason.isBlank() ? null : reason.trim());
+        showtime.setCancelledAt(LocalDateTime.now());
     }
 
 }

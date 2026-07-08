@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags, LogOut
+  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags, LogOut, MessageSquare
 } from 'lucide-react';
 import { expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../../services/authService';
 import { adminService } from '../../services/adminService';
@@ -17,13 +17,15 @@ import AdminFoodsPanel from './catalog/AdminFoodsPanel';
 import AdminShowtimesPanel from './cinema/AdminShowtimesPanel';
 import AdminTransactionsPanel from './system/AdminTransactionsPanel';
 import AdminUsersPanel from './system/AdminUsersPanel';
+import AdminLoyaltyPanel from './system/AdminLoyaltyPanel';
+import AdminReviewsPanel from './system/AdminReviewsPanel';
 import AdminCinemaPanel from './cinema/AdminCinemaPanel';
 import AdminRoomsPanel from './cinema/AdminRoomsPanel';
 
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies', 'foods'].includes(section)) return 'movies';
   if (['rooms', 'showtimes', 'transactions'].includes(section)) return 'cinema';
-  if (['users'].includes(section)) return 'system';
+  if (['users', 'loyalty', 'reviews'].includes(section)) return 'system';
   return null;
 };
 
@@ -37,6 +39,8 @@ const ADMIN_SECTIONS = new Set([
   'showtimes',
   'transactions',
   'users',
+  'reviews',
+  'loyalty',
   'cinema'
 ]);
 
@@ -1472,6 +1476,8 @@ export default function AdminDashboard({
     showtimes: AdminShowtimesPanel,
     transactions: AdminTransactionsPanel,
     users: AdminUsersPanel,
+    reviews: AdminReviewsPanel,
+    loyalty: AdminLoyaltyPanel,
     cinema: AdminCinemaPanel,
     rooms: AdminRoomsPanel
   };
@@ -1656,7 +1662,7 @@ export default function AdminDashboard({
                   >
                     <span className="flex items-center space-x-2.5">
                       <FileText className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>SỔ CÁI KIỂM TOÁN VÉ</span>
+                      <span>GIAO DỊCH</span>
                     </span>
                     {activeTab === 'transactions' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
@@ -1669,7 +1675,7 @@ export default function AdminDashboard({
               onClick={() => setOpenNavGroup(openNavGroup === 'system' ? null : 'system')}
               className={`mt-2 flex w-full items-center justify-between border-2 px-4 py-4 transition ${openNavGroup === 'system' ? 'border-purple-500/60 bg-purple-500/[0.14] text-purple-300 shadow-[inset_3px_0_0_rgba(168,85,247,0.9)]' : 'border-white/10 bg-black/70 text-neutral-300 hover:border-purple-500/40 hover:text-white'}`}
             >
-              <span className="text-xs font-sans font-black uppercase tracking-[0.16em] drop-shadow-sm">Hệ thống</span>
+              <span className="text-xs font-sans font-black uppercase tracking-[0.16em] drop-shadow-sm">Khách hàng</span>
               <ChevronDown className={`!h-4 !w-4 transition-transform duration-300 ${openNavGroup === 'system' ? 'rotate-180' : ''}`} />
             </button>
 
@@ -1693,6 +1699,34 @@ export default function AdminDashboard({
                       <span>QUẢN LÝ NGƯỜI DÙNG</span>
                     </span>
                     {activeTab === 'users' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+
+                  <button
+                    onClick={() => { playPulseSound(515, 'sine', 0.05); changeAdminSection('reviews'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'reviews'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <MessageSquare className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span>ĐÁNH GIÁ</span>
+                    </span>
+                    {activeTab === 'reviews' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+
+                  <button
+                    onClick={() => { playPulseSound(520, 'sine', 0.05); changeAdminSection('loyalty'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'loyalty'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <DollarSign className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span>QUẢN LÝ ĐIỂM</span>
+                    </span>
+                    {activeTab === 'loyalty' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                 </motion.div>

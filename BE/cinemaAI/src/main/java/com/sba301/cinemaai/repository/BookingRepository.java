@@ -35,6 +35,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
 
+    Page<Booking> findByStatusAndBulkRefundTrue(BookingStatus status, Pageable pageable);
+
+    List<Booking> findTop50ByStatusAndBulkRefundTrueOrderByRefundRequestedAtAsc(BookingStatus status);
+
     List<Booking> findByStatusAndHoldExpiresAtBefore(BookingStatus status, LocalDateTime expiresAt);
 
     @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END FROM Booking b WHERE b.user = :user AND b.showtime.movie = :movie AND b.status = 'USED'")

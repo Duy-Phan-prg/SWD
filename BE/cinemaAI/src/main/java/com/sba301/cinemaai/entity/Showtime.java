@@ -120,6 +120,14 @@ public class Showtime extends BaseEntity {
     @Setter
     private ShowtimeStatus status = ShowtimeStatus.SCHEDULED;
 
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    @Setter
+    private String cancellationReason;
+
+    @Column(name = "cancelled_at")
+    @Setter
+    private LocalDateTime cancelledAt;
+
     public Showtime(Movie movie, Room room, LocalDateTime startTime, LocalDateTime endTime, BigDecimal basePrice) {
         this.movie = movie;
         this.room = room;

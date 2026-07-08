@@ -21,6 +21,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,8 +101,19 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     @Override
     public PageResponse<ReviewResponse> getAllReviewsAdmin(Long movieId, String status, int page, int size) {
-        var pageable = PageRequest.of(Math.max(page, 0), Math.max(1, Math.min(size, 100)),
-                Sort.by("createdAt").descending());
+
+
+
+
+        int pageNumber = Math.max(page, 0);
+        int pageSize = Math.max(1, Math.min(size, 10));
+
+        Pageable pageable = PageRequest.of(
+                pageNumber,
+                pageSize,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
         if (movieId != null) {
             Movie movie = resolveMovie(movieId);
             if (status != null) {
@@ -111,6 +123,10 @@ public class ReviewServiceImpl implements ReviewService {
                 );
             }
             return PageResponse.from(reviewRepository.findByMovie(movie, pageable).map(ReviewResponse::from));
+        }
+        if (status != null) {
+            ReviewStatus reviewStatus = ReviewStatus.valueOf(status.toUpperCase());
+            return PageResponse.from(reviewRepository.findByStatus(reviewStatus, pageable).map(ReviewResponse::from));
         }
         return PageResponse.from(reviewRepository.findAll(pageable).map(ReviewResponse::from));
     }

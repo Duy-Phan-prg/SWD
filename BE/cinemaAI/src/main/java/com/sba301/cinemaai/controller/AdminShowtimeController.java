@@ -2,11 +2,13 @@ package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.request.cinema.BulkShowtimeRequest;
 import com.sba301.cinemaai.dto.request.cinema.ShowtimeRequest;
+import com.sba301.cinemaai.dto.request.refund.CancelShowtimeRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import java.util.List;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeResponse;
 import com.sba301.cinemaai.dto.response.cinema.ShowtimeSeatMapResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.refund.BulkRefundResponse;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.service.ShowtimeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -262,6 +264,22 @@ public class AdminShowtimeController {
         return ApiResponse.success(
                 showtimeService.cancelShowtime(showtimeId, reason),
                 "Showtime cancelled and refund process initiated"
+        );
+    }
+
+    @PostMapping("/{showtimeId}/cancel-and-refund")
+    @Operation(
+            summary = "Cancel showtime and start system-triggered bulk refund (Admin)",
+            description = "Cancels the showtime and processes all PAID bookings for refund."
+    )
+    public ApiResponse<BulkRefundResponse> cancelShowtimeAndRefund(
+            @PathVariable Long showtimeId,
+            @Valid @RequestBody(required = false) CancelShowtimeRequest request
+    ) {
+        String reason = request == null ? null : request.reason();
+        return ApiResponse.success(
+                showtimeService.cancelShowtimeAndRefund(showtimeId, reason),
+                "Showtime cancelled and bulk refund started"
         );
     }
 

@@ -132,6 +132,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setSubtotal(subtotal);
         booking.setDiscountAmount(discountAmount);
         booking.setTotalAmount(subtotal.subtract(discountAmount));
+        bookingRepository.saveAndFlush(booking);
         return toResponse(booking);
     }
 
@@ -170,6 +171,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setSubtotal(subtotal);
         booking.setDiscountAmount(loyaltyDiscount);
         booking.setTotalAmount(subtotal.subtract(loyaltyDiscount));
+        bookingRepository.saveAndFlush(booking);
         markPendingPayment(booking);
         return toResponse(booking);
     }
@@ -532,9 +534,10 @@ public class BookingServiceImpl implements BookingService {
         if (requestedPoints <= 0 || subtotal == null || subtotal.signum() <= 0) {
             return BigDecimal.ZERO;
         }
-        int maxRedeemablePoints = subtotal.setScale(0, RoundingMode.DOWN).intValue();
+        int maxRedeemablePoints = loyaltyPointService.getMaxRedeemablePointsForAmount(subtotal);
         int points = Math.min(requestedPoints, maxRedeemablePoints);
         int redeemed = loyaltyPointService.redeemPointsForBooking(user, booking, points);
+        booking.setLoyaltyPointsRedeemed(points);
         return BigDecimal.valueOf(redeemed);
     }
 

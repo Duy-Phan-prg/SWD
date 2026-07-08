@@ -49,6 +49,8 @@ const formatDateTime = (value) => {
   return date.toLocaleString('vi-VN');
 };
 
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}d`;
+
 const formatSeats = (booking) => {
   const seats = booking?.seats || [];
   if (!seats.length) return 'Chưa có ghế';
@@ -196,6 +198,14 @@ export default function StaffCheckInPage() {
   const [savingStaffFoodKey, setSavingStaffFoodKey] = useState('');
   const [staffFoodPage, setStaffFoodPage] = useState(1);
   const [staffFoodSearch, setStaffFoodSearch] = useState('');
+  const [failedRefunds, setFailedRefunds] = useState([]);
+  const [failedRefundPage, setFailedRefundPage] = useState(0);
+  const [failedRefundTotalPages, setFailedRefundTotalPages] = useState(1);
+  const [isLoadingFailedRefunds, setIsLoadingFailedRefunds] = useState(false);
+  const [failedRefundError, setFailedRefundError] = useState('');
+  const [manualRefundModal, setManualRefundModal] = useState(null);
+  const [manualRefundForm, setManualRefundForm] = useState({ refundMethod: 'MANUAL_BANK_TRANSFER', notes: '' });
+  const [isSavingManualRefund, setIsSavingManualRefund] = useState(false);
   const qrVideoRef = useRef(null);
   const qrCanvasRef = useRef(null);
   const qrStreamRef = useRef(null);
@@ -388,6 +398,57 @@ export default function StaffCheckInPage() {
     }
   };
 
+  const loadFailedRefunds = async (page = 0) => {
+    const token = getToken();
+    if (!token) {
+      setFailedRefundError('Vui long dang nhap bang tai khoan STAFF.');
+      return;
+    }
+
+    setIsLoadingFailedRefunds(true);
+    setFailedRefundError('');
+    try {
+      const data = await staffService.getFailedBulkRefunds(token, { page, size: 8 });
+      const items = data?.items || data?.content || (Array.isArray(data) ? data : []);
+      setFailedRefunds(items);
+      setFailedRefundTotalPages(data?.totalPages || 1);
+      setFailedRefundPage(page);
+    } catch (error) {
+      setFailedRefundError(error.message || 'Khong the tai danh sach refund loi.');
+    } finally {
+      setIsLoadingFailedRefunds(false);
+    }
+  };
+
+  const openManualRefundModal = async (refund) => {
+    const token = getToken();
+    if (!token) return;
+    setFailedRefundError('');
+    try {
+      const detail = await staffService.getBulkRefundDetail(token, refund.bookingId);
+      setManualRefundModal(detail);
+      setManualRefundForm({ refundMethod: 'MANUAL_BANK_TRANSFER', notes: '' });
+    } catch (error) {
+      setFailedRefundError(error.message || 'Khong the tai chi tiet refund.');
+    }
+  };
+
+  const confirmManualRefund = async () => {
+    const token = getToken();
+    if (!token || !manualRefundModal?.bookingId) return;
+    setIsSavingManualRefund(true);
+    setFailedRefundError('');
+    try {
+      await staffService.confirmManualBulkRefund(token, manualRefundModal.bookingId, manualRefundForm);
+      setManualRefundModal(null);
+      await loadFailedRefunds(failedRefundPage);
+    } catch (error) {
+      setFailedRefundError(error.message || 'Khong the xac nhan hoan tien ngoai.');
+    } finally {
+      setIsSavingManualRefund(false);
+    }
+  };
+
   const updateStaffFoodStatus = async (food, nextStatus) => {
     const token = getToken();
     if (!token) {
@@ -418,6 +479,7 @@ export default function StaffCheckInPage() {
   useEffect(() => {
     loadRecentBookings();
     loadStaffFoods();
+    loadFailedRefunds();
   }, []);
 
   useEffect(() => () => stopQrScanner(), []);
@@ -723,6 +785,105 @@ export default function StaffCheckInPage() {
         <section className="border border-neutral-800 bg-[#070707] p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-rose-300">Bulk refund failed</p>
+              <h3 className="mt-1 text-lg font-black uppercase text-white">Xu ly hoan tien thu cong</h3>
+              <p className="mt-2 text-xs leading-6 text-neutral-500">
+                STAFF xem cac booking VNPay refund loi, hoan tien ngoai he thong, roi xac nhan de can bang diem loyalty.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => loadFailedRefunds(failedRefundPage)}
+              disabled={isLoadingFailedRefunds}
+              className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-rose-300 hover:text-white disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoadingFailedRefunds ? 'animate-spin' : ''}`} /> Lam moi
+            </button>
+          </div>
+          {failedRefundError && <p className="mt-3 text-xs font-bold text-rose-400">{failedRefundError}</p>}
+          <div className="mt-4 overflow-x-auto border border-neutral-800 bg-black">
+            <table className="w-full min-w-[860px] text-left">
+              <thead className="border-b border-neutral-800 bg-[#050505] text-[8px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                <tr>
+                  <th className="px-4 py-3">Booking</th>
+                  <th className="px-3 py-3">Khach</th>
+                  <th className="px-3 py-3">Phim / suat</th>
+                  <th className="px-3 py-3">So tien</th>
+                  <th className="px-3 py-3">Diem NET</th>
+                  <th className="px-4 py-3 text-right">Thao tac</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-900">
+                {isLoadingFailedRefunds ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-xs font-bold text-neutral-500">
+                      Dang tai danh sach refund loi...
+                    </td>
+                  </tr>
+                ) : failedRefunds.length > 0 ? failedRefunds.map((refund) => (
+                  <tr key={refund.bookingId} className="transition hover:bg-rose-400/5">
+                    <td className="px-4 py-4">
+                      <p className="font-mono text-[11px] font-black text-white">{refund.bookingCode}</p>
+                      <p className="mt-1 font-mono text-[8px] text-neutral-600">#{refund.bookingId}</p>
+                    </td>
+                    <td className="px-3 py-4">
+                      <p className="max-w-[180px] truncate text-xs font-bold text-neutral-300">{refund.customerName || '--'}</p>
+                      <p className="max-w-[180px] truncate text-[10px] text-neutral-600">{refund.customerEmail}</p>
+                    </td>
+                    <td className="px-3 py-4">
+                      <p className="max-w-[220px] truncate text-xs font-bold text-neutral-300">{refund.movieName}</p>
+                      <p className="text-[10px] font-bold text-neutral-500">{formatDateTime(refund.showtimeStart)}</p>
+                    </td>
+                    <td className="px-3 py-4 font-mono text-xs font-black text-amber-300">{formatCurrency(refund.refundAmount)}</td>
+                    <td className="px-3 py-4 font-mono text-xs font-black text-emerald-300">
+                      {Number(refund.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => openManualRefundModal(refund)}
+                        className="border border-amber-400/40 bg-amber-400 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300"
+                      >
+                        Xac nhan ngoai
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-xs font-bold text-neutral-500">
+                      Khong co booking refund loi.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500">
+            <span>Trang {failedRefundPage + 1}/{failedRefundTotalPages}</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={failedRefundPage <= 0}
+                onClick={() => loadFailedRefunds(failedRefundPage - 1)}
+                className="border border-neutral-700 px-3 py-2 text-white transition hover:border-rose-300 disabled:opacity-30"
+              >
+                Truoc
+              </button>
+              <button
+                type="button"
+                disabled={failedRefundPage >= failedRefundTotalPages - 1}
+                onClick={() => loadFailedRefunds(failedRefundPage + 1)}
+                className="border border-neutral-700 px-3 py-2 text-white transition hover:border-rose-300 disabled:opacity-30"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="border border-neutral-800 bg-[#070707] p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400">Quầy bắp nước</p>
               <h3 className="mt-1 text-lg font-black uppercase text-white">Trạng thái món/combo</h3>
               <p className="mt-2 text-xs leading-6 text-neutral-500">
@@ -904,6 +1065,89 @@ export default function StaffCheckInPage() {
 
           </div>
         </section>
+        {manualRefundModal && (
+          <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-lg border border-amber-400/30 bg-[#070707] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-300">Manual refund</p>
+                  <h3 className="mt-1 text-lg font-black uppercase text-white">Xac nhan da hoan tien ngoai</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setManualRefundModal(null)}
+                  className="border border-neutral-700 px-3 py-2 text-[10px] font-black uppercase text-neutral-300 hover:border-white hover:text-white"
+                >
+                  Dong
+                </button>
+              </div>
+              <div className="mt-5 grid gap-3 text-xs sm:grid-cols-2">
+                <div className="border border-neutral-800 bg-black p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Booking</p>
+                  <p className="mt-1 font-mono font-black text-white">{manualRefundModal.bookingCode}</p>
+                </div>
+                <div className="border border-neutral-800 bg-black p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">So tien</p>
+                  <p className="mt-1 font-mono font-black text-amber-300">{formatCurrency(manualRefundModal.refundAmount)}</p>
+                </div>
+                <div className="border border-neutral-800 bg-black p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Khach hang</p>
+                  <p className="mt-1 truncate font-bold text-neutral-300">{manualRefundModal.customerName || manualRefundModal.customerEmail}</p>
+                </div>
+                <div className="border border-neutral-800 bg-black p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Diem NET</p>
+                  <p className="mt-1 font-mono font-black text-emerald-300">
+                    {Number(manualRefundModal.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Phuong thuc</span>
+                  <select
+                    value={manualRefundForm.refundMethod}
+                    onChange={(event) => setManualRefundForm((current) => ({ ...current, refundMethod: event.target.value }))}
+                    className="w-full border border-neutral-800 bg-black px-3 py-3 text-xs font-bold text-white outline-none focus:border-amber-300"
+                  >
+                    <option value="MANUAL_BANK_TRANSFER">Bank Transfer</option>
+                    <option value="CASH">Cash</option>
+                  </select>
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Ghi chu</span>
+                  <input
+                    value={manualRefundForm.notes}
+                    onChange={(event) => setManualRefundForm((current) => ({ ...current, notes: event.target.value }))}
+                    maxLength={500}
+                    placeholder="Transaction ID, STK, ca truc..."
+                    className="w-full border border-neutral-800 bg-black px-3 py-3 text-xs font-bold text-white outline-none placeholder:text-neutral-700 focus:border-amber-300"
+                  />
+                </label>
+              </div>
+              <div className="mt-5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setManualRefundModal(null)}
+                  className="flex-1 border border-neutral-700 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-white hover:text-white"
+                >
+                  Quay lai
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmManualRefund}
+                  disabled={isSavingManualRefund}
+                  className="flex-1 bg-amber-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300 disabled:opacity-50"
+                >
+                  {isSavingManualRefund ? 'Dang luu...' : 'Da hoan tien ngoai'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </main>
     </div>
   );

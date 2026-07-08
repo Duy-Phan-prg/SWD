@@ -57,6 +57,10 @@ public class Booking extends BaseEntity {
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
     @Setter
+    @Column(name = "loyalty_points_redeemed", nullable = false)
+    private int loyaltyPointsRedeemed = 0;
+
+    @Setter
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
@@ -92,6 +96,22 @@ public class Booking extends BaseEntity {
     @Setter
     @Column(name = "refund_reason", length = 500)
     private String refundReason;
+
+    @Setter
+    @Column(name = "refund_method", length = 50)
+    private String refundMethod;
+
+    @Setter
+    @Column(name = "bulk_refund", nullable = false)
+    private boolean bulkRefund = false;
+
+    @Setter
+    @Column(name = "refund_retry_attempts", nullable = false)
+    private int refundRetryAttempts = 0;
+
+    @Setter
+    @Column(name = "last_refund_attempt_at")
+    private LocalDateTime lastRefundAttemptAt;
 
     @Setter
     @Column(name = "qr_code", length = 500)

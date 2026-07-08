@@ -540,7 +540,7 @@ export default function MyTicketsView() {
                           />
                         </div>
                         <div className="text-center">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">QR Check-in thật</p>
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">QR Check-in</p>
                           <p className="mt-1 text-[8px] leading-relaxed text-neutral-500">Nhân viên quét mã để lấy thông tin vé</p>
                         </div>
                       </>

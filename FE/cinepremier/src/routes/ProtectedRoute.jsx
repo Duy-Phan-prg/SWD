@@ -73,7 +73,7 @@ export default function ProtectedRoute({ children }) {
           <Lock className="h-6 w-6" />
         </div>
         <p className="text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">Cần xác thực tài khoản</p>
-        <h1 className="mt-3 font-serif text-3xl font-black italic tracking-tight text-white md:text-4xl">
+        <h1 className="mt-3 font text-2xl font-black italic tracking-tight text-white md:text-4xl">
           Đăng nhập để tiếp tục đặt vé
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-7 text-neutral-300">

@@ -86,6 +86,8 @@ public class CinemaMapper {
                 showtime.getLateNightSurchargeAmount(),
                 showtime.getSurchargeAmount(),
                 showtime.getStatus(),
+                showtime.getCancellationReason(),
+                showtime.getCancelledAt(),
                 showtime.getCreatedAt(),
                 showtime.getUpdatedAt()
         );

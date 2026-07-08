@@ -26,12 +26,16 @@ import com.sba301.cinemaai.service.MovieService;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -53,6 +57,10 @@ public class MovieServiceImpl implements MovieService {
     private final MovieMapper movieMapper;
 
     @Transactional(readOnly = true)
+    @Cacheable(
+            cacheNames = "publicMovies",
+            key = "{#keyword, #status, #genreId, #fromDate, #toDate, #page, #size}"
+    )
     public PageResponse<MovieResponse> searchPublic(
             String keyword,
             MovieStatus status,
@@ -81,6 +89,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "publicMovieDetails", key = "#id")
     public MovieResponse getPublic(Long id) {
         Movie movie = findById(id);
         if (movie.getStatus() == MovieStatus.INACTIVE) {
@@ -95,6 +104,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicMovies", "publicMovieDetails"}, allEntries = true)
     public MovieResponse create(MovieCreateRequest request) {
         if (movieRepository.existsByTitle(request.title())) {
             throw new ConflictException("Movie title already exists");
@@ -119,6 +129,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicMovies", "publicMovieDetails"}, allEntries = true)
     public MovieResponse update(Long id, MovieUpdateRequest request) {
         Movie movie = findById(id);
         if (movie.getStatus() != MovieStatus.UPCOMING) {
@@ -174,6 +185,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicMovies", "publicMovieDetails"}, allEntries = true)
     public MovieResponse updateStatus(Long id, MovieStatusUpdateRequest request) {
         Movie movie = findById(id);
         movie.setStatus(request.status());
@@ -181,6 +193,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = {"publicMovies", "publicMovieDetails"}, allEntries = true)
     public void delete(Long id) {
         Movie movie = findById(id);
         movie.setStatus(MovieStatus.INACTIVE);
@@ -291,36 +304,82 @@ public class MovieServiceImpl implements MovieService {
     }
 
     private PageResponse<MovieResponse> mapPage(Page<Movie> page) {
-        return PageResponse.from(page.map(this::toResponse));
+        return new PageResponse<>(
+                mapMovies(page.getContent()),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast()
+        );
     }
 
     private MovieResponse toResponse(Movie movie) {
-        List<Genre> genres = movieGenreRepository.findByMovie(movie)
+        return mapMovies(List.of(movie)).stream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Movie not found"));
+    }
+
+    private List<MovieResponse> mapMovies(List<Movie> movies) {
+        if (movies.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> movieIds = movies.stream().map(Movie::getId).toList();
+
+        Map<Long, List<Genre>> genresByMovieId = movieGenreRepository.findWithGenreByMovieIdIn(movieIds)
                 .stream()
-                .map(MovieGenre::getGenre)
-                .toList();
-        List<MovieActor> movieActorLinks = movieActorRepository.findByMovie(movie);
-        List<Actor> movieActors = movieActorLinks
+                .collect(Collectors.groupingBy(
+                        movieGenre -> movieGenre.getMovie().getId(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(MovieGenre::getGenre, Collectors.toList())
+                ));
+
+        Map<Long, List<MovieActor>> actorLinksByMovieId = movieActorRepository.findWithActorByMovieIdIn(movieIds)
                 .stream()
-                .map(MovieActor::getActor)
-                .toList();
-        List<Long> mainActorIds = movieActorLinks.stream()
-                .filter(MovieActor::isMainActor)
+                .collect(Collectors.groupingBy(
+                        movieActor -> movieActor.getMovie().getId(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        List<Long> actorIds = actorLinksByMovieId.values()
+                .stream()
+                .flatMap(List::stream)
                 .map(movieActor -> movieActor.getActor().getId())
+                .distinct()
                 .toList();
-        Map<Long, Long> movieCounts = movieActors.isEmpty()
+        Map<Long, Long> movieCountsByActorId = actorIds.isEmpty()
                 ? Map.of()
-                : actorRepository.findWithMovieCountByIdIn(movieActors.stream().map(Actor::getId).toList())
+                : actorRepository.findWithMovieCountByIdIn(actorIds)
                         .stream()
                         .collect(Collectors.toMap(
                                 result -> result.getActor().getId(),
                                 result -> result.getMovieCount(),
                                 (left, right) -> left
                         ));
-        List<ActorResponse> actors = movieActors.stream()
-                .map(actor -> movieMapper.toActorResponse(actor, movieCounts.getOrDefault(actor.getId(), 0L)))
-                .toList();
-        return movieMapper.toMovieResponse(movie, genres, actors, mainActorIds);
+
+        List<MovieResponse> responses = new ArrayList<>(movies.size());
+        for (Movie movie : movies) {
+            List<MovieActor> movieActorLinks = actorLinksByMovieId.getOrDefault(movie.getId(), List.of());
+            List<ActorResponse> actors = movieActorLinks.stream()
+                    .map(MovieActor::getActor)
+                    .map(actor -> movieMapper.toActorResponse(actor, movieCountsByActorId.getOrDefault(actor.getId(), 0L)))
+                    .toList();
+            List<Long> mainActorIds = movieActorLinks.stream()
+                    .filter(MovieActor::isMainActor)
+                    .map(movieActor -> movieActor.getActor().getId())
+                    .toList();
+
+            responses.add(movieMapper.toMovieResponse(
+                    movie,
+                    genresByMovieId.getOrDefault(movie.getId(), List.of()),
+                    actors,
+                    mainActorIds
+            ));
+        }
+        return responses;
     }
 
     private Movie findById(Long id) {

@@ -26,7 +26,9 @@ import lombok.Setter;
         name = "movies",
         indexes = {
                 @Index(name = "idx_movies_status", columnList = "status"),
-                @Index(name = "idx_movies_release_date", columnList = "release_date")
+                @Index(name = "idx_movies_release_date", columnList = "release_date"),
+                @Index(name = "idx_movies_status_release_id", columnList = "status, release_date, id"),
+                @Index(name = "idx_movies_release_id", columnList = "release_date, id")
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

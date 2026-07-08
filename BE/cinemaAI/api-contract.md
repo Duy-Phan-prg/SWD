@@ -97,6 +97,7 @@ Status chung:
 | `GET /wishlist` | Auth | — | `List<WishlistResponse>` | `200` |
 | `DELETE /wishlist/{movieId}` | Auth | path | — | `204` |
 | `GET /loyalty/me` | Auth | — | `LoyaltyResponse` | `200` |
+| `GET /loyalty/config` | Auth | — | `LoyaltyConfigurationResponse` | `200` |
 | `POST /loyalty/me/redeem` | Auth | query `points` | `LoyaltyResponse` | `200` |
 | `GET /wallet/me` | Auth | — | `WalletResponse` | `200` |
 | `GET /reviews/movies/{movieId}` | Public | query `page,size` | `PageResponse<ReviewResponse>` | `200` |
@@ -123,6 +124,9 @@ Hai alias dùng cùng contract:
 |---|---|---|---|---|
 | `POST /staff/check-in` | Staff/Admin | `CheckInRequest` | `BookingResponse` | `200` |
 | `POST /staff/showtimes/{showtimeId}/cancel` | Staff/Admin | query `reason` | `ShowtimeResponse` | `200` |
+| `GET /staff/bulk-refunds/failed` | Staff/Admin | query `page,size` | `PageResponse<BulkRefundDetailResponse>` | `200` |
+| `GET /staff/bulk-refunds/{bookingId}/detail` | Staff/Admin | path | `BulkRefundDetailResponse` | `200` |
+| `POST /staff/bulk-refunds/{bookingId}/confirm` | Staff/Admin | `ConfirmManualRefundRequest` | `BulkRefundDetailResponse` | `200` |
 | `POST /admin/check-in` | Admin | `CheckInRequest` | `BookingResponse` | `200` |
 
 ## 5. Admin
@@ -175,7 +179,16 @@ Tất cả endpoint dưới đây có prefix `/api/v1/admin` và yêu cầu role
 | `PUT /showtimes/{showtimeId}` | `ShowtimeRequest` | `ShowtimeResponse` | `200` |
 | `PATCH /showtimes/{showtimeId}/status` | query `status`, optional `reason` when cancelling | `ShowtimeResponse` | `200` |
 | `POST /showtimes/{showtimeId}/cancel` | query `reason` | `ShowtimeResponse` | `200` |
+| `POST /showtimes/{showtimeId}/cancel-and-refund` | `CancelShowtimeRequest` | `BulkRefundResponse` | `200` |
 | `DELETE /showtimes/{showtimeId}` | path | — | `204` |
+
+### Bulk refund follow-up
+
+| Method + path | Request | Response | Success |
+|---|---|---|---|
+| `GET /bulk-refunds/failed` | query `page,size` | `PageResponse<BulkRefundDetailResponse>` | `200` |
+| `GET /bulk-refunds/{bookingId}/detail` | path | `BulkRefundDetailResponse` | `200` |
+| `POST /bulk-refunds/{bookingId}/confirm` | `ConfirmManualRefundRequest` | `BulkRefundDetailResponse` | `200` |
 
 ### Food và ticket pricing
 
@@ -212,6 +225,11 @@ Ticket-pricing admin endpoints đang `@Hidden` trong Swagger nhưng vẫn tồn 
 | `GET /users/{userId}` | path | `UserProfileResponse` | `200` |
 | `POST /users/staff` | `AdminStaffCreateRequest` | `UserProfileResponse` | `200` |
 | `PATCH /users/{userId}/status` | `AdminUserStatusUpdateRequest` | `UserProfileResponse` | `200` |
+| `GET /loyalty/config` | — | `LoyaltyConfigurationResponse` | `200` |
+| `PUT /loyalty/config` | `LoyaltyConfigurationRequest` | `LoyaltyConfigurationResponse` | `200` |
+| `GET /loyalty/transactions` | query `keyword,from,to,page,size` | `PageResponse<LoyaltyTransactionResponse>` | `200` |
+| `GET /loyalty/report` | query `from,to` | `LoyaltyReportResponse` | `200` |
+| `POST /loyalty/expire-now` | — | `Integer` | `200` |
 | `POST /loyalty/add` | `LoyaltyAddRequest` | `LoyaltyResponse` | `200` |
 | `POST /loyalty/{userId}/redeem` | query `points` | `LoyaltyResponse` | `200` |
 

@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
                 .toList();
 
         return ResponseEntity.badRequest()
-                .body(ErrorResponse.of("Validation failed", request.getRequestURI(), errors));
+                .body(ErrorResponse.of("Dữ liệu không hợp lệ", request.getRequestURI(), errors));
     }
 
     @ExceptionHandler(BadRequestException.class)

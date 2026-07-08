@@ -31,6 +31,8 @@ public record ShowtimeResponse(
         BigDecimal lateNightSurchargeAmount,
         BigDecimal surchargeAmount,
         ShowtimeStatus status,
+        String cancellationReason,
+        LocalDateTime cancelledAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

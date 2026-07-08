@@ -46,7 +46,7 @@ public class RefundServiceImpl implements RefundService {
                     cancelUnpaidBooking(booking);
                     notificationService.notifyBookingCancelled(booking);
                 }
-                case PAID, USED -> processPaidBookingRefund(booking, showtime, refundReason);
+                case PAID -> processPaidBookingRefund(booking, showtime, refundReason);
                 default -> { /* terminal or in-progress refund — no action */ }
             }
         });
@@ -56,6 +56,7 @@ public class RefundServiceImpl implements RefundService {
         booking.setStatus(BookingStatus.REFUND_REQUESTED);
         booking.setRefundReason(refundReason);
         booking.setRefundRequestedAt(LocalDateTime.now());
+        booking.setBulkRefund(true);
         bookingRepository.save(booking);
 
         Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
@@ -139,6 +140,7 @@ public class RefundServiceImpl implements RefundService {
         booking.setQrCode(null);
         booking.setStatus(BookingStatus.REFUNDED);
         booking.setRefundedAt(LocalDateTime.now());
+        booking.setRefundMethod(refundMethod);
         bookingRepository.save(booking);
 
         if (payment != null) {

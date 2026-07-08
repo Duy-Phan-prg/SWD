@@ -15,6 +15,17 @@ const TICKET_TYPE_META = {
 };
 
 const CHILD_TICKET_MAX_AGE = 12;
+const DEFAULT_LOYALTY_CONFIG = {
+  earningRatePercent: 1,
+  redemptionPoints: 1000,
+  redemptionValueVnd: 1000,
+  expiryMonth: 12,
+  expiryDay: 31,
+  expiryTime: '23:59:59',
+  lastExpiredAt: null,
+  lastResetAt: null,
+  lastResetSource: null
+};
 
 const normalizeSeatTypeForPricing = (seatType) => {
   const normalized = String(seatType || 'STANDARD').toUpperCase();
@@ -37,6 +48,31 @@ const moneyValue = (value) => {
 };
 
 const formatVnd = (value) => `${Number(value || 0).toLocaleString()}đ`;
+
+const formatDateTimeVi = (value) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
+const buildLoyaltyExpiryDateTime = (config = DEFAULT_LOYALTY_CONFIG) => {
+  const month = Math.max(1, Math.min(12, Number(config.expiryMonth || 12)));
+  const maxDay = new Date(new Date().getFullYear(), month, 0).getDate();
+  const day = Math.max(1, Math.min(maxDay, Number(config.expiryDay || 31)));
+  const [hour = 23, minute = 59, second = 59] = String(config.expiryTime || '23:59:59').split(':').map(Number);
+  const now = new Date();
+  const candidate = new Date(now.getFullYear(), month - 1, day, hour || 0, minute || 0, second || 0);
+  if (candidate.getTime() < now.getTime()) candidate.setFullYear(candidate.getFullYear() + 1);
+  return candidate;
+};
 
 const normalizeSeatTypeKey = (seatType) => {
   const normalized = String(seatType || 'STANDARD').toUpperCase();
@@ -187,20 +223,31 @@ export default function BookingView() {
   const [ticketPriceValidation, setTicketPriceValidation] = useState(null);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [loyaltyPointsInput, setLoyaltyPointsInput] = useState('');
+  const [loyaltyConfig, setLoyaltyConfig] = useState(DEFAULT_LOYALTY_CONFIG);
+  const [heldPaymentSummary, setHeldPaymentSummary] = useState(null);
 
   useEffect(() => {
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
       setLoyaltyPoints(0);
+      setLoyaltyConfig(DEFAULT_LOYALTY_CONFIG);
       return;
     }
     let cancelled = false;
-    loyaltyService.getMyLoyalty(accessToken)
-      .then((loyalty) => {
-        if (!cancelled) setLoyaltyPoints(Number(loyalty?.points ?? 0));
+    Promise.all([
+      loyaltyService.getMyLoyalty(accessToken),
+      loyaltyService.getConfiguration(accessToken)
+    ])
+      .then(([loyalty, config]) => {
+        if (cancelled) return;
+        setLoyaltyPoints(Number(loyalty?.points ?? 0));
+        setLoyaltyConfig({ ...DEFAULT_LOYALTY_CONFIG, ...(config || {}) });
       })
       .catch(() => {
-        if (!cancelled) setLoyaltyPoints(0);
+        if (!cancelled) {
+          setLoyaltyPoints(0);
+          setLoyaltyConfig(DEFAULT_LOYALTY_CONFIG);
+        }
       });
     return () => { cancelled = true; };
   }, []);
@@ -462,10 +509,30 @@ export default function BookingView() {
   }, 0);
   const subTotal = priceTickets + priceCombos;
   const requestedLoyaltyPoints = Math.max(0, Number(String(loyaltyPointsInput || '').replace(/\D/g, '')) || 0);
-  const loyaltyDiscountAmount = Math.min(requestedLoyaltyPoints, loyaltyPoints, Math.max(0, Math.floor(subTotal)));
-  const earnedPointsPreview = Math.floor(Math.max(0, subTotal - loyaltyDiscountAmount) * 0.01);
+  const earningRatePercent = Math.max(0, Number(loyaltyConfig.earningRatePercent ?? DEFAULT_LOYALTY_CONFIG.earningRatePercent) || 0);
+  const redemptionPoints = Math.max(1, Number(loyaltyConfig.redemptionPoints ?? DEFAULT_LOYALTY_CONFIG.redemptionPoints) || DEFAULT_LOYALTY_CONFIG.redemptionPoints);
+  const redemptionValueVnd = Math.max(1, Number(loyaltyConfig.redemptionValueVnd ?? DEFAULT_LOYALTY_CONFIG.redemptionValueVnd) || DEFAULT_LOYALTY_CONFIG.redemptionValueVnd);
+  const loyaltyResetScheduleLabel = formatDateTimeVi(buildLoyaltyExpiryDateTime(loyaltyConfig));
+  const loyaltyAdminResetAt = loyaltyConfig.lastResetSource === 'ADMIN'
+    ? formatDateTimeVi(loyaltyConfig.lastResetAt || loyaltyConfig.lastExpiredAt)
+    : '';
+  const maxRedeemablePointsForSubtotal = Math.max(0, Math.floor(Math.floor(subTotal) * redemptionPoints / redemptionValueVnd));
+  const loyaltyPointsToRedeem = Math.min(requestedLoyaltyPoints, loyaltyPoints, maxRedeemablePointsForSubtotal);
+  const loyaltyDiscountAmount = Math.min(
+    Math.floor(loyaltyPointsToRedeem * redemptionValueVnd / redemptionPoints),
+    Math.max(0, Math.floor(subTotal))
+  );
+  const earnedPointsPreview = Math.floor(Math.max(0, subTotal - loyaltyDiscountAmount) * earningRatePercent / 100);
   const discountAmount = loyaltyDiscountAmount;
   const totalAmount = Math.max(0, subTotal - discountAmount);
+  const loyaltyValidationMessage = requestedLoyaltyPoints > loyaltyPoints
+    ? `Số điểm muốn dùng không được vượt quá ${loyaltyPoints.toLocaleString('vi-VN')} điểm hiện có.`
+    : requestedLoyaltyPoints > maxRedeemablePointsForSubtotal
+      ? `Số điểm muốn dùng vượt quá mức giảm tối đa của hóa đơn (${maxRedeemablePointsForSubtotal.toLocaleString('vi-VN')} điểm).`
+      : '';
+  const gatewayDiscountAmount = Number(heldPaymentSummary?.discountAmount ?? discountAmount);
+  const gatewayTotalAmount = Number(heldPaymentSummary?.totalAmount ?? totalAmount);
+  const gatewayRedeemedPoints = Number(heldPaymentSummary?.loyaltyPointsRedeemed ?? loyaltyPointsToRedeem);
   const formatHoldSeconds = (seconds) => {
     if (seconds === null || seconds === undefined) return '--:--';
     const normalizedSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -482,7 +549,7 @@ export default function BookingView() {
   };
 
   const applyMaxLoyaltyPoints = () => {
-    const maxPoints = Math.min(loyaltyPoints, Math.max(0, Math.floor(subTotal)));
+    const maxPoints = Math.min(loyaltyPoints, maxRedeemablePointsForSubtotal);
     setLoyaltyPointsInput(String(maxPoints));
   };
 
@@ -494,8 +561,18 @@ export default function BookingView() {
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">CinePoints</p>
           <p className="mt-1 text-[11px] font-mono text-neutral-500">
-            {loyaltyPoints.toLocaleString('vi-VN')} điểm khả dụng · 1 điểm = 1đ
+            {loyaltyPoints.toLocaleString('vi-VN')} điểm khả dụng · {redemptionPoints.toLocaleString('vi-VN')} điểm = {redemptionValueVnd.toLocaleString('vi-VN')}đ
           </p>
+          {loyaltyResetScheduleLabel && (
+            <p className="mt-1 text-[10px] font-mono text-neutral-500">
+              Ngày reset điểm: {loyaltyResetScheduleLabel}
+            </p>
+          )}
+          {loyaltyAdminResetAt && (
+            <p className="mt-1 border-l border-amber-400/40 pl-2 text-[10px] font-bold leading-snug text-amber-300">
+              Quản trị viên đã reset điểm lúc {loyaltyAdminResetAt}.
+            </p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-[11px] uppercase tracking-widest text-neutral-500">Dự kiến cộng</p>
@@ -532,7 +609,7 @@ export default function BookingView() {
       {loyaltyDiscountAmount > 0 && (
         <div className="flex justify-between border-t border-white/5 pt-2 text-[10px] font-mono uppercase tracking-wider text-emerald-300">
           <span>Đang dùng</span>
-          <span>-{loyaltyDiscountAmount.toLocaleString('vi-VN')}đ</span>
+          <span>-{loyaltyDiscountAmount.toLocaleString('vi-VN')}đ ({loyaltyPointsToRedeem.toLocaleString('vi-VN')} điểm)</span>
         </div>
       )}
     </div>
@@ -568,6 +645,7 @@ export default function BookingView() {
     setHoldExpiresAt(null);
     setHoldSecondsLeft(null);
     setTicketPriceValidation(null);
+    setHeldPaymentSummary(null);
 
     if (!accessToken) return;
     try {
@@ -727,6 +805,11 @@ export default function BookingView() {
       return;
     }
 
+    if (loyaltyValidationMessage) {
+      showToast(loyaltyValidationMessage);
+      return;
+    }
+
     setIsHolding(true);
     try {
       if (holdBookingId) {
@@ -752,16 +835,22 @@ export default function BookingView() {
         holiday: false,
         tickets: buildTicketSelections(),
         foods: buildFoodRequests(),
-        loyaltyPointsToRedeem: loyaltyDiscountAmount
+        loyaltyPointsToRedeem
       });
       console.log('[holdSeats] result:', holdResult);
       setHoldBookingId(holdResult.id);
+      setHeldPaymentSummary({
+        subtotal: Number(holdResult.subtotal ?? subTotal),
+        discountAmount: Number(holdResult.discountAmount ?? discountAmount),
+        totalAmount: Number(holdResult.totalAmount ?? totalAmount),
+        loyaltyPointsRedeemed: Number(holdResult.loyaltyPointsRedeemed ?? loyaltyPointsToRedeem)
+      });
       setHoldExpiresAt(holdResult.holdExpiresAt || holdResult.expiresAt || null);
       setHoldSecondsLeft(holdResult.holdExpiresAt
         ? Math.max(0, Math.ceil((new Date(holdResult.holdExpiresAt).getTime() - Date.now()) / 1000))
         : HOLD_DURATION_SECONDS);
-      if (loyaltyDiscountAmount > 0) {
-        setLoyaltyPoints(points => Math.max(0, points - loyaltyDiscountAmount));
+      if (loyaltyPointsToRedeem > 0) {
+        setLoyaltyPoints(points => Math.max(0, points - loyaltyPointsToRedeem));
       }
 
       setPaymentState('payment_method');
@@ -1015,10 +1104,10 @@ export default function BookingView() {
                     </div>
                   );
                 })}
-                {discountAmount > 0 && (
+                {gatewayDiscountAmount > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-emerald-400">
                     <span>Giảm CinePoints</span>
-                    <span>-{discountAmount.toLocaleString()}đ</span>
+                    <span>-{gatewayDiscountAmount.toLocaleString()}đ</span>
                   </div>
                 )}
               </div>
@@ -1027,7 +1116,7 @@ export default function BookingView() {
               <div className="flex items-center justify-between p-6">
                 <div>
                   <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-1">Tổng thanh toán</p>
-                  <p className="text-2xl font-black text-emerald-400 font-mono">{totalAmount.toLocaleString()}đ</p>
+                  <p className="text-2xl font-black text-emerald-400 font-mono">{gatewayTotalAmount.toLocaleString()}đ</p>
                 </div>
                 {/* QR mock */}
                 <div className="bg-white p-2 border border-white/10">
@@ -1163,16 +1252,16 @@ export default function BookingView() {
                     <span>{priceCombos.toLocaleString()}đ</span>
                   </div>
                 )}
-                {discountAmount > 0 && (
+                {gatewayDiscountAmount > 0 && (
                   <div className="flex justify-between text-emerald-400">
                     <span>CinePoints áp dụng:</span>
-                    <span>-{discountAmount.toLocaleString()}đ</span>
+                    <span>-{gatewayDiscountAmount.toLocaleString()}đ</span>
                   </div>
                 )}
                 <div className="flex justify-between items-end border-t border-white/10 pt-3 text-xs">
                   <span className="text-white font-sans font-bold tracking-widest text-[10px]">TỔNG THÀNH TIỀN</span>
                   <span className="text-base font-black text-white bg-[#0e0e0e] p-2 border border-white/15">
-                    {totalAmount.toLocaleString()}đ
+                    {gatewayTotalAmount.toLocaleString()}đ
                   </span>
                 </div>
               </div>
@@ -1200,7 +1289,7 @@ export default function BookingView() {
                     </div>
                   </div>
                   <div className="border-t border-white/5 pt-3 grid grid-cols-2 gap-2 text-[10px] font-mono text-zinc-400">
-                    <div><span className="text-zinc-600 block text-[12px]">SỐ TIỀN:</span><span className="text-white font-bold text-sm">{totalAmount.toLocaleString()}đ</span></div>
+                    <div><span className="text-zinc-600 block text-[12px]">SỐ TIỀN:</span><span className="text-white font-bold text-sm">{gatewayTotalAmount.toLocaleString()}đ</span></div>
                     <div><span className="text-zinc-600 block text-[12px]">GHẾ:</span><span className="text-amber-400 font-bold">{selectedSeats.map(s => s.id).join(', ')}</span></div>
                   </div>
                   <div className="border-t border-white/5 pt-3">
@@ -1975,7 +2064,7 @@ export default function BookingView() {
             {/* Show selected combos details */}
             {Object.entries(selectedCombos).length > 0 && (
               <div className="space-y-2 pt-2 border-t border-white/5 text-[9px] lowercase tracking-wide text-neutral-400">
-                <span className="text-[9px] uppercase tracking-[0.15em] text-neutral-600 block font-sans">Dịch vụ đi kèm</span>
+                <span className="text-[11px] uppercase tracking-[0.15em] text-neutral-600 block font-sans">Dịch vụ đi kèm</span>
                 {Object.entries(selectedCombos).map(([id, q]) => {
                   const it = concessions.find(item => item.id === id);
                   if (!it) return null;
@@ -2019,17 +2108,17 @@ export default function BookingView() {
 
 
 
-            {discountAmount > 0 && (
+            {gatewayDiscountAmount > 0 && (
               <div className="flex justify-between text-emerald-400">
                 <span>Giảm bằng CinePoints:</span>
-                <span className="font-mono">-{discountAmount.toLocaleString()}đ</span>
+                <span className="font-mono">-{gatewayDiscountAmount.toLocaleString()}đ</span>
               </div>
             )}
 
             <div className="flex justify-between items-end border-t border-white/10 pt-3">
               <span className="text-white font-sans tracking-widest text-[10px] font-bold">TỔNG CỘNG HOÁ ĐƠN</span>
               <span className="text-lg font-black text-white font-mono tracking-tight leading-none bg-[#101010] p-2 border border-white/20">
-                {totalAmount.toLocaleString()}đ
+                {gatewayTotalAmount.toLocaleString()}đ
               </span>
             </div>
 

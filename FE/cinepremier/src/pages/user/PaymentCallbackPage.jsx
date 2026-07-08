@@ -69,7 +69,7 @@ export default function PaymentCallbackPage() {
               </div>
             </div>
             <div>
-              <h2 className="text-lg font-serif italic text-red-400 uppercase tracking-wider font-bold">Thanh Toán Thất Bại</h2>
+              <h2 className="text-lg font text-red-400 uppercase tracking-wider font-bold">Thanh Toán Thất Bại</h2>
               <p className="text-[11px] text-zinc-400 mt-1">Giao dịch bị huỷ hoặc không thành công.</p>
             </div>
           </>

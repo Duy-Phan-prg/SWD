@@ -22,6 +22,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     Page<Review> findByMovie(Movie movie, Pageable pageable);
 
+    Page<Review> findByStatus(ReviewStatus status, Pageable pageable);
+
     List<Review> findByUser(User user);
 
     Optional<Review> findByUserAndMovie(User user, Movie movie);

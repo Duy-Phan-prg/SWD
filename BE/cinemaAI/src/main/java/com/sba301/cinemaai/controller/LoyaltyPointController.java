@@ -3,6 +3,7 @@ package com.sba301.cinemaai.controller;
 import com.sba301.cinemaai.dto.request.loyalty.LoyaltyAddRequest;
 import com.sba301.cinemaai.dto.response.loyalty.LoyaltyResponse;
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.loyalty.LoyaltyConfigurationResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,10 +42,16 @@ public class LoyaltyPointController {
         return ApiResponse.success(loyaltyPointService.getMyPoints(currentUser.getUsername()));
     }
 
+    @GetMapping("/config")
+    @Operation(summary = "Get loyalty conversion configuration")
+    public ApiResponse<LoyaltyConfigurationResponse> getConfiguration() {
+        return ApiResponse.success(loyaltyPointService.getConfiguration());
+    }
+
     @PostMapping("/me/redeem")
     @Operation(
             summary = "Redeem loyalty points",
-            description = "Customer redeems loyalty points. Rate: 1000 points = 1,000 VND discount."
+            description = "Customer redeems loyalty points using the current admin-configured conversion rate."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Points redeemed"),

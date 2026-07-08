@@ -67,6 +67,14 @@ public class PaymentServiceImpl implements PaymentService {
 
         String txnRef = payment.getId() + "-" + booking.getBookingCode();
         String orderInfo = "Thanh toan ve xem phim " + booking.getBookingCode();
+        log.info(
+                "Creating VNPAY payment for booking {}: subtotal={}, discount={}, total={}, redeemedPoints={}",
+                booking.getBookingCode(),
+                booking.getSubtotal(),
+                booking.getDiscountAmount(),
+                booking.getTotalAmount(),
+                booking.getLoyaltyPointsRedeemed()
+        );
         String paymentUrl = vnpayService.buildPaymentUrl(txnRef, booking.getTotalAmount(), orderInfo, clientIp);
 
         return toResponse(payment, paymentUrl);

@@ -34,6 +34,16 @@ public class CinemaScheduleSeeder implements Seeder {
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
 
+    private static final BigDecimal ADULT_STANDARD_PRICE = BigDecimal.valueOf(90_000);
+    private static final BigDecimal CHILD_STANDARD_PRICE = BigDecimal.valueOf(70_000);
+    private static final BigDecimal STUDENT_STANDARD_PRICE = BigDecimal.valueOf(75_000);
+    private static final BigDecimal ADULT_VIP_PRICE = BigDecimal.valueOf(120_000);
+    private static final BigDecimal CHILD_VIP_PRICE = BigDecimal.valueOf(95_000);
+    private static final BigDecimal STUDENT_VIP_PRICE = BigDecimal.valueOf(100_000);
+    private static final BigDecimal ADULT_COUPLE_PRICE = BigDecimal.valueOf(180_000);
+    private static final BigDecimal CHILD_COUPLE_PRICE = BigDecimal.valueOf(140_000);
+    private static final BigDecimal STUDENT_COUPLE_PRICE = BigDecimal.valueOf(150_000);
+
     @Override
     @Transactional
     public void seed() {
@@ -56,6 +66,7 @@ public class CinemaScheduleSeeder implements Seeder {
         seedSeats(roomB);
         seedSeats(roomC);
         seedShowtimes(java.util.List.of(roomA, roomB, roomC));
+        backfillMissingTicketPrices();
     }
 
     private void seedSeats(Room room) {
@@ -104,13 +115,56 @@ public class CinemaScheduleSeeder implements Seeder {
     }
 
     private void seedShowtime(Room room, Movie movie, LocalDateTime startTime) {
-        if (showtimeRepository.existsByRoomAndMovieAndStartTime(room, movie, startTime)) {
+        var existing = showtimeRepository.findByRoomAndMovieAndStartTime(room, movie, startTime);
+        if (existing.isPresent()) {
+            applyDefaultTicketPrices(existing.get());
             return;
         }
 
         LocalDateTime endTime = startTime.plusMinutes(movie.getDurationMinutes()).plusMinutes(15);
-        Showtime showtime = new Showtime(movie, room, startTime, endTime, BigDecimal.valueOf(90000));
+        Showtime showtime = new Showtime(movie, room, startTime, endTime, ADULT_STANDARD_PRICE);
+        applyDefaultTicketPrices(showtime);
         showtime.setStatus(ShowtimeStatus.OPEN);
         showtimeRepository.save(showtime);
+    }
+
+    private void applyDefaultTicketPrices(Showtime showtime) {
+        if (showtime.getVipPrice() == null) {
+            showtime.setVipPrice(ADULT_VIP_PRICE);
+        }
+        if (showtime.getCouplePrice() == null) {
+            showtime.setCouplePrice(ADULT_COUPLE_PRICE);
+        }
+        if (showtime.getAdultStandardPrice() == null) {
+            showtime.setAdultStandardPrice(ADULT_STANDARD_PRICE);
+        }
+        if (showtime.getChildStandardPrice() == null) {
+            showtime.setChildStandardPrice(CHILD_STANDARD_PRICE);
+        }
+        if (showtime.getStudentStandardPrice() == null) {
+            showtime.setStudentStandardPrice(STUDENT_STANDARD_PRICE);
+        }
+        if (showtime.getAdultVipPrice() == null) {
+            showtime.setAdultVipPrice(ADULT_VIP_PRICE);
+        }
+        if (showtime.getChildVipPrice() == null) {
+            showtime.setChildVipPrice(CHILD_VIP_PRICE);
+        }
+        if (showtime.getStudentVipPrice() == null) {
+            showtime.setStudentVipPrice(STUDENT_VIP_PRICE);
+        }
+        if (showtime.getAdultCouplePrice() == null) {
+            showtime.setAdultCouplePrice(ADULT_COUPLE_PRICE);
+        }
+        if (showtime.getChildCouplePrice() == null) {
+            showtime.setChildCouplePrice(CHILD_COUPLE_PRICE);
+        }
+        if (showtime.getStudentCouplePrice() == null) {
+            showtime.setStudentCouplePrice(STUDENT_COUPLE_PRICE);
+        }
+    }
+
+    private void backfillMissingTicketPrices() {
+        showtimeRepository.findAll().forEach(this::applyDefaultTicketPrices);
     }
 }

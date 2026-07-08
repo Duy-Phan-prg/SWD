@@ -98,7 +98,24 @@ export const adminService = {
   createAdminShowtimesBulk: (token, payload)     => request('/api/v1/admin/showtimes/bulk', { method: 'POST', token, body: payload }),
   updateAdminShowtime:      (token, id, payload) => showtimesApi.update(token, id, payload),
   updateAdminShowtimeStatus: (token, id, status) => showtimesApi.patchQuery(token, id, status),
+  cancelShowtimeAndRefund:  (token, id, reason)  => request(`/api/v1/admin/showtimes/${enc(id)}/cancel-and-refund`, { method: 'POST', token, body: { reason } }),
   deleteAdminShowtime:      (token, id)          => showtimesApi.remove(token, id),
+
+  // Bulk refunds
+  getFailedBulkRefunds:     (token, params = {}) => request(`/api/v1/admin/bulk-refunds/failed${buildQueryString(params)}`, { token }),
+  getBulkRefundDetail:      (token, bookingId)   => request(`/api/v1/admin/bulk-refunds/${enc(bookingId)}/detail`, { token }),
+  confirmManualBulkRefund:  (token, bookingId, payload) => request(`/api/v1/admin/bulk-refunds/${enc(bookingId)}/confirm`, { method: 'POST', token, body: payload }),
+
+  // Loyalty points
+  getLoyaltyConfiguration:    (token) => request('/api/v1/admin/loyalty/config', { token }),
+  updateLoyaltyConfiguration: (token, payload) => request('/api/v1/admin/loyalty/config', { method: 'PUT', token, body: payload }),
+  getLoyaltyTransactions:     (token, params = {}) => request(`/api/v1/admin/loyalty/transactions${buildQueryString(params)}`, { token }),
+  getLoyaltyReport:           (token, params = {}) => request(`/api/v1/admin/loyalty/report${buildQueryString(params)}`, { token }),
+  expireLoyaltyPointsNow:     (token) => request('/api/v1/admin/loyalty/expire-now', { method: 'POST', token }),
+
+  // Reviews
+  getAdminReviews:    (token, params = {}) => request(`/api/v1/admin/reviews${buildQueryString(params)}`, { token }).then(normalizePageResponse),
+  deleteAdminReview:  (token, reviewId) => request(`/api/v1/admin/reviews/${enc(reviewId)}`, { method: 'DELETE', token }),
 
   // ── Ticket Pricing ─────────────────────────────────────────────────────────
   getAdminTicketPricingRules:   (token, params = {}) => pricingRules.getAll(token, params),

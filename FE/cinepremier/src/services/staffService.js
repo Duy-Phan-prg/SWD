@@ -24,5 +24,16 @@ export const staffService = {
   updateStaffFoodComboStatus: (token, comboId, status) => request(`/api/v1/staff/foods/combos/${encodeURIComponent(comboId)}/status?status=${encodeURIComponent(status)}`, {
     method: 'PATCH',
     token
+  }),
+  getFailedBulkRefunds: (token, params = {}) => {
+    const query = new URLSearchParams(params);
+    return request(`/api/v1/staff/bulk-refunds/failed?${query.toString()}`, { token });
+  },
+  getBulkRefundDetail: (token, bookingId) =>
+    request(`/api/v1/staff/bulk-refunds/${encodeURIComponent(bookingId)}/detail`, { token }),
+  confirmManualBulkRefund: (token, bookingId, payload) => request(`/api/v1/staff/bulk-refunds/${encodeURIComponent(bookingId)}/confirm`, {
+    method: 'POST',
+    token,
+    body: payload
   })
 };
