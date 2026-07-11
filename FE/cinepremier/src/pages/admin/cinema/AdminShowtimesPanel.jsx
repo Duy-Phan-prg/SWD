@@ -522,14 +522,6 @@ export default function AdminShowtimesPanel({ ctx }) {
   const [confirmDelete, setConfirmDelete] = useState(null); // showtimeId
   const [confirmCancel, setConfirmCancel] = useState(null); // showtime object
   const [cancelReason, setCancelReason] = useState('');
-  const [refundSummary, setRefundSummary] = useState(null);
-  const [failedRefunds, setFailedRefunds] = useState([]);
-  const [failedRefundPage, setFailedRefundPage] = useState(0);
-  const [failedRefundTotalPages, setFailedRefundTotalPages] = useState(1);
-  const [failedRefundLoading, setFailedRefundLoading] = useState(false);
-  const [manualRefundModal, setManualRefundModal] = useState(null);
-  const [manualRefundForm, setManualRefundForm] = useState({ refundMethod: 'MANUAL_BANK_TRANSFER', notes: '' });
-  const [manualRefundSaving, setManualRefundSaving] = useState(false);
   const [copySource, setCopySource] = useState(null); // showtime object
   const [copyDate, setCopyDate] = useState('');
   const [isCopying, setIsCopying] = useState(false);
@@ -616,22 +608,6 @@ export default function AdminShowtimesPanel({ ctx }) {
     }
   }, [filters, showToast]);
 
-  const fetchFailedRefunds = useCallback(async (p = 0) => {
-    const token = getTokenRef.current?.();
-    if (!token) return;
-    setFailedRefundLoading(true);
-    try {
-      const data = await adminService.getFailedBulkRefunds(token, { page: p, size: 10 });
-      const items = data?.content || data?.items || (Array.isArray(data) ? data : []);
-      setFailedRefunds(items);
-      setFailedRefundTotalPages(data?.totalPages || 1);
-      setFailedRefundPage(p);
-    } catch (e) {
-      showToast?.('Khong the tai danh sach hoan tien loi: ' + e.message, 'error');
-    } finally {
-      setFailedRefundLoading(false);
-    }
-  }, [showToast]);
 
   useEffect(() => { fetchShowtimes(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -885,7 +861,6 @@ export default function AdminShowtimesPanel({ ctx }) {
       setCancelReason('');
       setDetailModal(null);
       fetchShowtimes(page);
-      fetchFailedRefunds(0);
     } catch (e) {
       showToast?.('Loi huy suat chieu va hoan tien: ' + e.message, 'error');
     } finally {
@@ -893,34 +868,6 @@ export default function AdminShowtimesPanel({ ctx }) {
     }
   };
 
-  const handleOpenManualRefund = async (refund) => {
-    const token = getAdminToken();
-    if (!token) return;
-    try {
-      const detail = await adminService.getBulkRefundDetail(token, refund.bookingId);
-      setManualRefundModal(detail);
-      setManualRefundForm({ refundMethod: 'MANUAL_BANK_TRANSFER', notes: '' });
-    } catch (e) {
-      showToast?.('Khong the tai chi tiet refund: ' + e.message, 'error');
-    }
-  };
-
-  const handleConfirmManualRefund = async () => {
-    if (!manualRefundModal?.bookingId) return;
-    const token = getAdminToken();
-    if (!token) return;
-    setManualRefundSaving(true);
-    try {
-      await adminService.confirmManualBulkRefund(token, manualRefundModal.bookingId, manualRefundForm);
-      showToast?.('Da xac nhan hoan tien thu cong va can bang diem.', 'success');
-      setManualRefundModal(null);
-      fetchFailedRefunds(failedRefundPage);
-    } catch (e) {
-      showToast?.('Khong the xac nhan hoan tien thu cong: ' + e.message, 'error');
-    } finally {
-      setManualRefundSaving(false);
-    }
-  };
 
   const handleDelete = async (showtimeId) => {
     const token = getAdminToken();
@@ -1157,10 +1104,6 @@ export default function AdminShowtimesPanel({ ctx }) {
         </div>
         {mode === 'list' && (
           <div className="flex gap-2">
-            <button onClick={() => { setMode('refunds'); fetchFailedRefunds(0); }}
-              className="flex items-center gap-1.5 px-3 py-2 border border-rose-500/40 text-rose-300 text-[10px] font-black uppercase tracking-wider hover:bg-rose-950/30 transition">
-              <AlertCircle className="w-3 h-3" /> Refund loi
-            </button>
             <button onClick={() => { setMode('create'); setForm(EMPTY_FORM); setEditingId(null); setEditingStatus(''); setErrors({}); }}
               className="flex items-center gap-1.5 px-3 py-2 bg-white text-black text-[10px] font-black uppercase tracking-wider hover:bg-zinc-200 transition">
               <Plus className="w-3 h-3" /> Tạo suất
@@ -1180,93 +1123,9 @@ export default function AdminShowtimesPanel({ ctx }) {
       </div>
 
       {/* ── CREATE / EDIT FORM ── */}
-      {refundSummary && mode === 'list' && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 border border-emerald-500/20 bg-emerald-950/10 p-3 text-[10px]">
-          <div><p className="uppercase tracking-wider text-emerald-400 font-black">Showtime</p><p className="font-mono text-white">#{refundSummary.showtimeId}</p></div>
-          <div><p className="uppercase tracking-wider text-zinc-500 font-black">Da quet</p><p className="font-mono text-white">{refundSummary.totalBookingsProcessed}</p></div>
-          <div><p className="uppercase tracking-wider text-zinc-500 font-black">Thanh cong</p><p className="font-mono text-emerald-300">{refundSummary.successCount}</p></div>
-          <div><p className="uppercase tracking-wider text-zinc-500 font-black">Loi</p><p className="font-mono text-rose-300">{refundSummary.failedCount}</p></div>
-          <div><p className="uppercase tracking-wider text-zinc-500 font-black">Trang thai</p><p className="font-mono text-amber-300">{refundSummary.status}</p></div>
-        </div>
-      )}
 
-      {mode === 'refunds' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-white">Bulk Refund Failed</h3>
-              <p className="text-[11px] text-zinc-500">Booking can staff hoan tien ngoai he thong roi xac nhan can bang diem.</p>
-            </div>
-            <button onClick={() => fetchFailedRefunds(failedRefundPage)}
-              className="flex items-center gap-1.5 px-3 py-2 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase hover:border-zinc-500 transition">
-              <RefreshCw className="w-3 h-3" /> Lam moi
-            </button>
-          </div>
-          <div className="border border-zinc-900 overflow-hidden">
-            {failedRefundLoading ? (
-              <div className="flex items-center justify-center py-14 text-zinc-600">
-                <RefreshCw className="w-4 h-4 animate-spin mr-2" /> Dang tai refund loi...
-              </div>
-            ) : failedRefunds.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-14 text-zinc-600">
-                <CheckCircle2 className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-xs">Khong co booking refund loi</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-zinc-900 bg-zinc-950/80">
-                      {['Booking', 'Khach hang', 'Phim / suat', 'So tien', 'Diem NET', 'Ly do loi', 'Thao tac'].map(h => (
-                        <th key={h} className="text-left px-3 py-3 text-[9px] uppercase tracking-wider text-zinc-500 font-bold whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {failedRefunds.map(refund => (
-                      <tr key={refund.bookingId} className="border-b border-zinc-900/50 hover:bg-zinc-900/30">
-                        <td className="px-3 py-3 font-mono text-white">{refund.bookingCode}</td>
-                        <td className="px-3 py-3">
-                          <div className="font-bold text-zinc-200">{refund.customerName || '--'}</div>
-                          <div className="text-[10px] text-zinc-500">{refund.customerEmail}</div>
-                        </td>
-                        <td className="px-3 py-3">
-                          <div className="font-bold text-zinc-200">{refund.movieName}</div>
-                          <div className="text-[10px] text-zinc-500 font-mono">{fmt(refund.showtimeStart)}</div>
-                        </td>
-                        <td className="px-3 py-3 font-mono text-amber-300">{fmtPrice(refund.refundAmount)}</td>
-                        <td className="px-3 py-3 font-mono text-emerald-300">{Number(refund.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}</td>
-                        <td className="px-3 py-3 max-w-[220px] text-zinc-500 truncate" title={refund.failureReason}>{refund.failureReason || '--'}</td>
-                        <td className="px-3 py-3">
-                          <button onClick={() => handleOpenManualRefund(refund)}
-                            className="px-2.5 py-1.5 bg-amber-500 text-black text-[9px] font-black uppercase hover:bg-amber-400 transition">
-                            Xac nhan ngoai
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {failedRefundTotalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-900 bg-zinc-950/50">
-                <span className="text-[9px] text-zinc-600 font-mono">Trang {failedRefundPage + 1} / {failedRefundTotalPages}</span>
-                <div className="flex gap-1">
-                  <button disabled={failedRefundPage === 0} onClick={() => fetchFailedRefunds(failedRefundPage - 1)}
-                    className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 transition">
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <button disabled={failedRefundPage >= failedRefundTotalPages - 1} onClick={() => fetchFailedRefunds(failedRefundPage + 1)}
-                    className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 transition">
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+
+
 
       <AnimatePresence mode="wait">
         {(mode === 'create' || mode === 'edit') && (
@@ -1831,71 +1690,7 @@ export default function AdminShowtimesPanel({ ctx }) {
         )}
       </AnimatePresence>
 
-      {/* Manual refund confirmation modal */}
-      <AnimatePresence>
-        {manualRefundModal && (
-          <motion.div key="manual-refund-confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="bg-zinc-950 border border-amber-500/30 p-6 max-w-lg w-full space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-amber-400">
-                  <DollarSign className="w-4 h-4" />
-                  <h3 className="text-xs font-black uppercase tracking-wider">Xac nhan hoan tien ngoai</h3>
-                </div>
-                <button onClick={() => setManualRefundModal(null)} className="text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="border border-zinc-900 bg-black/40 p-2">
-                  <p className="text-zinc-500 font-bold uppercase text-[9px]">Booking</p>
-                  <p className="font-mono text-white">{manualRefundModal.bookingCode}</p>
-                </div>
-                <div className="border border-zinc-900 bg-black/40 p-2">
-                  <p className="text-zinc-500 font-bold uppercase text-[9px]">So tien</p>
-                  <p className="font-mono text-amber-300">{fmtPrice(manualRefundModal.refundAmount)}</p>
-                </div>
-                <div className="border border-zinc-900 bg-black/40 p-2">
-                  <p className="text-zinc-500 font-bold uppercase text-[9px]">Khach hang</p>
-                  <p className="truncate text-zinc-200">{manualRefundModal.customerName || manualRefundModal.customerEmail}</p>
-                </div>
-                <div className="border border-zinc-900 bg-black/40 p-2">
-                  <p className="text-zinc-500 font-bold uppercase text-[9px]">Diem NET</p>
-                  <p className="font-mono text-emerald-300">{Number(manualRefundModal.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <label className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phuong thuc</span>
-                  <select value={manualRefundForm.refundMethod}
-                    onChange={e => setManualRefundForm(prev => ({ ...prev, refundMethod: e.target.value }))}
-                    className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
-                    <option value="MANUAL_BANK_TRANSFER">Bank Transfer</option>
-                    <option value="CASH">Cash</option>
-                  </select>
-                </label>
-                <label className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Ghi chu</span>
-                  <input value={manualRefundForm.notes}
-                    onChange={e => setManualRefundForm(prev => ({ ...prev, notes: e.target.value }))}
-                    maxLength={500}
-                    placeholder="Transaction ID, STK, ca thu ngan..."
-                    className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400" />
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setManualRefundModal(null)}
-                  className="flex-1 py-2.5 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase hover:border-zinc-500 transition">
-                  Quay lai
-                </button>
-                <button onClick={handleConfirmManualRefund} disabled={manualRefundSaving}
-                  className="flex-1 py-2.5 bg-amber-500 text-black text-[10px] font-black uppercase hover:bg-amber-400 transition disabled:opacity-50">
-                  {manualRefundSaving ? 'Dang luu...' : 'Da hoan tien ngoai'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       {/* Detail modal */}
       <AnimatePresence>

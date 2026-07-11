@@ -1,21 +1,24 @@
 package com.sba301.cinemaai.service.impl;
 
-import com.sba301.cinemaai.dto.response.refund.VnpRefundResponse;
 import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.CineWallet;
 import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.entity.Showtime;
+import com.sba301.cinemaai.entity.WalletTransaction;
 import com.sba301.cinemaai.enums.BookingStatus;
-import com.sba301.cinemaai.enums.PaymentProvider;
 import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
+import com.sba301.cinemaai.enums.WalletTransactionType;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
+import com.sba301.cinemaai.repository.CineWalletRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
+import com.sba301.cinemaai.repository.WalletTransactionRepository;
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import com.sba301.cinemaai.service.MailService;
 import com.sba301.cinemaai.service.NotificationService;
 import com.sba301.cinemaai.service.RefundService;
-import com.sba301.cinemaai.service.VNPayService;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,10 +33,11 @@ public class RefundServiceImpl implements RefundService {
     private final BookingRepository bookingRepository;
     private final BookingSeatRepository bookingSeatRepository;
     private final PaymentRepository paymentRepository;
+    private final CineWalletRepository cineWalletRepository;
+    private final WalletTransactionRepository walletTransactionRepository;
     private final LoyaltyPointService loyaltyPointService;
     private final NotificationService notificationService;
     private final MailService mailService;
-    private final VNPayService vnpayService;
 
     @Override
     @Transactional
@@ -47,112 +51,77 @@ public class RefundServiceImpl implements RefundService {
                     notificationService.notifyBookingCancelled(booking);
                 }
                 case PAID -> processPaidBookingRefund(booking, showtime, refundReason);
-                default -> { /* terminal or in-progress refund — no action */ }
+                default -> { /* terminal or already refunded — no action */ }
             }
         });
     }
 
     private void processPaidBookingRefund(Booking booking, Showtime showtime, String refundReason) {
-        booking.setStatus(BookingStatus.REFUND_REQUESTED);
-        booking.setRefundReason(refundReason);
-        booking.setRefundRequestedAt(LocalDateTime.now());
-        booking.setBulkRefund(true);
-        bookingRepository.save(booking);
+        BigDecimal refundAmount = booking.getTotalAmount();
 
-        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
-                .orElse(null);
-
-        if (payment == null) {
-            log.error("Payment SUCCESS not found for refundable booking: {}", booking.getBookingCode());
-            markRefundFailed(booking, refundReason);
-            return;
-        }
-
-        try {
-            RefundAttempt attempt = attemptProviderRefund(payment, booking);
-            if (attempt.success()) {
-                completeSuccessfulRefund(
-                        booking,
-                        payment,
-                        booking.getTotalAmount(),
-                        attempt.refundTransactionNo(),
-                        attempt.refundMethod()
-                );
-                notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
-            } else {
-                markRefundFailed(booking, refundReason);
-                log.warn("Refund failed for booking {} — responseCode={}",
-                        booking.getBookingCode(), attempt.responseCode());
-            }
-        } catch (Exception exception) {
-            log.error("Error processing refund for booking: {}", booking.getBookingCode(), exception);
-            markRefundFailed(booking, refundReason);
-        }
-    }
-
-    private void markRefundFailed(Booking booking, String refundReason) {
-        booking.setStatus(BookingStatus.REFUND_FAILED);
-        bookingRepository.save(booking);
-        mailService.sendRefundFailedNotice(
-                booking.getUser().getEmail(),
-                booking.getBookingCode(),
-                booking.getTotalAmount(),
-                refundReason
-        );
-    }
-
-    private RefundAttempt attemptProviderRefund(Payment payment, Booking booking) {
-        if (payment.getProvider() == PaymentProvider.MOCK) {
-            return new RefundAttempt(
-                    true,
-                    "00",
-                    "MOCK-REFUND-" + System.currentTimeMillis(),
-                    "MOCK"
-            );
-        }
-
-        if (payment.getProvider() != PaymentProvider.VNPAY) {
-            return new RefundAttempt(false, "UNSUPPORTED_PROVIDER", null, null);
-        }
-
-        // VNPay hoàn về đúng tài khoản/phương thức đã dùng khi thanh toán gốc.
-        VnpRefundResponse response = vnpayService.requestRefund(payment, booking.getTotalAmount());
-        boolean success = "00".equals(response.getResponseCode());
-        return new RefundAttempt(
-                success,
-                response.getResponseCode(),
-                response.getRefundTransactionNo(),
-                "VNPAY"
-        );
-    }
-
-    private void completeSuccessfulRefund(
-            Booking booking,
-            Payment payment,
-            java.math.BigDecimal refundAmount,
-            String refundTransactionNo,
-            String refundMethod
-    ) {
+        // 1. Hoàn điểm loyalty
         loyaltyPointService.restoreRedeemedPointsFromBooking(booking.getUser(), booking);
         loyaltyPointService.revokePointsFromBooking(booking.getUser(), booking);
 
+        // 2. Hoàn tiền vào CineWallet
+        CineWallet wallet = cineWalletRepository.findByUserForUpdate(booking.getUser())
+                .orElseGet(() -> cineWalletRepository.save(new CineWallet(booking.getUser())));
+
+        BigDecimal newBalance = wallet.getBalance().add(refundAmount);
+        wallet.setBalance(newBalance);
+        cineWalletRepository.save(wallet);
+
+        // 3. Tạo giao dịch wallet
+        String refCode = "REFUND-" + booking.getBookingCode();
+        if (!walletTransactionRepository.existsByBookingAndType(booking, WalletTransactionType.REFUND_CREDIT)) {
+            walletTransactionRepository.save(new WalletTransaction(
+                    wallet,
+                    booking.getUser(),
+                    booking,
+                    WalletTransactionType.REFUND_CREDIT,
+                    refundAmount,
+                    newBalance,
+                    refCode,
+                    refundReason
+            ));
+        }
+
+        // 4. Giải phóng ghế và cập nhật booking
         releaseSeats(booking);
         booking.setQrCode(null);
         booking.setStatus(BookingStatus.REFUNDED);
         booking.setRefundedAt(LocalDateTime.now());
-        booking.setRefundMethod(refundMethod);
+        booking.setRefundReason(refundReason);
+        booking.setRefundMethod("CINEWALLET");
+        booking.setBulkRefund(true);
         bookingRepository.save(booking);
 
+        // 5. Cập nhật payment
+        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
+                .orElse(null);
         if (payment != null) {
             payment.setStatus(PaymentStatus.REFUNDED);
             payment.setRefundAmount(refundAmount);
             payment.setRefundedAt(LocalDateTime.now());
-            payment.setRefundTransactionNo(refundTransactionNo);
-            payment.setRefundMethod(refundMethod);
+            payment.setRefundTransactionNo(refCode);
+            payment.setRefundMethod("CINEWALLET");
             payment.setPaymentAccountLabel(null);
             payment.setCallbackPayload(null);
             paymentRepository.save(payment);
         }
+
+        // 6. Gửi thông báo + email
+        notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
+        mailService.sendWalletRefundNotice(
+                booking.getUser().getEmail(),
+                booking.getBookingCode(),
+                refundAmount,
+                newBalance,
+                refundReason
+        );
+
+        log.info("Refunded {} VND to CineWallet for booking {} (new balance: {})",
+                refundAmount, booking.getBookingCode(), newBalance);
     }
 
     private void cancelUnpaidBooking(Booking booking) {
@@ -171,13 +140,5 @@ public class RefundServiceImpl implements RefundService {
             return "Showtime cancelled due to operational incident";
         }
         return "Hủy suất chiếu do sự cố: " + reason.trim();
-    }
-
-    private record RefundAttempt(
-            boolean success,
-            String responseCode,
-            String refundTransactionNo,
-            String refundMethod
-    ) {
     }
 }

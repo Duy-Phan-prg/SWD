@@ -6,6 +6,4 @@ import com.sba301.cinemaai.entity.Showtime;
 public interface BulkRefundService {
 
     BulkRefundResponse processBulkRefund(Showtime showtime, String reason);
-
-    int retryPendingRefunds();
 }

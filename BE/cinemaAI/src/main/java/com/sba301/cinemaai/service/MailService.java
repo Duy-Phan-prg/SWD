@@ -6,5 +6,5 @@ public interface MailService {
 
     void sendOtp(String to, String otp, String purpose);
 
-    void sendRefundFailedNotice(String to, String bookingCode, BigDecimal amount, String reason);
+    void sendWalletRefundNotice(String to, String bookingCode, BigDecimal amount, BigDecimal newBalance, String reason);
 }

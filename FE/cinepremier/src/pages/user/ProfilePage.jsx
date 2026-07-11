@@ -4,13 +4,14 @@ import {
   Camera, CreditCard, Lock, LogOut, Settings, User,
   ChevronRight, Award, Flame, Eye, Film, Sparkles,
   ChevronDown, Check, Shield, Volume2, VolumeX, EyeOff,
-  Save, Trash2, Sliders, Smartphone, Mail, Phone, Cake, BadgeCheck, Loader2, Ticket, ScanLine
+  Save, Trash2, Sliders, Smartphone, Mail, Phone, Cake, BadgeCheck, Loader2, Ticket, ScanLine, Wallet, ArrowUpRight, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { expireAuthSession, getStoredAuth, normalizeUser } from '../../services/authService';
 import { userService } from '../../services/userService';
 import { bookingService } from '../../services/bookingService';
 import { loyaltyService } from '../../services/loyaltyService';
+import { walletService } from '../../services/walletService';
 import {
   MAX_NAME_LENGTH,
   NAME_VALIDATION_MESSAGE,
@@ -95,6 +96,15 @@ export default function ProfileView() {
   const [recentBookings, setRecentBookings] = useState([]);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [loyaltyConfig, setLoyaltyConfig] = useState(DEFAULT_LOYALTY_CONFIG);
+  const [wallet, setWallet] = useState(null);
+  const [walletTxs, setWalletTxs] = useState([]);
+  const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [withdrawForm, setWithdrawForm] = useState({ amount: '', bankName: '', accountNumber: '', accountHolder: '', walletPhone: '' });
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [withdrawErrors, setWithdrawErrors] = useState({});
+  const [bankList, setBankList] = useState([]);
+  const [bankSearch, setBankSearch] = useState('');
+  const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   // Settings - Payment card states
@@ -151,6 +161,8 @@ export default function ProfileView() {
         setRecentBookings(bookingList);
         setLoyaltyPoints(Number(loyalty?.points ?? 0));
         setLoyaltyConfig({ ...DEFAULT_LOYALTY_CONFIG, ...(loyaltyConfiguration || {}) });
+        // Fetch wallet
+        walletService.getWallet(accessToken).then(w => { setWallet(w); return walletService.getTransactions(accessToken, { page: 0, size: 5 }); }).then(txData => setWalletTxs(txData?.content ?? txData?.items ?? [])).catch(() => { });
       })
       .catch((error) => {
         if (!cancelled) showToast(error.message || 'Không thể tải dữ liệu hồ sơ từ hệ thống.');
@@ -737,6 +749,247 @@ export default function ProfileView() {
                 </div>
               </div>
 
+            {/* ── CINEWALLET CARD ─────────────────────────────────────────────── */}
+            <div className="border border-amber-500/20 bg-gradient-to-br from-[#0d0d00] to-[#050500] p-5 space-y-4 mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+                    <Wallet className="h-4 w-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-amber-500">CineWallet</p>
+                    <p className="text-xl font-mono font-black text-white">
+                      {wallet ? `${Number(wallet.balance).toLocaleString('vi-VN')}đ` : '—'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const next = !showWithdrawForm;
+                    setShowWithdrawForm(next);
+                    setShowBankDropdown(false);
+                    if (next && bankList.length === 0) {
+                      fetch('https://api.vietqr.io/v2/banks')
+                        .then(r => r.json())
+                        .then(d => setBankList(d.data || []))
+                        .catch(() => {});
+                    }
+                  }}
+                  className="flex items-center gap-1.5 border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-amber-400 hover:bg-amber-500/20 transition"
+                >
+                  <ArrowUpRight className="h-3 w-3" /> Rút tiền
+                </button>
+              </div>
+
+              {walletTxs.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[8px] font-black uppercase tracking-[0.14em] text-neutral-500">Giao dịch gần đây</p>
+                  {walletTxs.map((tx, i) => (
+                    <div key={tx.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                      <div>
+                        <p className="text-[10px] font-bold text-white">
+                          {tx.type === 'REFUND_CREDIT' ? '+ Hoàn tiền'
+                            : tx.type === 'WITHDRAWAL_HOLD' ? '- Yêu cầu rút'
+                            : tx.type === 'WITHDRAWAL_PAID' ? '✓ Đã chuyển khoản'
+                            : tx.type === 'WITHDRAWAL_REJECTED' ? '↩ Hoàn lại'
+                            : tx.type}
+                        </p>
+                        <p className="text-[9px] text-neutral-500">{tx.referenceCode}</p>
+                      </div>
+                      <span className={`text-[11px] font-black font-mono ${tx.type === 'REFUND_CREDIT' || tx.type === 'WITHDRAWAL_REJECTED' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {tx.type === 'REFUND_CREDIT' || tx.type === 'WITHDRAWAL_REJECTED' ? '+' : '-'}
+                        {Math.abs(Number(tx.amount)).toLocaleString('vi-VN')}đ
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <AnimatePresence>
+                {showWithdrawForm && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="pt-3 border-t border-amber-500/15 space-y-3">
+                      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-amber-500/70">Yêu cầu rút tiền</p>
+
+                      {/* Số tiền */}
+                      <div>
+                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Số tiền (VND)</label>
+                        <input
+                          type="number"
+                          value={withdrawForm.amount}
+                          onChange={e => { setWithdrawForm(f => ({ ...f, amount: e.target.value })); setWithdrawErrors(err => ({ ...err, amount: '' })); }}
+                          className={`w-full bg-black/40 border px-3 py-2 text-[11px] text-white outline-none transition ${withdrawErrors.amount ? 'border-rose-500/70' : 'border-white/10 focus:border-amber-500/50'}`}
+                        />
+                        {withdrawErrors.amount && <p className="mt-1 text-[9px] text-rose-400">{withdrawErrors.amount}</p>}
+                      </div>
+
+                      {/* Ngân hàng */}
+                      <div className="relative">
+                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Ngân hàng</label>
+
+                        {/* Trigger button */}
+                        <button
+                          type="button"
+                          onClick={() => setShowBankDropdown(v => !v)}
+                          className={`w-full flex items-center gap-2 bg-[#111] border px-3 py-2 text-[11px] text-left outline-none transition ${withdrawErrors.bankName ? 'border-rose-500/70' : 'border-white/10 hover:border-amber-500/40'}`}
+                        >
+                          {withdrawForm.bankName ? (
+                            <>
+                              {bankList.find(b => b.short_name === withdrawForm.bankName || b.shortName === withdrawForm.bankName)?.logo && (
+                                <img
+                                  src={bankList.find(b => b.short_name === withdrawForm.bankName || b.shortName === withdrawForm.bankName)?.logo}
+                                  alt=""
+                                  className="h-5 w-8 object-contain bg-white/5 rounded"
+                                />
+                              )}
+                              <span className="text-white font-bold flex-1">{withdrawForm.bankName}</span>
+                            </>
+                          ) : (
+                            <span className="text-neutral-500 flex-1">-- Chọn ngân hàng --</span>
+                          )}
+                          <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform ${showBankDropdown ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {/* Dropdown panel */}
+                        {showBankDropdown && (
+                          <div className="absolute z-50 left-0 right-0 mt-1 bg-[#0f0f0f] border border-white/10 shadow-2xl max-h-56 flex flex-col">
+                            {/* Search */}
+                            <div className="p-2 border-b border-white/5">
+                              <input
+                                autoFocus
+                                type="text"
+                                placeholder="Tìm ngân hàng..."
+                                value={bankSearch}
+                                onChange={e => setBankSearch(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-amber-500/40 placeholder:text-neutral-600"
+                              />
+                            </div>
+                            {/* List */}
+                            <div className="overflow-y-auto flex-1">
+                              {bankList
+                                .filter(b => {
+                                  const q = bankSearch.toLowerCase();
+                                  return !q || (b.short_name || b.shortName || '').toLowerCase().includes(q) || (b.name || '').toLowerCase().includes(q);
+                                })
+                                .map(b => {
+                                  const sn = b.short_name || b.shortName;
+                                  const selected = withdrawForm.bankName === sn;
+                                  return (
+                                    <button
+                                      key={b.bin}
+                                      type="button"
+                                      onClick={() => {
+                                        setWithdrawForm(f => ({ ...f, bankName: sn }));
+                                        setWithdrawErrors(err => ({ ...err, bankName: '' }));
+                                        setShowBankDropdown(false);
+                                        setBankSearch('');
+                                      }}
+                                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-[11px] transition hover:bg-white/5 ${selected ? 'bg-amber-500/10' : ''}`}
+                                    >
+                                      {b.logo ? (
+                                        <img src={b.logo} alt={sn} className="h-5 w-8 object-contain bg-white/5 rounded flex-shrink-0" />
+                                      ) : (
+                                        <div className="h-5 w-8 bg-white/5 rounded flex-shrink-0" />
+                                      )}
+                                      <span className={`font-bold flex-shrink-0 ${selected ? 'text-amber-400' : 'text-white'}`}>{sn}</span>
+                                      <span className="text-neutral-500 truncate text-[10px]">{b.name}</span>
+                                    </button>
+                                  );
+                                })}
+                              {bankList.filter(b => {
+                                const q = bankSearch.toLowerCase();
+                                return !q || (b.short_name || b.shortName || '').toLowerCase().includes(q) || (b.name || '').toLowerCase().includes(q);
+                              }).length === 0 && (
+                                <p className="text-center text-[10px] text-neutral-600 py-4">Không tìm thấy ngân hàng</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {withdrawErrors.bankName && <p className="mt-1 text-[9px] text-rose-400">{withdrawErrors.bankName}</p>}
+                      </div>
+
+                      {/* Số tài khoản */}
+                      <div>
+                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Số tài khoản</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={15}
+                          value={withdrawForm.accountNumber}
+                          onChange={e => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 15);
+                            setWithdrawForm(f => ({ ...f, accountNumber: digits }));
+                            setWithdrawErrors(err => ({ ...err, accountNumber: '' }));
+                          }}
+                          placeholder="8 – 15 chữ số"
+                          className={`w-full bg-black/40 border px-3 py-2 text-[11px] text-white outline-none transition font-mono tracking-widest ${withdrawErrors.accountNumber ? 'border-rose-500/70' : 'border-white/10 focus:border-amber-500/50'}`}
+                        />
+                        {withdrawErrors.accountNumber && <p className="mt-1 text-[9px] text-rose-400">{withdrawErrors.accountNumber}</p>}
+                      </div>
+
+                      {/* Chủ tài khoản */}
+                      <div>
+                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Chủ tài khoản</label>
+                        <input
+                          type="text"
+                          value={withdrawForm.accountHolder}
+                          onChange={e => {
+                            // Strip digits and special chars, auto-uppercase
+                            const cleaned = e.target.value.replace(/[^a-zA-Z\s\u00C0-\u024F\u1E00-\u1EFF]/g, '').toUpperCase();
+                            setWithdrawForm(f => ({ ...f, accountHolder: cleaned }));
+                            setWithdrawErrors(err => ({ ...err, accountHolder: '' }));
+                          }}
+                          placeholder="VD: NGUYEN VAN A"
+                          className={`w-full bg-black/40 border px-3 py-2 text-[11px] text-white outline-none transition uppercase tracking-wider ${withdrawErrors.accountHolder ? 'border-rose-500/70' : 'border-white/10 focus:border-amber-500/50'}`}
+                        />
+                        {withdrawErrors.accountHolder && <p className="mt-1 text-[9px] text-rose-400">{withdrawErrors.accountHolder}</p>}
+                      </div>
+
+                      {withdrawErrors.general && (
+                        <p className="text-[9px] text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-2">{withdrawErrors.general}</p>
+                      )}
+                      <button
+                        disabled={withdrawLoading}
+                        onClick={async () => {
+                          const errs = {};
+                          if (!withdrawForm.amount || Number(withdrawForm.amount) < 10000) errs.amount = 'Số tiền tối thiểu 10,000đ';
+                          if (!withdrawForm.bankName) errs.bankName = 'Vui lòng chọn ngân hàng';
+                          if (!withdrawForm.accountNumber || withdrawForm.accountNumber.length < 8) errs.accountNumber = 'Số tài khoản phải có tối thiểu 8 chữ số';
+                          else if (withdrawForm.accountNumber.length > 15) errs.accountNumber = 'Số tài khoản không quá 15 chữ số';
+                          if (!withdrawForm.accountHolder.trim()) errs.accountHolder = 'Vui lòng nhập tên chủ tài khoản';
+                          else if (withdrawForm.accountHolder.trim().length < 2) errs.accountHolder = 'Tên chủ tài khoản không hợp lệ';
+                          if (Object.keys(errs).length) { setWithdrawErrors(errs); return; }
+                          const { accessToken } = getStoredAuth();
+                          if (!accessToken) return;
+                          setWithdrawLoading(true);
+                          setWithdrawErrors({});
+                          try {
+                            await walletService.createWithdrawal(accessToken, {
+                              amount: Number(withdrawForm.amount),
+                              bankName: withdrawForm.bankName,
+                              accountNumber: withdrawForm.accountNumber,
+                              accountHolder: withdrawForm.accountHolder,
+                              walletPhone: withdrawForm.walletPhone || null,
+                            });
+                            const w = await walletService.getWallet(accessToken);
+                            setWallet(w);
+                            setShowWithdrawForm(false);
+                            setWithdrawForm({ amount: '', bankName: '', accountNumber: '', accountHolder: '', walletPhone: '' });
+                          } catch (e) {
+                            setWithdrawErrors({ general: e.message || 'Không thể tạo yêu cầu rút tiền. Vui lòng thử lại.' });
+                          } finally { setWithdrawLoading(false); }
+                        }}
+                        className="w-full bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest py-2.5 hover:bg-amber-400 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {withdrawLoading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <ArrowUpRight className="h-3 w-3" />}
+                        Gửi yêu cầu rút tiền
+                      </button>
+                      <p className="text-[9px] text-neutral-600 leading-relaxed">Staff sẽ xem xét và chuyển khoản thủ công trong vòng 1-3 ngày làm việc.</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             </div>
 
             {/* RIGHT SECTION: PERSONALIZED PREFERENCES & SETTINGS */}
@@ -1280,4 +1533,3 @@ export default function ProfileView() {
     </div>
   );
 }
-

@@ -191,6 +191,7 @@ public class DemoBookingSeeder implements Seeder {
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setTransactionId("DEMO-TXN-" + code);
         payment.setPaidAt(paidAt);
+
         paymentRepository.save(payment);
 
         int earnedPoints = subtotal.divide(BigDecimal.valueOf(1000), 0, RoundingMode.FLOOR).intValue();

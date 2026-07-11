@@ -101,10 +101,12 @@ export const adminService = {
   cancelShowtimeAndRefund:  (token, id, reason)  => request(`/api/v1/admin/showtimes/${enc(id)}/cancel-and-refund`, { method: 'POST', token, body: { reason } }),
   deleteAdminShowtime:      (token, id)          => showtimesApi.remove(token, id),
 
-  // Bulk refunds
-  getFailedBulkRefunds:     (token, params = {}) => request(`/api/v1/admin/bulk-refunds/failed${buildQueryString(params)}`, { token }),
-  getBulkRefundDetail:      (token, bookingId)   => request(`/api/v1/admin/bulk-refunds/${enc(bookingId)}/detail`, { token }),
-  confirmManualBulkRefund:  (token, bookingId, payload) => request(`/api/v1/admin/bulk-refunds/${enc(bookingId)}/confirm`, { method: 'POST', token, body: payload }),
+  // CineWallet
+  getWalletDashboard:       (token) => request('/api/v1/admin/wallet/dashboard', { token }),
+  getAdminWithdrawals:      (token, params = {}) => request(`/api/v1/admin/wallet/withdrawals${buildQueryString(params)}`, { token }),
+  approveWithdrawal:        (token, id, payload) => request(`/api/v1/admin/wallet/withdrawals/${enc(id)}/approve`, { method: 'POST', token, body: payload }),
+  rejectWithdrawal:         (token, id, payload) => request(`/api/v1/admin/wallet/withdrawals/${enc(id)}/reject`, { method: 'POST', token, body: payload }),
+
 
   // Loyalty points
   getLoyaltyConfiguration:    (token) => request('/api/v1/admin/loyalty/config', { token }),

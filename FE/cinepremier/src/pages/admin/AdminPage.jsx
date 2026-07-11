@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags, LogOut, MessageSquare
+  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags, LogOut, MessageSquare, Wallet
 } from 'lucide-react';
 import { expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../../services/authService';
 import { adminService } from '../../services/adminService';
@@ -19,13 +19,14 @@ import AdminTransactionsPanel from './system/AdminTransactionsPanel';
 import AdminUsersPanel from './system/AdminUsersPanel';
 import AdminLoyaltyPanel from './system/AdminLoyaltyPanel';
 import AdminReviewsPanel from './system/AdminReviewsPanel';
+import AdminWalletPanel from './system/AdminWalletPanel';
 import AdminCinemaPanel from './cinema/AdminCinemaPanel';
 import AdminRoomsPanel from './cinema/AdminRoomsPanel';
 
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies', 'foods'].includes(section)) return 'movies';
   if (['rooms', 'showtimes', 'transactions'].includes(section)) return 'cinema';
-  if (['users', 'loyalty', 'reviews'].includes(section)) return 'system';
+  if (['users', 'loyalty', 'reviews', 'cinewallet'].includes(section)) return 'system';
   return null;
 };
 
@@ -41,6 +42,7 @@ const ADMIN_SECTIONS = new Set([
   'users',
   'reviews',
   'loyalty',
+  'cinewallet',
   'cinema'
 ]);
 
@@ -1477,6 +1479,7 @@ export default function AdminDashboard({
     transactions: AdminTransactionsPanel,
     users: AdminUsersPanel,
     reviews: AdminReviewsPanel,
+    cinewallet: AdminWalletPanel,
     loyalty: AdminLoyaltyPanel,
     cinema: AdminCinemaPanel,
     rooms: AdminRoomsPanel
@@ -1727,6 +1730,20 @@ export default function AdminDashboard({
                       <span>QUẢN LÝ ĐIỂM</span>
                     </span>
                     {activeTab === 'loyalty' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+
+                  <button
+                    onClick={() => { playPulseSound(525, 'sine', 0.05); changeAdminSection('cinewallet'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'cinewallet'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <Wallet className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span>CINEWALLET</span>
+                    </span>
+                    {activeTab === 'cinewallet' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                 </motion.div>
