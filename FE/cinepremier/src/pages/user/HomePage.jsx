@@ -8,6 +8,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getStoredAuth } from '../../services/authService';
 import { movieService } from '../../services/movieService';
 import { recommendationService } from '../../services/recommendationService';
+import { bookingService } from '../../services/bookingService';
+import { wishlistService } from '../../services/wishlistService';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
   const trimmed = url.trim();
@@ -79,6 +81,8 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const currentUser = useAuthStore((state) => state.currentUser);
   const [personalRecs, setPersonalRecs] = useState([]);
+  const [favoriteGenreMovies, setFavoriteGenreMovies] = useState([]);
+  const [favoriteGenres, setFavoriteGenres] = useState([]);
 
   // Filter movies for "Now Playing" and "Upcoming"
   const sourceMovies = Array.isArray(moviesList) ? moviesList : [];
@@ -236,6 +240,52 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       cancelled = true;
     };
   }, [isLoggedIn, currentUser?.id]);
+
+  // Tính genre yêu thích từ lịch sử đặt vé + wishlist, lọc phim phù hợp
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.id) {
+      setFavoriteGenreMovies([]);
+      setFavoriteGenres([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const { accessToken } = getStoredAuth();
+    Promise.all([
+      bookingService.getMyBookings(accessToken).catch(() => []),
+      wishlistService.getWishlist(accessToken).catch(() => [])
+    ]).then(([bookings, wishlist]) => {
+      if (cancelled) return;
+      const genreCount = {};
+      const countGenres = (movie) => {
+        const genres = movie?.genres || movie?.genreNames || [];
+        genres.forEach((g) => {
+          const name = typeof g === 'string' ? g : g?.name || g?.genreName;
+          if (name) genreCount[name] = (genreCount[name] || 0) + 1;
+        });
+      };
+      (bookings || []).forEach((b) => countGenres(b.movie || b));
+      (wishlist || []).forEach((w) => countGenres(w.movie || w));
+
+      const sorted = Object.entries(genreCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name]) => name);
+
+      if (!cancelled) setFavoriteGenres(sorted);
+
+      if (sorted.length && publicMovies.length) {
+        const matched = publicMovies.filter((m) => {
+          const mg = m?.genres || m?.genreNames || [];
+          return mg.some((g) => {
+            const n = typeof g === 'string' ? g : g?.name || g?.genreName;
+            return sorted.includes(n);
+          });
+        });
+        if (!cancelled) setFavoriteGenreMovies(matched.slice(0, 12));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [isLoggedIn, currentUser?.id, publicMovies.length]);
 
   // Enrich a recommendation item with full movie data (synopsis, status…) when we already have it.
   const enrichRecommendation = (rec) => {
@@ -567,6 +617,66 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
           </section>
         );
       })()}
+
+      {/* 4. FAVORITE GENRE MOVIES */}
+      {isLoggedIn && favoriteGenreMovies.length > 0 && (
+        <section className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8" id="favorite-genre-section">
+          <div className="relative pb-4 mb-8">
+            <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+            <div className="flex items-center gap-3 mb-1">
+              <Sparkles className="h-4 w-4 text-amber-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-400">Dựa trên sở thích của bạn</span>
+            </div>
+            <h2 className="text-2xl font-serif font-light text-white tracking-wide">
+              Thể Loại Yêu Thích
+              {favoriteGenres.length > 0 && (
+                <span className="ml-3 text-sm font-sans font-normal text-neutral-400 tracking-[0.1em]">
+                  {favoriteGenres.join(' · ')}
+                </span>
+              )}
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {favoriteGenreMovies.map((movie) => (
+              <button
+                key={movie.id}
+                type="button"
+                onClick={() => onSelectMovie(movie.id)}
+                className="group relative text-left bg-neutral-950 border border-white/10 hover:border-amber-400/40 transition overflow-hidden cursor-pointer"
+              >
+                <div className="aspect-[2/3] w-full overflow-hidden bg-black">
+                  {movie.posterUrl ? (
+                    <img
+                      src={movie.posterUrl}
+                      alt={movie.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
+                  )}
+                </div>
+                <div className="p-2.5 space-y-1">
+                  <p className="text-xs font-serif text-white leading-snug line-clamp-2">{movie.title}</p>
+                  <p className="text-[9px] text-neutral-500 uppercase tracking-wider">
+                    {(movie.genres || movie.genreNames || []).slice(0, 2).map((g) => typeof g === 'string' ? g : g?.name).filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                {(movie.status === 'NOW_SHOWING') && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onBookMovie(movie); }}
+                    className="absolute bottom-0 left-0 right-0 bg-amber-400 text-black text-[9px] font-black uppercase tracking-[0.18em] py-1.5 opacity-0 group-hover:opacity-100 transition"
+                  >
+                    Đặt vé
+                  </button>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 5. DISCOVER GENRES ARTWORK */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8" id="genres-section">
