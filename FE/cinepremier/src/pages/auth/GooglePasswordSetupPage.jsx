@@ -180,7 +180,7 @@ export default function GooglePasswordSetupPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex w-full items-center justify-center gap-2 border border-white bg-white px-5 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-black transition hover:bg-amber-300 hover:border-amber-300 disabled:cursor-wait disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 border border-white bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-amber-300 hover:border-amber-300 disabled:cursor-wait disabled:opacity-60"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Đổi mật khẩu và vào hệ thống

@@ -649,7 +649,7 @@ export default function StaffCheckInPage() {
                   <button
                     type="button"
                     onClick={isCameraOpen ? stopQrScanner : startQrScanner}
-                    className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-[#070707] px-4 py-3 text-[9px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-emerald-400 hover:text-white"
+                    className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-[#070707] px-4 py-3 text-[9px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white"
                   >
                     {isCameraOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
                     {isCameraOpen ? 'Tắt camera' : 'Mở camera quét QR'}
@@ -686,7 +686,7 @@ export default function StaffCheckInPage() {
                     type="button"
                     onClick={() => lookupBooking({ preferQr: true })}
                     disabled={isLookingUp || !qrCode.trim()}
-                    className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
                   >
                     {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Kiểm tra mã
                   </button>
@@ -694,7 +694,7 @@ export default function StaffCheckInPage() {
                     type="button"
                     onClick={() => checkInByQr()}
                     disabled={isCheckingIn || !qrCode.trim()}
-                    className="flex items-center justify-center gap-2 bg-emerald-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-black transition hover:bg-emerald-300 disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 bg-emerald-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-300 disabled:opacity-50"
                   >
                     {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} Xác nhận check-in
                   </button>
@@ -720,7 +720,7 @@ export default function StaffCheckInPage() {
                   type="button"
                   onClick={() => lookupBooking()}
                   disabled={isLookingUp || !bookingCode.trim()}
-                  className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-purple-400 hover:text-white disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-purple-400 hover:text-white disabled:opacity-50"
                 >
                   {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tra cứu booking
                 </button>
@@ -729,7 +729,7 @@ export default function StaffCheckInPage() {
                     type="button"
                     onClick={() => checkInByQr(result.booking.qrCode)}
                     disabled={isCheckingIn}
-                    className="flex w-full items-center justify-center gap-2 border border-emerald-400/40 bg-emerald-400/10 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300 transition hover:bg-emerald-400 hover:text-black disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 border border-emerald-400/40 bg-emerald-400/10 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300 transition hover:bg-emerald-400 hover:text-black disabled:opacity-50"
                   >
                     {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Check-in booking vừa tra
                   </button>
@@ -761,7 +761,7 @@ export default function StaffCheckInPage() {
                 type="button"
                 onClick={loadShowtimeBookings}
                 disabled={isLoadingShowtime || !showtimeId.trim()}
-                className="flex items-center justify-center gap-2 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-black transition hover:bg-emerald-400 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-400 disabled:opacity-50"
               >
                 {isLoadingShowtime ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tải danh sách
               </button>
@@ -772,7 +772,7 @@ export default function StaffCheckInPage() {
                     setShowtimeBookings([]);
                     setShowtimeError('');
                   }}
-                  className="border border-neutral-700 bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-white hover:text-white"
+                  className="border border-neutral-700 bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-white hover:text-white"
                 >
                   Về danh sách phiên
                 </button>
@@ -858,7 +858,7 @@ export default function StaffCheckInPage() {
               </tbody>
             </table>
           </div>
-          <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500">
+          <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
             <span>Trang {failedRefundPage + 1}/{failedRefundTotalPages}</span>
             <div className="flex gap-2">
               <button
@@ -924,7 +924,7 @@ export default function StaffCheckInPage() {
                 className="w-full bg-transparent text-xs font-bold text-white outline-none placeholder:text-neutral-600"
               />
             </div>
-            <span className="shrink-0 px-1 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500">
+            <span className="shrink-0 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
               {filteredStaffFoods.length}/{staffFoods.length} kết quả
             </span>
           </div>
@@ -964,7 +964,7 @@ export default function StaffCheckInPage() {
               </div>
             )}
           </div>
-          <div className="mt-4 flex flex-col gap-3 border border-neutral-800 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-4 flex flex-col gap-3 border border-neutral-800 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
             <span>
               Hiển thị {staffFoodDisplayStart}-{staffFoodDisplayEnd}/{filteredStaffFoods.length} món - Trang {safeStaffFoodPage}/{staffFoodTotalPages}
             </span>

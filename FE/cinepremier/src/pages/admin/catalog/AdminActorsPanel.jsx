@@ -57,29 +57,29 @@ export default function AdminActorsPanel({ ctx }) {
     >
       <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
         <span className="text-[12px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black">ADMIN ACTOR</span>
-        <h2 className="text-lg font-sans font-black uppercase tracking-wider text-white mt-1">Quản lý diễn viên</h2>
+        <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">Quản lý diễn viên</h2>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-5 items-start">
         <form onSubmit={handleActorSubmit} className="border border-neutral-850 bg-[#070707] p-4 space-y-4">
           <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
-            <h3 className="text-sm font-black uppercase text-white">{editingActorId ? 'Cập nhật diễn viên' : 'Thêm diễn viên'}</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">{editingActorId ? 'Cập nhật diễn viên' : 'Thêm diễn viên'}</h3>
             {editingActorId && <button type="button" onClick={resetActorForm} className="text-[10px] uppercase text-amber-300">Hủy sửa</button>}
           </div>
 
           <label className="block space-y-1">
-            <span className="text-[9px] uppercase text-neutral-400">Tên diễn viên ({actorForm.name.length}/50)</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400">Tên diễn viên ({actorForm.name.length}/50)</span>
             <input value={actorForm.name} maxLength={50} onChange={(event) => updateField('name', event.target.value)} className="w-full bg-black border border-neutral-800 p-2.5 text-sm text-white focus:outline-none focus:border-amber-400" />
             {actorErrors.name && <span className="text-[10px] text-rose-400">{actorErrors.name}</span>}
           </label>
 
           <label className="block space-y-1">
-            <span className="text-[9px] uppercase text-neutral-400">Tiểu sử ({actorForm.biography.length}/1000)</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400">Tiểu sử ({actorForm.biography.length}/1000)</span>
             <textarea value={actorForm.biography} maxLength={1000} rows={6} onChange={(event) => updateField('biography', event.target.value)} className="w-full resize-none bg-black border border-neutral-800 p-2.5 text-sm text-white focus:outline-none focus:border-amber-400" />
           </label>
 
           <div className="space-y-2">
-            <span className="text-[9px] uppercase text-neutral-400 block">Ảnh đại diện</span>
+            <span className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400 block">Ảnh đại diện</span>
             {actorForm.avatarUrl && (
               <div className="space-y-1">
                 <img src={actorForm.avatarUrl} alt="Actor preview" className="w-full h-48 object-cover border border-neutral-800 bg-black" />
@@ -101,7 +101,7 @@ export default function AdminActorsPanel({ ctx }) {
 
         <div className="border border-neutral-850 bg-neutral-950 overflow-hidden">
           <div className="p-3 border-b border-neutral-850 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-black uppercase text-white">{totalItems} diễn viên</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">{totalItems} diễn viên</h3>
             <div className="relative w-full max-w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-600" />
               <input value={actorSearch} onChange={handleActorSearchChange} placeholder="Tìm diễn viên..." className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-amber-400" />

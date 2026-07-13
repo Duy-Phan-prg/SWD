@@ -510,7 +510,7 @@ export default function AdminMoviesPanel({ ctx }) {
                   setSearchQuery(e.target.value);
                   setAdminMoviePagination((prev) => ({ ...prev, page: 0 }));
                 }}
-                className="w-full bg-black border border-neutral-800 focus:border-amber-400 p-2.5 pl-10 text-xs text-white focus:outline-none focus:ring-0 placeholder-neutral-700 font-sans"
+                className="w-full bg-black border border-neutral-800 focus:border-amber-400 p-2.5 pl-10 text-xs text-white focus:outline-none focus:ring-0 placeholder-neutral-600 font-sans"
                 id="search-all-movies-input"
               />
             </div>
@@ -598,7 +598,7 @@ export default function AdminMoviesPanel({ ctx }) {
                 <form onSubmit={handleCreateMovieSubmit} className="space-y-4 text-xs font-sans">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 font-extrabold block">Tên tác phẩm (Tiếng Việt viết Hoa)</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">Tên tác phẩm (Tiếng Việt viết Hoa)</label>
                       <input
                         type="text"
                         placeholder="VD: CHIẾN BINH ÁNH SÁNG (tối đa 50 ký tự)"
@@ -610,7 +610,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-neutral-500 font-extrabold block">Tên tiếng Anh hoặc tiêu đề gốc</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">Tên tiếng Anh hoặc tiêu đề gốc</label>
                       <input
                         type="text"
                         placeholder="VD: Dawn of Light (tối đa 30 ký tự)"
@@ -624,7 +624,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-1.5 md:col-span-2">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Đạo diễn</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Đạo diễn</label>
                       <div className="relative">
                         <button
                           type="button"
@@ -729,7 +729,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Thể loại (Ngăn nhau bởi dấu phẩy)</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Thể loại (Ngăn nhau bởi dấu phẩy)</label>
                       <input
                         type="text"
                         placeholder="Chọn ít nhất 1 thể loại bên dưới"
@@ -766,7 +766,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Thời lượng (Số phút)</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Thời lượng (Số phút)</label>
                       <input
                         type="number"
                         placeholder="60 - 180 phút"
@@ -779,7 +779,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Độ tuổi phân loại</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Độ tuổi phân loại</label>
                       <select
                         value={formData.ageRating}
                         onChange={(e) => setFormData({ ...formData, ageRating: e.target.value })}
@@ -795,7 +795,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Ngày phát hành</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Ngày phát hành</label>
                       <input
                         type={focusedDateField === 'release' ? 'date' : 'text'}
                         lang="en-GB"
@@ -821,7 +821,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Ngày kết thúc</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Ngày kết thúc</label>
                       <input
                         type={focusedDateField === 'end' ? 'date' : 'text'}
                         lang="en-GB"
@@ -849,7 +849,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Ngôn ngữ</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Ngôn ngữ</label>
                       <input
                         type="text"
                         placeholder="VD: Tiếng Việt (tối đa 30 ký tự)"
@@ -861,7 +861,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Phụ đề</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Phụ đề</label>
                       <input
                         type="text"
                         placeholder="VD: EN Sub (tối đa 30 ký tự)"
@@ -876,7 +876,7 @@ export default function AdminMoviesPanel({ ctx }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2 space-y-2 border border-neutral-800 bg-black p-3">
                       <div className="flex items-center justify-between gap-3">
-                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Chọn diễn viên và vai chính</label>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Chọn diễn viên và vai chính</label>
                         <span className="text-[9px] text-neutral-500">
                           {selectedActorIds.length} diễn viên, {selectedMainActorIds.length} vai chính
                         </span>
@@ -1034,7 +1034,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
                     <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-3 gap-3 border border-neutral-850 bg-neutral-950/40 p-3">
                       <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Trailer *</label>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Trailer *</label>
                         <div className="flex items-center gap-2">
                           <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isTrailerUploading ? 'pointer-events-none opacity-60' : ''}`}>
                             {isTrailerUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <Video className="h-3 w-3 shrink-0" />}
@@ -1052,7 +1052,7 @@ export default function AdminMoviesPanel({ ctx }) {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Poster đứng *</label>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Poster đứng *</label>
                         <div className="flex items-center gap-2">
                           <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isPosterUploading ? 'pointer-events-none opacity-60' : ''}`}>
                             {isPosterUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <ImageUp className="h-3 w-3 shrink-0" />}
@@ -1069,7 +1069,7 @@ export default function AdminMoviesPanel({ ctx }) {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase tracking-wider text-[#A1B0B8] block">Banner ngang *</label>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Banner ngang *</label>
                         <div className="flex items-center gap-2">
                           <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isBannerUploading ? 'pointer-events-none opacity-60' : ''}`}>
                             {isBannerUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <ImageUp className="h-3 w-3 shrink-0" />}

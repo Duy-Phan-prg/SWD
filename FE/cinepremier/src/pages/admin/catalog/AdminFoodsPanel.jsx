@@ -148,7 +148,7 @@ export default function AdminFoodsPanel({ ctx }) {
         >
           <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
             <span className="text-[12px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black block">ADMIN FOOD</span>
-            <h2 className="text-lg font-sans font-black uppercase tracking-wider text-white mt-1">Quản lý bắp nước & combo</h2>
+            <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">Quản lý bắp nước & combo</h2>
           </div>
 
           <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
@@ -158,7 +158,7 @@ export default function AdminFoodsPanel({ ctx }) {
                   <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-neutral-500 font-black">
                     {editingFood ? 'Chỉnh sửa món' : 'Tạo món mới'}
                   </span>
-                  <h3 className="text-sm font-sans font-black uppercase tracking-wider text-white mt-1">
+                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">
                     {foodKind === 'combo' ? 'Combo bắp nước' : 'Món lẻ'}
                   </h3>
                 </div>
@@ -190,7 +190,7 @@ export default function AdminFoodsPanel({ ctx }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Tên món</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Tên món</label>
                 <input
                   value={foodForm.name}
                   onChange={(e) => {
@@ -205,7 +205,7 @@ export default function AdminFoodsPanel({ ctx }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Giá bán</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Giá bán</label>
                   <input
                     type="number"
                     min="1"
@@ -219,7 +219,7 @@ export default function AdminFoodsPanel({ ctx }) {
                   {foodErrors.price && <p className="text-[10px] text-rose-400 font-bold">{foodErrors.price}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Trạng thái</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Trạng thái</label>
                   <select
                     value={foodForm.status}
                     onChange={(e) => setFoodForm((prev) => ({ ...prev, status: e.target.value }))}
@@ -233,7 +233,7 @@ export default function AdminFoodsPanel({ ctx }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Hình ảnh món</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Hình ảnh món</label>
                 {foodForm.imageUrl && (
                   <div className="space-y-1">
                     <div className="overflow-hidden border border-neutral-850 bg-black">
@@ -266,7 +266,7 @@ export default function AdminFoodsPanel({ ctx }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Mô tả</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Mô tả</label>
                 <textarea
                   value={foodForm.description}
                   maxLength={500}
@@ -293,7 +293,7 @@ export default function AdminFoodsPanel({ ctx }) {
               <div className="p-4 border-b border-neutral-850 flex flex-col md:flex-row md:items-center gap-3 justify-between">
                 <div>
                   <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-[0.2em] font-black">Danh sách món</span>
-                  <h3 className="text-sm font-sans font-black uppercase tracking-wider text-white mt-1">
+                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">
                     {foodItems.length + foodCombos.length} món đang quản lý
                   </h3>
                 </div>

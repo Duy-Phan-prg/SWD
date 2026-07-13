@@ -54,7 +54,7 @@ export default function AdminGenresPanel({ ctx }) {
           <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
             <div>
               <span className="text-[12px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black block">ADMIN GENRE</span>
-              <h2 className="text-lg font-sans font-black uppercase tracking-wider text-white mt-1">Quản trị thể loại phim</h2>
+              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">Quản trị thể loại phim</h2>
             </div>
           </div>
 
@@ -66,7 +66,7 @@ export default function AdminGenresPanel({ ctx }) {
                   <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-neutral-500 font-black">
                     {editingGenreId ? 'Chỉnh sửa bản ghi' : 'Tạo bản ghi mới'}
                   </span>
-                  <h3 className="text-sm font-sans font-black uppercase tracking-wider text-white mt-1">
+                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">
                     {editingGenreId ? 'Cập nhật thể loại' : 'Thêm thể loại'}
                   </h3>
                 </div>
@@ -84,7 +84,7 @@ export default function AdminGenresPanel({ ctx }) {
               <form onSubmit={handleGenreSubmit} className="space-y-4 text-xs font-sans">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Tên thể loại</label>
+                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Tên thể loại</label>
                     <span className={`text-[9px] font-mono ${genreForm.name.length > 100 ? 'text-rose-400' : 'text-neutral-600'}`}>
                       {genreForm.name.length}/100
                     </span>
@@ -109,7 +109,7 @@ export default function AdminGenresPanel({ ctx }) {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[9px] uppercase tracking-wider text-neutral-400 font-extrabold">Mô tả</label>
+                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Mô tả</label>
                     <span className={`text-[9px] font-mono ${genreForm.description.length < 50 || genreForm.description.length > 1000 ? 'text-rose-400' : 'text-neutral-600'}`}>
                       {genreForm.description.length}/1000
                     </span>
@@ -151,7 +151,7 @@ export default function AdminGenresPanel({ ctx }) {
               <div className="p-3 border-b border-neutral-850 flex flex-col md:flex-row md:items-center gap-3 justify-between">
                 <div>
                   <span className="text-[8px] font-mono text-white uppercase tracking-[0.2em] font-black">Danh sách loại phim</span>
-                  <h3 className="text-sm font-sans font-black uppercase tracking-wider text-white mt-1">
+                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">
                     {totalItems} thể loại đã đồng bộ
                   </h3>
                 </div>

@@ -773,7 +773,7 @@ export default function AuthModal({
                         </p>
 
                         <div className="space-y-1.5 focus-within:text-white">
-                          <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                          <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                             Số Điện Thoại VIP
                           </label>
                           <div className="relative">
@@ -784,7 +784,7 @@ export default function AuthModal({
                               placeholder="09xx xxx xxx..."
                               value={phoneNumber}
                               onChange={(e) => setPhoneNumber(e.target.value)}
-                              className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-14 pr-4 text-xs font-mono font-bold tracking-widest text-white focus:outline-none transition-all placeholder-neutral-800"
+                              className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-14 pr-4 text-xs font-mono font-bold tracking-widest text-white focus:outline-none transition-all placeholder-neutral-600"
                             />
                           </div>
                         </div>
@@ -809,7 +809,7 @@ export default function AuthModal({
                         </div>
 
                         <div className="space-y-1.5 focus-within:text-amber-400">
-                          <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                          <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                             Nhập 6 số bảo an
                           </label>
                           <input
@@ -819,7 +819,7 @@ export default function AuthModal({
                             placeholder="● ● ● ● ● ●"
                             value={localOtp}
                             onChange={(e) => setLocalOtp(e.target.value)}
-                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-3.5 text-center text-sm font-mono font-black tracking-[0.8em] text-white focus:outline-none transition-all placeholder-neutral-800"
+                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-3.5 text-center text-sm font-mono font-black tracking-[0.8em] text-white focus:outline-none transition-all placeholder-neutral-600"
                           />
                         </div>
 
@@ -854,7 +854,7 @@ export default function AuthModal({
                     </p>
 
                     <div className="space-y-1.5 focus-within:text-white">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Địa Chỉ Email
                       </label>
                       <div className="relative">
@@ -865,13 +865,13 @@ export default function AuthModal({
                           placeholder="Nhập email của bạn..."
                           value={loginEmail}
                           onChange={(e) => setLoginEmail(e.target.value)}
-                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-4 text-xs font-sans text-white focus:outline-none transition-all placeholder-neutral-500"
+                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-4 text-xs font-sans text-white focus:outline-none transition-all placeholder-neutral-600"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1.5 focus-within:text-white">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Mật Khẩu Bảo Mật
                       </label>
                       <div className="relative">
@@ -882,7 +882,7 @@ export default function AuthModal({
                           placeholder="••••••••••••"
                           value={loginPass}
                           onChange={(e) => setLoginPass(e.target.value)}
-                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white tracking-widest focus:outline-none transition-all placeholder-neutral-850"
+                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white tracking-widest focus:outline-none transition-all placeholder-neutral-600"
                         />
                         <button
                           type="button"
@@ -1024,7 +1024,7 @@ export default function AuthModal({
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Mã OTP Email
                       </label>
                       <div className="relative">
@@ -1037,7 +1037,7 @@ export default function AuthModal({
                           placeholder="Nhap 6 so OTP..."
                           value={regOtp}
                           onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-3 pl-9 pr-3 text-sm font-mono tracking-[0.4em] text-white focus:outline-none transition-all placeholder-neutral-800"
+                          className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-3 pl-9 pr-3 text-sm font-mono tracking-[0.4em] text-white focus:outline-none transition-all placeholder-neutral-600"
                         />
                       </div>
                     </div>
@@ -1062,7 +1062,7 @@ export default function AuthModal({
                           setRegisterStep('form');
                           setRegOtp('');
                         }}
-                        className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans tracking-widest py-3.5 hover:text-white transition cursor-pointer"
+                        className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans font-black tracking-[0.18em] py-3.5 hover:text-white transition cursor-pointer"
                       >
                         Quay lai
                       </button>
@@ -1081,7 +1081,7 @@ export default function AuthModal({
 
                     {/* Avatar Preset Grid - Extremely satisfying UI */}
                     <div className="space-y-2">
-                      <span className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300 mb-1 flex items-center gap-1">
+                      <span className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300 mb-1 flex items-center gap-1">
                         <Sparkle className="h-3 w-3 text-amber-400" /> CHỌN DANH TÍNH AVATAR ĐIỆN ẢNH
                       </span>
                       <div className="grid grid-cols-5 gap-2" id="avatar-presets-box">
@@ -1116,7 +1116,7 @@ export default function AuthModal({
 
                       {/* Full Name */}
                       <div className="space-y-1">
-                        <label className="block text-[10px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                        <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                           Họ & Tên Thượng Khách
                         </label>
                         <div className="relative">
@@ -1128,7 +1128,7 @@ export default function AuthModal({
                             placeholder="Minh Hồng..."
                             value={regName}
                             onChange={(e) => setRegName(normalizeNameInput(e.target.value))}
-                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none transition-all placeholder-neutral-800"
+                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none transition-all placeholder-neutral-600"
                           />
                         </div>
                         <p className="text-[9px] text-neutral-600 font-mono text-right">{regName.length}/{MAX_NAME_LENGTH}</p>
@@ -1136,7 +1136,7 @@ export default function AuthModal({
 
                       {/* Contact Phone */}
                       <div className="space-y-1">
-                        <label className="block text-[10px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                        <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                           Số Điện Thoại Nhận Vé
                         </label>
                         <div className="relative">
@@ -1150,7 +1150,7 @@ export default function AuthModal({
                             placeholder="0912345678"
                             value={regPhone}
                             onChange={(e) => setRegPhone(normalizePhoneInput(e.target.value))}
-                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-3 text-xs font-mono tracking-wide text-white focus:outline-none transition-all placeholder-neutral-800"
+                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-3 text-xs font-mono tracking-wide text-white focus:outline-none transition-all placeholder-neutral-600"
                           />
                         </div>
                         <p className="text-[9px] text-neutral-600 font-mono">10 số, bắt đầu 03/05/08/09</p>
@@ -1160,7 +1160,7 @@ export default function AuthModal({
 
                     {/* Year of Birth */}
                     <div className="space-y-1">
-                      <label className="block text-[10px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Năm Sinh
                       </label>
                       <input
@@ -1181,7 +1181,7 @@ export default function AuthModal({
 
                       {/* Email */}
                       <div className="space-y-1">
-                        <label className="block text-[9px] font-sans font-black uppercase tracking-wider text-neutral-500">
+                        <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-400">
                           Địa Chỉ Email
                         </label>
                         <div className="relative">
@@ -1192,14 +1192,14 @@ export default function AuthModal({
                             placeholder="tuan01062004kt@gmail.com..."
                             value={regEmail}
                             onChange={(e) => setRegEmail(e.target.value)}
-                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none transition-all placeholder-neutral-800"
+                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none transition-all placeholder-neutral-600"
                           />
                         </div>
                       </div>
 
                       {/* Password Registration */}
                       <div className="space-y-1">
-                        <label className="block text-[9px] font-sans font-black uppercase tracking-wider text-neutral-500">
+                        <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-400">
                           Đặt Mật Khẩu Khóa
                         </label>
                         <div className="relative">
@@ -1210,7 +1210,7 @@ export default function AuthModal({
                             placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt..."
                             value={regPassword}
                             onChange={(e) => setRegPassword(e.target.value)}
-                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-850"
+                            className="w-full border border-neutral-800 focus:border-amber-400 bg-neutral-950 py-2.5 pl-9 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-600"
                           />
                           <button
                             type="button"
@@ -1227,7 +1227,7 @@ export default function AuthModal({
 
                     {/* Favorite Genre Selection */}
                     <div className="space-y-1.5">
-                      <span className="block text-[10px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <span className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Gu phim yêu thích để nhận gợi ý phù hợp
                       </span>
                       <div className="flex flex-wrap gap-1.5" id="genre-box">
@@ -1294,7 +1294,7 @@ export default function AuthModal({
                 {forgotStep === 1 && (
                   <form onSubmit={handleSendForgotOTP} className="space-y-4">
                     <div className="space-y-1.5 focus-within:text-white">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Email Đăng Ký Hội Viên
                       </label>
                       <div className="relative">
@@ -1305,7 +1305,7 @@ export default function AuthModal({
                           placeholder="Nhập email của quý khách (Vd: kh@gmail.com)..."
                           value={forgotEmail}
                           onChange={(e) => setForgotEmail(e.target.value)}
-                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-4 text-xs font-sans text-white focus:outline-none transition-all placeholder-neutral-700"
+                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-4 text-xs font-sans text-white focus:outline-none transition-all placeholder-neutral-600"
                         />
                       </div>
                     </div>
@@ -1339,7 +1339,7 @@ export default function AuthModal({
                     </div>
 
                     <div className="space-y-1.5 focus-within:text-amber-400">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Nhập mã OTP
                       </label>
                       <input
@@ -1350,7 +1350,7 @@ export default function AuthModal({
                         placeholder="Nhập mã OTP gồm 6 chữ số..."
                         value={forgotOtp}
                         onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        className="w-full border border-neutral-800 focus:border-amber-500 bg-neutral-950 py-3 px-3 text-xs font-mono font-black text-white focus:outline-none transition-all placeholder-neutral-800"
+                        className="w-full border border-neutral-800 focus:border-amber-500 bg-neutral-950 py-3 px-3 text-xs font-mono font-black text-white focus:outline-none transition-all placeholder-neutral-600"
                       />
                     </div>
 
@@ -1358,7 +1358,7 @@ export default function AuthModal({
                       <button
                         type="button"
                         onClick={() => { playPing(300, 'sine', 0.1); setForgotStep(1); }}
-                        className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans tracking-widest py-3.5 hover:text-white transition cursor-pointer"
+                        className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans font-black tracking-[0.18em] py-3.5 hover:text-white transition cursor-pointer"
                       >
                         Quay Lại
                       </button>
@@ -1380,7 +1380,7 @@ export default function AuthModal({
                 {forgotStep === 3 && (
                   <form onSubmit={handleUpdatePassword} className="space-y-4">
                     <div className="space-y-1.5 focus-within:text-white">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Thiết lập mật khẩu mới
                       </label>
                       <div className="relative">
@@ -1391,7 +1391,7 @@ export default function AuthModal({
                           placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt..."
                           value={forgotNewPass}
                           onChange={(e) => setForgotNewPass(e.target.value)}
-                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-500"
+                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-600"
                         />
                         <button
                           type="button"
@@ -1404,7 +1404,7 @@ export default function AuthModal({
                     </div>
 
                     <div className="space-y-1.5 focus-within:text-white">
-                      <label className="block text-[11px] font-sans font-extrabold uppercase tracking-wider text-neutral-300">
+                      <label className="block text-[10px] font-sans font-black uppercase tracking-[0.18em] text-neutral-300">
                         Xác nhận mật khẩu mới
                       </label>
                       <div className="relative">
@@ -1415,7 +1415,7 @@ export default function AuthModal({
                           placeholder="Nhập lại mật khẩu mới..."
                           value={forgotConfirmPass}
                           onChange={(e) => setForgotConfirmPass(e.target.value)}
-                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-500"
+                          className="w-full border border-neutral-800 focus:border-amber-400/70 bg-neutral-950 py-3 pl-10 pr-10 text-xs text-white focus:outline-none transition-all placeholder-neutral-600"
                         />
                       </div>
                     </div>
@@ -1424,7 +1424,7 @@ export default function AuthModal({
                       <button
                         type="button"
                         onClick={() => { playPing(300, 'sine', 0.1); setForgotStep(2); }}
-                        className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans tracking-widest py-3.5 hover:text-white transition cursor-pointer"
+                        className="w-1/3 border border-neutral-800 bg-[#060606] text-neutral-400 text-[10px] uppercase font-sans font-black tracking-[0.18em] py-3.5 hover:text-white transition cursor-pointer"
                       >
                         Quay Lại OTP
                       </button>

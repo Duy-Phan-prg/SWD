@@ -311,7 +311,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
   return (
     <div className="space-y-2">
       {label && (
-        <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold block">{label}</label>
+        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">{label}</label>
       )}
       {/* Date row */}
       <div className="relative">
@@ -1099,7 +1099,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-sm font-black uppercase tracking-widest text-white font-sans">Quản lý Suất Chiếu</h2>
+          <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white">Quản lý Suất Chiếu</h2>
           <p className="text-[13px] text-zinc-520 mt-0.5">Tạo, chỉnh sửa và giám sát lịch chiếu phim</p>
         </div>
         {mode === 'list' && (
@@ -1131,14 +1131,14 @@ export default function AdminShowtimesPanel({ ctx }) {
         {(mode === 'create' || mode === 'edit') && (
           <motion.div key="form-single" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="border border-zinc-800 bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-6">
-            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-300 mb-4 pb-2 border-b border-zinc-900">
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mb-4 pb-2 border-b border-zinc-900">
               {mode === 'edit' ? '✏️ Chỉnh sửa suất chiếu' : '➕ Tạo suất chiếu mới'}
             </h3>
             <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
 
               {/* Movie */}
               <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phim *</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Phim *</label>
                 <select value={form.movieId} onChange={e => {
                   const nextMovieId = e.target.value;
                   const nextMovie = findUiMovie(nextMovieId);
@@ -1159,7 +1159,7 @@ export default function AdminShowtimesPanel({ ctx }) {
 
               {/* Room */}
               <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phòng chiếu *</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Phòng chiếu *</label>
                 <select value={form.roomId} onChange={e => setForm({ ...form, roomId: e.target.value })}
                   className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                   <option value="">-- Chọn phòng --</option>
@@ -1183,7 +1183,7 @@ export default function AdminShowtimesPanel({ ctx }) {
 
               {/* Status */}
               <div className="space-y-1.5">
-                <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Trạng thái ban đầu</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Trạng thái ban đầu</label>
                 <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
                   className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                   <option value="SCHEDULED">SCHEDULED — lên lịch, chưa bán</option>
@@ -1215,7 +1215,7 @@ export default function AdminShowtimesPanel({ ctx }) {
             className="border border-amber-500/30 bg-gradient-to-b from-[#0d0900] to-[#040404] p-6">
             <div className="flex items-center gap-2 mb-4 pb-2 border-b border-zinc-900">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <h3 className="text-xs font-black uppercase tracking-wider text-amber-300">Tạo hàng loạt suất chiếu</h3>
+              <h3 className="text-sm font-black uppercase tracking-[0.18em] text-amber-300">Tạo hàng loạt suất chiếu</h3>
 
             </div>
             <form onSubmit={handleBulkSubmit} className="space-y-5 text-xs font-sans">
@@ -1223,7 +1223,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               {/* Shared fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Phim *</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Phim *</label>
                   <select value={bulkForm.movieId} onChange={e => {
                     const nextMovieId = e.target.value;
                     const nextMovie = findUiMovie(nextMovieId);
@@ -1247,7 +1247,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                   {errors.movieId && <p className="text-rose-400 text-[9px]">{errors.movieId}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Trạng thái mặc định</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Trạng thái mặc định</label>
                   <select value={bulkForm.defaultStatus} onChange={e => setBulkForm({ ...bulkForm, defaultStatus: e.target.value })}
                     className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                     <option value="SCHEDULED">SCHEDULED — lên lịch, chưa bán</option>
@@ -1266,7 +1266,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               <div className="space-y-4 border border-zinc-900 bg-zinc-950/40 p-4">
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                   <div>
-                    <label className="text-[9px] uppercase tracking-wider text-amber-500 font-bold">
+                    <label className="text-[10px] uppercase tracking-[0.18em] text-amber-500 font-black">
                       Khung giờ có thể chiếu ({selectedBulkSlotsCount}/{bulkForm.slots.length} đã chọn)
                     </label>
                     <p className="text-[10px] text-zinc-400 mt-1">
@@ -1289,7 +1289,7 @@ export default function AdminShowtimesPanel({ ctx }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-start">
                   <div className="space-y-2">
-                    <label className="text-[9px] uppercase tracking-wider text-zinc-300 font-bold">Phòng chiếu *</label>
+                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 font-black">Phòng chiếu *</label>
                     <select value={activeBulkSlot?.roomId || ''}
                       onChange={e => updateBulkSlot(activeBulkSlotIndex, { roomId: e.target.value, selected: true })}
                       className="w-full bg-black border border-zinc-800 p-2.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400 appearance-none">
@@ -1403,7 +1403,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               {/* Slots */}
               <div className="hidden">
                 <div className="flex items-center justify-between">
-                  <label className="text-[9px] uppercase tracking-wider text-amber-500 font-bold">
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-amber-500 font-black">
                     Danh sách khung giờ ({bulkForm.slots.length} slot)
                   </label>
                   <div className="flex gap-2">
@@ -1475,7 +1475,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       {mode === 'list' && (
         <div className="flex flex-wrap gap-2 items-end">
           <div className="space-y-1">
-            <label className="text-[8px] uppercase tracking-wider text-zinc-600 block">Phim</label>
+            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-500 block">Phim</label>
             <select value={filters.movieId} onChange={e => setFilters({ ...filters, movieId: e.target.value })}
               className="bg-black border border-zinc-800 text-xs text-zinc-300 px-2.5 py-2 focus:outline-none focus:border-zinc-600">
               <option value="">Tất cả phim</option>
@@ -1483,7 +1483,7 @@ export default function AdminShowtimesPanel({ ctx }) {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-[8px] uppercase tracking-wider text-zinc-600 block">Trạng thái</label>
+            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-500 block">Trạng thái</label>
             <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
               className="bg-black border border-zinc-800 text-xs text-zinc-300 px-2.5 py-2 focus:outline-none focus:border-zinc-600">
               <option value="">Tất cả</option>
@@ -1494,7 +1494,7 @@ export default function AdminShowtimesPanel({ ctx }) {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-[8px] uppercase tracking-wider text-zinc-600 block">Ngày</label>
+            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-500 block">Ngày</label>
             <input type="date" value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })}
               className="bg-black border border-zinc-800 text-xs text-zinc-300 px-2.5 py-2 focus:outline-none focus:border-zinc-600 font-mono" />
           </div>
@@ -1527,7 +1527,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                 <thead>
                   <tr className="border-b border-zinc-900 bg-zinc-950/80">
                     {['Phim', 'Phòng', 'Bắt đầu', 'Kết thúc', 'Giá vé', 'Trạng thái', 'Thao tác'].map(h => (
-                      <th key={h} className="text-left px-3 py-3 text-[9px] uppercase tracking-wider text-zinc-500 font-bold whitespace-nowrap">{h}</th>
+                      <th key={h} className="text-left px-3 py-3 text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1626,7 +1626,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               className="bg-zinc-950 border border-rose-500/30 p-6 max-w-sm w-full space-y-4">
               <div className="flex items-center gap-2 text-rose-400">
                 <AlertCircle className="w-4 h-4" />
-                <h3 className="text-xs font-black uppercase tracking-wider">Xác nhận xóa suất chiếu</h3>
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Xác nhận xóa suất chiếu</h3>
               </div>
               <p className="text-[11px] text-zinc-400">
                 Suất chiếu sẽ bị xóa vĩnh viễn. Nếu còn booking đang hoạt động, thao tác sẽ bị từ chối (409).
@@ -1656,7 +1656,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               className="bg-zinc-950 border border-amber-500/30 p-6 max-w-sm w-full space-y-4">
               <div className="flex items-center gap-2 text-amber-400">
                 <AlertCircle className="w-4 h-4" />
-                <h3 className="text-xs font-black uppercase tracking-wider">Xác nhận hủy suất chiếu</h3>
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Xác nhận hủy suất chiếu</h3>
               </div>
               <p className="text-[11px] text-zinc-400">
                 Bạn có chắc muốn hủy suất chiếu
@@ -1665,7 +1665,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                 Thao tác này sẽ chặn khách đặt vé cho suất chiếu đó.
               </p>
               <label className="block space-y-1.5">
-                <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Ly do huy</span>
+                <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Ly do huy</span>
                 <textarea
                   value={cancelReason}
                   onChange={e => setCancelReason(e.target.value)}
@@ -1702,7 +1702,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               onClick={e => e.stopPropagation()}
               className="max-h-[calc(100vh-8rem)] w-full max-w-md space-y-4 overflow-y-auto border border-zinc-800 bg-zinc-950 p-6 shadow-2xl">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-wider text-white">Chi tiết suất chiếu #{detailModal.id}</h3>
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Chi tiết suất chiếu #{detailModal.id}</h3>
                 <button onClick={() => setDetailModal(null)} className="text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               <div className="space-y-2 text-[11px]">

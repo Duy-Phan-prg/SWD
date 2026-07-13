@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="CinemaAiApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="cinemaAI" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.sba301.cinemaai.CinemaAiApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/BE/cinemaAI" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

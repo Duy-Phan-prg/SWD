@@ -122,7 +122,7 @@ export default function AdminTransactionsPanel({ ctx }) {
                   <div className="border border-neutral-850 bg-neutral-950 overflow-hidden shadow-md">
                     <div className="p-4.5 bg-black border-b border-neutral-850 flex flex-col sm:flex-row justify-between items-center gap-4">
                       <div className="space-y-0.5 self-start">
-                        <h3 className="text-xs font-sans font-black uppercase text-zinc-300 tracking-wider">THƯ SỔ CÁI TOÀN BỘ GIAO DỊCH KHÁCH HÀNG</h3>
+                        <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">THƯ SỔ CÁI TOÀN BỘ GIAO DỊCH KHÁCH HÀNG</h3>
                         <p className="text-[10px] text-zinc-500">Giám sát các cổng thanh toán liên bang, hoàn bồi ghế ngồi</p>
                       </div>
 

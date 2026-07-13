@@ -261,7 +261,7 @@ export default function AdminUsersPanel({ ctx }) {
           <span className="text-[8px] font-mono font-black uppercase tracking-widest text-amber-400">
             ADMIN USER CONTROL
           </span>
-          <h2 className="text-sm font-sans font-black uppercase tracking-wider text-zinc-200">
+          <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white">
             Quản lý người dùng hệ thống
           </h2>
         </div>
@@ -324,7 +324,7 @@ export default function AdminUsersPanel({ ctx }) {
                   placeholder={placeholder}
                   min={field === 'birthYear' ? 1900 : undefined}
                   max={field === 'birthYear' ? 2100 : undefined}
-                  className={`w-full border bg-black px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400 ${staffFormErrors[field] ? 'border-rose-500' : 'border-neutral-800'}`}
+                  className={`w-full border bg-black px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400 ${staffFormErrors[field] ? 'border-rose-500' : 'border-neutral-800'}`}
                 />
                 {staffFormErrors[field] && <span className="block text-[9px] text-rose-300">{staffFormErrors[field]}</span>}
               </label>
@@ -338,7 +338,7 @@ export default function AdminUsersPanel({ ctx }) {
                   value={staffForm.password}
                   onChange={(event) => updateStaffForm('password', event.target.value)}
                   placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt"
-                  className={`w-full border bg-black px-3 py-2.5 pr-10 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400 ${staffFormErrors.password ? 'border-rose-500' : 'border-neutral-800'}`}
+                  className={`w-full border bg-black px-3 py-2.5 pr-10 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400 ${staffFormErrors.password ? 'border-rose-500' : 'border-neutral-800'}`}
                 />
                 <button
                   type="button"
@@ -379,7 +379,7 @@ export default function AdminUsersPanel({ ctx }) {
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 placeholder="Tìm email, tên, SĐT..."
-                className="w-full border border-neutral-800 bg-[#050505] py-2 pl-9 pr-3 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+                className="w-full border border-neutral-800 bg-[#050505] py-2 pl-9 pr-3 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400"
               />
             </div>
           </div>
@@ -545,7 +545,7 @@ export default function AdminUsersPanel({ ctx }) {
                             value={profileForm.employeeCode}
                             onChange={(event) => updateProfileForm('employeeCode', event.target.value)}
                             placeholder="EMP001"
-                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400"
                           />
                         </label>
                         <label className="space-y-1.5">
@@ -554,7 +554,7 @@ export default function AdminUsersPanel({ ctx }) {
                             value={profileForm.position}
                             onChange={(event) => updateProfileForm('position', event.target.value)}
                             placeholder="Gate Staff"
-                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400"
                           />
                         </label>
                       </div>

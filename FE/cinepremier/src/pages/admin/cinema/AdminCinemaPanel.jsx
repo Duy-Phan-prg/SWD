@@ -144,7 +144,7 @@ export default function AdminCinemaPanel({ ctx }) {
           <div className="mb-6 flex items-start justify-between gap-4 border-b border-white/10 pb-4">
             <div>
               <div className="text-[9px] font-black uppercase tracking-[0.22em] text-amber-400">Thông tin vận hành</div>
-              <h3 className="mt-1 text-lg font-black uppercase text-white">Cập nhật rạp chiếu</h3>
+              <h3 className="mt-1 text-sm font-black uppercase tracking-[0.18em] text-white">Cập nhật rạp chiếu</h3>
             </div>
             <Building2 className="h-6 w-6 text-neutral-700" />
           </div>
@@ -234,7 +234,7 @@ function Field({ icon: Icon, label, value, onChange, placeholder, required = fal
           value={value}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
-          className="h-12 w-full border border-neutral-800 bg-black pl-11 pr-4 text-xs text-white outline-none transition placeholder:text-neutral-700 focus:border-amber-400"
+          className="h-12 w-full border border-neutral-800 bg-black pl-11 pr-4 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400"
         />
       </span>
     </label>

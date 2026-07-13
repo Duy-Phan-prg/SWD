@@ -219,7 +219,7 @@ export default function AdminLoyaltyPanel({ ctx }) {
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.16em] text-white">Xác nhận reset điểm</h3>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Xác nhận reset điểm</h3>
             <p className="mt-2 text-xs leading-relaxed text-neutral-300">
               Thao tác này sẽ đặt toàn bộ điểm hiện tại về 0. Hành động này không thể hoàn tác.
             </p>
@@ -271,7 +271,7 @@ export default function AdminLoyaltyPanel({ ctx }) {
     >
       <div className="flex flex-col gap-3 border border-neutral-850 bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">QUẢN LÝ ĐIỂM THÀNH VIÊN</h3>
+          <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">QUẢN LÝ ĐIỂM THÀNH VIÊN</h3>
           <p className="mt-1 break-words text-[10px] leading-snug text-neutral-500">Cấu hình tích/tiêu điểm, audit trail và báo cáo điểm</p>
         </div>
         <button

@@ -430,7 +430,7 @@ export default function ProfileView() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-500">Tài khoản quản trị viên</p>
-                  <h2 className="mt-1 text-sm font-bold uppercase tracking-wider text-white">Chọn khu vực làm việc</h2>
+                  <h2 className="mt-1 text-sm font-black uppercase tracking-[0.18em] text-white">Chọn khu vực làm việc</h2>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button
@@ -458,7 +458,7 @@ export default function ProfileView() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-400">Tài khoản nhân viên</p>
-                  <h2 className="mt-1 text-sm font-bold uppercase tracking-wider text-white">Khu vực làm việc tại quầy</h2>
+                  <h2 className="mt-1 text-sm font-black uppercase tracking-[0.18em] text-white">Khu vực làm việc tại quầy</h2>
                   <p className="mt-1 text-xs text-neutral-500">Check-in vé bằng QR và đổi trạng thái bắp nước khi hết hàng đột ngột.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -813,7 +813,7 @@ export default function ProfileView() {
 
                       {/* Số tiền */}
                       <div>
-                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Số tiền (VND)</label>
+                        <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-[0.18em] mb-1">Số tiền (VND)</label>
                         <input
                           type="number"
                           value={withdrawForm.amount}
@@ -825,7 +825,7 @@ export default function ProfileView() {
 
                       {/* Ngân hàng */}
                       <div className="relative">
-                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Ngân hàng</label>
+                        <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-[0.18em] mb-1">Ngân hàng</label>
 
                         {/* Trigger button */}
                         <button
@@ -910,7 +910,7 @@ export default function ProfileView() {
 
                       {/* Số tài khoản */}
                       <div>
-                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Số tài khoản</label>
+                        <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-[0.18em] mb-1">Số tài khoản</label>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -929,7 +929,7 @@ export default function ProfileView() {
 
                       {/* Chủ tài khoản */}
                       <div>
-                        <label className="block text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Chủ tài khoản</label>
+                        <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-[0.18em] mb-1">Chủ tài khoản</label>
                         <input
                           type="text"
                           value={withdrawForm.accountHolder}
@@ -1101,7 +1101,7 @@ export default function ProfileView() {
                             {/* Profile settings fields form */}
                             <div className="space-y-3.5">
                               <div className="space-y-1">
-                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Tên Thượng Khách</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400">Tên Thượng Khách</label>
                                 <input
                                   type="text"
                                   maxLength={MAX_NAME_LENGTH}
@@ -1113,7 +1113,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Tiểu sử Điện ảnh</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400">Tiểu sử Điện ảnh</label>
                                 <textarea
                                   value={profileBioInput}
                                   onChange={(e) => setProfileBioInput(e.target.value)}
@@ -1123,7 +1123,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Địa chỉ Email Liên hệ</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400">Địa chỉ Email Liên hệ</label>
                                 <input
                                   type="email"
                                   value={profileEmailInput}
@@ -1133,7 +1133,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Số điện thoại</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400">Số điện thoại</label>
                                 <input
                                   type="tel"
                                   inputMode="numeric"
@@ -1148,7 +1148,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-500">Năm sinh</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] font-black text-neutral-400">Năm sinh</label>
                                 <input
                                   type="number"
                                   min={1900}
@@ -1306,7 +1306,7 @@ export default function ProfileView() {
                             {/* Inputs with real dynamic visualization */}
                             <div className="grid grid-cols-2 gap-2.5 pt-1">
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Tên chủ thẻ</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Tên chủ thẻ</label>
                                 <input
                                   type="text"
                                   placeholder="MINH HONG"
@@ -1317,7 +1317,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Số Thẻ Di Động</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Số Thẻ Di Động</label>
                                 <input
                                   type="text"
                                   placeholder="4611 1234 5678 8899"
@@ -1330,7 +1330,7 @@ export default function ProfileView() {
 
                             <div className="grid grid-cols-3 gap-2.5">
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Hạn dùng</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Hạn dùng</label>
                                 <input
                                   type="text"
                                   placeholder="12/29"
@@ -1342,7 +1342,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Mã CVV</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Mã CVV</label>
                                 <input
                                   type="password"
                                   placeholder="***"
@@ -1356,7 +1356,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold">Loại thẻ</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Loại thẻ</label>
                                 <select
                                   value={cardType}
                                   onChange={(e) => { playPing(480, 'sine', 0.05); setCardType(e.target.value); }}
@@ -1420,7 +1420,7 @@ export default function ProfileView() {
 
                             <div className="space-y-3">
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Mật khẩu cũ</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">Mật khẩu cũ</label>
                                 <div className="relative">
                                   <input
                                     type={showOldPass ? "text" : "password"}
@@ -1440,7 +1440,7 @@ export default function ProfileView() {
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Mật khẩu mới</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">Mật khẩu mới</label>
                                 <div className="relative">
                                   <input
                                     type={showNewPass ? "text" : "password"}
@@ -1464,7 +1464,7 @@ export default function ProfileView() {
 
                             <div className="space-y-3">
                               <div className="space-y-1">
-                                <label className="text-[8px] uppercase tracking-wider text-neutral-500 font-bold block">Xác nhận mật khẩu mới</label>
+                                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">Xác nhận mật khẩu mới</label>
                                 <div className="relative">
                                   <input
                                     type={showNewPass ? "text" : "password"}

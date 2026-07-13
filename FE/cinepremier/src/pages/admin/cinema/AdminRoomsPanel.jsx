@@ -517,7 +517,7 @@ export default function AdminRoomsPanel({ ctx }) {
       <div className="flex flex-col gap-4 border border-white/10 bg-gradient-to-r from-[#100d04] to-black p-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-500">Quản lý rạp</p>
-          <h2 className="mt-1 text-xl font-black uppercase tracking-wider text-white">Phòng chiếu & ghế</h2>
+          <h2 className="mt-1 text-sm font-black uppercase tracking-[0.18em] text-white">Phòng chiếu & ghế</h2>
           <p className="mt-1 text-xs text-neutral-500">Tạo phòng, thiết lập sơ đồ và quản lý tình trạng từng ghế.</p>
         </div>
         <div className="flex gap-2">
@@ -563,7 +563,7 @@ export default function AdminRoomsPanel({ ctx }) {
               <div className="flex items-center gap-3">
                 <DoorOpen className="h-5 w-5 text-amber-500" />
                 <div>
-                  <h3 className="text-sm font-black uppercase text-white">{selectedRoom ? 'Thông tin phòng chiếu' : 'Tạo phòng chiếu mới'}</h3>
+                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">{selectedRoom ? 'Thông tin phòng chiếu' : 'Tạo phòng chiếu mới'}</h3>
                   <p className="text-xs font-semibold text-neutral-400">Tên phòng được tự động bỏ khoảng trắng thừa và không phân biệt hoa thường khi kiểm tra trùng.</p>
                 </div>
               </div>
@@ -606,7 +606,7 @@ export default function AdminRoomsPanel({ ctx }) {
                 <div className="flex items-center gap-3">
                   <Armchair className="h-5 w-5 text-cyan-400" />
                   <div>
-                    <h3 className="text-sm font-black uppercase text-white">Sơ đồ ghế · {selectedRoom.name}</h3>
+                    <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Sơ đồ ghế · {selectedRoom.name}</h3>
                     <p className="text-xs font-semibold text-neutral-400">{layoutSeatCount} ghế đang được sắp xếp</p>
                   </div>
                 </div>
@@ -784,7 +784,7 @@ export default function AdminRoomsPanel({ ctx }) {
               <div className="flex gap-3">
                 <div className="border border-amber-500/30 bg-amber-500/10 p-2 text-amber-400"><AlertTriangle className="h-5 w-5" /></div>
                 <div>
-                  <h3 className="text-sm font-black uppercase text-white">{confirmAction.title}</h3>
+                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">{confirmAction.title}</h3>
                   <p className="mt-2 text-xs leading-5 text-neutral-400">{confirmAction.description}</p>
                 </div>
               </div>

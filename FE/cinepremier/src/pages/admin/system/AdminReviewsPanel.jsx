@@ -97,7 +97,7 @@ export default function AdminReviewsPanel({ ctx }) {
     >
       <div className="flex flex-col gap-3 border border-neutral-850 bg-black p-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-white">
+          <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-white">
             <MessageSquare className="h-4 w-4 text-amber-400" />
             Quản lý đánh giá
           </h3>
