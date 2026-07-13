@@ -1,0 +1,36 @@
+{
+  "username": "admin@cinemaai.com",
+  "password": "Admin123"
+} 
+
+
+
+Ngân hàng	NCB
+Số thẻ	9704198526191432198
+Tên chủ thẻ	NGUYEN VAN A
+Ngày phát hành	07/15
+Mật khẩu OTP	123456
+
+{
+  "username": "duypd3107@gmail.com",
+  "password": "31072005Xy09@"
+}
+
+{
+  "email": "duypd3107@gmail.com",
+  "password": "31072005Xy09@",
+  "fullName": "Phan Duc Duy",
+  "phone": "0967941195",
+  "birthYear": 2005
+}
+
+{
+  "username": "staff@cinemaai.com",
+  "password": "Staff123"
+} 
+
+
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+run 
+
+
