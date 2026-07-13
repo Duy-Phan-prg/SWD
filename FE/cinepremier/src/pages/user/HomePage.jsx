@@ -441,36 +441,30 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
 
       {/* POPCORN AI CHATBOT */}
       <div className="fixed bottom-6 right-6 z-[200] flex flex-col items-end gap-3">
-        {/* Chat window */}
         {chatOpen && (
-          <div className="w-80 bg-neutral-950 border border-purple-500/30 shadow-2xl flex flex-col overflow-hidden"
-            style={{ height: 420 }}>
+          <div className="w-[340px] bg-[#0d0d0d] border border-purple-500/40 flex flex-col overflow-hidden rounded-2xl" style={{ height: 440, boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(168,85,247,0.15), 0 0 60px rgba(139,92,246,0.2)' }}>
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-purple-950/60 border-b border-purple-500/20">
-              <img src={popcornBot} alt="PopBot" className="w-8 h-8 object-contain rounded-full border border-purple-400/40" />
+            <div className="flex items-center gap-3 px-4 py-3 bg-purple-950/50 border-b border-purple-500/20 rounded-t-2xl">
+              <img src={popcornBot} alt="PopBot" className="w-9 h-9 object-cover flex-shrink-0 border border-purple-400/30 rounded-full" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-sans font-bold text-white">PopBot AI</p>
-                <p className="text-[9px] text-emerald-400 font-sans flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                  Đang hoạt động
-                </p>
+                <p className="text-[11px] font-sans font-black text-white uppercase tracking-[0.12em]">PopBot AI</p>
               </div>
-              <button onClick={() => setChatOpen(false)} className="text-neutral-400 hover:text-white transition">
+              <button onClick={() => setChatOpen(false)} className="text-neutral-500 hover:text-white transition p-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.1)_transparent]">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 [scrollbar-width:thin] [scrollbar-color:rgba(168,85,247,0.2)_transparent]">
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   {msg.role === 'bot' && (
-                    <img src={popcornBot} alt="bot" className="w-6 h-6 object-contain rounded-full border border-purple-400/30 flex-shrink-0 mt-0.5" />
+                    <img src={popcornBot} alt="bot" className="w-6 h-6 object-cover border border-purple-400/20 flex-shrink-0 mt-0.5 rounded-full" />
                   )}
-                  <div className={`max-w-[75%] px-3 py-2 text-[12px] font-sans leading-relaxed ${
+                  <div className={`max-w-[78%] px-3.5 py-2.5 text-[12px] font-sans leading-relaxed rounded-2xl ${
                     msg.role === 'user'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-neutral-800 text-neutral-200'
+                      ? 'bg-purple-700 text-white rounded-tr-sm'
+                      : 'bg-neutral-900 border border-white/8 text-neutral-200 rounded-tl-sm'
                   }`}>
                     {msg.text}
                   </div>
@@ -480,7 +474,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             </div>
 
             {/* Input */}
-            <div className="flex items-center gap-2 px-3 py-3 border-t border-white/10">
+            <div className="flex items-center gap-2 px-4 py-3 border-t border-white/8">
               <input
                 type="text"
                 value={chatInput}
@@ -491,13 +485,13 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                     setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
                     setChatInput('');
                     setTimeout(() => {
-                      setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé! 🎬' }]);
+                      setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé!' }]);
                       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                     }, 600);
                   }
                 }}
                 placeholder="Hỏi về phim, lịch chiếu..."
-                className="flex-1 bg-neutral-800 px-3 py-2 text-[12px] font-sans text-white placeholder-neutral-500 outline-none focus:bg-neutral-700 transition"
+                className="flex-1 bg-neutral-800/60 px-4 py-2.5 text-[12px] font-sans text-white placeholder-neutral-500 outline-none rounded-full"
               />
               <button
                 onClick={() => {
@@ -506,11 +500,11 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                   setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
                   setChatInput('');
                   setTimeout(() => {
-                    setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé! 🎬' }]);
+                    setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé!' }]);
                     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                   }, 600);
                 }}
-                className="bg-purple-600 hover:bg-purple-500 transition p-2 text-white"
+                className="bg-purple-600 hover:bg-purple-500 transition p-2.5 text-white rounded-full flex-shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -521,13 +515,10 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
         {/* Floating button */}
         <button
           onClick={() => setChatOpen((o) => !o)}
-          className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-purple-400/60 shadow-lg shadow-purple-900/50 hover:scale-110 transition-transform duration-200"
+          className="relative w-14 h-14 overflow-hidden border-2 border-purple-400/50 hover:border-purple-400 shadow-lg shadow-purple-900/40 hover:scale-105 transition-all duration-200 rounded-full"
           title="Chat với PopBot AI"
         >
           <img src={popcornBot} alt="PopBot" className="w-full h-full object-cover" />
-          {!chatOpen && (
-            <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-neutral-950 animate-pulse" />
-          )}
         </button>
       </div>
     </div>

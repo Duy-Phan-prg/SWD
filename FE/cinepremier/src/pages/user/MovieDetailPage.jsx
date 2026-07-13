@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+const popcornBot = new URL('../../assets/banners/—Pngtree—barrel popcorn pattern_4538379.png', import.meta.url).href;
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Play, Star, Clock, Heart, Loader2 } from 'lucide-react';
@@ -145,16 +146,34 @@ export default function DetailView() {
   useEffect(() => {
     if (!showTrailer) return undefined;
     const onKeyDown = (e) => { if (e.key === 'Escape') setShowTrailer(false); };
-    const blockScroll = (e) => e.preventDefault();
+    const scrollY = window.scrollY;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+    const redirectScroll = (e) => {
+      const inner = document.getElementById('trailer-modal-inner');
+      if (!inner) return;
+      e.preventDefault();
+      // If already scrolling inside modal, let the modal scroll
+      // If scrolling outside (backdrop), redirect to modal
+      inner.scrollBy({ top: e.deltaY, behavior: 'auto' });
+    };
+    document.addEventListener('wheel', redirectScroll, { passive: false });
+    document.addEventListener('touchmove', redirectScroll, { passive: false });
+
     window.addEventListener('keydown', onKeyDown);
-    document.addEventListener('wheel', blockScroll, { passive: false });
-    document.addEventListener('touchmove', blockScroll, { passive: false });
-    document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('wheel', blockScroll);
-      document.removeEventListener('touchmove', blockScroll);
-      document.body.style.overflow = '';
+      document.removeEventListener('wheel', redirectScroll);
+      document.removeEventListener('touchmove', redirectScroll);
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.paddingRight = '';
+      window.scrollTo(0, scrollY);
     };
   }, [showTrailer]);
 
@@ -516,7 +535,8 @@ export default function DetailView() {
           id="trailer-modal"
         >
           <div
-            className="relative w-full max-w-4xl border border-white/20 bg-neutral-950 shadow-2xl overflow-y-auto max-h-screen [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            id="trailer-modal-inner"
+            className="relative w-full max-w-4xl border border-white/20 bg-neutral-950 shadow-2xl overflow-y-auto max-h-[95vh] [scrollbar-width:thin] [scrollbar-color:rgba(168,85,247,0.4)_transparent]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close bar */}
@@ -548,31 +568,35 @@ export default function DetailView() {
             </div>
 
             {/* AI Chat */}
-            <div className="bg-neutral-800 flex flex-col border-t border-white/10" style={{ height: 260 }}>
-              <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10">
-                <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[8px] font-black text-white">AI</div>
-                <span className="text-xs font-sans font-semibold text-white">CinePremier AI</span>
-                <span className="ml-auto flex items-center gap-1 text-[9px] text-emerald-400 font-sans">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Online
-                </span>
+            <div className="flex flex-col border-t border-purple-500/30 bg-neutral-950/80">
+              {/* Header */}
+              <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/8 bg-purple-950/40">
+                <img src={popcornBot} alt="AI" className="w-6 h-6 object-cover flex-shrink-0 rounded-full border border-purple-400/30" />
+                <span className="text-[11px] font-sans font-bold text-white uppercase tracking-[0.15em]">CinePremier AI</span>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 animate-pulse" />
+                  <span className="text-[9px] text-emerald-400 font-sans uppercase tracking-widest">Online</span>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto px-5 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[8px] font-black text-white flex-shrink-0 mt-0.5">AI</div>
-                  <div className="bg-neutral-700 px-4 py-3 max-w-xs">
-                    <p className="text-[13px] font-sans text-white leading-relaxed">Xin chào! 👋 Bạn muốn biết gì về <span className="font-semibold text-purple-300">{movie.title}</span>?</p>
-                    <p className="text-[9px] text-neutral-400 font-sans mt-1.5">Vừa xong</p>
+              {/* Messages */}
+              <div className="px-5 py-4">
+                <div className="flex items-start gap-2.5">
+                  <img src={popcornBot} alt="AI" className="w-6 h-6 object-cover flex-shrink-0 mt-0.5 rounded-full border border-purple-400/30" />
+                  <div className="bg-neutral-800/60 border border-white/8 px-4 py-3 max-w-sm rounded-2xl rounded-tl-sm">
+                    <p className="text-[12px] font-sans text-neutral-200 leading-relaxed">
+                      Xin chào! Bạn muốn biết gì về <span className="font-semibold text-purple-300">{movie.title}</span>?
+                    </p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 px-5 py-3 border-t border-white/10">
+              {/* Input */}
+              <div className="flex items-center gap-3 px-4 pt-3 pb-5 border-t border-white/8">
                 <input
                   type="text"
                   placeholder="Nhập câu hỏi về phim..."
-                  className="flex-1 bg-neutral-700 px-4 py-2 text-[13px] font-sans text-white placeholder-neutral-400 outline-none focus:bg-neutral-600 transition"
+                  className="flex-1 bg-neutral-800/50 px-4 py-2.5 text-[12px] font-sans text-white placeholder-neutral-600 outline-none rounded-full"
                 />
-                <button className="bg-purple-600 hover:bg-purple-500 transition text-white px-5 py-2 text-[11px] font-sans font-semibold">
+                <button className="bg-purple-700 hover:bg-purple-600 transition text-white px-5 py-2.5 text-[10px] font-sans font-bold uppercase tracking-[0.15em] rounded-full flex-shrink-0">
                   Gửi
                 </button>
               </div>

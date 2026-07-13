@@ -54,6 +54,20 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
               </div>
             )}
           </div>
+          {onToggleWatchlist && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleWatchlist(movie); }}
+              className={`absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center border transition-all duration-200 ${
+                isWatchlisted
+                  ? 'bg-rose-500 border-rose-400 text-white'
+                  : 'bg-black/60 border-white/30 text-white hover:bg-white hover:text-black'
+              }`}
+              title={isWatchlisted ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+            >
+              <Heart className={`h-3.5 w-3.5 ${isWatchlisted ? 'fill-current' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* Age rating */}
@@ -76,21 +90,6 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
           </div>
         )}
 
-        {/* Watchlist button */}
-        {onToggleWatchlist && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onToggleWatchlist(movie); }}
-            className={`absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center border transition-all duration-200 opacity-0 group-hover:opacity-100 ${
-              isWatchlisted
-                ? 'bg-rose-500 border-rose-400 text-white'
-                : 'bg-black/70 border-white/30 text-white hover:bg-white hover:text-black'
-            }`}
-            title={isWatchlisted ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
-          >
-            <Heart className={`h-3.5 w-3.5 ${isWatchlisted ? 'fill-current' : ''}`} />
-          </button>
-        )}
       </div>
 
       {/* Info */}
