@@ -141,14 +141,21 @@ export default function DetailView() {
     };
   }, [detailMovieId]);
 
-  // Close the trailer modal with the Escape key.
+  // Close the trailer modal with the Escape key + lock body scroll.
   useEffect(() => {
     if (!showTrailer) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setShowTrailer(false);
-    };
+    const onKeyDown = (e) => { if (e.key === 'Escape') setShowTrailer(false); };
+    const blockScroll = (e) => e.preventDefault();
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('wheel', blockScroll, { passive: false });
+    document.addEventListener('touchmove', blockScroll, { passive: false });
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('wheel', blockScroll);
+      document.removeEventListener('touchmove', blockScroll);
+      document.body.style.overflow = '';
+    };
   }, [showTrailer]);
 
   useEffect(() => {
@@ -220,7 +227,11 @@ export default function DetailView() {
   const directorNames = splitDirectorNames(movie.director);
 
   return (
-    <div className="pb-24 space-y-12">
+    <div className="pb-24 space-y-12 relative">
+      {/* Background lighting — same as homepage */}
+      <div className="pointer-events-none fixed inset-0 -z-50">
+        <div className="absolute left-1/2 top-1/3 h-[900px] w-[900px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[150px]" />
+      </div>
 
       {/* 1. BLURRED BANNER HERO BACKGROUND */}
       <section
@@ -344,157 +355,117 @@ export default function DetailView() {
       </div>
 
       {/* 2. MAIN DETAILS GRID */}
-      <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-12">
 
-          {/* Left Block: Synopsis & Actors representation */}
-          <div className="lg:col-span-12 space-y-10">
-            <div className="space-y-4">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">TÓM TẮT NỘI DUNG</h3>
-              <p className="text-sm text-white leading-relaxed font-sans font-light">
-                {movie.synopsis}
-              </p>
-            </div>
+        {/* Synopsis */}
+        <div className="space-y-3">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-purple-300 pb-2 border-b border-purple-500/20">Tóm tắt nội dung</h3>
+          <p className="text-sm text-neutral-300 leading-relaxed font-sans">{movie.synopsis}</p>
+        </div>
 
-            {/* Circular Actors representation block */}
-            <div className="space-y-4">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">DIỄN VIÊN CHÍNH</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" id="cast-list">
-                {mainCasts.length === 0 && (
-                  <p className="col-span-full border border-dashed border-white/10 bg-black p-4 text-xs text-white">
-                    Chưa chọn diễn viên chính cho phim này.
-                  </p>
-                )}
-                {mainCasts.map((cast) => (
-                  <div key={cast.id || cast.name} className="flex items-center space-x-3 bg-[#0A0A0A] p-3 border border-white/5">
-                    <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-neutral-950 flex-shrink-0">
-                      {cast.avatarUrl ? (
-                        <img
-                          src={cast.avatarUrl}
-                          alt={cast.name}
-                          className="h-full w-full object-cover grayscale"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs font-black text-neutral-500">
-                          {cast.name.slice(0, 1)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-sans text-white truncate font-bold">{cast.name}</h4>
-                      <p className="text-[9px] text-white uppercase tracking-widest truncate mt-0.5">{cast.role}</p>
-                    </div>
-                  </div>
-                ))}
+        {/* Main Cast */}
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-purple-300 pb-2 border-b border-purple-500/20">Diễn viên chính</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" id="cast-list">
+            {mainCasts.length === 0 && (
+              <p className="col-span-full border border-dashed border-white/10 p-4 text-xs text-neutral-500">Chưa chọn diễn viên chính.</p>
+            )}
+            {mainCasts.map((cast) => (
+              <div key={cast.id || cast.name} className="flex items-center gap-3 bg-white/5 hover:bg-white/8 transition p-3 border border-white/8">
+                <div className="h-9 w-9 overflow-hidden rounded-full border border-purple-500/30 bg-neutral-800 flex-shrink-0">
+                  {cast.avatarUrl ? (
+                    <img src={cast.avatarUrl} alt={cast.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs font-black text-purple-300">{cast.name.slice(0, 1)}</div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-sans text-white truncate font-semibold">{cast.name}</h4>
+                  <p className="text-[9px] text-purple-300/70 uppercase tracking-wider truncate mt-0.5">{cast.role || 'Diễn viên'}</p>
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">MỘT SỐ DIỄN VIÊN TRONG PHIM</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" id="supporting-cast-list">
-                {supportingCasts.length === 0 && (
-                  <p className="col-span-full border border-dashed border-white/10 bg-black p-4 text-xs text-white">
-                    Chưa có diễn viên phụ hoặc tất cả diễn viên đang được đánh dấu là vai chính.
-                  </p>
-                )}
-                {supportingCasts.map((cast) => (
-                  <div key={cast.id || cast.name} className="flex items-center space-x-3 bg-[#0A0A0A] p-3 border border-white/5">
-                    <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-neutral-950 flex-shrink-0">
-                      {cast.avatarUrl ? (
-                        <img
-                          src={cast.avatarUrl}
-                          alt={cast.name}
-                          className="h-full w-full object-cover grayscale"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs font-black text-neutral-500">
-                          {cast.name.slice(0, 1)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-sans text-white truncate font-bold">{cast.name}</h4>
-                      <p className="text-[9px] text-white uppercase tracking-widest truncate mt-0.5">{cast.role}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action Reviews comment section */}
-            <div className="space-y-6">
-              <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">
-                NHẬN XÉT CỦA CINEPHILE ({reviews.length})
-              </h3>
-
-              <div className="border border-white/10 bg-black p-5">
-                <p className="text-xs text-neutral-400 font-sans leading-relaxed">
-                  Đánh giá bên dưới được lấy từ 100% đánh giá thực tế của khách hàng đã xem phim.
-                </p>
-              </div>
-
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {isLoadingReviews && (
-                  <div className="flex items-center justify-center gap-2 border border-white/10 bg-[#0A0A0A] p-6 text-xs uppercase tracking-widest text-neutral-400">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Đang tải đánh giá
-                  </div>
-                )}
-                {!isLoadingReviews && reviews.length === 0 && (
-                  <div className="border border-dashed border-white/10 bg-[#0A0A0A] p-6 text-center text-xs uppercase tracking-widest text-neutral-500">
-                    Chưa có đánh giá công khai cho phim này.
-                  </div>
-                )}
-                {!isLoadingReviews && reviews.map((rev) => (
-                  <div key={rev.id} className="bg-[#0A0A0A] p-4 border border-white/5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-neutral-950 text-[10px] font-black text-white">
-                          {(rev.userFullName || rev.userEmail || 'C').slice(0, 1).toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="font-sans text-xs text-white font-bold">{rev.userFullName || rev.userEmail || 'Cinephile'}</h4>
-                          <span className="text-[11px] text-neutral-500 uppercase tracking-widest">
-                            {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('vi-VN') : 'Đã đánh giá'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex space-x-0.5">
-                        {Array.from({ length: 5 }, (_, idx) => (
-                          <Star
-                            key={idx}
-                            className={`h-3 w-3 ${idx < rev.rating ? 'text-white fill-current' : 'text-neutral-800'}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <p className="text-neutral-200 text-xs leading-relaxed font-sans font-light pl-11">
-                      "{rev.comment || ''}"
-                    </p>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5 font-sans text-[9px] tracking-wider text-white pl-11">
-                      <button
-                        onClick={() => handleLikeReview(rev.id)}
-                        className={`flex items-center gap-1.5 hover:text-white transition uppercase ${likedReviews[rev.id] ? 'text-white font-bold' : ''}`}
-                      >
-                        <Heart className={`h-3 w-3 ${likedReviews[rev.id] ? 'fill-current' : ''}`} />
-                        <span>Thích {rev.likes || 0}</span>
-                      </button>
-
-                    </div>
-
-                  </div>
-                ))}
-              </div>
-
-            </div>
-
+            ))}
           </div>
         </div>
+
+        {/* Supporting Cast */}
+        {supportingCasts.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-purple-300 pb-2 border-b border-purple-500/20">Một số diễn viên trong phim</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" id="supporting-cast-list">
+              {supportingCasts.map((cast) => (
+                <div key={cast.id || cast.name} className="flex items-center gap-3 bg-white/5 hover:bg-white/8 transition p-3 border border-white/8">
+                  <div className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-neutral-800 flex-shrink-0">
+                    {cast.avatarUrl ? (
+                      <img src={cast.avatarUrl} alt={cast.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs font-black text-neutral-400">{cast.name.slice(0, 1)}</div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-sans text-white truncate font-semibold">{cast.name}</h4>
+                    <p className="text-[9px] text-neutral-500 uppercase tracking-wider truncate mt-0.5">{cast.role || 'Diễn viên'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Reviews */}
+        <div className="space-y-5">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.22em] text-purple-300 pb-2 border-b border-purple-500/20">
+            Nhận xét của cinephile ({reviews.length})
+          </h3>
+
+          <p className="text-xs text-neutral-500 font-sans">Đánh giá bên dưới được lấy từ 100% đánh giá thực tế của khách hàng đã xem phim.</p>
+
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.1)_transparent]">
+            {isLoadingReviews && (
+              <div className="flex items-center justify-center gap-2 p-6 text-xs text-neutral-500">
+                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải đánh giá...
+              </div>
+            )}
+            {!isLoadingReviews && reviews.length === 0 && (
+              <div className="border border-dashed border-white/10 p-6 text-center text-xs text-neutral-600 uppercase tracking-widest">
+                Chưa có đánh giá công khai cho phim này.
+              </div>
+            )}
+            {!isLoadingReviews && reviews.map((rev) => (
+              <div key={rev.id} className="bg-white/4 hover:bg-white/6 transition p-4 border border-white/8 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600/40 border border-purple-500/30 text-[10px] font-black text-purple-200">
+                      {(rev.userFullName || rev.userEmail || 'C').slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-xs text-white font-semibold">{rev.userFullName || rev.userEmail || 'Cinephile'}</h4>
+                      <span className="text-[10px] text-neutral-500">
+                        {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('vi-VN') : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, idx) => (
+                      <Star key={idx} className={`h-3 w-3 ${idx < rev.rating ? 'text-amber-400 fill-current' : 'text-neutral-700'}`} />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-neutral-300 text-xs leading-relaxed font-sans pl-11">"{rev.comment || ''}"</p>
+                <div className="pl-11 pt-2 border-t border-white/5">
+                  <button
+                    onClick={() => handleLikeReview(rev.id)}
+                    className={`flex items-center gap-1.5 text-[10px] transition uppercase tracking-wider ${likedReviews[rev.id] ? 'text-rose-400' : 'text-neutral-500 hover:text-white'}`}
+                  >
+                    <Heart className={`h-3 w-3 ${likedReviews[rev.id] ? 'fill-current' : ''}`} />
+                    Thích {rev.likes || 0}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </section>
 
       {/* 3. SIMILAR MOVIES (content-based AI recommendation) */}
@@ -543,30 +514,28 @@ export default function DetailView() {
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 p-4 transition duration-300"
           id="trailer-modal"
-          onClick={() => setShowTrailer(false)}
         >
           <div
-            className="relative w-full max-w-4xl border border-white/20 bg-neutral-950 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
+            className="relative w-full max-w-4xl border border-white/20 bg-neutral-950 shadow-2xl overflow-y-auto max-h-screen [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => setShowTrailer(false)}
-              className="absolute top-4 right-4 z-10 bg-black/70 hover:bg-black text-white p-2.5 border border-white/15 transition text-xs font-sans cursor-pointer"
-              id="close-trailer-modal"
-            >
-              ✕ ĐÓNG <span className="text-neutral-500 ml-1">ESC</span>
-            </button>
+            {/* Close bar */}
+            <div className="flex items-center justify-between px-4 py-2 bg-black">
+              <span className="text-[10px] text-neutral-500 font-sans uppercase tracking-[0.2em]">Trailer chính thức · {movie.title}</span>
+              <button
+                onClick={() => setShowTrailer(false)}
+                className="flex items-center gap-2 text-neutral-400 hover:text-white transition text-xs font-sans cursor-pointer"
+                id="close-trailer-modal"
+              >
+                <span className="text-base leading-none">✕</span>
+                <span className="tracking-widest uppercase text-[10px]">Đóng</span>
+                <span className="text-neutral-600 text-[10px]">ESC</span>
+              </button>
+            </div>
 
-            {/* Aspect box iframe */}
             <div className="aspect-video w-full bg-black">
               {hasDirectTrailerVideo ? (
-                <video
-                  src={trailerUrl}
-                  className="h-full w-full"
-                  controls
-                  autoPlay
-                  playsInline
-                />
+                <video src={trailerUrl} className="h-full w-full" controls autoPlay playsInline />
               ) : (
                 <iframe
                   title={`${movie.title} Trailer`}
@@ -578,9 +547,35 @@ export default function DetailView() {
               )}
             </div>
 
-            <div className="p-4 bg-neutral-950 border-t border-white/10">
-              <p className="text-[9px] text-white font-sans tracking-[0.25em] uppercase">TRAILER CHÍNH THỨC</p>
-              <h4 className="text-base font-serif text-white mt-1 italic">{movie.title}: {movie.englishTitle}</h4>
+            {/* AI Chat */}
+            <div className="bg-neutral-800 flex flex-col border-t border-white/10" style={{ height: 260 }}>
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10">
+                <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[8px] font-black text-white">AI</div>
+                <span className="text-xs font-sans font-semibold text-white">CinePremier AI</span>
+                <span className="ml-auto flex items-center gap-1 text-[9px] text-emerald-400 font-sans">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Online
+                </span>
+              </div>
+              <div className="flex-1 overflow-y-auto px-5 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[8px] font-black text-white flex-shrink-0 mt-0.5">AI</div>
+                  <div className="bg-neutral-700 px-4 py-3 max-w-xs">
+                    <p className="text-[13px] font-sans text-white leading-relaxed">Xin chào! 👋 Bạn muốn biết gì về <span className="font-semibold text-purple-300">{movie.title}</span>?</p>
+                    <p className="text-[9px] text-neutral-400 font-sans mt-1.5">Vừa xong</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3 border-t border-white/10">
+                <input
+                  type="text"
+                  placeholder="Nhập câu hỏi về phim..."
+                  className="flex-1 bg-neutral-700 px-4 py-2 text-[13px] font-sans text-white placeholder-neutral-400 outline-none focus:bg-neutral-600 transition"
+                />
+                <button className="bg-purple-600 hover:bg-purple-500 transition text-white px-5 py-2 text-[11px] font-sans font-semibold">
+                  Gửi
+                </button>
+              </div>
             </div>
 
           </div>

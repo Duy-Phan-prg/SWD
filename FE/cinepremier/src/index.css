@@ -537,3 +537,62 @@ h3 {
     animation: none;
   }
 }
+
+/* ─── Customer page — unified design system ─── */
+
+.section-heading {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  position: relative;
+  padding-bottom: 1.25rem;
+}
+
+.section-heading::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.8), transparent);
+}
+
+.section-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-family: "Inter", sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.section-subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: rgba(163, 163, 163, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-family: "Inter", sans-serif;
+}
+
+.section-cta-btn {
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.65rem 2.5rem;
+  font-size: 0.7rem;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  transition: background 200ms, color 200ms;
+}
+
+.section-cta-btn:hover {
+  background: #fff;
+  color: #000;
+}

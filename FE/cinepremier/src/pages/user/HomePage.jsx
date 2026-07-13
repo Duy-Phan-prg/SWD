@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, X, Send } from 'lucide-react';
 import MovieCard from '@/components/common/MovieCard';
 import cinema1 from "@/assets/banners/cinema1.png";
 import cinema2 from "@/assets/banners/cinema2.png";
+const popcornBot = new URL('../../assets/banners/—Pngtree—barrel popcorn pattern_4538379.png', import.meta.url).href;
 import { useMovies } from '../../stores/useMovieStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { getStoredAuth } from '../../services/authService';
 import { movieService } from '../../services/movieService';
 import { recommendationService } from '../../services/recommendationService';
-import { bookingService } from '../../services/bookingService';
-import { wishlistService } from '../../services/wishlistService';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
   const trimmed = url.trim();
@@ -81,8 +80,12 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const currentUser = useAuthStore((state) => state.currentUser);
   const [personalRecs, setPersonalRecs] = useState([]);
-  const [favoriteGenreMovies, setFavoriteGenreMovies] = useState([]);
-  const [favoriteGenres, setFavoriteGenres] = useState([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'bot', text: 'Xin chào! 🍿 Tôi là PopBot — trợ lý AI của CinePremier. Bạn muốn tìm phim gì hôm nay?' }
+  ]);
+  const chatEndRef = useRef(null);
 
   // Filter movies for "Now Playing" and "Upcoming"
   const sourceMovies = Array.isArray(moviesList) ? moviesList : [];
@@ -97,6 +100,11 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const upcomingRef = useRef(null);
   const scrollUpcoming = (dir) => {
     const el = upcomingRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
+  const personalRecsRef = useRef(null);
+  const scrollPersonalRecs = (dir) => {
+    const el = personalRecsRef.current;
     if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
   };
 
@@ -241,51 +249,6 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
     };
   }, [isLoggedIn, currentUser?.id]);
 
-  // Tính genre yêu thích từ lịch sử đặt vé + wishlist, lọc phim phù hợp
-  useEffect(() => {
-    if (!isLoggedIn || !currentUser?.id) {
-      setFavoriteGenreMovies([]);
-      setFavoriteGenres([]);
-      return undefined;
-    }
-    let cancelled = false;
-    const { accessToken } = getStoredAuth();
-    Promise.all([
-      bookingService.getMyBookings(accessToken).catch(() => []),
-      wishlistService.getWishlist(accessToken).catch(() => [])
-    ]).then(([bookings, wishlist]) => {
-      if (cancelled) return;
-      const genreCount = {};
-      const countGenres = (movie) => {
-        const genres = movie?.genres || movie?.genreNames || [];
-        genres.forEach((g) => {
-          const name = typeof g === 'string' ? g : g?.name || g?.genreName;
-          if (name) genreCount[name] = (genreCount[name] || 0) + 1;
-        });
-      };
-      (bookings || []).forEach((b) => countGenres(b.movie || b));
-      (wishlist || []).forEach((w) => countGenres(w.movie || w));
-
-      const sorted = Object.entries(genreCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([name]) => name);
-
-      if (!cancelled) setFavoriteGenres(sorted);
-
-      if (sorted.length && publicMovies.length) {
-        const matched = publicMovies.filter((m) => {
-          const mg = m?.genres || m?.genreNames || [];
-          return mg.some((g) => {
-            const n = typeof g === 'string' ? g : g?.name || g?.genreName;
-            return sorted.includes(n);
-          });
-        });
-        if (!cancelled) setFavoriteGenreMovies(matched.slice(0, 12));
-      }
-    });
-    return () => { cancelled = true; };
-  }, [isLoggedIn, currentUser?.id, publicMovies.length]);
 
   // Enrich a recommendation item with full movie data (synopsis, status…) when we already have it.
   const enrichRecommendation = (rec) => {
@@ -303,82 +266,58 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   ];
 
   return (
-    <div className="space-y-20 pb-24 relative">
-      {/* Snowfall effect */}
-      <Snowfall
-        color="rgba(255, 255, 255, 0.5)"
-        snowflakeCount={10}
-        style={{
-          position: 'fixed',
-          width: '100vw',
-          height: '100vh',
-          zIndex: 1
-        }}
-      />
+    <div className="pb-32 relative">
+      {/* Snowfall */}
+      <Snowfall color="rgba(255,255,255,0.4)" snowflakeCount={10} style={{ position: 'fixed', width: '100vw', height: '100vh', zIndex: 1 }} />
 
-      {/* Background lighting effect */}
+      {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 -z-50">
-        <div className="absolute left-1/2 top-1/3 h-[900px] w-[900px] -translate-x-1/2 rounded-full bg-purple-600/20 blur-[150px]" />
+        <div className="absolute left-1/2 top-0 h-[700px] w-[900px] -translate-x-1/2 bg-purple-700/15 blur-[180px]" />
+        <div className="absolute left-1/4 top-1/2 h-[400px] w-[400px] bg-purple-900/10 blur-[120px]" />
       </div>
 
-      <div className="relative mx-auto max-w-5xl mt-10 mb-4 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-        <button
-          onClick={() => {
-            setCurrentIndex((prev) =>
-              prev === 0 ? banners.length - 1 : prev - 1
-            );
-          }}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -ml-8 sm:-ml-12 z-20 text-white hover:text-gray-300 focus:outline-none"
-        >
-          <ChevronLeft className="h-8 w-8" />
-        </button>
-
-        <section className="relative w-full overflow-hidden rounded-lg bg-black">
-          <div className="relative w-full h-[300px]">
-            {banners.map((banner, index) => (
-              <img
-                key={index}
-                src={banner}
-                className={`absolute inset-0 w-full h-full object-fill transition-transform duration-700 ${
-                  index === currentIndex 
-                    ? 'translate-x-0' 
-                    : index < currentIndex 
-                      ? '-translate-x-full' 
-                      : 'translate-x-full'
-                }`}
-                alt={`Banner ${index + 1}`}
-              />
+      {/* ── BANNER ── */}
+      <div className="relative mb-16 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden" style={{ height: '320px' }}>
+          {banners.map((banner, index) => (
+            <img
+              key={index}
+              src={banner}
+              className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${
+                index === currentIndex ? 'translate-x-0' : index < currentIndex ? '-translate-x-full' : 'translate-x-full'
+              }`}
+              alt={`Banner ${index + 1}`}
+            />
+          ))}
+          {/* bottom fade */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent" />
+          {/* side controls */}
+          <button onClick={() => setCurrentIndex((p) => (p === 0 ? banners.length - 1 : p - 1))}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex h-10 w-10 items-center justify-center bg-black/40 border border-white/20 text-white hover:bg-black/70 transition">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button onClick={() => setCurrentIndex((p) => (p === banners.length - 1 ? 0 : p + 1))}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex h-10 w-10 items-center justify-center bg-black/40 border border-white/20 text-white hover:bg-black/70 transition">
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          {/* dot indicators */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+            {banners.map((_, i) => (
+              <button key={i} onClick={() => setCurrentIndex(i)}
+                className={`h-1 transition-all duration-300 ${i === currentIndex ? 'w-6 bg-purple-400' : 'w-2 bg-white/30'}`} />
             ))}
           </div>
-        </section>
-
-        <button
-          onClick={() => {
-            setCurrentIndex((prev) =>
-              prev === banners.length - 1 ? 0 : prev + 1
-            );
-          }}
-          className="absolute right-0 top-1/2 -translate-y-1/2 -mr-8 sm:-mr-12 z-20 text-white hover:text-gray-300 focus:outline-none"
-        >
-          <ChevronRight className="h-8 w-8" />
-        </button>
+        </div>
       </div>
 
-      {/* Lighting effect between banner and content */}
-      <div className="pointer-events-none relative mx-auto max-w-5xl -mt-32 h-20">
-        <div className="absolute left-1/2 top-1/2 h-[500px] w-[2000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/40 blur-[600px] -z-10" />
-      </div>
+      {/* ── SECTIONS CONTAINER ── */}
+      <div className="space-y-20 px-4 sm:px-8 lg:px-12 xl:px-16 mx-auto max-w-[1400px]">
 
       {/* 2. NOW PLAYING GRID */}
-      <section className="relative mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-0" id="now-playing-section">
-        <div className="flex flex-col items-center text-center gap-3 pb-4 mb-10 relative">
-          <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
-          <div>
-            <h2 className="text-3xl sm:text-4xl font-sans uppercase tracking-wider font-bold bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent">
-                Phim Đang Chiếu
-              </h2>
-            <p className="text-base text-neutral-200 uppercase tracking-widest mt-1.5">Các tác phẩm độc sắc kích hoạt quang phổ nghệ thuật điện ảnh</p>
-          </div>
+      <section id="now-playing-section">
+        <div className="section-heading">
+          <h2 className="section-title">Phim Đang Chiếu</h2>
+          <p className="section-subtitle">Các tác phẩm đang chiếu tại rạp</p>
         </div>
 
         <div className="relative">
@@ -386,25 +325,17 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             type="button"
             onClick={() => scrollNowPlaying(-1)}
             aria-label="Phim trước"
-            className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-left-8 xl:-left-12"
+            className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-left-8"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
 
-          <div
-            ref={nowPlayingRef}
-            className="flex [justify-content:safe_center] gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            id="now-playing-grid"
-          >
+          <div ref={nowPlayingRef} id="now-playing-grid"
+            className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {nowPlaying.map((movie) => (
-              <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[calc((100%_-_4.5rem)/4)]">
-                <MovieCard
-                  movie={movie}
-                  onSelect={onSelectMovie}
-                  onBook={onBookMovie}
-                  isWatchlisted={isMovieWatchlisted(movie)}
-                  onToggleWatchlist={handleToggleWatchlist}
-                />
+              <div key={movie.id} className="snap-start shrink-0 w-[185px] sm:w-[220px] lg:w-[calc((100%-3.75rem)/5)]">
+                <MovieCard movie={movie} onSelect={onSelectMovie} onBook={onBookMovie}
+                  isWatchlisted={isMovieWatchlisted(movie)} onToggleWatchlist={handleToggleWatchlist} />
               </div>
             ))}
           </div>
@@ -413,299 +344,192 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
             type="button"
             onClick={() => scrollNowPlaying(1)}
             aria-label="Phim sau"
-            className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-right-8 xl:-right-12"
+            className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-right-8"
           >
             <ChevronRight className="h-6 w-6" />
           </button>
         </div>
-
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={() => onTabChange('explore')}
-            className="border border-white/30 px-10 py-3 text-xs font-sans uppercase tracking-[0.2em] text-white hover:bg-white hover:text-black transition"
-          >
-            Xem Thêm
-          </button>
+        <div className="mt-10 flex justify-center">
+          <button onClick={() => onTabChange('explore')} className="section-cta-btn">Xem Thêm</button>
         </div>
       </section>
 
       {/* 4. UPCOMING RELEASES */}
-      <section className="relative mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8 py-0" id="upcoming-section">
-        <div className="flex flex-col items-center text-center gap-3 pb-4 mb-10 relative">
-          <div>
-            <h2 className="text-3xl sm:text-4xl font-sans uppercase tracking-wider font-bold bg-gradient-to-r from-purple-300 via-white to-purple-300 bg-clip-text text-transparent">
-              Phim Sắp Chiếu VIP
-            </h2>
-            <p className="text-base text-neutral-200 uppercase tracking-widest mt-1.5">Lưu trước thời khắc khởi chiếu và đặt chỗ tiên phong</p>
-          </div>
+      <section id="upcoming-section">
+        <div className="section-heading">
+          <h2 className="section-title">Phim Sắp Chiếu VIP</h2>
+          <p className="section-subtitle">Lưu trước thời khắc khởi chiếu và đặt chỗ tiên phong</p>
         </div>
-
         <div className="relative">
-          <button
-            type="button"
-            onClick={() => scrollUpcoming(-1)}
-            aria-label="Phim trước"
-            className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-left-8 xl:-left-12"
-          >
+          <button type="button" onClick={() => scrollUpcoming(-1)} aria-label="Phim trước"
+            className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-left-8">
             <ChevronLeft className="h-6 w-6" />
           </button>
-
-          <div
-            ref={upcomingRef}
-            className="flex [justify-content:safe_center] gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            id="upcoming-grid"
-          >
-          {upcoming.map((movie) => (
-            <div key={movie.id} className="snap-start shrink-0 w-[200px] sm:w-[240px] lg:w-[calc((100%_-_4.5rem)/4)]">
-              <MovieCard
-                movie={movie}
-                onSelect={onSelectMovie}
-                onBook={onBookMovie}
-                isWatchlisted={isMovieWatchlisted(movie)}
-                onToggleWatchlist={handleToggleWatchlist}
-              />
-            </div>
-          ))}
+          <div ref={upcomingRef} id="upcoming-grid"
+            className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {upcoming.map((movie) => (
+              <div key={movie.id} className="snap-start shrink-0 w-[185px] sm:w-[220px] lg:w-[calc((100%-3.75rem)/5)]">
+                <MovieCard movie={movie} onSelect={onSelectMovie} onBook={onBookMovie}
+                  isWatchlisted={isMovieWatchlisted(movie)} onToggleWatchlist={handleToggleWatchlist} />
+              </div>
+            ))}
           </div>
-
-          <button
-            type="button"
-            onClick={() => scrollUpcoming(1)}
-            aria-label="Phim sau"
-            className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/90 transition hover:text-white sm:-right-8 xl:-right-12"
-          >
+          <button type="button" onClick={() => scrollUpcoming(1)} aria-label="Phim sau"
+            className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-right-8">
             <ChevronRight className="h-6 w-6" />
           </button>
         </div>
-
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={() => onTabChange('explore')}
-            className="border border-white/30 px-10 py-3 text-xs font-sans uppercase tracking-[0.2em] text-white hover:bg-white hover:text-black transition"
-          >
-            Xem Thêm
-          </button>
+        <div className="mt-10 flex justify-center">
+          <button onClick={() => onTabChange('explore')} className="section-cta-btn">Xem Thêm</button>
         </div>
       </section>
-      {/* 3. PERSONALIZED RECOMMENDATIONS — real data from collaborative AI */}
-      {isLoggedIn && personalRecs.length > 0 && (() => {
-        const [featuredRec, ...otherRecs] = personalRecs.map(enrichRecommendation);
-        return (
-          <section className="bg-gradient-to-b from-purple-950/20 via-black to-purple-950/20 border-y border-purple-500/20 py-16 relative" id="personalized-highlights-section">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,0.1),transparent_50%)]" />
-            <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10 space-y-10">
 
-              <div className="space-y-5">
-                <div className="inline-flex items-center space-x-1.5 border border-purple-500/30 bg-purple-950/50 px-3 py-1 text-[9px] text-purple-200 tracking-[0.2em] uppercase font-sans">
-                  <Sparkles className="h-3 w-3 text-purple-300" />
-                  <span>ĐỀ XUẤT CHO BẠN</span>
-                </div>
-
-                <h2 className="text-5xl sm:text-6xl font-serif font-light text-white tracking-wide leading-tight">
-                  Chọn Riêng Cho <br />
-                  <span className="font-serif italic text-neutral-200">Gu Xem Của Bạn</span>
-                </h2>
-
-                <p className="text-lg text-neutral-200 leading-relaxed max-w-xl font-sans">
-                  Mức phù hợp bên dưới được tính trực tiếp từ lịch sử đặt vé và đánh giá của những
-                  khán giả có gu xem tương tự bạn — dữ liệu thật từ hệ thống, không phải con số trang trí.
-                </p>
-              </div>
-
-              {/* Featured recommendation with real match score */}
-              {featuredRec && (
-                <div className="relative bg-gradient-to-br from-purple-950/30 to-black border border-purple-500/20 p-6 flex flex-col md:flex-row gap-6 hover:border-purple-400/40 transition-all duration-300">
-                  <div className="w-full md:w-32 aspect-[2/3] overflow-hidden flex-shrink-0 bg-neutral-950 border border-white/5">
-                    {featuredRec.posterUrl ? (
-                      <img
-                        src={featuredRec.posterUrl}
-                        alt={featuredRec.title}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-sans tracking-[0.15em] text-neutral-200 uppercase">PHÙ HỢP NHẤT VỚI BẠN</span>
-                        {typeof featuredRec.similarity === 'number' && (
-                          <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/20 px-2 py-0.5 border border-emerald-500/20">
-                            ✓ KHỚP {Math.round(featuredRec.similarity * 100)}%
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-xl font-serif text-white mt-2 italic">{featuredRec.title}</h4>
-                      {featuredRec.englishTitle && (
-                        <p className="text-[10px] text-neutral-300 font-bold uppercase tracking-widest">{featuredRec.englishTitle}</p>
-                      )}
-                      {featuredRec.director && (
-                        <p className="text-[10px] text-neutral-300 mt-1.5 font-sans uppercase tracking-widest">
-                          Đạo diễn: <span className="text-white font-bold">{featuredRec.director}</span>
-                        </p>
-                      )}
-
-                      {featuredRec.synopsis && (
-                        <p className="text-xs text-neutral-200 mt-3 leading-relaxed font-sans line-clamp-3">
-                          {featuredRec.synopsis}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-neutral-400 mt-3 font-sans italic">
-                        Điểm khớp tính từ đánh giá của khán giả có lịch sử xem giống bạn.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                      <button
-                        onClick={() => onSelectMovie(featuredRec.id)}
-                        className="text-[10px] font-sans tracking-wider uppercase text-neutral-200 hover:text-white underline underline-offset-4 decoration-white/30"
-                      >
-                        XEM CHI TIẾT →
-                      </button>
-                      <button
-                        disabled={!isMovieBookable(featuredRec)}
-                        onClick={() => isMovieBookable(featuredRec) && onBookMovie(featuredRec)}
-                        className="bg-purple-600 text-white px-5 py-2 text-[10px] uppercase tracking-wider font-sans font-bold hover:bg-purple-500 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        ĐẶT NGAY
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Remaining recommendations */}
-              {otherRecs.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="personalized-recs-grid">
-                  {otherRecs.slice(0, 10).map((rec) => (
-                    <button
-                      key={rec.id}
-                      type="button"
-                      onClick={() => onSelectMovie(rec.id)}
-                      className="group relative text-left bg-neutral-950 border border-white/10 hover:border-purple-400/40 transition overflow-hidden cursor-pointer"
-                    >
-                      <div className="aspect-[2/3] w-full overflow-hidden bg-black">
-                        {rec.posterUrl ? (
-                          <img
-                            src={rec.posterUrl}
-                            alt={rec.title}
-                            loading="lazy"
-                            className="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
-                        )}
-                      </div>
-                      {typeof rec.similarity === 'number' && (
-                        <span className="absolute top-2 right-2 bg-black/80 border border-purple-400/30 px-2 py-1 text-[9px] font-sans font-bold tracking-wider text-purple-200">
-                          {Math.round(rec.similarity * 100)}% KHỚP
-                        </span>
-                      )}
-                      <div className="p-3">
-                        <p className="text-xs font-serif text-white leading-snug line-clamp-2">{rec.title}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-            </div>
-          </section>
-        );
-      })()}
-
-      {/* 4. FAVORITE GENRE MOVIES */}
-      {isLoggedIn && favoriteGenreMovies.length > 0 && (
-        <section className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8" id="favorite-genre-section">
-          <div className="relative pb-4 mb-8">
-            <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
-            <div className="flex items-center gap-3 mb-1">
-              <Sparkles className="h-4 w-4 text-amber-400" />
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-400">Dựa trên sở thích của bạn</span>
-            </div>
-            <h2 className="text-2xl font-serif font-light text-white tracking-wide">
-              Thể Loại Yêu Thích
-              {favoriteGenres.length > 0 && (
-                <span className="ml-3 text-sm font-sans font-normal text-neutral-400 tracking-[0.1em]">
-                  {favoriteGenres.join(' · ')}
-                </span>
-              )}
-            </h2>
+      {/* 3. PERSONALIZED RECOMMENDATIONS */}
+      {isLoggedIn && (personalRecs.length > 0 || publicMovies.length > 0) && (
+        <section id="personalized-highlights-section">
+          <div className="section-heading">
+            <h2 className="section-title">Chọn Riêng Cho Bạn</h2>
+            <p className="section-subtitle">Gợi ý từ lịch sử xem của những khán giả có gu tương tự bạn</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {favoriteGenreMovies.map((movie) => (
-              <button
-                key={movie.id}
-                type="button"
-                onClick={() => onSelectMovie(movie.id)}
-                className="group relative text-left bg-neutral-950 border border-white/10 hover:border-amber-400/40 transition overflow-hidden cursor-pointer"
-              >
-                <div className="aspect-[2/3] w-full overflow-hidden bg-black">
-                  {movie.posterUrl ? (
-                    <img
-                      src={movie.posterUrl}
-                      alt={movie.title}
-                      loading="lazy"
-                      className="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
-                  )}
+          <div className="relative">
+            <button type="button" onClick={() => scrollPersonalRecs(-1)} aria-label="Phim trước"
+              className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-left-8">
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <div ref={personalRecsRef}
+              className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {(personalRecs.length > 0 ? personalRecs.map(enrichRecommendation) : publicMovies.slice(0, 8)).map((rec) => (
+                <div key={rec.id} className="snap-start shrink-0 w-[185px] sm:w-[220px] lg:w-[calc((100%-3.75rem)/5)]">
+                  <MovieCard movie={rec} onSelect={onSelectMovie} onBook={onBookMovie}
+                    isWatchlisted={isMovieWatchlisted(rec)} onToggleWatchlist={handleToggleWatchlist} />
                 </div>
-                <div className="p-2.5 space-y-1">
-                  <p className="text-xs font-serif text-white leading-snug line-clamp-2">{movie.title}</p>
-                  <p className="text-[9px] text-neutral-500 uppercase tracking-wider">
-                    {(movie.genres || movie.genreNames || []).slice(0, 2).map((g) => typeof g === 'string' ? g : g?.name).filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                {(movie.status === 'NOW_SHOWING') && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onBookMovie(movie); }}
-                    className="absolute bottom-0 left-0 right-0 bg-amber-400 text-black text-[9px] font-black uppercase tracking-[0.18em] py-1.5 opacity-0 group-hover:opacity-100 transition"
-                  >
-                    Đặt vé
-                  </button>
-                )}
-              </button>
-            ))}
+              ))}
+            </div>
+            <button type="button" onClick={() => scrollPersonalRecs(1)} aria-label="Phim sau"
+              className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-right-8">
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="mt-10 flex justify-center">
+            <button onClick={() => onTabChange('explore')} className="section-cta-btn">Xem Thêm</button>
           </div>
         </section>
       )}
 
-      {/* 5. DISCOVER GENRES ARTWORK */}
-      <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8" id="genres-section">
-        <div className="relative pb-4 mb-10">
-          <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-          <h2 className="text-4xl font-serif uppercase tracking-wider font-light bg-gradient-to-r from-purple-300 via-white to-purple-300 bg-clip-text text-transparent">
-            Khám Phá Vũ Trụ Thể Loại
-          </h2>
+      {/* 5. DISCOVER GENRES */}
+      <section id="genres-section">
+        <div className="section-heading">
+          <h2 className="section-title">Khám Phá Vũ Trụ Thể Loại</h2>
+          <p className="section-subtitle">Tìm phim theo thể loại yêu thích</p>
         </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6" id="discover-genres-grid">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="discover-genres-grid">
           {genresList.map((g, i) => (
-            <div
-              key={i}
-              onClick={() => onTabChange('explore')}
-              className="group relative h-28 border border-purple-500/20 bg-gradient-to-br from-purple-950/30 to-black p-4 flex flex-col justify-end cursor-pointer hover:border-purple-400/50 transition-all duration-300"
-            >
-              <div className="absolute inset-0 bg-cover bg-center grayscale contrast-200 opacity-20 group-hover:scale-105 group-hover:opacity-40 transition-all duration-500" style={{ backgroundImage: `url(${g.bg})` }} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-
-              <div className="relative z-10 border-l border-white/20 pl-3">
-                <h4 className="text-xs uppercase tracking-[0.2em] text-white font-sans">{g.title}</h4>
-                <p className="text-[9px] text-neutral-300 mt-1 uppercase tracking-widest">{g.tags}</p>
+            <div key={i} onClick={() => onTabChange('explore')}
+              className="group relative h-32 border border-purple-500/20 bg-gradient-to-br from-purple-950/40 to-black p-5 flex flex-col justify-end cursor-pointer hover:border-purple-400/60 transition-all duration-300 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-purple-900/10" />
+              <div className="absolute inset-0 bg-purple-500/0 group-hover:bg-purple-500/5 transition-all duration-300" />
+              <div className="relative z-10">
+                <h4 className="text-sm font-black uppercase tracking-[0.15em] text-white">{g.title}</h4>
+                <p className="text-[10px] text-purple-300/70 mt-1 uppercase tracking-widest">{g.tags}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
+      </div>{/* end sections container */}
+
+      {/* POPCORN AI CHATBOT */}
+      <div className="fixed bottom-6 right-6 z-[200] flex flex-col items-end gap-3">
+        {/* Chat window */}
+        {chatOpen && (
+          <div className="w-80 bg-neutral-950 border border-purple-500/30 shadow-2xl flex flex-col overflow-hidden"
+            style={{ height: 420 }}>
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-purple-950/60 border-b border-purple-500/20">
+              <img src={popcornBot} alt="PopBot" className="w-8 h-8 object-contain rounded-full border border-purple-400/40" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-sans font-bold text-white">PopBot AI</p>
+                <p className="text-[9px] text-emerald-400 font-sans flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                  Đang hoạt động
+                </p>
+              </div>
+              <button onClick={() => setChatOpen(false)} className="text-neutral-400 hover:text-white transition">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.1)_transparent]">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {msg.role === 'bot' && (
+                    <img src={popcornBot} alt="bot" className="w-6 h-6 object-contain rounded-full border border-purple-400/30 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className={`max-w-[75%] px-3 py-2 text-[12px] font-sans leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-neutral-800 text-neutral-200'
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="flex items-center gap-2 px-3 py-3 border-t border-white/10">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && chatInput.trim()) {
+                    const userMsg = chatInput.trim();
+                    setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
+                    setChatInput('');
+                    setTimeout(() => {
+                      setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé! 🎬' }]);
+                      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }, 600);
+                  }
+                }}
+                placeholder="Hỏi về phim, lịch chiếu..."
+                className="flex-1 bg-neutral-800 px-3 py-2 text-[12px] font-sans text-white placeholder-neutral-500 outline-none focus:bg-neutral-700 transition"
+              />
+              <button
+                onClick={() => {
+                  if (!chatInput.trim()) return;
+                  const userMsg = chatInput.trim();
+                  setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
+                  setChatInput('');
+                  setTimeout(() => {
+                    setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé! 🎬' }]);
+                    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  }, 600);
+                }}
+                className="bg-purple-600 hover:bg-purple-500 transition p-2 text-white"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Floating button */}
+        <button
+          onClick={() => setChatOpen((o) => !o)}
+          className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-purple-400/60 shadow-lg shadow-purple-900/50 hover:scale-110 transition-transform duration-200"
+          title="Chat với PopBot AI"
+        >
+          <img src={popcornBot} alt="PopBot" className="w-full h-full object-cover" />
+          {!chatOpen && (
+            <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-neutral-950 animate-pulse" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
