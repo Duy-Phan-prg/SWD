@@ -1,6 +1,6 @@
 package com.sba301.cinemaai.ai.service.impl;
 
-import com.sba301.cinemaai.ai.client.AIRecommendationClient;
+import com.sba301.cinemaai.ai.client.AIClient;
 import com.sba301.cinemaai.ai.dto.response.RecommendMovieResponse;
 import com.sba301.cinemaai.ai.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecommendationServiceImpl implements RecommendationService {
 
-    private final AIRecommendationClient client;
+    private final AIClient client;
 
     @Override
     public List<RecommendMovieResponse> content(Long movieId) {
