@@ -38,10 +38,10 @@ export const normalizeRecommendationResponse = (payload) =>
 export const recommendationService = {
   // Content-based: "similar movies" — public endpoint
   getContentRecommendations: (movieId) =>
-    request(`/api/recommendation/content/${encodeURIComponent(movieId)}`)
+    request(`/api/v1/recommendation/content/${encodeURIComponent(movieId)}`)
       .then(normalizeRecommendationResponse),
   // Collaborative: "recommended for you" — requires auth token
   getCollaborativeRecommendations: (userId, token) =>
-    request(`/api/recommendation/collaborative/${encodeURIComponent(userId)}`, { token })
+    request(`/api/v1/recommendation/collaborative/${encodeURIComponent(userId)}`, { token })
       .then(normalizeRecommendationResponse)
 };

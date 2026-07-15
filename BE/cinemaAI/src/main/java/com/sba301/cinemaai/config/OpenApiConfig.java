@@ -51,7 +51,7 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("3-customer-public")
                 .displayName("Customer & Public APIs")
-                .pathsToMatch("/api/v1/**", "/api/recommendation/**")
+                .pathsToMatch("/api/v1/**")
                 .pathsToExclude("/api/v1/admin/**", "/api/v1/staff/**")
                 .build();
     }

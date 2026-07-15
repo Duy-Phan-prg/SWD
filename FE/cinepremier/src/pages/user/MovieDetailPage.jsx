@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 const popcornBot = new URL('../../assets/banners/—Pngtree—barrel popcorn pattern_4538379.png', import.meta.url).href;
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Play, Star, Clock, Heart, Loader2 } from 'lucide-react';
+import { ArrowLeft, Play, Star, Clock, Heart, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMovies } from '../../stores/useMovieStore';
 import { getStoredAuth } from '../../services/authService';
 import { adminService } from '../../services/adminService';
@@ -71,6 +71,11 @@ const hasSourcePoster = (movie = {}) => Boolean(
 export default function DetailView() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const similarMoviesRef = useRef(null);
+  const scrollSimilar = (dir) => {
+    const el = similarMoviesRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
   const { moviesList, setMoviesList, watchlist = [], handleToggleWatchlist } = useMovies();
   const currentRole = useAuthStore((state) => state.currentRole);
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
@@ -494,36 +499,47 @@ export default function DetailView() {
             PHIM TƯƠNG TỰ
             <span className="ml-3 font-light normal-case tracking-normal text-neutral-300">Dựa trên nội dung, thể loại và ê-kíp</span>
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="similar-movies-grid">
-            {similarMovies.slice(0, 10).map((rec) => (
-              <button
-                key={rec.id}
-                type="button"
-                onClick={() => navigate(`/movies/${rec.backendId || rec.id}`)}
-                className="group relative text-left bg-neutral-950 border border-white/10 hover:border-white/40 transition overflow-hidden cursor-pointer"
-              >
-                <div className="aspect-[2/3] w-full overflow-hidden bg-black">
-                  {rec.posterUrl ? (
-                    <img
-                      src={rec.posterUrl}
-                      alt={rec.title}
-                      loading="lazy"
-                      className="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
+          <div className="relative">
+            <button type="button" onClick={() => scrollSimilar(-1)} aria-label="Phim trước"
+              className="absolute -left-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-left-8">
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <div ref={similarMoviesRef}
+              className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {similarMovies.map((rec) => (
+                <button
+                  key={rec.id ?? rec.movieId}
+                  type="button"
+                  onClick={() => navigate(`/movies/${rec.backendId || rec.id}`)}
+                  className="snap-start shrink-0 w-[calc((100%-6rem)/7)] group relative text-left bg-neutral-950 border border-white/10 hover:border-white/40 transition overflow-hidden cursor-pointer"
+                >
+                  <div className="aspect-[2/3] w-full overflow-hidden bg-black">
+                    {rec.posterUrl ? (
+                      <img
+                        src={rec.posterUrl}
+                        alt={rec.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-neutral-600">Không có poster</div>
+                    )}
+                  </div>
+                  {typeof rec.similarity === 'number' && (
+                    <span className="absolute top-2 right-2 bg-black/80 border border-white/20 px-2 py-1 text-[9px] font-sans font-bold tracking-wider text-white">
+                      {Math.round(rec.similarity * 100)}% TƯƠNG ĐỒNG
+                    </span>
                   )}
-                </div>
-                {typeof rec.similarity === 'number' && (
-                  <span className="absolute top-2 right-2 bg-black/80 border border-white/20 px-2 py-1 text-[9px] font-sans font-bold tracking-wider text-white">
-                    {Math.round(rec.similarity * 100)}% TƯƠNG ĐỒNG
-                  </span>
-                )}
-                <div className="p-3">
-                  <p className="text-xs font-serif text-white leading-snug line-clamp-2">{rec.title}</p>
-                </div>
-              </button>
-            ))}
+                  <div className="p-3">
+                    <p className="text-xs font-serif text-white leading-snug line-clamp-2">{rec.title}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => scrollSimilar(1)} aria-label="Phim sau"
+              className="absolute -right-4 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-white/70 hover:text-white transition sm:-right-8">
+              <ChevronRight className="h-6 w-6" />
+            </button>
           </div>
         </section>
       )}
