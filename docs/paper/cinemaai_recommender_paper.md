@@ -1,0 +1,179 @@
+# CinemaAI: Design and Offline Evaluation of a Sentence-Embedding Content-Based and User-Based Collaborative Movie Recommender for a Cinema Ticketing Platform
+
+**[Author Name(s)]**
+*[Institution], [City, Country]*
+*[email]*
+
+---
+
+## Abstract
+
+Cinema ticketing platforms increasingly rely on recommendation systems to surface relevant films to their audiences. This paper presents CinemaAI, a production movie recommendation service deployed as a FastAPI microservice within a three-tier cinema management system, and reports the first systematic offline evaluation of its algorithms. The service combines (i) a content-based recommender that encodes movie metadata with the `all-MiniLM-L6-v2` sentence-embedding model and ranks by cosine similarity, (ii) a user-based collaborative filtering (CF) model with k = 20 nearest neighbors and similarity-weighted rating prediction, and (iii) a two-tier popularity fallback for cold-start users. We evaluate all three models under an identical per-user temporal 80/10/10 split on two datasets: the MovieLens 1M benchmark (1,000,209 ratings, 6,040 users) and a fully synthetic CinemaAI dataset (55,775 interactions, 600 users) used for pipeline validation. Performance is measured with Precision@10, Recall@10, NDCG@10, MAP@10, catalog coverage, RMSE, and MAE. The results reveal three actionable findings. First, the value of content-based recommendation depends strongly on metadata richness: with full metadata (overview, cast, keywords) the sentence-embedding recommender outperforms all alternatives by 3–4×, whereas with title-and-genre metadata only (MovieLens 1M) it degrades to near the CF level. Second, the production CF formula—which ranks by raw similarity-weighted predicted rating without mean-centering or support weighting—underperforms even an item-mean baseline in rating prediction (RMSE 1.081 vs. 0.993 on MovieLens 1M). Third, under a temporal split on real data, the popularity baseline is remarkably strong for ranking (Precision@10 = 0.039) but recommends only 3% of the catalog, justifying its role as a fallback rather than a primary model. We discuss concrete, formula-level improvements (mean-centered prediction, support-weighted ranking, hybrid blending) and release the evaluation harness alongside the system.
+
+**Keywords** — recommender systems, collaborative filtering, content-based filtering, sentence embeddings, offline evaluation, MovieLens
+
+---
+
+## 1. Introduction
+
+Online cinema ticketing platforms present users with a catalog of currently showing and upcoming films. Unlike large streaming catalogs, a cinema catalog is small and volatile—titles enter and leave weekly—yet the recommendation problem remains: a visitor deciding what to watch benefits from "similar movies" on a detail page and from a personalized "recommended for you" shelf on the home page.
+
+CinemaAI is the recommendation and conversational-AI subsystem of CinePremier, a full-stack cinema management system consisting of a React frontend, a Spring Boot backend, and a Python FastAPI microservice. The microservice implements two complementary recommenders that mirror the classical dichotomy in the literature: a content-based model over movie metadata and a user-based collaborative filtering model over explicit ratings, with a popularity fallback for cold-start users.
+
+While the system is functional in production, its algorithms had never been evaluated quantitatively. This paper closes that gap. Our contributions are:
+
+1. **A documented production architecture** for embedding-based movie recommendation in a microservice setting, including offline embedding precomputation and graceful degradation (Section 4).
+2. **A reproducible offline evaluation harness** implementing Precision@K, Recall@K, NDCG@K, MAP@K, catalog coverage, RMSE, and MAE under a per-user temporal split, with the production formulas ported verbatim (Section 6).
+3. **An empirical comparison** of the three production models on MovieLens 1M (primary, real-world benchmark) and a synthetic CinemaAI dataset (secondary, pipeline validation), yielding formula-level diagnoses of the production CF model and evidence that metadata richness governs content-based performance (Sections 7–8).
+
+## 2. Related Work
+
+**Collaborative filtering.** Neighborhood-based CF dates to GroupLens [5], which predicted a user's rating as a similarity-weighted average of neighbors' ratings. Sarwar et al. [6] introduced the item-based variant; Herlocker et al. [7] established evaluation methodology for CF systems, including the importance of mean-centering and significance (support) weighting in neighborhood models—both absent from the CinemaAI production formula, a gap our results quantify.
+
+**Content-based filtering.** Classical content-based recommenders represent items with TF-IDF bag-of-words vectors [1]. Modern systems replace sparse lexical vectors with dense semantic embeddings; Sentence-BERT [3] produces sentence-level embeddings suitable for cosine-similarity ranking, and MiniLM [4] provides a distilled 6-layer encoder (`all-MiniLM-L6-v2`, 384 dimensions) that trades little accuracy for large speedups, making it practical for CPU-only production services such as ours.
+
+**Evaluation.** Cremonesi et al. [8] showed that top-N accuracy and rating-prediction accuracy can disagree, and that non-personalized popularity is a strong top-N baseline—an effect we reproduce under a temporal split. Harper and Konstan [2] describe the MovieLens datasets used here.
+
+## 3. System Overview
+
+CinePremier is a three-tier system:
+
+- **Frontend (React/Vite).** The movie detail page displays a "similar movies" grid fed by the content-based endpoint; the home page displays a personalized "recommended for you" shelf fed by the collaborative endpoint, falling back to the public catalog when no personalized results exist.
+- **Backend (Spring Boot).** Exposes `/api/v1/recommendation/content/{movieId}` and `/api/v1/recommendation/collaborative/{userId}`; a thin `AIClient` proxies to the AI microservice and returns an empty list on failure, so recommendation outages never break page rendering (graceful degradation).
+- **AI microservice (FastAPI, Python).** Hosts the two recommenders and a retrieval-augmented movie chatbot. Movie embeddings are precomputed offline by a batch script from the PostgreSQL catalog and stored in a pickle file; at query time only the (cheap) query-side encoding and cosine ranking are performed.
+
+## 4. Recommendation Algorithms
+
+### 4.1 Content-based recommendation with sentence embeddings
+
+Each movie *m* is represented by a text document concatenating its metadata:
+
+```
+d_m = description ⊕ director ⊕ actors ⊕ genres
+```
+
+The document is encoded by the pretrained sentence-embedding model `all-MiniLM-L6-v2` [3, 4] into a dense vector **v**_m ∈ ℝ³⁸⁴. Given a query movie *q*, all catalog movies are ranked by cosine similarity
+
+$$
+\cos(\mathbf{v}_q, \mathbf{v}_m) \;=\; \frac{\mathbf{v}_q \cdot \mathbf{v}_m}{\lVert\mathbf{v}_q\rVert \, \lVert\mathbf{v}_m\rVert},
+$$
+
+the query movie is excluded, and the top-10 are returned. Unlike the TF-IDF representation common in earlier systems, the embedding captures semantic similarity between synonymous descriptions.
+
+### 4.2 User-based collaborative filtering
+
+Each user *u* is a sparse rating vector **r**_u = {(m, r_{u,m})}. Similarity between two users is the cosine over their ratings (the dot product ranges over co-rated movies only):
+
+$$
+\mathrm{sim}(u,v) \;=\; \frac{\sum_{m \in I_u \cap I_v} r_{u,m}\, r_{v,m}}{\sqrt{\sum_{m \in I_u} r_{u,m}^2}\,\sqrt{\sum_{m \in I_v} r_{v,m}^2}}.
+$$
+
+For a target user *u*, the k = 20 most similar users with positive similarity form the neighborhood N(u). The predicted rating for an unseen movie *m* is the similarity-weighted average
+
+$$
+\hat{r}_{u,m} \;=\; \frac{\sum_{v \in N(u)} \mathrm{sim}(u,v)\, r_{v,m}}{\sum_{v \in N(u)} \mathrm{sim}(u,v)},
+$$
+
+and movies already rated or booked by the user are excluded. The top-10 movies by predicted rating are returned. Note that this production formula uses **raw** ratings (no mean-centering) and ranks purely by predicted value regardless of how many neighbors support the prediction; Section 8 shows both choices are measurably harmful.
+
+### 4.3 Cold-start fallback
+
+Users without ratings receive a two-tier non-personalized list: (1) movies ranked by mean review rating; if empty, (2) movies ranked by the number of paid bookings (popularity).
+
+## 5. Datasets
+
+**MovieLens 1M (primary).** The main experiments use the MovieLens 1M stable benchmark [2]: 1,000,209 anonymous ratings (integers 1–5) of 3,883 movies from 6,040 users, each with at least 20 ratings. Interactions are ordered chronologically per user; the earliest 80% form the training set (797,758 interactions), the next 10% validation, and the latest 10% the test set (102,759 interactions). This temporal strategy prevents leakage of future interactions into training. Because MovieLens provides only titles and genres as item metadata, the content-based document is `d_m = title ⊕ genres`.
+
+**Synthetic CinemaAI dataset (secondary).** A separately generated synthetic dataset (seed 20260717) is used only to validate metadata processing, the evaluation pipeline, and application behavior under the *full* metadata schema of the production system (overview, director, cast, keywords, genres): 1,200 movies, 600 users, 55,775 interactions with explicit ratings (0.5–5.0) and a binary `liked` flag, split per-user temporally 80/10/10 (44,376 / 5,560 / 5,839). Every record carries `synthetic_flag = true`. Results from synthetic data are reported separately and are **not** interpreted as evidence of real-world effectiveness.
+
+## 6. Experimental Setup
+
+**Protocol.** All models are fit on the training split only. For each user, the candidate set is the full catalog minus the user's training items (mirroring the production `seen` filter); each model produces a top-10 ranking. A held-out test item is *relevant* if its rating ≥ 4 on MovieLens 1M (standard practice), and if `liked = 1` (primary) or rating ≥ 3.5 (sensitivity variant) on the synthetic dataset. Users with no relevant test items are excluded from ranking metrics.
+
+**Models.** (1) *Popularity*: a single ranking by training interaction count, personalized only by the seen-item filter. (2) *User-based CF (k = 20)*: the production formula of Section 4.2, ported verbatim (dictionary implementation for the synthetic dataset; a mathematically equivalent vectorized implementation for MovieLens 1M). (3) *Content-based SBERT*: because the production endpoint is item-to-item, per-user evaluation requires an adaptation—each user is represented by a profile vector equal to the rating-weighted mean of the embeddings of their liked training items (falling back to all training items when none are liked), and candidates are ranked by cosine to this profile.
+
+**Metrics.** Precision@10, Recall@10, NDCG@10, and MAP@10 averaged over users; catalog coverage@10 (fraction of the catalog recommended to at least one user); RMSE and MAE for rating prediction, compared against global-mean and per-item-mean baselines. All computations are deterministic; two independent runs produce byte-identical results.
+
+**Environment.** Python 3.11, sentence-transformers 3.0.1 (CPU), numpy/pandas. Encoding 3,883 MovieLens documents takes 7 s; the full MovieLens evaluation completes in under one minute.
+
+## 7. Results
+
+### 7.1 MovieLens 1M (real-world benchmark)
+
+**Table 1 — Top-10 ranking quality, MovieLens 1M (relevance: rating ≥ 4; 5,827 users).**
+
+| Model | P@10 | R@10 | NDCG@10 | MAP@10 | Coverage@10 |
+|---|---|---|---|---|---|
+| Popularity | **0.0394** | **0.0446** | **0.0506** | **0.0227** | 0.0301 |
+| User-based CF (k=20) | 0.0067 | 0.0096 | 0.0100 | 0.0043 | **0.7005** |
+| Content-based SBERT | 0.0060 | 0.0113 | 0.0093 | 0.0040 | 0.2856 |
+
+**Table 2 — Rating prediction, MovieLens 1M test set.**
+
+| Model | RMSE | MAE |
+|---|---|---|
+| Global mean | 1.1634 | 0.9575 |
+| Item mean | **0.9925** | **0.7893** |
+| User-based CF (k=20) | 1.0807 | 0.8421 |
+
+### 7.2 Synthetic CinemaAI dataset (pipeline validation)
+
+**Table 3 — Top-10 ranking quality, synthetic dataset (relevance: liked = 1; 363 users).**
+
+| Model | P@10 | R@10 | NDCG@10 | MAP@10 | Coverage@10 |
+|---|---|---|---|---|---|
+| Popularity | 0.0036 | 0.0195 | 0.0124 | 0.0084 | 0.0133 |
+| User-based CF (k=20) | 0.0039 | 0.0233 | 0.0121 | 0.0067 | **0.5317** |
+| Content-based SBERT | **0.0127** | **0.0787** | **0.0417** | **0.0245** | 0.3942 |
+
+The sensitivity variant (relevance: rating ≥ 3.5; 524 users) preserves the ordering: content-based leads with P@10 = 0.0116 against 0.0053 for both alternatives.
+
+**Table 4 — Rating prediction, synthetic test set.**
+
+| Model | RMSE | MAE |
+|---|---|---|
+| Global mean | 0.8404 | 0.6795 |
+| Item mean | **0.8221** | **0.6641** |
+| User-based CF (k=20) | 0.9532 | 0.7543 |
+
+## 8. Discussion
+
+**F1 — Metadata richness governs content-based performance.** The sentence-embedding recommender is the best model by 3–4× on the synthetic dataset, where documents contain overview, cast, keywords, director, and genres—the schema of the production system. On MovieLens 1M, where only title and genres are available, the same model collapses to CF-level performance (P@10 = 0.0060). The practical implication for CinemaAI is direct: the investment in rich catalog metadata (descriptions, cast, keywords) is precisely what makes the embedding approach viable, and enriching metadata is likely a higher-leverage improvement than changing the model.
+
+**F2 — The production CF formula underperforms trivial baselines.** On both datasets, ranking by raw similarity-weighted predicted rating is no better than (synthetic) or far worse than (MovieLens) the popularity baseline, and rating prediction is worse than the per-item mean (RMSE 1.081 vs. 0.993 on MovieLens; 0.953 vs. 0.822 on synthetic). Two textbook defects explain this [7]: (i) no *mean-centering*—users with different rating scales are averaged directly; the standard fix is $\hat{r}_{u,m} = \bar{r}_u + \frac{\sum_v \mathrm{sim}(u,v)(r_{v,m} - \bar{r}_v)}{\sum_v \mathrm{sim}(u,v)}$; (ii) no *support weighting*—an item rated 5 by a single neighbor outranks an item rated 4.5 by fifteen neighbors, which also explains CF's very high coverage (70% of the catalog) being a symptom of noise rather than healthy diversity. Both fixes are one-line formula changes in `collaborative_recommend.py`.
+
+**F3 — Popularity is a strong ranking baseline under temporal splits, but a poor recommender.** On MovieLens 1M, popularity dominates all personalized models on every ranking metric, consistent with Cremonesi et al. [8] and amplified by the temporal split (recent test interactions concentrate on currently popular titles). Yet it recommends only 3.0% of the catalog—every user receives nearly the same list. This supports its production role as a cold-start *fallback* while cautioning against reading its accuracy as user value.
+
+**F4 — Rating-prediction and ranking quality disagree.** CF beats the global mean on RMSE yet ranks worse than popularity; content-based has no rating semantics at all yet ranks best on the synthetic dataset. This reproduces the classical observation [8] that RMSE-centric development can mislead top-N system design, and justifies our metric suite.
+
+**Implications for the production system.** In order of expected leverage: (1) apply mean-centering and a minimum-support threshold (or shrinkage) to the CF predictor; (2) blend content and CF scores into a hybrid ranker, with the blend weight tuned on the validation split—the complementary strengths across the two datasets suggest a metadata-aware blend; (3) keep popularity strictly as fallback; (4) for larger catalogs, replace the O(N) brute-force cosine scan with an approximate-nearest-neighbor index.
+
+## 9. Threats to Validity
+
+*Construct.* Offline relevance (rating ≥ 4, liked = 1) is a proxy for user satisfaction; online A/B testing remains necessary before claiming user-facing impact. The content-based model required an item-to-item → user-profile adaptation for per-user evaluation; production behavior on the movie detail page is item-to-item and is not directly measured here. *Internal.* Hyperparameters were fixed at production values (k = 20, K = 10) rather than tuned on the validation split; tuned baselines could shift absolute numbers, though the formula-level defects of F2 are parameter-independent in direction. *External.* The synthetic dataset is generated, carries `synthetic_flag = true`, and is used only to validate the pipeline under the full metadata schema; no claim about real audience behavior is derived from it. MovieLens users are movie-enthusiast raters and may differ from cinema-ticket buyers. *Reliability.* All experiments are deterministic and were verified to reproduce exactly across independent runs; the split, seed (20260717), and harness are fixed and released.
+
+## 10. Conclusion and Future Work
+
+We presented the CinemaAI recommendation service and its first systematic offline evaluation. The study delivered a reusable evaluation harness and three formula-level findings: sentence-embedding content-based recommendation is highly effective exactly when catalog metadata is rich; the production CF predictor needs mean-centering and support weighting before it can compete with trivial baselines; and popularity, while a strong offline ranking baseline under temporal evaluation, is unsuitable as a primary recommender due to negligible coverage. Future work includes implementing the corrected CF formula, learning a validation-tuned hybrid blend of content and collaborative scores, replacing brute-force similarity search with an ANN index, and validating the offline findings with an online experiment on the CinePremier platform.
+
+## Acknowledgments
+
+MovieLens data courtesy of GroupLens Research. The synthetic dataset was generated for engineering validation and is marked as such in every record.
+
+## References
+
+[1] F. Ricci, L. Rokach, and B. Shapira, Eds., *Recommender Systems Handbook*, 2nd ed. Springer, 2015.
+
+[2] F. M. Harper and J. A. Konstan, "The MovieLens datasets: History and context," *ACM Trans. Interact. Intell. Syst.*, vol. 5, no. 4, Article 19, 2015. doi:10.1145/2827872.
+
+[3] N. Reimers and I. Gurevych, "Sentence-BERT: Sentence embeddings using Siamese BERT-networks," in *Proc. EMNLP-IJCNLP*, 2019, pp. 3982–3992.
+
+[4] W. Wang, F. Wei, L. Dong, H. Bao, N. Yang, and M. Zhou, "MiniLM: Deep self-attention distillation for task-agnostic compression of pre-trained transformers," in *Proc. NeurIPS*, 2020.
+
+[5] P. Resnick, N. Iacovou, M. Suchak, P. Bergstrom, and J. Riedl, "GroupLens: An open architecture for collaborative filtering of netnews," in *Proc. CSCW*, 1994, pp. 175–186.
+
+[6] B. Sarwar, G. Karypis, J. Konstan, and J. Riedl, "Item-based collaborative filtering recommendation algorithms," in *Proc. WWW*, 2001, pp. 285–295.
+
+[7] J. L. Herlocker, J. A. Konstan, L. G. Terveen, and J. T. Riedl, "Evaluating collaborative filtering recommender systems," *ACM Trans. Inf. Syst.*, vol. 22, no. 1, pp. 5–53, 2004.
+
+[8] P. Cremonesi, Y. Koren, and R. Turrin, "Performance of recommender algorithms on top-N recommendation tasks," in *Proc. RecSys*, 2010, pp. 39–46.
