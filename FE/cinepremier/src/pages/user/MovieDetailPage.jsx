@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 const popcornBot = new URL('../../assets/banners/—Pngtree—barrel popcorn pattern_4538379.png', import.meta.url).href;
 import { createPortal } from 'react-dom';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Play, Star, Clock, Heart, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMovies } from '../../stores/useMovieStore';
 import { getStoredAuth } from '../../services/authService';
@@ -9,6 +9,7 @@ import { adminService } from '../../services/adminService';
 import { movieService } from '../../services/movieService';
 import { reviewService } from '../../services/reviewService';
 import { recommendationService } from '../../services/recommendationService';
+import { chatService } from '../../services/chatService';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const extractYoutubeId = (url = '') => {
@@ -78,6 +79,7 @@ export default function DetailView() {
   };
   const { moviesList, setMoviesList, watchlist = [], handleToggleWatchlist } = useMovies();
   const currentRole = useAuthStore((state) => state.currentRole);
+  const currentUser = useAuthStore((state) => state.currentUser);
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
   const onBack = () => navigate(-1);
   const onBook = (mv) => navigate(`/movies/${mv.id}/book`);
@@ -112,7 +114,16 @@ export default function DetailView() {
     return () => { cancelled = true; };
   }, [id, currentRole, movie?.backendId]);
 
-  const [showTrailer, setShowTrailer] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showTrailer, setShowTrailerState] = useState(searchParams.get('trailer') === '1');
+  const setShowTrailer = (value) => {
+    setShowTrailerState(value);
+    if (!value && searchParams.get('trailer')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('trailer');
+      setSearchParams(next, { replace: true });
+    }
+  };
   const [reviews, setReviews] = useState([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [likedReviews, setLikedReviews] = useState({});
@@ -126,6 +137,52 @@ export default function DetailView() {
   const hasDirectTrailerVideo = isDirectVideoUrl(trailerUrl);
 
   const detailMovieId = movie?.backendId || movie?.movieId || movie?.id || id;
+
+  const [trailerChatInput, setTrailerChatInput] = useState('');
+  const [trailerChatMessages, setTrailerChatMessages] = useState([]);
+  const [trailerChatSending, setTrailerChatSending] = useState(false);
+  const trailerChatEndRef = useRef(null);
+
+  useEffect(() => {
+    trailerChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [trailerChatMessages]);
+
+  const handleSendTrailerChat = async () => {
+    const userMsg = trailerChatInput.trim();
+    if (!userMsg || trailerChatSending) return;
+
+    setTrailerChatMessages((prev) => [
+      ...prev,
+      { role: 'user', text: userMsg },
+      { role: 'bot', text: '🤖 Đang suy nghĩ...' }
+    ]);
+    setTrailerChatInput('');
+    setTrailerChatSending(true);
+
+    try {
+      const { accessToken } = getStoredAuth();
+      const res = await chatService.sendMessage({
+        message: userMsg,
+        movieId: detailMovieId,
+        userId: currentUser?.id,
+        token: accessToken,
+        scope: 'trailer'
+      });
+      setTrailerChatMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = { role: 'bot', text: res?.message || 'Xin lỗi, tôi chưa có câu trả lời phù hợp.' };
+        return next;
+      });
+    } catch (error) {
+      setTrailerChatMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = { role: 'bot', text: '⚠️ Có lỗi xảy ra, thử lại sau nhé!' };
+        return next;
+      });
+    } finally {
+      setTrailerChatSending(false);
+    }
+  };
 
   useEffect(() => {
     if (!detailMovieId) return;
@@ -595,7 +652,7 @@ export default function DetailView() {
                 </div>
               </div>
               {/* Messages */}
-              <div className="px-5 py-4">
+              <div className="px-5 py-4 space-y-3 max-h-64 overflow-y-auto">
                 <div className="flex items-start gap-2.5">
                   <img src={popcornBot} alt="AI" className="w-6 h-6 object-cover flex-shrink-0 mt-0.5 rounded-full border border-purple-400/30" />
                   <div className="bg-neutral-800/60 border border-white/8 px-4 py-3 max-w-sm rounded-2xl rounded-tl-sm">
@@ -604,15 +661,38 @@ export default function DetailView() {
                     </p>
                   </div>
                 </div>
+                {trailerChatMessages.map((msg, i) => (
+                  <div key={i} className={`flex items-start gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                    {msg.role === 'bot' && (
+                      <img src={popcornBot} alt="AI" className="w-6 h-6 object-cover flex-shrink-0 mt-0.5 rounded-full border border-purple-400/30" />
+                    )}
+                    <div className={`px-4 py-3 max-w-sm text-[12px] font-sans leading-relaxed rounded-2xl ${
+                      msg.role === 'user'
+                        ? 'bg-purple-700 text-white rounded-tr-sm'
+                        : 'bg-neutral-800/60 border border-white/8 text-neutral-200 rounded-tl-sm'
+                    }`}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+                <div ref={trailerChatEndRef} />
               </div>
               {/* Input */}
               <div className="flex items-center gap-3 px-4 pt-3 pb-5 border-t border-white/8">
                 <input
                   type="text"
+                  value={trailerChatInput}
+                  onChange={(e) => setTrailerChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSendTrailerChat(); }}
+                  disabled={trailerChatSending}
                   placeholder="Nhập câu hỏi về phim..."
-                  className="flex-1 bg-neutral-800/50 px-4 py-2.5 text-[12px] font-sans text-white placeholder-neutral-600 outline-none rounded-full"
+                  className="flex-1 bg-neutral-800/50 px-4 py-2.5 text-[12px] font-sans text-white placeholder-neutral-600 outline-none rounded-full disabled:opacity-60"
                 />
-                <button className="bg-purple-700 hover:bg-purple-600 transition text-white px-5 py-2.5 text-[10px] font-sans font-bold uppercase tracking-[0.15em] rounded-full flex-shrink-0">
+                <button
+                  onClick={handleSendTrailerChat}
+                  disabled={trailerChatSending}
+                  className="bg-purple-700 hover:bg-purple-600 transition text-white px-5 py-2.5 text-[10px] font-sans font-bold uppercase tracking-[0.15em] rounded-full flex-shrink-0 disabled:opacity-60"
+                >
                   Gửi
                 </button>
               </div>

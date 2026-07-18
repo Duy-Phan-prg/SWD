@@ -8,7 +8,7 @@ import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
-from service.db import get_connection
+from service.db import get_connection, read_lob
 
 load_dotenv()
 
@@ -30,6 +30,8 @@ cursor.execute("""
     GROUP BY m.id, m.title, m.description, m.director, m.main_actors, m.poster_url
 """)
 movies = cursor.fetchall()
+for movie in movies:
+    movie["description"] = read_lob(conn, movie.get("description"))
 cursor.close()
 conn.close()
 

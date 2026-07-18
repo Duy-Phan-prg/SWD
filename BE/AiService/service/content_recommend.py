@@ -1,6 +1,6 @@
 import numpy as np
 import psycopg2.extras
-from service.db import get_connection
+from service.db import get_connection, read_lob
 from service.embedding_service import get_embedding_service
 
 TOP_K = 10
@@ -21,6 +21,7 @@ def get_movie_data(movie_id: int) -> dict | None:
             return None
 
         movie = dict(movie)
+        movie["description"] = read_lob(conn, movie.get("description"))
 
         cursor.execute("""
             SELECT g.name FROM genres g
@@ -63,14 +64,37 @@ def get_movies_info(movie_ids: list) -> dict:
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        cursor.execute(
-            "SELECT id, title, poster_url FROM movies WHERE id = ANY(%s)",
-            (movie_ids,)
-        )
-        return {r["id"]: dict(r) for r in cursor.fetchall()}
+        cursor.execute("""
+            SELECT m.id, m.title, m.poster_url, m.release_date, m.status,
+                   m.description, m.trailer_url,
+                   AVG(r.rating) AS avg_rating
+            FROM movies m
+            LEFT JOIN reviews r ON r.movie_id = m.id AND r.status = 'VISIBLE'
+            WHERE m.id = ANY(%s)
+            GROUP BY m.id, m.title, m.poster_url, m.release_date, m.status,
+                     m.description, m.trailer_url
+        """, (movie_ids,))
+        rows = {r["id"]: dict(r) for r in cursor.fetchall()}
+        for row in rows.values():
+            row["description"] = read_lob(conn, row.get("description"))
+        return rows
     finally:
         cursor.close()
         conn.close()
+
+
+def _movie_summary(info: dict) -> dict:
+    year = info["release_date"].year if info.get("release_date") else None
+    rating = round(float(info["avg_rating"]), 1) if info.get("avg_rating") else None
+    return {
+        "title": info["title"],
+        "posterUrl": info.get("poster_url", ""),
+        "year": year,
+        "rating": rating,
+        "status": info.get("status"),
+        "overview": info.get("description") or "",
+        "trailerUrl": info.get("trailer_url") or "",
+    }
 
 
 def recommend_content(movie_id: int) -> list:
@@ -94,12 +118,66 @@ def recommend_content(movie_id: int) -> list:
 
     db_info = get_movies_info([s["movieId"] for s in candidates])
     result = [
-        {
-            "movieId": s["movieId"],
-            "title": db_info[s["movieId"]]["title"],
-            "posterUrl": db_info[s["movieId"]].get("poster_url", ""),
-            "similarity": s["similarity"],
-        }
+        {**_movie_summary(db_info[s["movieId"]]), "movieId": s["movieId"], "similarity": s["similarity"]}
         for s in candidates if s["movieId"] in db_info
     ]
     return result[:TOP_K]
+
+
+def filter_movies_by_genre(genre_name: str, limit: int = 10) -> list:
+    """Lọc phim theo thể loại CHÍNH XÁC qua bảng genres (không phải semantic search).
+    Ưu tiên phim đang chiếu (NOW_SHOWING), rồi tới điểm đánh giá cao."""
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cursor.execute("""
+            SELECT m.id, m.title, m.poster_url, m.release_date, m.status,
+                   m.description, m.trailer_url,
+                   AVG(r.rating) AS avg_rating
+            FROM movies m
+            JOIN movie_genres mg ON mg.movie_id = m.id
+            JOIN genres g ON g.id = mg.genre_id
+            LEFT JOIN reviews r ON r.movie_id = m.id AND r.status = 'VISIBLE'
+            WHERE g.name ILIKE %s
+            GROUP BY m.id, m.title, m.poster_url, m.release_date, m.status,
+                     m.description, m.trailer_url
+            ORDER BY (m.status = 'NOW_SHOWING') DESC, avg_rating DESC NULLS LAST
+            LIMIT %s
+        """, (genre_name, limit))
+        rows = [dict(r) for r in cursor.fetchall()]
+        for row in rows:
+            row["description"] = read_lob(conn, row.get("description"))
+        return [
+            {**_movie_summary(row), "movieId": row["id"], "similarity": None}
+            for row in rows
+        ]
+    finally:
+        cursor.close()
+        conn.close()
+
+
+SEARCH_SIMILARITY_THRESHOLD = 0.25  # dưới ngưỡng này coi là không liên quan
+
+def search_movies(query: str, limit: int = 5) -> list:
+    """Tìm phim theo mô tả tự nhiên (VD: 'phim hành động kiểu mind-bending').
+    Khác recommend_content: không cần movie_id gốc, encode thẳng câu query."""
+    svc = get_embedding_service()
+    query_vec = svc.encode(query)
+    embeddings = svc.get_embeddings()
+
+    scores = []
+    for mid, data in embeddings.items():
+        sim = cosine_similarity(query_vec, data["embedding"])
+        scores.append({"movieId": mid, "similarity": round(float(sim), 4)})
+
+    scores.sort(key=lambda x: x["similarity"], reverse=True)
+
+    # Lọc theo threshold — tránh trả về phim không liên quan chỉ vì DB ít phim
+    above_threshold = [s for s in scores if s["similarity"] >= SEARCH_SIMILARITY_THRESHOLD]
+    candidates = (above_threshold if above_threshold else scores[:2])[:limit]
+
+    db_info = get_movies_info([s["movieId"] for s in candidates])
+    return [
+        {**_movie_summary(db_info[s["movieId"]]), "movieId": s["movieId"], "similarity": s["similarity"]}
+        for s in candidates if s["movieId"] in db_info
+    ]

@@ -87,6 +87,9 @@ export const saveAuthSession = (authData) => {
 
 export const clearAuthSession = () => {
   Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith('cinepremier_chat_conversation_id'))
+    .forEach((key) => localStorage.removeItem(key));
 };
 
 export const expireAuthSession = () => {
@@ -161,7 +164,7 @@ const inflightGetRequests = new Map();
 
 const getDedupeKey = (path, token) => `${token ? `auth:${token}` : 'public'}:${path}`;
 
-const performRequest = async (path, { method = 'GET', body, token } = {}) => {
+const performRequest = async (path, { method = 'GET', body, token, timeout } = {}) => {
   const isFormData = body instanceof FormData;
   const hadToken = Boolean(token);
   let effectiveToken = token;
@@ -180,7 +183,8 @@ const performRequest = async (path, { method = 'GET', body, token } = {}) => {
       url: path,
       method,
       headers,
-      data: body === undefined ? undefined : body
+      data: body === undefined ? undefined : body,
+      ...(timeout !== undefined ? { timeout } : {})
     });
 
     return unwrapResponse(response);
@@ -200,7 +204,8 @@ const performRequest = async (path, { method = 'GET', body, token } = {}) => {
           url: path,
           method,
           headers: retryHeaders,
-          data: body === undefined ? undefined : body
+          data: body === undefined ? undefined : body,
+          ...(timeout !== undefined ? { timeout } : {})
         });
         return unwrapResponse(retryResponse);
       } catch (retryError) {
@@ -215,19 +220,19 @@ const performRequest = async (path, { method = 'GET', body, token } = {}) => {
   }
 };
 
-export const request = (path, { method = 'GET', body, token } = {}) => {
+export const request = (path, { method = 'GET', body, token, timeout } = {}) => {
   const normalizedMethod = String(method || 'GET').toUpperCase();
   const shouldDedupe = normalizedMethod === 'GET' && body === undefined;
 
   if (!shouldDedupe) {
-    return performRequest(path, { method: normalizedMethod, body, token });
+    return performRequest(path, { method: normalizedMethod, body, token, timeout });
   }
 
   const dedupeKey = getDedupeKey(path, token);
   const existingRequest = inflightGetRequests.get(dedupeKey);
   if (existingRequest) return existingRequest;
 
-  const promise = performRequest(path, { method: normalizedMethod, body, token })
+  const promise = performRequest(path, { method: normalizedMethod, body, token, timeout })
     .finally(() => inflightGetRequests.delete(dedupeKey));
   inflightGetRequests.set(dedupeKey, promise);
   return promise;

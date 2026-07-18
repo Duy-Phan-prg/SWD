@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.ai.client;
 
 import com.sba301.cinemaai.ai.dto.request.ChatRequest;
+import com.sba301.cinemaai.ai.dto.response.AIChatResult;
 import com.sba301.cinemaai.ai.dto.response.RecommendMovieResponse;
 import com.sba301.cinemaai.config.AIProperties;
 import lombok.RequiredArgsConstructor;
@@ -50,12 +51,20 @@ public class AIClient {
         }
     }
 
-    public String chat(ChatRequest request) {
+    public AIChatResult chat(ChatRequest request) {
         try {
-            return restTemplate.postForObject(url("/chat"), request, String.class);
+            AIChatResult result = restTemplate.postForObject(url("/chat"), request, AIChatResult.class);
+            return result != null ? result : fallback(request);
         } catch (RestClientException e) {
             log.warn("AI Service unavailable for chat: {}", e.getMessage());
-            return "Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau.";
+            return fallback(request);
         }
+    }
+
+    private AIChatResult fallback(ChatRequest request) {
+        AIChatResult result = new AIChatResult();
+        result.setMessage("Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau.");
+        result.setConversationId(request.getConversationId());
+        return result;
     }
 }

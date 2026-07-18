@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, ChevronLeft, ChevronRight, X, Send } from 'lucide-react';
 import MovieCard from '@/components/common/MovieCard';
 import cinema1 from "@/assets/banners/cinema1.png";
@@ -9,6 +11,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getStoredAuth } from '../../services/authService';
 import { movieService } from '../../services/movieService';
 import { recommendationService } from '../../services/recommendationService';
+import { chatService, clearStoredConversationId } from '../../services/chatService';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
   const trimmed = url.trim();
@@ -74,6 +77,70 @@ const loadYoutubeIframeApi = () => {
 
 const banners = [cinema1, cinema2];
 
+// Câu hỏi mẫu — chọn theo đúng từ khóa router.py nhận diện (search_movies/get_ticket_price)
+// để đảm bảo luôn có data trả về, không rơi vào nhánh chat chung chung.
+const CHAT_QUICK_QUESTIONS = [
+  'Tìm phim hành động',
+  'Phim nào đang chiếu?',
+  'Giá vé xem phim bao nhiêu?',
+  'Phim giống Inception',
+];
+
+const ChatMovieResults = ({ movies, onPlayTrailer }) => {
+  const navigate = useNavigate();
+  return (
+    <div className="grid grid-cols-2 gap-2 w-full">
+      {movies.map((movie) => (
+        <div
+          key={movie.id}
+          className="text-left bg-neutral-900 border border-white/10 hover:border-purple-400/60 transition overflow-hidden rounded-lg"
+        >
+          <button type="button" onClick={() => navigate(`/movies/${movie.id}`)} className="block w-full text-left">
+            <div className="relative aspect-[2/3] w-full overflow-hidden bg-black">
+              {movie.poster ? (
+                <img src={movie.poster} alt={movie.title} loading="lazy" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-widest text-neutral-600">Không có poster</div>
+              )}
+              {typeof movie.rating === 'number' && (
+                <span className="absolute top-1 right-1 bg-black/80 border border-white/20 px-1.5 py-0.5 text-[9px] font-sans font-bold text-amber-400">
+                  ★ {movie.rating}
+                </span>
+              )}
+            </div>
+            <p className="px-2 pt-1.5 text-[11px] font-sans text-white leading-snug line-clamp-2">{movie.title}</p>
+            {movie.year && (
+              <p className="px-2 pt-0.5 text-[10px] font-sans text-neutral-500">{movie.year}</p>
+            )}
+            {movie.overview && (
+              <p className="px-2 pt-1 text-[10px] font-sans text-neutral-400 leading-snug line-clamp-2">{movie.overview}</p>
+            )}
+          </button>
+          {movie.trailerUrl && (
+            <button
+              type="button"
+              onClick={() => onPlayTrailer(movie.trailerUrl)}
+              className="flex items-center justify-center gap-1 w-[calc(100%-1rem)] mx-2 mb-2 mt-1.5 py-1.5 text-[10px] font-sans font-bold uppercase tracking-wide text-purple-300 border border-purple-500/30 hover:bg-purple-500/10 transition rounded"
+            >
+              ▶ Xem trailer
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ChatShowtimeResults = ({ showtimes }) => (
+  <div className="flex flex-col gap-1.5 w-full">
+    {showtimes.map((s, i) => (
+      <div key={i} className="px-3 py-2 text-[11px] font-sans bg-neutral-900 border border-white/8 text-neutral-300 rounded-lg">
+        <span className="text-purple-300">{s.show_date} {s.start_time}</span> · {s.cinema_name} - {s.room_name}
+      </div>
+    ))}
+  </div>
+);
+
 export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, moviesList = [] }) {
    const [currentIndex, setCurrentIndex] = useState(0);
   const { watchlist = [], handleToggleWatchlist } = useMovies();
@@ -85,7 +152,56 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const [chatMessages, setChatMessages] = useState([
     { role: 'bot', text: 'Xin chào! 🍿 Tôi là PopBot — trợ lý AI của CinePremier. Bạn muốn tìm phim gì hôm nay?' }
   ]);
+  const [chatSending, setChatSending] = useState(false);
+  const [chatTrailerUrl, setChatTrailerUrl] = useState(null);
   const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const replaceLastBotMessage = (text, data = null) => {
+    setChatMessages((prev) => {
+      const next = [...prev];
+      next[next.length - 1] = { role: 'bot', text, data };
+      return next;
+    });
+  };
+
+  const handleSendChat = async (overrideMessage) => {
+    const userMsg = (overrideMessage ?? chatInput).trim();
+    if (!userMsg || chatSending) return;
+
+    setChatMessages((prev) => [
+      ...prev,
+      { role: 'user', text: userMsg },
+      { role: 'bot', text: '🤖 Đang suy nghĩ...' }
+    ]);
+    setChatInput('');
+    setChatSending(true);
+
+    try {
+      const { accessToken } = getStoredAuth();
+      const res = await chatService.sendMessage({
+        message: userMsg,
+        userId: currentUser?.id,
+        token: accessToken,
+        scope: 'home'
+      });
+      replaceLastBotMessage(res?.message || 'Xin lỗi, tôi chưa có câu trả lời.', res?.data || null);
+    } catch (error) {
+      replaceLastBotMessage('⚠️ Có lỗi xảy ra, thử lại sau nhé!');
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  const handleResetChat = () => {
+    clearStoredConversationId('home');
+    setChatMessages([
+      { role: 'bot', text: 'Xin chào! 🍿 Tôi là PopBot — trợ lý AI của CinePremier. Bạn muốn tìm phim gì hôm nay?' }
+    ]);
+  };
 
   // Filter movies for "Now Playing" and "Upcoming"
   const sourceMovies = Array.isArray(moviesList) ? moviesList : [];
@@ -449,6 +565,9 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-sans font-black text-white uppercase tracking-[0.12em]">PopBot AI</p>
               </div>
+              <button onClick={handleResetChat} title="Bắt đầu hội thoại mới" className="text-neutral-500 hover:text-white transition p-1">
+                <Sparkles className="w-4 h-4" />
+              </button>
               <button onClick={() => setChatOpen(false)} className="text-neutral-500 hover:text-white transition p-1">
                 <X className="w-4 h-4" />
               </button>
@@ -461,15 +580,37 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                   {msg.role === 'bot' && (
                     <img src={popcornBot} alt="bot" className="w-6 h-6 object-cover border border-purple-400/20 flex-shrink-0 mt-0.5 rounded-full" />
                   )}
-                  <div className={`max-w-[78%] px-3.5 py-2.5 text-[12px] font-sans leading-relaxed rounded-2xl ${
-                    msg.role === 'user'
-                      ? 'bg-purple-700 text-white rounded-tr-sm'
-                      : 'bg-neutral-900 border border-white/8 text-neutral-200 rounded-tl-sm'
-                  }`}>
-                    {msg.text}
+                  <div className={`flex flex-col gap-2 ${msg.role === 'user' ? 'max-w-[78%] items-end' : 'max-w-[90%] items-start'}`}>
+                    <div className={`px-3.5 py-2.5 text-[12px] font-sans leading-relaxed rounded-2xl ${
+                      msg.role === 'user'
+                        ? 'bg-purple-700 text-white rounded-tr-sm'
+                        : 'bg-neutral-900 border border-white/8 text-neutral-200 rounded-tl-sm'
+                    }`}>
+                      {msg.text}
+                    </div>
+                    {msg.data?.movies?.length > 0 && (
+                      <ChatMovieResults movies={msg.data.movies} onPlayTrailer={setChatTrailerUrl} />
+                    )}
+                    {msg.data?.showtimes?.length > 0 && (
+                      <ChatShowtimeResults showtimes={msg.data.showtimes} />
+                    )}
                   </div>
                 </div>
               ))}
+              {chatMessages.length === 1 && (
+                <div className="flex flex-wrap gap-1.5 pl-8">
+                  {CHAT_QUICK_QUESTIONS.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => handleSendChat(q)}
+                      className="px-3 py-1.5 text-[11px] font-sans text-purple-300 border border-purple-500/30 hover:bg-purple-500/10 transition rounded-full"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div ref={chatEndRef} />
             </div>
 
@@ -480,31 +621,16 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && chatInput.trim()) {
-                    const userMsg = chatInput.trim();
-                    setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
-                    setChatInput('');
-                    setTimeout(() => {
-                      setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé!' }]);
-                      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                    }, 600);
-                  }
+                  if (e.key === 'Enter') handleSendChat();
                 }}
+                disabled={chatSending}
                 placeholder="Hỏi về phim, lịch chiếu..."
-                className="flex-1 bg-neutral-800/60 px-4 py-2.5 text-[12px] font-sans text-white placeholder-neutral-500 outline-none rounded-full"
+                className="flex-1 bg-neutral-800/60 px-4 py-2.5 text-[12px] font-sans text-white placeholder-neutral-500 outline-none rounded-full disabled:opacity-60"
               />
               <button
-                onClick={() => {
-                  if (!chatInput.trim()) return;
-                  const userMsg = chatInput.trim();
-                  setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
-                  setChatInput('');
-                  setTimeout(() => {
-                    setChatMessages((prev) => [...prev, { role: 'bot', text: 'Tính năng AI đang được phát triển. Bạn có thể khám phá phim tại mục "Phim Đang Chiếu" nhé!' }]);
-                    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                  }, 600);
-                }}
-                className="bg-purple-600 hover:bg-purple-500 transition p-2.5 text-white rounded-full flex-shrink-0"
+                onClick={() => handleSendChat()}
+                disabled={chatSending}
+                className="bg-purple-600 hover:bg-purple-500 transition p-2.5 text-white rounded-full flex-shrink-0 disabled:opacity-60"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -521,6 +647,25 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
           <img src={popcornBot} alt="PopBot" className="w-full h-full object-cover" />
         </button>
       </div>
+
+      {chatTrailerUrl && createPortal(
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setChatTrailerUrl(null)}
+        >
+          <div className="relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setChatTrailerUrl(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white transition"
+              aria-label="Đóng trailer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <video src={chatTrailerUrl} className="w-full rounded-lg" controls autoPlay playsInline />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
