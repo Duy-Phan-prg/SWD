@@ -38,6 +38,7 @@ import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.ShowtimeRepository;
 import com.sba301.cinemaai.dto.response.PageResponse;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.BookingService;
 import com.sba301.cinemaai.service.FoodService;
 import com.sba301.cinemaai.service.LoyaltyPointService;
@@ -48,6 +49,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +58,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -92,6 +96,7 @@ public class BookingServiceImpl implements BookingService {
     private final LoyaltyPointService loyaltyPointService;
     private final PaymentRepository paymentRepository;
     private final ReviewRepository reviewRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public BookingResponse holdSeats(String email, HoldSeatsRequest request) {
@@ -176,18 +181,78 @@ public class BookingServiceImpl implements BookingService {
         return toResponse(booking);
     }
 
+    /**
+     * Cho phép quay lại bước bắp nước từ màn thanh toán mà KHÔNG hủy hold ghế:
+     * chỉ thay danh sách bắp nước + điểm loyalty rồi tính lại tổng, đồng thời gia hạn hold.
+     */
+    @Transactional
+    public BookingResponse updateHoldingItems(
+            String email,
+            Long bookingId,
+            com.sba301.cinemaai.dto.request.booking.UpdateHoldingBookingRequest request
+    ) {
+        User user = userService.getByEmail(email);
+        Booking booking = findBooking(bookingId);
+        validateOwner(booking, user);
+        if (booking.getStatus() != BookingStatus.HOLDING && booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new BadRequestException("Only holding bookings can be updated");
+        }
+        if (booking.getHoldExpiresAt() != null && booking.getHoldExpiresAt().isBefore(LocalDateTime.now())) {
+            expireBooking(booking);
+            throw new BadRequestException("Seat hold has expired");
+        }
+
+        loyaltyPointService.restoreRedeemedPointsFromBooking(user, booking);
+        booking.setLoyaltyPointsRedeemed(0);
+        booking.setDiscountAmount(BigDecimal.ZERO);
+
+        bookingFoodItemRepository.findByBooking(booking)
+                .stream()
+                .filter(item -> item.getFoodOrder() == null)
+                .forEach(bookingFoodItemRepository::delete);
+
+        List<BookingTicket> ticketLines = bookingTicketRepository.findByBooking(booking);
+        BigDecimal subtotal = ticketLines.isEmpty()
+                ? bookingSeatRepository.findByBooking(booking).stream()
+                        .map(BookingSeat::getUnitPrice)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                : ticketLines.stream()
+                        .map(BookingTicket::getLineTotal)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (request.foods() != null) {
+            for (BookingFoodRequest foodRequest : request.foods()) {
+                BookingFoodItem item = createFoodItem(booking, foodRequest);
+                bookingFoodItemRepository.save(item);
+                subtotal = subtotal.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            }
+        }
+
+        BigDecimal discountAmount = applyLoyaltyDiscount(user, booking, request.loyaltyPointsToRedeem(), subtotal);
+        booking.setSubtotal(subtotal);
+        booking.setDiscountAmount(discountAmount);
+        booking.setTotalAmount(subtotal.subtract(discountAmount));
+        booking.setHoldExpiresAt(LocalDateTime.now().plusMinutes(HOLD_MINUTES));
+        bookingRepository.saveAndFlush(booking);
+        return toResponse(booking);
+    }
+
     @Transactional(readOnly = true)
     public PageResponse<BookingResponse> getMyBookings(String email, int page, int size) {
         User user = userService.getByEmail(email);
-        return PageResponse.from(bookingRepository.findByUser(user, bookingPageable(page, size)).map(this::toResponse));
+        Page<Booking> bookings = bookingRepository.findByUser(user, bookingPageable(page, size));
+        return PageResponse.from(new PageImpl<>(
+                toResponses(bookings.getContent()), bookings.getPageable(), bookings.getTotalElements()));
     }
 
     @Transactional(readOnly = true)
     public PageResponse<BookingResponse> getAdminBookings(BookingStatus status, int page, int size) {
         Pageable pageable = bookingPageable(page, size);
-        return PageResponse.from((status == null
-                ? bookingRepository.findAll(pageable)
-                : bookingRepository.findByStatus(status, pageable)).map(this::toResponse));
+        Page<Booking> bookings = status == null
+                ? bookingRepository.findAllWithDetails(pageable)
+                : bookingRepository.findByStatus(status, pageable);
+        return PageResponse.from(new PageImpl<>(
+                toResponses(bookings.getContent()), bookings.getPageable(), bookings.getTotalElements()));
     }
 
     @Transactional(readOnly = true)
@@ -213,7 +278,11 @@ public class BookingServiceImpl implements BookingService {
 
     @Transactional
     public BookingResponse cancelAdmin(Long bookingId) {
-        return cancelBooking(findBooking(bookingId));
+        Booking booking = findBooking(bookingId);
+        BookingResponse response = cancelBooking(booking);
+        auditLogService.record(com.sba301.cinemaai.enums.AuditActionType.DELETE, "BOOKING",
+                booking.getId(), booking.getBookingCode());
+        return response;
     }
 
     private BookingResponse cancelBooking(Booking booking) {
@@ -227,20 +296,56 @@ public class BookingServiceImpl implements BookingService {
 
     @Transactional
     public BookingResponse checkIn(String qrCode) {
-        String bookingCode;
+        QrTicketService.QrPayload payload;
         try {
-            bookingCode = qrTicketService.extractBookingCode(qrCode);
+            payload = qrTicketService.parse(qrCode);
         } catch (IllegalArgumentException exception) {
             throw new BadRequestException(exception.getMessage());
         }
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
-                .orElseThrow(() -> new NotFoundException("Booking not found"));
-        if (booking.getStatus() != BookingStatus.PAID) {
-            throw new BadRequestException("Only paid booking can be checked in");
+
+        if (payload.type() == QrTicketService.QrPayloadType.SEAT) {
+            BookingSeat bookingSeat = bookingSeatRepository.findByTicketCode(payload.code())
+                    .orElseThrow(() -> new NotFoundException("Seat ticket not found"));
+            Booking booking = bookingSeat.getBooking();
+            checkInSeat(booking, bookingSeat);
+            finishCheckInIfComplete(booking);
+            auditLogService.record(com.sba301.cinemaai.enums.AuditActionType.CHECK_IN, "BOOKING",
+                    booking.getId(), "Seat " + payload.code());
+            return toResponse(booking);
         }
-        checkIn(booking);
-        bookingSeatRepository.findByBooking(booking)
-                .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.CHECKED_IN));
+
+        Booking booking = bookingRepository.findByBookingCode(payload.code())
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+        checkInRemainingSeats(booking);
+        auditLogService.record(com.sba301.cinemaai.enums.AuditActionType.CHECK_IN, "BOOKING",
+                booking.getId(), booking.getBookingCode() + " (all seats)");
+        return toResponse(booking);
+    }
+
+    @Transactional
+    public BookingResponse checkInSeats(String bookingCode, List<String> ticketCodes) {
+        if (bookingCode == null || bookingCode.isBlank()) {
+            throw new BadRequestException("Booking code is required");
+        }
+        if (ticketCodes == null || ticketCodes.isEmpty()) {
+            throw new BadRequestException("At least one ticket code is required");
+        }
+        Booking booking = bookingRepository.findByBookingCode(bookingCode.trim())
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+        Map<String, BookingSeat> seatsByTicketCode = bookingSeatRepository.findByBooking(booking)
+                .stream()
+                .filter(bookingSeat -> bookingSeat.getTicketCode() != null)
+                .collect(Collectors.toMap(BookingSeat::getTicketCode, Function.identity()));
+        for (String ticketCode : ticketCodes) {
+            BookingSeat bookingSeat = seatsByTicketCode.get(ticketCode == null ? null : ticketCode.trim());
+            if (bookingSeat == null) {
+                throw new NotFoundException("Seat ticket not found in booking: " + ticketCode);
+            }
+            checkInSeat(booking, bookingSeat);
+        }
+        finishCheckInIfComplete(booking);
+        auditLogService.record(com.sba301.cinemaai.enums.AuditActionType.CHECK_IN, "BOOKING",
+                booking.getId(), booking.getBookingCode() + " seats: " + String.join(", ", ticketCodes));
         return toResponse(booking);
     }
 
@@ -248,23 +353,79 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse checkInAdmin(Long bookingId, String qrCode) {
         Booking booking = findBooking(bookingId);
         if (qrCode != null && !qrCode.isBlank()) {
-            String bookingCode;
+            QrTicketService.QrPayload payload;
             try {
-                bookingCode = qrTicketService.extractBookingCode(qrCode);
+                payload = qrTicketService.parse(qrCode);
             } catch (IllegalArgumentException exception) {
                 throw new BadRequestException(exception.getMessage());
             }
-            if (!booking.getBookingCode().equals(bookingCode)) {
+            boolean matches = payload.type() == QrTicketService.QrPayloadType.BOOKING
+                    ? booking.getBookingCode().equals(payload.code())
+                    : payload.code().startsWith(booking.getBookingCode() + "-");
+            if (!matches) {
                 throw new BadRequestException("QR code does not match booking");
             }
         }
-        if (booking.getStatus() != BookingStatus.PAID) {
-            throw new BadRequestException("Only paid booking can be checked in");
-        }
-        checkIn(booking);
-        bookingSeatRepository.findByBooking(booking)
-                .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.CHECKED_IN));
+        checkInRemainingSeats(booking);
         return toResponse(booking);
+    }
+
+    private void checkInRemainingSeats(Booking booking) {
+        ensureSeatTicketCodes(booking);
+        List<BookingSeat> remaining = bookingSeatRepository.findByBooking(booking)
+                .stream()
+                .filter(bookingSeat -> bookingSeat.getStatus() != SeatRuntimeStatus.CHECKED_IN)
+                .toList();
+        if (remaining.isEmpty()) {
+            throw new BadRequestException("All seats of this booking are already checked in");
+        }
+        remaining.forEach(bookingSeat -> checkInSeat(booking, bookingSeat));
+        finishCheckInIfComplete(booking);
+    }
+
+    private void checkInSeat(Booking booking, BookingSeat bookingSeat) {
+        requireStatus(booking, BookingStatus.PAID, "Only paid booking can be checked in");
+        if (bookingSeat.getStatus() == SeatRuntimeStatus.CHECKED_IN) {
+            throw new BadRequestException("Seat "
+                    + bookingSeat.getSeat().getRowLabel() + bookingSeat.getSeat().getSeatNumber()
+                    + " is already checked in");
+        }
+        if (bookingSeat.getStatus() != SeatRuntimeStatus.BOOKED) {
+            throw new BadRequestException("Seat is not in booked status");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime checkInOpenAt = booking.getShowtime().getStartTime().minusMinutes(CHECK_IN_LEAD_MINUTES);
+        if (now.isBefore(checkInOpenAt)) {
+            throw new BadRequestException("Check-in opens 30 minutes before showtime");
+        }
+        if (booking.getShowtime().getEndTime() != null && now.isAfter(booking.getShowtime().getEndTime())) {
+            throw new BadRequestException("Showtime has already ended");
+        }
+        bookingSeat.setStatus(SeatRuntimeStatus.CHECKED_IN);
+        bookingSeat.setCheckedInAt(now);
+    }
+
+    private void finishCheckInIfComplete(Booking booking) {
+        boolean allCheckedIn = bookingSeatRepository.findByBooking(booking)
+                .stream()
+                .allMatch(bookingSeat -> bookingSeat.getStatus() == SeatRuntimeStatus.CHECKED_IN);
+        if (allCheckedIn && booking.getStatus() == BookingStatus.PAID) {
+            booking.setCheckedInAt(LocalDateTime.now());
+            booking.setStatus(BookingStatus.USED);
+        }
+    }
+
+    private void ensureSeatTicketCodes(Booking booking) {
+        if (booking.getStatus() != BookingStatus.PAID && booking.getStatus() != BookingStatus.USED) {
+            return;
+        }
+        bookingSeatRepository.findByBooking(booking)
+                .stream()
+                .filter(bookingSeat -> bookingSeat.getTicketCode() == null)
+                .forEach(bookingSeat -> {
+                    bookingSeat.setTicketCode(qrTicketService.generateTicketCode(bookingSeat));
+                    bookingSeat.setQrCode(qrTicketService.generateSeatQr(bookingSeat));
+                });
     }
 
     @Transactional
@@ -281,42 +442,51 @@ public class BookingServiceImpl implements BookingService {
         return expiredBookings.size();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public BookingResponse lookupForCheckIn(String bookingCode, String qrCode) {
+        Booking booking = null;
         String resolvedCode = bookingCode;
         if ((resolvedCode == null || resolvedCode.isBlank()) && qrCode != null && !qrCode.isBlank()) {
+            QrTicketService.QrPayload payload;
             try {
-                resolvedCode = qrTicketService.extractBookingCode(qrCode);
+                payload = qrTicketService.parse(qrCode);
             } catch (IllegalArgumentException exception) {
                 throw new BadRequestException(exception.getMessage());
             }
+            if (payload.type() == QrTicketService.QrPayloadType.SEAT) {
+                booking = bookingSeatRepository.findByTicketCode(payload.code())
+                        .orElseThrow(() -> new NotFoundException("Seat ticket not found"))
+                        .getBooking();
+            } else {
+                resolvedCode = payload.code();
+            }
         }
-        if (resolvedCode == null || resolvedCode.isBlank()) {
-            throw new BadRequestException("Booking code or QR code is required");
+        if (booking == null) {
+            if (resolvedCode == null || resolvedCode.isBlank()) {
+                throw new BadRequestException("Booking code or QR code is required");
+            }
+            String trimmedCode = resolvedCode.trim();
+            booking = bookingRepository.findByBookingCode(trimmedCode)
+                    .or(() -> bookingSeatRepository.findByTicketCode(trimmedCode).map(BookingSeat::getBooking))
+                    .orElseThrow(() -> new NotFoundException("Booking not found"));
         }
-        Booking booking = bookingRepository.findByBookingCode(resolvedCode.trim())
-                .orElseThrow(() -> new NotFoundException("Booking not found"));
+        ensureSeatTicketCodes(booking);
         return toResponse(booking);
     }
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getRecentStaffCheckInBookings(int limit) {
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "updatedAt"));
-        return bookingRepository.findRecentForCheckIn(
+        return toResponses(bookingRepository.findRecentForCheckIn(
                 List.of(BookingStatus.PAID, BookingStatus.USED),
                 pageable
-        ).stream()
-                .map(this::toResponse)
-                .toList();
+        ));
     }
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getStaffBookingsByShowtime(Long showtimeId) {
         Showtime showtime = findShowtime(showtimeId);
-        return bookingRepository.findByShowtime(showtime)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return toResponses(bookingRepository.findByShowtime(showtime));
     }
 
     private BigDecimal applyTicketSelections(
@@ -357,6 +527,7 @@ public class BookingServiceImpl implements BookingService {
                 BookingSeat bookingSeat = seatsById.get(seatId);
                 if (bookingSeat != null) {
                     changeBookingSeatUnitPrice(bookingSeat, ticket.unitPrice());
+                    bookingSeat.setTicketType(ticket.ticketType());
                 }
             }
         }
@@ -519,16 +690,6 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
     }
 
-    private void checkIn(Booking booking) {
-        requireStatus(booking, BookingStatus.PAID, "Only paid booking can be checked in");
-        LocalDateTime checkInOpenAt = booking.getShowtime().getStartTime().minusMinutes(CHECK_IN_LEAD_MINUTES);
-        if (LocalDateTime.now().isBefore(checkInOpenAt)) {
-            throw new BadRequestException("Check-in opens 30 minutes before showtime");
-        }
-        booking.setCheckedInAt(LocalDateTime.now());
-        booking.setStatus(BookingStatus.USED);
-    }
-
     private BigDecimal applyLoyaltyDiscount(User user, Booking booking, Integer pointsToRedeem, BigDecimal subtotal) {
         int requestedPoints = pointsToRedeem == null ? 0 : pointsToRedeem;
         if (requestedPoints <= 0 || subtotal == null || subtotal.signum() <= 0) {
@@ -562,22 +723,60 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingResponse toResponse(Booking booking) {
-        return bookingMapper.toResponse(
-                booking,
-                bookingSeatRepository.findByBooking(booking),
-                bookingTicketRepository.findByBooking(booking),
-                bookingFoodItemRepository.findByBooking(booking),
-                resolvePaymentAccount(booking)
-        );
+        return toResponses(List.of(booking)).get(0);
     }
 
-    private String resolvePaymentAccount(Booking booking) {
-        if (booking.getStatus() == BookingStatus.REFUNDED) {
-            return null;
+    /**
+     * Batch mapping: nạp seats/tickets/foods/payment cho CẢ danh sách bằng 4 query IN
+     * thay vì 4 query mỗi booking — DB remote nên số câu SQL quyết định thời gian phản hồi.
+     */
+    private List<BookingResponse> toResponses(List<Booking> bookings) {
+        if (bookings.isEmpty()) {
+            return List.of();
         }
-        return paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
-                .map(Payment::getPaymentAccountLabel)
-                .orElse(null);
+        Map<Long, List<BookingSeat>> seatsByBookingId = bookingSeatRepository.findByBookingIn(bookings)
+                .stream()
+                .collect(Collectors.groupingBy(bookingSeat -> bookingSeat.getBooking().getId()));
+        Map<Long, List<BookingTicket>> ticketsByBookingId = bookingTicketRepository.findByBookingIn(bookings)
+                .stream()
+                .collect(Collectors.groupingBy(ticket -> ticket.getBooking().getId()));
+        Map<Long, List<BookingFoodItem>> foodsByBookingId = bookingFoodItemRepository.findByBookingIn(bookings)
+                .stream()
+                .filter(item -> item.getFoodOrder() == null
+                        || item.getFoodOrder().getStatus() == com.sba301.cinemaai.enums.FoodOrderStatus.PAID)
+                .collect(Collectors.groupingBy(item -> item.getBooking().getId()));
+        Map<Long, String> paymentAccountsByBookingId = resolvePaymentAccounts(bookings);
+        return bookings.stream()
+                .map(booking -> bookingMapper.toResponse(
+                        booking,
+                        seatsByBookingId.getOrDefault(booking.getId(), List.of()),
+                        ticketsByBookingId.getOrDefault(booking.getId(), List.of()),
+                        foodsByBookingId.getOrDefault(booking.getId(), List.of()),
+                        paymentAccountsByBookingId.get(booking.getId())
+                ))
+                .toList();
+    }
+
+    private Map<Long, String> resolvePaymentAccounts(List<Booking> bookings) {
+        List<Long> bookingIds = bookings.stream()
+                .filter(booking -> booking.getStatus() != BookingStatus.REFUNDED)
+                .map(Booking::getId)
+                .toList();
+        if (bookingIds.isEmpty()) {
+            return Map.of();
+        }
+        // ORDER BY id DESC toàn cục → payment đầu tiên gặp của mỗi booking là bản mới nhất;
+        // Set-guard (thay vì putIfAbsent) để label null của payment mới nhất vẫn thắng.
+        Map<Long, String> accounts = new HashMap<>();
+        Set<Long> resolved = new HashSet<>();
+        for (Payment payment : paymentRepository
+                .findByBookingIdInAndStatusAndFoodOrderIsNullOrderByIdDesc(bookingIds, PaymentStatus.SUCCESS)) {
+            Long bookingId = payment.getBooking().getId();
+            if (resolved.add(bookingId)) {
+                accounts.put(bookingId, payment.getPaymentAccountLabel());
+            }
+        }
+        return accounts;
     }
 
     private void validateOwner(Booking booking, User user) {
@@ -597,7 +796,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private Booking findBooking(Long id) {
-        return bookingRepository.findById(id)
+        return bookingRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new NotFoundException("Booking not found"));
     }
 

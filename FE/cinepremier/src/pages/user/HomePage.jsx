@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, ChevronLeft, ChevronRight, X, Send } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, X, Send, BrainCircuit, Info } from 'lucide-react';
 import MovieCard from '@/components/common/MovieCard';
 import cinema1 from "@/assets/banners/cinema1.png";
 import cinema2 from "@/assets/banners/cinema2.png";
@@ -10,7 +10,7 @@ import { useMovies } from '../../stores/useMovieStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { getStoredAuth } from '../../services/authService';
 import { movieService } from '../../services/movieService';
-import { recommendationService } from '../../services/recommendationService';
+import { recommendationService, pickRecExplanation } from '../../services/recommendationService';
 import { chatService, clearStoredConversationId } from '../../services/chatService';
 import Snowfall from 'react-snowfall';
 const extractYoutubeId = (url = '') => {
@@ -147,6 +147,8 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const currentUser = useAuthStore((state) => state.currentUser);
   const [personalRecs, setPersonalRecs] = useState([]);
+  const [recInfoOpen, setRecInfoOpen] = useState(false);
+  const [recStats, setRecStats] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([
@@ -352,7 +354,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
         if (list.length) {
           try {
             const detail = await movieService.getMovieDetail(list[0].backendId || list[0].id);
-            if (detail?.id) list[0] = { ...detail, similarity: list[0].similarity };
+            if (detail?.id) list[0] = { ...detail, ...pickRecExplanation(list[0]) };
           } catch { /* keep the slim rec if the detail call fails */ }
         }
         if (!cancelled) setPersonalRecs(list);
@@ -371,8 +373,24 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
     const full = publicMovies.find((m) => (
       String(m.backendId || m.movieId || m.id) === String(rec.backendId || rec.id)
     ));
-    return full ? { ...full, similarity: rec.similarity } : rec;
+    return full ? { ...full, ...pickRecExplanation(rec) } : rec;
   };
+
+  const openRecInfo = () => {
+    setRecInfoOpen(true);
+    if (!recStats) {
+      recommendationService.getRecommendationStats()
+        .then((stats) => { if (stats) setRecStats(stats); })
+        .catch(() => {});
+    }
+  };
+
+  // Trạng thái của khối gợi ý: cá nhân hóa thật / cold-start fallback / AI service không phản hồi.
+  const recSource = personalRecs[0]?.source;
+  const isPersonalizedRecs = recSource === 'collaborative';
+  const isFallbackRecs = typeof recSource === 'string' && recSource.startsWith('fallback');
+  const hasAiRecs = personalRecs.length > 0;
+  const recAnchorTitle = personalRecs.find((r) => r.anchorTitle)?.anchorTitle;
 
   const genresList = [
     { title: 'CINEMATIC NOIR', tags: 'Kịch Tính • Tăm Tối', bg: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10' },
@@ -504,8 +522,30 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       {isLoggedIn && (personalRecs.length > 0 || publicMovies.length > 0) && (
         <section id="personalized-highlights-section">
           <div className="section-heading">
-            <h2 className="section-title">Chọn Riêng Cho Bạn</h2>
-            <p className="section-subtitle">Gợi ý từ lịch sử xem của những khán giả có gu tương tự bạn</p>
+            {hasAiRecs && (
+              <div className="mb-3 flex items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1.5 border border-purple-500/40 bg-purple-950/40 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-purple-300">
+                  <BrainCircuit className="h-3.5 w-3.5" />
+                  {isPersonalizedRecs ? 'AI Gợi Ý · Collaborative Filtering' : 'AI Gợi Ý · Dữ Liệu Thực'}
+                </span>
+                <button type="button" onClick={openRecInfo} title="Cách hệ gợi ý hoạt động"
+                  className="flex h-6 w-6 items-center justify-center text-purple-300/70 hover:text-purple-200 transition">
+                  <Info className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <h2 className="section-title">
+              {isPersonalizedRecs ? 'Chọn Riêng Cho Bạn' : isFallbackRecs ? 'Phim Nổi Bật' : 'Phim Đang Chiếu'}
+            </h2>
+            <p className="section-subtitle">
+              {isPersonalizedRecs
+                ? (recAnchorTitle
+                  ? `Phân tích đánh giá thực của khán giả có gu giống bạn — vì bạn đã chấm cao "${recAnchorTitle}"`
+                  : 'Phân tích đánh giá thực của khán giả có gu giống bạn')
+                : isFallbackRecs
+                  ? 'Bạn chưa có đánh giá nào — đây là phim được chấm điểm và đặt vé nhiều nhất. Hãy đánh giá phim để nhận gợi ý cá nhân hóa.'
+                  : 'Danh sách phim đang chiếu tại rạp'}
+            </p>
           </div>
           <div className="relative">
             <button type="button" onClick={() => scrollPersonalRecs(-1)} aria-label="Phim trước"
@@ -516,7 +556,7 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
               className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {(personalRecs.length > 0 ? personalRecs.map(enrichRecommendation) : publicMovies.slice(0, 8)).map((rec) => (
                 <div key={rec.id} className="snap-start shrink-0 w-[185px] sm:w-[220px] lg:w-[calc((100%-3.75rem)/5)]">
-                  <MovieCard movie={rec} onSelect={onSelectMovie} onBook={onBookMovie}
+                  <MovieCard movie={rec} onSelect={onSelectMovie} onBook={onBookMovie} recReason={rec.reason}
                     isWatchlisted={isMovieWatchlisted(rec)} onToggleWatchlist={handleToggleWatchlist} />
                 </div>
               ))}
@@ -554,6 +594,50 @@ export default function HomeView({ onSelectMovie, onBookMovie, onTabChange, movi
       </section>
 
       </div>{/* end sections container */}
+
+      {/* RECOMMENDER "HOW IT WORKS" MODAL */}
+      {recInfoOpen && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/85 p-4" onClick={() => setRecInfoOpen(false)}>
+          <div className="w-full max-w-md border border-purple-500/30 bg-[#0d0d0d] p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="flex items-center gap-2 text-[12px] font-sans font-black uppercase tracking-[0.18em] text-white">
+                <BrainCircuit className="h-4 w-4 text-purple-300" />
+                Cách hệ gợi ý hoạt động
+              </h3>
+              <button onClick={() => setRecInfoOpen(false)} className="text-neutral-500 hover:text-white transition p-1">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3 text-[12px] font-sans leading-relaxed text-neutral-300">
+              <p>
+                <span className="font-bold text-purple-300">Gợi ý cá nhân hóa (Collaborative Filtering):</span>{' '}
+                hệ thống so sánh vector đánh giá của bạn với toàn bộ khán giả khác bằng cosine similarity,
+                chọn 20 người có gu giống bạn nhất và dự đoán điểm cho từng phim bạn chưa xem.
+              </p>
+              <p>
+                <span className="font-bold text-purple-300">Phim tương tự (Content-based):</span>{' '}
+                mô tả, thể loại, diễn viên và đạo diễn của mỗi phim được mã hóa thành embedding
+                bằng mô hình SBERT (all-MiniLM-L6-v2), rồi so độ tương đồng ngữ nghĩa giữa các phim.
+              </p>
+              <div className="border border-purple-500/20 bg-purple-950/20 p-3">
+                {recStats ? (
+                  <p>
+                    Đang phân tích <span className="font-black text-white">{recStats.reviewCount}</span> đánh giá
+                    từ <span className="font-black text-white">{recStats.reviewerCount}</span> khán giả,{' '}
+                    <span className="font-black text-white">{recStats.paidBookingCount}</span> vé đã bán
+                    và <span className="font-black text-white">{recStats.embeddedMovieCount}</span> phim đã được mã hóa embedding.
+                  </p>
+                ) : (
+                  <p className="text-neutral-500">Đang tải số liệu…</p>
+                )}
+              </div>
+              <p className="text-[11px] text-neutral-500">
+                Toàn bộ số liệu lấy trực tiếp từ cơ sở dữ liệu đánh giá và đặt vé của hệ thống — không dùng dữ liệu giả lập.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* POPCORN AI CHATBOT */}
       <div className="fixed bottom-6 right-6 z-[200] flex flex-col items-end gap-3">

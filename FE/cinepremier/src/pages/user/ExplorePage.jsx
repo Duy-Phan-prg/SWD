@@ -38,15 +38,15 @@ export default function ExploreView() {
   const processedMovies = useMemo(() => {
     let result = moviesList.filter((movie) => movie.status !== 'INACTIVE' && !movie.isInactive);
 
-    // 1. Text Search Filter
+    // 1. Text Search Filter (null-guard: phim có thể thiếu englishTitle/director/genre)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
         (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.englishTitle.toLowerCase().includes(q) ||
-          m.director.toLowerCase().includes(q) ||
-          m.genre.some(g => g.toLowerCase().includes(q))
+          (m.title || '').toLowerCase().includes(q) ||
+          (m.englishTitle || '').toLowerCase().includes(q) ||
+          (m.director || '').toLowerCase().includes(q) ||
+          (m.genre || []).some(g => String(g || '').toLowerCase().includes(q))
       );
     }
 
@@ -180,8 +180,42 @@ export default function ExploreView() {
           />
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/5 pt-3 text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-          <span>{isLoading ? 'Đang tải phim từ hệ thống...' : `Tìm thấy ${pagination?.totalElements ?? processedMovies.length} phim`}</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3 text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>{isLoading ? 'Đang tải phim từ hệ thống...' : `Tìm thấy ${pagination?.totalElements ?? processedMovies.length} phim`}</span>
+
+            {/* Chip các bộ lọc đang bật — thấy ngay vì sao kết quả bị hẹp, bấm ✕ để bỏ từng lọc */}
+            {(searchQuery.trim() || selectedDate || selectedGenreId) && (
+              <span className="text-neutral-600">· Đang lọc:</span>
+            )}
+            {searchQuery.trim() && (
+              <button
+                onClick={() => onSearchChange('')}
+                className="flex items-center gap-1.5 border border-amber-500/40 bg-amber-500/10 px-2 py-1 font-sans font-bold normal-case tracking-normal text-amber-300 transition hover:bg-amber-500/25"
+                title="Bỏ lọc từ khóa"
+              >
+                "{searchQuery.trim()}" <X className="h-3 w-3" />
+              </button>
+            )}
+            {selectedDate && (
+              <button
+                onClick={() => onDateChange('')}
+                className="flex items-center gap-1.5 border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-sans font-bold text-sky-300 transition hover:bg-sky-500/25"
+                title="Bỏ lọc ngày chiếu"
+              >
+                <CalendarDays className="h-3 w-3" /> {selectedDate.split('-').reverse().join('/')} <X className="h-3 w-3" />
+              </button>
+            )}
+            {selectedGenreId && (
+              <button
+                onClick={() => { setSelectedGenreId(''); if (pagination) onPageChange(1); setLocalPage(1); }}
+                className="flex items-center gap-1.5 border border-white/25 bg-white/5 px-2 py-1 font-sans font-bold text-neutral-200 transition hover:bg-white/15"
+                title="Bỏ lọc thể loại"
+              >
+                {genres.find((g) => String(g.id) === String(selectedGenreId))?.name || 'Thể loại'} <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
           <span>Trang {currentPage}/{totalPages}</span>
         </div>
 
@@ -204,9 +238,11 @@ export default function ExploreView() {
       ) : (
         <div className="border border-dashed border-white/10 bg-black p-16 text-center space-y-4">
           <Filter className="h-8 w-8 text-neutral-600 mx-auto" />
-          <h3 className="text-base font-serif text-white italic">Không tuyển lựa ra kết quả tương thích</h3>
+          <h3 className="text-base font-sans font-bold text-white">Không tìm thấy phim phù hợp</h3>
           <p className="text-xs text-neutral-500 max-w-md mx-auto font-sans leading-relaxed">
-            Hãy chuyển dịch lại từ khóa tìm kiếm hoặc bấm nút Thiết lập lại phía dưới để quay lại danh mục chuẩn.
+            {selectedDate
+              ? `Bộ lọc ngày ${selectedDate.split('-').reverse().join('/')} đang được áp dụng — thử bỏ lọc ngày hoặc đổi từ khóa khác.`
+              : 'Thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ phim đang chiếu.'}
           </p>
           <button
             onClick={() => {
@@ -217,7 +253,7 @@ export default function ExploreView() {
             }}
             className="border border-white bg-white text-black px-6 py-2.5 text-[10px] font-sans tracking-widest uppercase hover:bg-black hover:text-white transition"
           >
-            Reset Bộ Lọc
+            Xóa bộ lọc
           </button>
         </div>
       )}

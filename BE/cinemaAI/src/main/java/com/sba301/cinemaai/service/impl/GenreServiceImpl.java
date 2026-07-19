@@ -4,10 +4,12 @@ import com.sba301.cinemaai.dto.request.movie.GenreRequest;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.movie.GenreResponse;
 import com.sba301.cinemaai.entity.Genre;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.MovieMapper;
 import com.sba301.cinemaai.repository.GenreRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.GenreService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class GenreServiceImpl implements GenreService {
 
     private final GenreRepository genreRepository;
     private final MovieMapper movieMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<GenreResponse> getGenres() {
@@ -48,7 +51,9 @@ public class GenreServiceImpl implements GenreService {
         if (genreRepository.existsByName(request.name())) {
             throw new ConflictException("Genre name already exists");
         }
-        return movieMapper.toGenreResponse(genreRepository.save(new Genre(request.name(), request.description())));
+        Genre saved = genreRepository.save(new Genre(request.name(), request.description()));
+        auditLogService.record(AuditActionType.CREATE, "GENRE", saved.getId(), saved.getName());
+        return movieMapper.toGenreResponse(saved);
     }
 
     @Transactional
@@ -61,12 +66,15 @@ public class GenreServiceImpl implements GenreService {
                 });
         genre.setName(request.name());
         genre.setDescription(request.description());
+        auditLogService.record(AuditActionType.UPDATE, "GENRE", genre.getId(), genre.getName());
         return movieMapper.toGenreResponse(genre);
     }
 
     @Transactional
     public void delete(Long id) {
-        genreRepository.delete(findById(id));
+        Genre genre = findById(id);
+        genreRepository.delete(genre);
+        auditLogService.record(AuditActionType.DELETE, "GENRE", genre.getId(), genre.getName());
     }
 
     public Genre findById(Long id) {

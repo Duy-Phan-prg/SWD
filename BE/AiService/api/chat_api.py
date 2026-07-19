@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import List, Optional
+from api.recommend_models import RecommendMovieResponse
 from service.chat_service import chat
 
 router = APIRouter()

@@ -23,6 +23,8 @@ public interface ShowtimeService {
 
     ShowtimeResponse create(ShowtimeRequest request);
 
+    List<com.sba301.cinemaai.dto.response.cinema.AvailableSlotResponse> getAvailableSlots(Long roomId, Long movieId, LocalDate date);
+
     List<ShowtimeResponse> createBulk(BulkShowtimeRequest request);
 
     ShowtimeResponse update(Long id, ShowtimeRequest request);

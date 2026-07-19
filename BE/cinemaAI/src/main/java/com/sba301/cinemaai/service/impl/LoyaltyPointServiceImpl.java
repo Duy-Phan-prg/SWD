@@ -12,6 +12,7 @@ import com.sba301.cinemaai.entity.LoyaltyConfiguration;
 import com.sba301.cinemaai.entity.LoyaltyPoint;
 import com.sba301.cinemaai.entity.LoyaltyPointTransaction;
 import com.sba301.cinemaai.entity.User;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.LoyaltyPointType;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.NotFoundException;
@@ -19,6 +20,7 @@ import com.sba301.cinemaai.repository.LoyaltyConfigurationRepository;
 import com.sba301.cinemaai.repository.LoyaltyPointRepository;
 import com.sba301.cinemaai.repository.LoyaltyPointTransactionRepository;
 import com.sba301.cinemaai.repository.UserRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -50,6 +52,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
     private final LoyaltyConfigurationRepository loyaltyConfigurationRepository;
     private final LoyaltyPointTransactionRepository loyaltyPointTransactionRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -68,6 +71,8 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         loyaltyPointRepository.save(lp);
         recordTransaction(user, null, LoyaltyPointType.ADJUST, request.getPoints(), lp.getPoints(), request.getReason());
         log.info("Added {} points to user {}", request.getPoints(), user.getEmail());
+        auditLogService.record(AuditActionType.UPDATE, "LOYALTY", user.getId(),
+                "User #" + user.getId() + " +" + request.getPoints() + " điểm: " + request.getReason());
         return LoyaltyResponse.from(lp);
     }
 
@@ -189,6 +194,7 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         config.setExpiryTime(expiryTime);
         LoyaltyConfiguration saved = loyaltyConfigurationRepository.save(config);
         deleteDuplicateConfigurations(saved.getId());
+        auditLogService.record(AuditActionType.UPDATE, "LOYALTY", saved.getId(), "Cập nhật cấu hình");
         return LoyaltyConfigurationResponse.from(saved);
     }
 
@@ -233,6 +239,8 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         config.setLastResetAt(LocalDateTime.now());
         config.setLastResetSource(resetSource == null || resetSource.isBlank() ? "SYSTEM" : resetSource.trim().toUpperCase(Locale.ROOT));
         loyaltyConfigurationRepository.save(config);
+        auditLogService.record(AuditActionType.UPDATE, "LOYALTY", config.getId(),
+                "Reset điểm (" + config.getLastResetSource() + "): " + count + " tài khoản");
         return count;
     }
 

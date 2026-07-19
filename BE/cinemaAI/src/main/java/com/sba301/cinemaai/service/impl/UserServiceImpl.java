@@ -7,6 +7,7 @@ import com.sba301.cinemaai.dto.response.user.UserProfileResponse;
 import com.sba301.cinemaai.dto.request.user.UserProfileUpdateRequest;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserProfile;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.RoleName;
 import com.sba301.cinemaai.enums.UserStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
@@ -15,6 +16,7 @@ import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.UserMapper;
 import com.sba301.cinemaai.repository.UserProfileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.UserRoleService;
 import com.sba301.cinemaai.service.UserService;
 import java.util.List;
@@ -33,6 +35,7 @@ public class UserServiceImpl implements UserService {
     private final UserRoleService userRoleService;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public User getByEmail(String email) {
@@ -115,6 +118,7 @@ public class UserServiceImpl implements UserService {
         ));
         activateEmail(staff);
         userRoleService.assignRole(staff, RoleName.STAFF);
+        auditLogService.record(AuditActionType.CREATE, "USER", staff.getId(), staff.getEmail());
         return toProfile(staff);
     }
 
@@ -128,6 +132,8 @@ public class UserServiceImpl implements UserService {
         } else if (request.status() == UserStatus.PENDING_VERIFICATION) {
             throw new BadRequestException("Cannot move user back to pending verification");
         }
+        auditLogService.record(AuditActionType.UPDATE, "USER", user.getId(),
+                user.getEmail() + " -> " + user.getStatus());
         return toProfile(user);
     }
 

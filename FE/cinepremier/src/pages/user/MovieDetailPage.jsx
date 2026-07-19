@@ -552,9 +552,12 @@ export default function DetailView() {
       {/* 3. SIMILAR MOVIES (content-based AI recommendation) */}
       {similarMovies.length > 0 && (
         <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-4" id="similar-movies-section">
-          <h3 className="text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">
+          <h3 className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-sans font-bold uppercase tracking-[0.2em] text-white border-b border-white/10 pb-2">
             PHIM TƯƠNG TỰ
-            <span className="ml-3 font-light normal-case tracking-normal text-neutral-300">Dựa trên nội dung, thể loại và ê-kíp</span>
+            <span className="inline-flex items-center gap-1 border border-purple-500/40 bg-purple-950/40 px-2 py-0.5 text-[9px] font-black tracking-[0.15em] text-purple-300">
+              AI · CONTENT-BASED (SBERT)
+            </span>
+            <span className="font-light normal-case tracking-normal text-neutral-300">AI so sánh nội dung, thể loại và ê-kíp của từng phim</span>
           </h3>
           <div className="relative">
             <button type="button" onClick={() => scrollSimilar(-1)} aria-label="Phim trước"
@@ -589,6 +592,11 @@ export default function DetailView() {
                   )}
                   <div className="p-3">
                     <p className="text-xs font-serif text-white leading-snug line-clamp-2">{rec.title}</p>
+                    {rec.reason && (
+                      <p className="mt-1 text-[10px] text-purple-300/80 leading-snug line-clamp-2" title={rec.reason}>
+                        {rec.reason}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))}

@@ -13,6 +13,9 @@ public interface BookingService {
 
     BookingResponse createBooking(String email, CreateBookingRequest request);
 
+    BookingResponse updateHoldingItems(String email, Long bookingId,
+            com.sba301.cinemaai.dto.request.booking.UpdateHoldingBookingRequest request);
+
     PageResponse<BookingResponse> getMyBookings(String email, int page, int size);
 
     PageResponse<BookingResponse> getAdminBookings(BookingStatus status, int page, int size);
@@ -26,6 +29,8 @@ public interface BookingService {
     BookingResponse cancelAdmin(Long bookingId);
 
     BookingResponse checkIn(String qrCode);
+
+    BookingResponse checkInSeats(String bookingCode, List<String> ticketCodes);
 
     BookingResponse checkInAdmin(Long bookingId, String qrCode);
 

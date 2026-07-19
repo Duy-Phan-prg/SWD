@@ -1,7 +1,7 @@
 import React from 'react';
-import { Calendar, Heart, Play } from 'lucide-react';
+import { Calendar, Heart, Play, Sparkles } from 'lucide-react';
 
-export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = false, onToggleWatchlist }) {
+export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = false, onToggleWatchlist, recReason }) {
   const isBookable = movie.status === 'NOW_SHOWING' || (!movie.status && !movie.isUpcoming);
   const isUpcoming = movie.status === 'UPCOMING' || movie.isUpcoming;
 
@@ -110,6 +110,12 @@ export default function MovieCard({ movie, onSelect, onBook, isWatchlisted = fal
           </div>
           <span className="text-[10px] text-neutral-500 shrink-0">{movie.duration} phút</span>
         </div>
+        {recReason && (
+          <div className="mt-1.5 flex items-center gap-1 text-[10px] text-purple-300/80" title={recReason}>
+            <Sparkles className="h-3 w-3 shrink-0" />
+            <span className="line-clamp-1">{recReason}</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, MapPin, Ticket, User, Heart, Compass, Home,
   Building2, ChevronDown, Phone, Settings2, X, ExternalLink, LogOut, Popcorn, CalendarDays
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
+import { movieService } from '../services/movieService';
 
 export default function Header({
   activeTab,
   onTabChange,
   searchQuery,
-  onSearchChange,
+  onSearchCommit = () => { },
+  moviesList = [],
   cinema = null,
   onManageCinema = () => { },
   onOpenOTP,
@@ -22,6 +24,85 @@ export default function Header({
   navigate = () => { }
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Ô tìm phim: state cục bộ + dropdown gợi ý (gõ không còn nhảy trang;
+  // Enter/"Xem tất cả" mới sang Khám Phá, click gợi ý đi thẳng trang phim)
+  const [headerQuery, setHeaderQuery] = useState(searchQuery || '');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const searchBoxRef = useRef(null);
+
+  useEffect(() => { setHeaderQuery(searchQuery || ''); }, [searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) setIsSearchOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Danh mục riêng cho gợi ý — tải 1 lần khi bắt đầu gõ, KHÔNG dùng moviesList
+  // của store (danh sách đó bị thay bằng kết quả lọc của trang Khám Phá).
+  const [suggestionCatalog, setSuggestionCatalog] = useState(null);
+  useEffect(() => {
+    if (!headerQuery.trim() || suggestionCatalog !== null) return undefined;
+    let cancelled = false;
+    movieService.searchMovies({ size: 100 })
+      .then((list) => { if (!cancelled) setSuggestionCatalog(Array.isArray(list) ? list : []); })
+      .catch(() => { if (!cancelled) setSuggestionCatalog([]); });
+    return () => { cancelled = true; };
+  }, [headerQuery, suggestionCatalog]);
+
+  const searchSuggestions = useMemo(() => {
+    const q = headerQuery.trim().toLowerCase();
+    if (!q) return [];
+    const source = suggestionCatalog?.length ? suggestionCatalog : (moviesList || []);
+    return source
+      .filter((m) => m && m.status !== 'INACTIVE' && !m.isInactive)
+      .filter((m) => (
+        (m.title || '').toLowerCase().includes(q)
+        || (m.englishTitle || '').toLowerCase().includes(q)
+        || (m.director || '').toLowerCase().includes(q)
+        || (m.genre || []).some((g) => String(g || '').toLowerCase().includes(q))
+      ))
+      .slice(0, 5);
+  }, [headerQuery, moviesList, suggestionCatalog]);
+
+  const openMovieSuggestion = (movie) => {
+    setIsSearchOpen(false);
+    setActiveSuggestion(-1);
+    setHeaderQuery('');
+    navigate(`/movies/${movie.id}`);
+  };
+
+  const commitSearch = () => {
+    const q = headerQuery.trim();
+    if (!q) return;
+    setIsSearchOpen(false);
+    setActiveSuggestion(-1);
+    onSearchCommit(q);
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Escape') { setIsSearchOpen(false); setActiveSuggestion(-1); return; }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setIsSearchOpen(true);
+      setActiveSuggestion((i) => Math.min(i + 1, searchSuggestions.length - 1));
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveSuggestion((i) => Math.max(i - 1, -1));
+      return;
+    }
+    if (event.key === 'Enter') {
+      if (activeSuggestion >= 0 && searchSuggestions[activeSuggestion]) openMovieSuggestion(searchSuggestions[activeSuggestion]);
+      else commitSearch();
+    }
+  };
+
   const cinemaAddress = [cinema?.address, cinema?.city].filter(Boolean).join(', ');
   const googleMapsUrl = cinemaAddress
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cinemaAddress)}`
@@ -92,20 +173,71 @@ export default function Header({
             <Popcorn className="h-3.5 w-3.5" /> ĐẶT BẮP NƯỚC
           </button>
 
-          {/* Search Box */}
-          <div className="relative hidden xl:block w-40 xl:w-48 h-9 flex items-center">
+          {/* Search Box + dropdown gợi ý */}
+          <div ref={searchBoxRef} className="relative hidden xl:block w-40 xl:w-48 h-9">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-200 pointer-events-none" />
             <input
               type="text"
               placeholder="TÌM PHIM..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onClick={() => {
-                if (activeTab !== 'explore') onTabChange('explore');
-              }}
+              value={headerQuery}
+              onChange={(e) => { setHeaderQuery(e.target.value); setIsSearchOpen(true); setActiveSuggestion(-1); }}
+              onFocus={() => { if (headerQuery.trim()) setIsSearchOpen(true); }}
+              onKeyDown={handleSearchKeyDown}
               className="w-full h-full border border-white/10 bg-black/60 pl-9 pr-4 text-[9.5px] font-semibold text-white tracking-widest placeholder:font-semibold placeholder-neutral-500 uppercase focus:border-white/30 focus:bg-black/80 focus:outline-none transition-all duration-300 rounded"
               id="search-input"
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={isSearchOpen && headerQuery.trim().length > 0}
+              aria-controls="search-suggestions"
             />
+
+            {isSearchOpen && headerQuery.trim().length > 0 && (
+              <div
+                id="search-suggestions"
+                role="listbox"
+                className="absolute left-0 right-0 top-full z-[200] mt-1.5 w-64 overflow-hidden rounded border border-white/15 bg-[#0d0d0d] shadow-[0_16px_50px_rgba(0,0,0,0.7)]"
+              >
+                {searchSuggestions.length === 0 ? (
+                  <p className="px-3.5 py-3 text-[10px] font-sans uppercase tracking-widest text-neutral-500">
+                    Không có phim khớp "{headerQuery.trim()}"
+                  </p>
+                ) : (
+                  <>
+                    {searchSuggestions.map((movie, index) => (
+                      <button
+                        key={movie.id}
+                        role="option"
+                        aria-selected={index === activeSuggestion}
+                        onMouseEnter={() => setActiveSuggestion(index)}
+                        onClick={() => openMovieSuggestion(movie)}
+                        className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition ${
+                          index === activeSuggestion ? 'bg-white/10' : 'hover:bg-white/5'
+                        }`}
+                      >
+                        {movie.posterUrl ? (
+                          <img src={movie.posterUrl} alt="" className="h-11 w-8 shrink-0 rounded-sm border border-white/10 object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="h-11 w-8 shrink-0 rounded-sm border border-white/10 bg-neutral-900" />
+                        )}
+                        <span className="min-w-0">
+                          <span className="block truncate text-[11px] font-sans font-bold text-white">{movie.title}</span>
+                          <span className="block truncate text-[9px] font-mono uppercase tracking-widest text-neutral-500">
+                            {[movie.durationMinutes || movie.duration ? `${movie.durationMinutes || movie.duration} phút` : '', (movie.genre || [])[0]].filter(Boolean).join(' · ') || movie.englishTitle || ''}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={commitSearch}
+                      className="flex w-full items-center justify-between border-t border-white/10 px-3.5 py-2.5 text-[9.5px] font-sans font-black uppercase tracking-widest text-amber-400 transition hover:bg-amber-500/10"
+                    >
+                      <span>Xem tất cả kết quả</span>
+                      <span className="font-mono normal-case text-neutral-500">Enter ↵</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Location Selector */}
@@ -281,6 +413,18 @@ export default function Header({
             >
               <Compass className="h-3.5 w-3.5" />
               <span>KHÁM PHÁ</span>
+            </button>
+
+            <button
+              onClick={() => onTabChange('showtimes')}
+              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'showtimes'
+                ? 'text-white border-white font-bold'
+                : 'text-neutral-300 hover:text-white border-transparent'
+                }`}
+              id="nav-showtimes"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>LỊCH CHIẾU</span>
             </button>
 
             {!isAdminRole && (

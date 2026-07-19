@@ -7,6 +7,7 @@ import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Review;
 import com.sba301.cinemaai.entity.User;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.ReviewStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
@@ -15,6 +16,7 @@ import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.ReviewRepository;
 import com.sba301.cinemaai.repository.UserRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.ReviewService;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,6 +37,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
     private final MovieRepository movieRepository;
     private final BookingRepository bookingRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional
     @Override
@@ -139,6 +142,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
         reviewRepository.setReviewStatus(reviewId, ReviewStatus.HIDDEN);
         log.info("Admin hid review {}", reviewId);
+        auditLogService.record(AuditActionType.UPDATE, "REVIEW", reviewId, "Ẩn review #" + reviewId);
         return ReviewResponse.from(reviewRepository.findById(reviewId).orElseThrow());
     }
 
@@ -168,6 +172,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
         reviewRepository.setReviewStatus(reviewId, ReviewStatus.DELETED);
         log.info("Admin deleted (soft) review {}", reviewId);
+        auditLogService.record(AuditActionType.DELETE, "REVIEW", reviewId, "Xóa review #" + reviewId);
     }
 
     @Transactional(readOnly = true)

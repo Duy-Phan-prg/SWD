@@ -11,6 +11,7 @@ import com.sba301.cinemaai.entity.CineWallet;
 import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.WalletTransaction;
 import com.sba301.cinemaai.entity.WithdrawalRequest;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.WalletTransactionType;
 import com.sba301.cinemaai.enums.WithdrawalStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
@@ -19,6 +20,7 @@ import com.sba301.cinemaai.repository.CineWalletRepository;
 import com.sba301.cinemaai.repository.UserRepository;
 import com.sba301.cinemaai.repository.WalletTransactionRepository;
 import com.sba301.cinemaai.repository.WithdrawalRequestRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.WalletService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -40,6 +42,7 @@ public class WalletServiceImpl implements WalletService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     // ─── User Endpoints ─────────────────────────────────────────────────────────
 
@@ -166,6 +169,8 @@ public class WalletServiceImpl implements WalletService {
         ));
 
         log.info("Withdrawal {} approved via {} for user {}", withdrawalId, request.method(), wr.getUser().getEmail());
+        auditLogService.record(AuditActionType.APPROVE, "WALLET", wr.getId(),
+                wr.getUser().getEmail() + " - rút " + wr.getAmount() + " VND");
         return WithdrawalResponse.from(wr);
     }
 
@@ -203,6 +208,8 @@ public class WalletServiceImpl implements WalletService {
 
         log.info("Withdrawal {} rejected, {} VND returned to wallet for user {}",
                 withdrawalId, wr.getAmount(), wr.getUser().getEmail());
+        auditLogService.record(AuditActionType.REJECT, "WALLET", wr.getId(),
+                wr.getUser().getEmail() + " - từ chối rút " + wr.getAmount() + " VND");
         return WithdrawalResponse.from(wr);
     }
 

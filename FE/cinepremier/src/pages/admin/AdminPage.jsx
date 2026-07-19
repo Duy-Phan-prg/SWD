@@ -22,10 +22,15 @@ import AdminReviewsPanel from './system/AdminReviewsPanel';
 import AdminWalletPanel from './system/AdminWalletPanel';
 import AdminCinemaPanel from './cinema/AdminCinemaPanel';
 import AdminRoomsPanel from './cinema/AdminRoomsPanel';
+import AdminTicketsPanel from './cinema/AdminTicketsPanel';
+import AdminAuditPanel from './system/AdminAuditPanel';
+import AdminStatsPanel from './overview/AdminStatsPanel';
 
 const getNavGroup = (section) => {
-  if (['genres', 'actors', 'movies', 'foods'].includes(section)) return 'movies';
-  if (['rooms', 'showtimes', 'transactions'].includes(section)) return 'cinema';
+  if (['genres', 'actors', 'movies'].includes(section)) return 'movies';
+  if (section === 'foods') return 'fnb';
+  if (['rooms', 'showtimes', 'tickets', 'transactions'].includes(section)) return 'cinema';
+  if (['statistics', 'audit'].includes(section)) return 'insights';
   if (['users', 'loyalty', 'reviews', 'cinewallet'].includes(section)) return 'system';
   return null;
 };
@@ -38,7 +43,10 @@ const ADMIN_SECTIONS = new Set([
   'foods',
   'rooms',
   'showtimes',
+  'tickets',
   'transactions',
+  'statistics',
+  'audit',
   'users',
   'reviews',
   'loyalty',
@@ -254,20 +262,9 @@ export default function AdminDashboard({
     } catch (e) { }
   };
 
-  // Log of simulated changes within session
-  const [auditLogs, setAuditLogs] = useState([
-    { id: 1, action: 'Khởi tạo hệ thống', target: 'Cơ sở dữ liệu CinePremier v2.0', time: '03:15:02', user: 'Quản trị viên' },
-    { id: 2, action: 'Cập nhật dữ liệu', target: 'Trung tâm phát hành thẻ VIP', time: '03:20:11', user: 'Hệ thống tự động' }
-  ]);
-
-  const addAuditLog = (action, target) => {
-    const now = new Date();
-    const timeStr = now.toTimeString().split(' ')[0];
-    setAuditLogs(prev => [
-      { id: Date.now(), action, target, time: timeStr, user: 'Quản trị viên' },
-      ...prev
-    ]);
-  };
+  // Audit log giờ được backend ghi thật tại mỗi mutation (xem AdminAuditPanel);
+  // giữ hàm no-op để không phải sửa mọi call site cũ.
+  const addAuditLog = () => { };
 
   const resetFoodForm = () => {
     setFoodForm({ name: '', description: '', price: '', imageUrl: '', status: 'ACTIVE' });
@@ -1414,8 +1411,6 @@ export default function AdminDashboard({
     HALL_OPTIONS,
     TIME_OPTIONS,
     playPulseSound,
-    auditLogs,
-    setAuditLogs,
     addAuditLog,
     resetFoodForm,
     validateFoodForm,
@@ -1476,7 +1471,10 @@ export default function AdminDashboard({
     actors: AdminActorsPanel,
     foods: AdminFoodsPanel,
     showtimes: AdminShowtimesPanel,
+    tickets: AdminTicketsPanel,
     transactions: AdminTransactionsPanel,
+    statistics: AdminStatsPanel,
+    audit: AdminAuditPanel,
     users: AdminUsersPanel,
     reviews: AdminReviewsPanel,
     cinewallet: AdminWalletPanel,
@@ -1595,6 +1593,28 @@ export default function AdminDashboard({
                     {activeTab === 'movies' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Bắp nước tách khỏi nhóm phim thành nhóm F&B riêng */}
+            <button
+              type="button"
+              onClick={() => setOpenNavGroup(openNavGroup === 'fnb' ? null : 'fnb')}
+              className={`mt-2 flex w-full items-center justify-between border-2 px-4 py-4 transition ${openNavGroup === 'fnb' ? 'border-amber-500/60 bg-amber-500/[0.14] text-amber-300 shadow-[inset_3px_0_0_rgba(245,158,11,0.9)]' : 'border-white/10 bg-black/70 text-neutral-300 hover:border-amber-500/40 hover:text-white'}`}
+            >
+              <span className="text-xs font-sans font-black uppercase tracking-[0.16em] drop-shadow-sm">Bắp nước / F&B</span>
+              <ChevronDown className={`!h-4 !w-4 transition-transform duration-300 ${openNavGroup === 'fnb' ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence initial={false}>
+              {openNavGroup === 'fnb' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="space-y-1.5 overflow-hidden"
+                >
                   <button
                     onClick={() => { playPulseSound(478, 'sine', 0.05); changeAdminSection('foods'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'foods'
@@ -1657,6 +1677,19 @@ export default function AdminDashboard({
                     {activeTab === 'showtimes' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
                   <button
+                    onClick={() => { playPulseSound(492, 'sine', 0.05); changeAdminSection('tickets'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'tickets'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <FileText className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span>QUẢN LÝ VÉ</span>
+                    </span>
+                    {activeTab === 'tickets' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+                  <button
                     onClick={() => { playPulseSound(500, 'sine', 0.05); changeAdminSection('transactions'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'transactions'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
@@ -1668,6 +1701,54 @@ export default function AdminDashboard({
                       <span>GIAO DỊCH</span>
                     </span>
                     {activeTab === 'transactions' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Nhóm phân tích: thống kê định giá + audit log */}
+            <button
+              type="button"
+              onClick={() => setOpenNavGroup(openNavGroup === 'insights' ? null : 'insights')}
+              className={`mt-2 flex w-full items-center justify-between border-2 px-4 py-4 transition ${openNavGroup === 'insights' ? 'border-amber-500/60 bg-amber-500/[0.14] text-amber-300 shadow-[inset_3px_0_0_rgba(245,158,11,0.9)]' : 'border-white/10 bg-black/70 text-neutral-300 hover:border-amber-500/40 hover:text-white'}`}
+            >
+              <span className="text-xs font-sans font-black uppercase tracking-[0.16em] drop-shadow-sm">Phân tích & Giám sát</span>
+              <ChevronDown className={`!h-4 !w-4 transition-transform duration-300 ${openNavGroup === 'insights' ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence initial={false}>
+              {openNavGroup === 'insights' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="space-y-1.5 overflow-hidden"
+                >
+                  <button
+                    onClick={() => { playPulseSound(505, 'sine', 0.05); changeAdminSection('statistics'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'statistics'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <BarChart2 className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span>THỐNG KÊ MUA BÁN</span>
+                    </span>
+                    {activeTab === 'statistics' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+                  <button
+                    onClick={() => { playPulseSound(508, 'sine', 0.05); changeAdminSection('audit'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'audit'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <ShieldAlert className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span>AUDIT LOG</span>
+                    </span>
+                    {activeTab === 'audit' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
                 </motion.div>
               )}

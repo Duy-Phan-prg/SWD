@@ -1,16 +1,9 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from typing import List
+from api.recommend_models import RecommendMovieResponse
 from service.content_recommend import recommend_content
 
 router = APIRouter()
-
-
-class RecommendMovieResponse(BaseModel):
-    movieId: int
-    title: str
-    posterUrl: str
-    similarity: float
 
 
 @router.get("/recommend/content/{movie_id}", response_model=List[RecommendMovieResponse])

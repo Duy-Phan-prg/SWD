@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
 import { expireAuthSession, getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
@@ -81,6 +82,8 @@ const normalizeSeatTypeKey = (seatType) => {
   return 'standard';
 };
 
+const MAX_TICKETS = 8;
+
 const getCoupleSeatPair = (seat, allSeats) => {
   if (!seat || normalizeSeatTypeKey(seat.type) !== 'couple') return seat ? [seat] : [];
   const rowSeats = allSeats
@@ -142,6 +145,13 @@ const sortShowtimes = (showtimes) => [...showtimes].sort((a, b) => {
 export default function BookingView() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const draftKey = `cp:bookingDraft:${id}`;
+  // Draft đọc từ sessionStorage khi mở trang (khôi phục tiến trình sau refresh)
+  const pendingDraftRef = useRef(undefined);
+  // Ghế chờ áp lại sau khi seat map tải xong
+  const pendingSeatRestoreRef = useRef(null);
+  const resumeAppliedRef = useRef(false);
   const { moviesList, foodCatalog, fetchPublicFoodCatalog } = useMovies();
   const showToast = useUiStore((state) => state.showToast);
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
@@ -225,6 +235,20 @@ export default function BookingView() {
   const [loyaltyPointsInput, setLoyaltyPointsInput] = useState('');
   const [loyaltyConfig, setLoyaltyConfig] = useState(DEFAULT_LOYALTY_CONFIG);
   const [heldPaymentSummary, setHeldPaymentSummary] = useState(null);
+  const [paidBooking, setPaidBooking] = useState(null);
+  const heldSeatIdsRef = useRef(null);
+
+  // Sau khi thanh toán thành công: tải booking để lấy QR thật + mã vé từng ghế
+  useEffect(() => {
+    if (paymentState !== 'payment_success' || !holdBookingId) return;
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) return;
+    let cancelled = false;
+    bookingService.getMyBooking(accessToken, holdBookingId)
+      .then((booking) => { if (!cancelled) setPaidBooking(booking); })
+      .catch(() => { /* QR hiển thị fallback trong My Tickets */ });
+    return () => { cancelled = true; };
+  }, [paymentState, holdBookingId]);
 
   useEffect(() => {
     const { accessToken } = getStoredAuth();
@@ -259,19 +283,45 @@ export default function BookingView() {
     const movieId = movie.backendId || movie.id;
     if (isNaN(Number(movieId))) return;
 
+    if (pendingDraftRef.current === undefined) {
+      try {
+        const raw = sessionStorage.getItem(draftKey);
+        pendingDraftRef.current = raw ? JSON.parse(raw) : null;
+      } catch {
+        pendingDraftRef.current = null;
+      }
+    }
+
     setIsLoadingShowtimes(true);
     bookingService.getShowtimes({ movieId: Number(movieId) })
       .then(data => {
         // BE trả PageResponse { items, page, ... } — không phải mảng thuần.
         const rawList = Array.isArray(data) ? data : (data?.items ?? data?.content ?? []);
-        const list = sortShowtimes(rawList);
+        // Ẩn suất đã qua giờ bắt đầu — không cho đặt vé suất đang/đã chiếu
+        const upcoming = rawList.filter(st => new Date(st.startTime) > new Date());
+        const list = sortShowtimes(upcoming);
         setShowtimesList(list);
         if (list.length > 0) {
-          const first = list[0];
+          // Ưu tiên suất từ deep-link (?showtimeId=) rồi tới draft đã lưu, cuối cùng là suất đầu tiên
+          const draft = pendingDraftRef.current;
+          const preferId = searchParams.get('showtimeId') || draft?.showtimeId;
+          const preferred = preferId ? list.find(st => String(st.id) === String(preferId)) : null;
+          const first = preferred || list[0];
           const date = first.startTime?.split('T')[0] || '';
           setSelectedDate(date);
           setSelectedRoomKey(getShowtimeRoomKey(first));
           setSelectedShowtime(first);
+          if (draft && preferred && String(draft.showtimeId) === String(preferred.id) && !searchParams.get('resumeBookingId')) {
+            setAdultCount(draft.counts?.adult ?? 1);
+            setChildCount(draft.counts?.child ?? 0);
+            setStudentCount(draft.counts?.student ?? 0);
+            if (draft.combos) setSelectedCombos(draft.combos);
+            if (draft.bookingStep) setBookingStep(draft.bookingStep);
+            if (Array.isArray(draft.seats) && draft.seats.length > 0) {
+              pendingSeatRestoreRef.current = { showtimeId: preferred.id, seats: draft.seats, allowHeld: false };
+            }
+          }
+          pendingDraftRef.current = null;
         } else {
           setSelectedDate('');
           setSelectedRoomKey('');
@@ -399,6 +449,48 @@ export default function BookingView() {
     })).sort((a, b) => (a.displayOrder - b.displayOrder) || (a.displayColumn - b.displayColumn) || (a.col - b.col))
     : [];
 
+  // Đổi số lượng vé nhưng GIỮ ghế đã chọn: chỉ cắt bớt khi vượt tổng vé mới,
+  // và gán lại ticketType cho ghế nào không còn quota loại cũ.
+  const changeTicketCount = (type, delta) => {
+    const next = {
+      adult: adultCount,
+      child: childCount,
+      student: studentCount,
+    };
+    next[type] += delta;
+    const newTotal = next.adult + next.child + next.student;
+    if (next[type] < 0 || newTotal > MAX_TICKETS) return;
+
+    setAdultCount(next.adult);
+    setChildCount(next.child);
+    setStudentCount(next.student);
+
+    setSelectedSeats(prev => {
+      // Cắt từ cuối nếu vượt tổng vé mới — ghế đôi phải bỏ trọn cặp
+      let kept = [...prev];
+      while (kept.length > newTotal) {
+        const last = kept[kept.length - 1];
+        const pairIds = new Set(getCoupleSeatPair(last, seats).map(s => s.id));
+        kept = kept.filter(s => s.id !== last.id && !pairIds.has(s.id));
+      }
+      // Giữ loại vé cũ nếu còn quota, phần dư gán lại theo thứ tự adult → child → student
+      const capacity = { ...next };
+      const marked = kept.map(s => {
+        if (capacity[s.ticketType] > 0) {
+          capacity[s.ticketType] -= 1;
+          return s;
+        }
+        return { ...s, ticketType: null };
+      });
+      return marked.map(s => {
+        if (s.ticketType) return s;
+        const t = capacity.adult > 0 ? 'adult' : capacity.child > 0 ? 'child' : 'student';
+        capacity[t] -= 1;
+        return { ...s, ticketType: t };
+      });
+    });
+  };
+
   useEffect(() => {
     const hasActiveSeatHold = seatMapData?.seats?.some(seat => Boolean(seat.holdExpiresAt));
     if (!hasActiveSeatHold) return undefined;
@@ -406,6 +498,91 @@ export default function BookingView() {
     const intervalId = window.setInterval(() => setSeatClockTick(Date.now()), 1000);
     return () => window.clearInterval(intervalId);
   }, [seatMapData]);
+
+  // Áp lại ghế đã lưu (draft/resume) sau khi seat map tải xong; bỏ ghế đã bị người khác chiếm
+  useEffect(() => {
+    const pending = pendingSeatRestoreRef.current;
+    if (!pending || !seatMapData || !selectedShowtime) return;
+    if (String(pending.showtimeId) !== String(selectedShowtime.id)) {
+      pendingSeatRestoreRef.current = null;
+      return;
+    }
+    pendingSeatRestoreRef.current = null;
+    const restored = pending.seats
+      .map((saved) => {
+        const live = seats.find(s => String(s.seatId) === String(saved.seatId));
+        if (!live) return pending.allowHeld ? saved : null;
+        if (live.isBooked && !pending.allowHeld) return null;
+        return { ...live, ticketType: saved.ticketType || 'adult' };
+      })
+      .filter(Boolean);
+    if (restored.length > 0) setSelectedSeats(restored);
+  }, [seatMapData]);
+
+  // Lưu tiến trình đặt vé vào sessionStorage để refresh không mất bước đang làm
+  useEffect(() => {
+    if (paymentState === 'payment_success') {
+      try { sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
+      return;
+    }
+    if (!selectedShowtime?.id) return;
+    const draft = {
+      showtimeId: selectedShowtime.id,
+      counts: { adult: adultCount, child: childCount, student: studentCount },
+      seats: selectedSeats.map(({ seatId, ticketType }) => ({ seatId, ticketType })),
+      combos: selectedCombos,
+      bookingStep
+    };
+    try { sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* ignore */ }
+  }, [selectedShowtime?.id, adultCount, childCount, studentCount, selectedSeats, selectedCombos, bookingStep, paymentState]);
+
+  // "Tiếp tục thanh toán" từ My Tickets: khôi phục booking đang giữ và vào thẳng màn thanh toán
+  useEffect(() => {
+    const resumeBookingId = searchParams.get('resumeBookingId');
+    if (!resumeBookingId || resumeAppliedRef.current || showtimesList.length === 0) return;
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) return;
+    resumeAppliedRef.current = true;
+    bookingService.getMyBooking(accessToken, resumeBookingId)
+      .then((booking) => {
+        const stillHeld = ['HOLDING', 'PENDING_PAYMENT'].includes(booking.status)
+          && booking.holdExpiresAt
+          && new Date(booking.holdExpiresAt).getTime() > Date.now();
+        if (!stillHeld) {
+          showToast('Booking đã hết thời gian giữ ghế. Vui lòng đặt lại từ đầu.');
+          return;
+        }
+        const st = showtimesList.find(s => String(s.id) === String(booking.showtimeId));
+        if (st) {
+          setSelectedDate(st.startTime?.split('T')[0] || '');
+          setSelectedRoomKey(getShowtimeRoomKey(st));
+          setSelectedShowtime(st);
+        }
+        const restoredSeats = (booking.seats || []).map((seat) => ({
+          id: `${seat.rowLabel}${seat.seatNumber}`,
+          seatId: seat.seatId,
+          type: 'standard',
+          ticketType: String(seat.ticketType || 'ADULT').toLowerCase()
+        }));
+        setAdultCount(restoredSeats.filter(s => s.ticketType === 'adult').length);
+        setChildCount(restoredSeats.filter(s => s.ticketType === 'child').length);
+        setStudentCount(restoredSeats.filter(s => s.ticketType === 'student').length);
+        setSelectedSeats(restoredSeats);
+        pendingSeatRestoreRef.current = { showtimeId: booking.showtimeId, seats: restoredSeats, allowHeld: true };
+        heldSeatIdsRef.current = restoredSeats.map(s => s.seatId);
+        setHoldBookingId(booking.id);
+        setHoldExpiresAt(booking.holdExpiresAt);
+        setHeldPaymentSummary({
+          subtotal: Number(booking.subtotal || 0),
+          discountAmount: Number(booking.discountAmount || 0),
+          totalAmount: Number(booking.totalAmount || 0),
+          loyaltyPointsRedeemed: Number(booking.loyaltyPointsRedeemed || 0)
+        });
+        setBookingStep('combos');
+        setPaymentState('payment_method');
+      })
+      .catch(() => showToast('Không thể khôi phục booking đang giữ.'));
+  }, [showtimesList]);
 
   const buildTicketSelections = () => {
     return selectedSeats.map((seat) => {
@@ -641,6 +818,7 @@ export default function BookingView() {
     if (!bookingId) return;
 
     const { accessToken } = getStoredAuth();
+    heldSeatIdsRef.current = null;
     setHoldBookingId(null);
     setHoldExpiresAt(null);
     setHoldSecondsLeft(null);
@@ -659,7 +837,8 @@ export default function BookingView() {
   };
 
   useEffect(() => {
-    if (!holdExpiresAt || !['payment_method', 'payment_processing', 'payment_failed'].includes(paymentState)) return undefined;
+    // Đếm ngược mọi lúc còn hold (kể cả khi quay lại bước bắp nước)
+    if (!holdExpiresAt || !holdBookingId || ['payment_success'].includes(paymentState)) return undefined;
 
     const tick = () => {
       const expiresAtMs = new Date(holdExpiresAt).getTime();
@@ -755,9 +934,18 @@ export default function BookingView() {
     });
   };
 
-  const handleBackToBooking = async () => {
+  // Quay lại bước bắp nước từ màn thanh toán mà KHÔNG hủy hold ghế
+  const handleBackToBooking = () => {
+    setPaymentState('booking');
+    setBookingStep('combos');
+    if (concessions.length === 0) fetchPublicFoodCatalog({ force: true });
+  };
+
+  // Đổi ghế thì phải hủy hold và chọn lại từ đầu (dùng ở màn payment_failed)
+  const handleBackToSeats = async () => {
     setIsHolding(true);
     setPaymentState('booking');
+    setBookingStep('seats');
     try {
       await releaseHeldBooking();
     } finally {
@@ -812,6 +1000,30 @@ export default function BookingView() {
 
     setIsHolding(true);
     try {
+      // Hold còn hiệu lực + ghế không đổi → chỉ cập nhật bắp nước/loyalty, giữ nguyên hold
+      const holdStillActive = holdBookingId
+        && holdExpiresAt
+        && new Date(holdExpiresAt).getTime() > Date.now();
+      const seatsUnchanged = heldSeatIdsRef.current
+        && heldSeatIdsRef.current.length === selectedSeats.length
+        && selectedSeats.every((seat) => heldSeatIdsRef.current.includes(seat.seatId));
+      if (holdStillActive && seatsUnchanged) {
+        const updated = await bookingService.updateHoldingBooking(accessToken, holdBookingId, {
+          foods: buildFoodRequests(),
+          loyaltyPointsToRedeem
+        });
+        setHeldPaymentSummary({
+          subtotal: Number(updated.subtotal ?? subTotal),
+          discountAmount: Number(updated.discountAmount ?? discountAmount),
+          totalAmount: Number(updated.totalAmount ?? totalAmount),
+          loyaltyPointsRedeemed: Number(updated.loyaltyPointsRedeemed ?? loyaltyPointsToRedeem)
+        });
+        setHoldExpiresAt(updated.holdExpiresAt || holdExpiresAt);
+        setPaymentState('payment_method');
+        setIsHolding(false);
+        return;
+      }
+
       if (holdBookingId) {
         await releaseHeldBooking();
       }
@@ -839,6 +1051,7 @@ export default function BookingView() {
       });
       console.log('[holdSeats] result:', holdResult);
       setHoldBookingId(holdResult.id);
+      heldSeatIdsRef.current = selectedSeats.map((seat) => seat.seatId);
       setHeldPaymentSummary({
         subtotal: Number(holdResult.subtotal ?? subTotal),
         discountAmount: Number(holdResult.discountAmount ?? discountAmount),
@@ -870,24 +1083,6 @@ export default function BookingView() {
     handleProceedToPayment();
   };
 
-  const handleMockPayment = async () => {
-    if (!isHoldActive()) return;
-    const { accessToken } = getStoredAuth();
-    if (!accessToken) {
-      showToast('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-      expireAuthSession();
-      return;
-    }
-    setPaymentState('payment_processing');
-    try {
-      await paymentService.mockPayment(accessToken, holdBookingId);
-      setPaymentState('payment_success');
-    } catch (err) {
-      showToast(err.message || 'Lỗi giả lập thanh toán.');
-      setPaymentState('payment_failed');
-    }
-  };
-
   // Payment via VNPAY
   const handleVnpayPayment = async () => {
     if (!isHoldActive()) return;
@@ -898,6 +1093,7 @@ export default function BookingView() {
       return;
     }
     setPaymentState('payment_processing');
+    let vnpayError = null;
     try {
       const result = await paymentService.createVnpayPayment(accessToken, holdBookingId);
       const paymentUrl = result?.paymentUrl ?? result?.payment_url;
@@ -905,9 +1101,13 @@ export default function BookingView() {
         window.location.href = paymentUrl;
         return;
       }
-    } catch { /* fallback mock */ }
+      vnpayError = 'không nhận được URL thanh toán';
+    } catch (err) {
+      vnpayError = err?.message || 'lỗi không xác định';
+    }
 
-    // Fallback mock khi VNPAY chưa được duyệt
+    // Phao cuối khi VNPay không tạo được phiên — báo rõ cho user, KHÔNG âm thầm mock
+    showToast(`Không tạo được phiên VNPay (${vnpayError}) — chuyển sang thanh toán demo.`);
     try {
       await paymentService.mockPayment(accessToken, holdBookingId);
       setPaymentState('payment_success');
@@ -945,8 +1145,9 @@ export default function BookingView() {
             <button
               onClick={handleBackToBooking}
               className="text-[10px] text-zinc-400 hover:text-white border border-white/10 hover:border-white px-3 py-1.5 uppercase font-mono tracking-wider transition bg-neutral-950"
+              title="Quay lại chọn thêm bắp nước — ghế vẫn được giữ"
             >
-              ← Trở lại sơ đồ ghế
+              ← Quay lại bắp nước (giữ ghế)
             </button>
           )}
         </div>
@@ -999,7 +1200,7 @@ export default function BookingView() {
                 Thử thanh toán lại
               </button>
               <button
-                onClick={handleBackToBooking}
+                onClick={handleBackToSeats}
                 className="w-full border border-white/20 hover:border-white text-white hover:bg-neutral-900 py-3.5 text-xs font-bold uppercase tracking-widest font-sans transition"
               >
                 Quay lại thay đổi ghế
@@ -1117,16 +1318,47 @@ export default function BookingView() {
                 <div>
                   <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-1">Tổng thanh toán</p>
                   <p className="text-2xl font-black text-emerald-400 font-mono">{gatewayTotalAmount.toLocaleString()}đ</p>
+                  {paidBooking?.bookingCode && (
+                    <p className="text-[10px] text-zinc-500 font-mono mt-1">Mã đơn: {paidBooking.bookingCode}</p>
+                  )}
                 </div>
-                {/* QR mock */}
-                <div className="bg-white p-2 border border-white/10">
-                  <div className="grid grid-cols-7 gap-px w-16 h-16 bg-white">
-                    {Array.from({ length: 49 }).map((_, i) => (
-                      <div key={i} className={`w-full h-full ${[0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 20, 21, 27, 28, 34, 35, 41, 42, 43, 44, 45, 46, 47, 48, 8, 15, 22, 29, 36].includes(i) ? 'bg-black' : 'bg-white'}`} />
+                {paidBooking?.qrCode ? (
+                  <div className="bg-white p-2 border border-white/10">
+                    <QRCodeSVG value={paidBooking.qrCode} size={72} level="M" />
+                  </div>
+                ) : (
+                  <div className="bg-white/5 border border-white/10 w-[88px] h-[88px] flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 text-zinc-500 animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              {/* Danh sách mã vé từng ghế nằm TRONG mã QR chung ở trên */}
+              {Array.isArray(paidBooking?.seats) && paidBooking.seats.some((s) => s.ticketCode) && (
+                <div className="px-6 pb-6 border-t border-dashed border-white/10 pt-4">
+                  <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-3">
+                    {paidBooking.seats.length} vé trong mã QR — quét một mã là đủ
+                  </p>
+                  <div className="space-y-1.5">
+                    {paidBooking.seats.map((seat) => (
+                      <div key={seat.ticketCode || seat.seatId} className="flex items-center gap-3 border border-white/10 bg-neutral-950 px-3 py-2">
+                        <span className="w-8 shrink-0 font-mono text-xs font-black text-white">{seat.rowLabel}{seat.seatNumber}</span>
+                        <span className={`shrink-0 text-[8px] font-sans font-black uppercase tracking-widest ${
+                          seat.ticketType === 'STUDENT' ? 'text-sky-400' : seat.ticketType === 'CHILD' ? 'text-amber-400' : 'text-zinc-400'
+                        }`}>
+                          {seat.ticketType === 'STUDENT' ? 'Sinh viên' : seat.ticketType === 'CHILD' ? 'Trẻ em' : 'Người lớn'}
+                        </span>
+                        <span className="ml-auto truncate font-mono text-[10px] text-zinc-500" title={seat.ticketCode}>
+                          {seat.ticketCode}
+                        </span>
+                      </div>
                     ))}
                   </div>
+                  <p className="mt-2 text-[8px] text-zinc-600 leading-relaxed">
+                    Nhân viên quét mã QR phía trên sẽ thấy đủ danh sách vé và xác nhận từng ghế khi vào phòng.
+                  </p>
                 </div>
-              </div>
+              )}
 
             </div>
 
@@ -1197,25 +1429,20 @@ export default function BookingView() {
 
                 {selectedSeats.length > 0 && (
                   <div className="border-b border-white/5 pb-3">
-                    <span className="mb-2 block text-zinc-500">Vị trí đang giữ:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSeats.map((seat) => {
-                        const isCouple = normalizeSeatTypeKey(seat.type) === 'couple';
-                        const isVip = normalizeSeatTypeKey(seat.type) === 'vip';
+                    <span className="mb-2 block text-zinc-500">Chi tiết vé từng ghế:</span>
+                    <div className="space-y-1.5">
+                      {selectedSeats.map((seat, index) => {
+                        const meta = TICKET_TYPE_META[seat.ticketType] || TICKET_TYPE_META.adult;
+                        const unitPrice = moneyValue(ticketPriceValidation?.tickets?.[index]?.unitPrice);
                         return (
-                          <div
-                            key={seat.id}
-                            className={`relative grid h-10 w-10 place-items-center border font-mono text-xs font-black ${isCouple
-                              ? 'border-rose-500/60 bg-rose-950/30 text-rose-300'
-                              : isVip
-                                ? 'border-yellow-500/60 bg-yellow-950/30 text-yellow-300'
-                                : 'border-white/30 bg-neutral-950 text-white'
-                              }`}
-                          >
-                            <span className={`absolute -top-2 left-1/2 -translate-x-1/2 border px-1 py-0.5 text-[7px] font-black leading-none ${holdSecondsLeft !== null && holdSecondsLeft <= 15 ? 'border-red-400 bg-red-500 text-white' : 'border-emerald-300 bg-emerald-500 text-black'}`}>
-                              {holdCountdownLabel}
+                          <div key={seat.id} className="flex items-center justify-between gap-2">
+                            <span className="truncate">
+                              <span className="text-amber-400 font-bold">Ghế {seat.id}</span>
+                              <span className="text-zinc-500"> · {meta.label}</span>
+                              {normalizeSeatTypeKey(seat.type) === 'vip' && <span className="text-yellow-400"> · VIP</span>}
+                              {normalizeSeatTypeKey(seat.type) === 'couple' && <span className="text-rose-400"> · Đôi</span>}
                             </span>
-                            {seat.id}
+                            <span className="text-white font-bold shrink-0">{unitPrice !== null ? `${unitPrice.toLocaleString()}đ` : '—'}</span>
                           </div>
                         );
                       })}
@@ -1225,13 +1452,13 @@ export default function BookingView() {
 
                 {Object.entries(selectedCombos).length > 0 && (
                   <div className="space-y-2 pt-2 text-[9px] font-sans tracking-tight text-zinc-500">
-                    <span className="text-[9px] font-mono tracking-widest text-zinc-600 block">Combo dính kèm:</span>
+                    <span className="text-[9px] font-mono tracking-widest text-zinc-600 block">Bắp nước (đơn giá × số lượng):</span>
                     {Object.entries(selectedCombos).map(([id, q]) => {
                       const it = concessions.find(item => item.id === id);
                       if (!it) return null;
                       return (
                         <div key={id} className="flex justify-between">
-                          <span className="truncate max-w-[150px]">{it.name} <span className="text-white font-bold">x{q}</span></span>
+                          <span className="truncate max-w-[170px]">{it.name} <span className="text-zinc-400">({it.price.toLocaleString()}đ × {q})</span></span>
                           <span className="text-zinc-300">{(it.price * q).toLocaleString()}đ</span>
                         </div>
                       );
@@ -1315,14 +1542,8 @@ export default function BookingView() {
                   <CheckCircle className="h-5 w-5" />
                   <span>Xác nhận & Thanh toán qua VNPAY</span>
                 </button>
-                <button
-                  onClick={handleMockPayment}
-                  className="w-full flex items-center justify-center gap-2 border border-white/20 hover:border-white text-white/60 hover:text-white font-sans font-bold uppercase tracking-widest text-xs py-3 transition"
-                >
-
-                </button>
                 <p className="text-[9px] text-zinc-600 text-center font-mono uppercase tracking-wider">
-                  Bạn sẽ được chuyển sang cổng VNPAY · Ghế giữ trong 1 phút
+                  Bạn sẽ được chuyển sang cổng VNPAY · Ghế được giữ trong 3 phút
                 </p>
               </div>
 
@@ -1477,9 +1698,9 @@ export default function BookingView() {
                         <p className="text-[9px] text-neutral-500 font-mono">Từ {getTicketStartingPrice('adult') !== null ? formatVnd(getTicketStartingPrice('adult')) : '—'}/vé</p>
                       </div>
                       <div className="flex items-center gap-2 border border-white/10 px-2 py-1 bg-black">
-                        <button onClick={() => { setAdultCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
+                        <button onClick={() => changeTicketCount('adult', -1)} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
                         <span className="text-white font-mono font-bold w-5 text-center text-sm">{adultCount}</span>
-                        <button onClick={() => { setAdultCount(c => Math.min(8 - childCount - studentCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">+</button>
+                        <button onClick={() => changeTicketCount('adult', 1)} className="text-neutral-400 hover:text-white w-5 text-center font-bold">+</button>
                       </div>
                     </div>
                     {/* Child */}
@@ -1494,9 +1715,9 @@ export default function BookingView() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2 border border-amber-500/20 px-2 py-1 bg-black">
-                          <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">−</button>
+                          <button disabled={!childTicketsAllowed} onClick={() => changeTicketCount('child', -1)} className="text-neutral-400 hover:text-white w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">−</button>
                           <span className="text-amber-400 font-mono font-bold w-5 text-center text-sm">{childCount}</span>
-                          <button disabled={!childTicketsAllowed} onClick={() => { setChildCount(c => Math.min(8 - adultCount - studentCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-amber-400 w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">+</button>
+                          <button disabled={!childTicketsAllowed} onClick={() => changeTicketCount('child', 1)} className="text-neutral-400 hover:text-amber-400 w-5 text-center font-bold disabled:cursor-not-allowed disabled:hover:text-neutral-400">+</button>
                         </div>
                       </div>
                     )}
@@ -1508,9 +1729,9 @@ export default function BookingView() {
                         <p className="text-[9px] text-neutral-500 font-mono">Từ {getTicketStartingPrice('student') !== null ? formatVnd(getTicketStartingPrice('student')) : '—'}/vé</p>
                       </div>
                       <div className="flex items-center gap-2 border border-sky-500/20 px-2 py-1 bg-black">
-                        <button onClick={() => { setStudentCount(c => Math.max(0, c - 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
+                        <button onClick={() => changeTicketCount('student', -1)} className="text-neutral-400 hover:text-white w-5 text-center font-bold">−</button>
                         <span className="text-sky-400 font-mono font-bold w-5 text-center text-sm">{studentCount}</span>
-                        <button onClick={() => { setStudentCount(c => Math.min(8 - adultCount - childCount, c + 1)); setSelectedSeats([]); }} className="text-neutral-400 hover:text-sky-400 w-5 text-center font-bold">+</button>
+                        <button onClick={() => changeTicketCount('student', 1)} className="text-neutral-400 hover:text-sky-400 w-5 text-center font-bold">+</button>
                       </div>
                     </div>
 

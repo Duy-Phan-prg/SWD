@@ -114,6 +114,7 @@ export const adminService = {
   getLoyaltyTransactions:     (token, params = {}) => request(`/api/v1/admin/loyalty/transactions${buildQueryString(params)}`, { token }),
   getLoyaltyReport:           (token, params = {}) => request(`/api/v1/admin/loyalty/report${buildQueryString(params)}`, { token }),
   expireLoyaltyPointsNow:     (token) => request('/api/v1/admin/loyalty/expire-now', { method: 'POST', token }),
+  grantLoyaltyPoints:         (token, payload) => request('/api/v1/admin/loyalty/add', { method: 'POST', token, body: payload }),
 
   // Reviews
   getAdminReviews:    (token, params = {}) => request(`/api/v1/admin/reviews${buildQueryString(params)}`, { token }).then(normalizePageResponse),
@@ -142,6 +143,24 @@ export const adminService = {
   getRevenueReport:  (token, params = {}) => request(`/api/v1/admin/reports/revenue${buildQueryString(params)}`, { token }),
   getTopMovies:      (token, params = {}) => request(`/api/v1/admin/reports/top-movies${buildQueryString(params)}`, { token }),
   getRoomOccupancy:  (token, params = {}) => request(`/api/v1/admin/reports/occupancy${buildQueryString(params)}`, { token }),
+  getDailyOccupancy: (token, params = {}) => request(`/api/v1/admin/reports/occupancy-daily${buildQueryString(params)}`, { token }),
+  getShowtimeFill:   (token, params = {}) => request(`/api/v1/admin/reports/showtime-fill${buildQueryString(params)}`, { token }),
+  getNoShowReport:   (token, params = {}) => request(`/api/v1/admin/reports/no-shows${buildQueryString(params)}`, { token }),
+  getPeakHours:      (token, params = {}) => request(`/api/v1/admin/reports/peak-hours${buildQueryString(params)}`, { token }),
+  getTopSeats:       (token, params = {}) => request(`/api/v1/admin/reports/top-seats${buildQueryString(params)}`, { token }),
+  getAbandonedRate:  (token, params = {}) => request(`/api/v1/admin/reports/abandoned${buildQueryString(params)}`, { token }),
+  getConcessionSales: (token, params = {}) => request(`/api/v1/admin/reports/concessions${buildQueryString(params)}`, { token }),
+  getExpiredUsers:   (token, params = {}) => request(`/api/v1/admin/reports/expired-users${buildQueryString(params)}`, { token }),
+
+  // ── Audit logs ─────────────────────────────────────────────────────────────
+  getAuditLogs:      (token, params = {}) => request(`/api/v1/admin/audit-logs${buildQueryString(params)}`, { token }).then(normalizePageResponse),
+
+  // ── Bookings (quản lý vé) ──────────────────────────────────────────────────
+  getAdminBookings:      (token, params = {}) => bookingsApi.getAll(token, params).then(normalizePageResponse),
+  getAdminBookingDetail: (token, bookingId)   => bookingsApi.getOne(token, bookingId),
+
+  // ── Showtime slots ─────────────────────────────────────────────────────────
+  getAvailableShowtimeSlots: (token, params = {}) => request(`/api/v1/admin/showtimes/available-slots${buildQueryString(params)}`, { token }),
 
   // ── Bookings / Giao dịch ───────────────────────────────────────────────────
   getAdminBookings:     (token, params = {}) => bookingsApi.getAll(token, params),

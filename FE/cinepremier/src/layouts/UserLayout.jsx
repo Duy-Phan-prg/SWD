@@ -26,7 +26,10 @@ export default function UserLayout({ children }) {
   const currentRole = useAuthStore((state) => state.currentRole);
   const setCurrentRole = useAuthStore((state) => state.setCurrentRole);
   const handleLogout = useAuthStore((state) => state.handleLogout);
-  const { searchQuery, setSearchQuery, setMoviePagination, publicCinema, watchlist, handleToggleWatchlist, bookedTickets } = useMovies();
+  const {
+    searchQuery, setSearchQuery, setMoviePagination, publicCinema, watchlist, handleToggleWatchlist, bookedTickets,
+    moviesList, setMovieDateFilter, setSelectedGenreId
+  } = useMovies();
   const isAdmin = currentRole === 'admin' || currentUser?.role === 'admin';
   const isStaff = currentRole === 'staff' || currentUser?.role === 'staff';
   const isWishlistRestricted = isAdmin || isStaff;
@@ -36,6 +39,7 @@ export default function UserLayout({ children }) {
     if (p.startsWith('/staff')) return 'staff';
     if (p.startsWith('/admin')) return 'admin';
     if (p.startsWith('/movies')) return 'explore';
+    if (p === '/showtimes') return 'showtimes';
     if (p === '/tickets') return 'my-tickets';
     if (p === '/watchlist') return 'wishlist';
     if (p === '/profile') return 'profile';
@@ -60,7 +64,7 @@ export default function UserLayout({ children }) {
     // Guest bấm "Vé của tôi" → mở modal đăng nhập (vé yêu cầu đăng nhập).
     if (tab === 'my-tickets' && !isLoggedIn) { setAuthMode('login'); setShowOTP(true); return; }
     if (tab === 'wishlist' && isWishlistRestricted) return;
-    const paths = { home: '/', explore: '/movies', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
+    const paths = { home: '/', explore: '/movies', showtimes: '/showtimes', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
     navigate(paths[tab] || '/');
   };
 
@@ -181,7 +185,15 @@ export default function UserLayout({ children }) {
             activeTab={activeTab}
             onTabChange={handleTabChange}
             searchQuery={searchQuery}
-            onSearchChange={(q) => { setSearchQuery(q); setMoviePagination(prev => ({ ...prev, page: 0 })); if (location.pathname !== '/movies') navigate('/movies'); }}
+            moviesList={moviesList}
+            onSearchCommit={(q) => {
+              // Commit tìm kiếm mới: bỏ lọc ngày/thể loại cũ để không rơi vào "0 phim" vì filter tồn dư
+              setSearchQuery(q);
+              setMovieDateFilter('');
+              setSelectedGenreId('');
+              setMoviePagination(prev => ({ ...prev, page: 0 }));
+              if (location.pathname !== '/movies') navigate('/movies');
+            }}
             cinema={publicCinema}
             onManageCinema={() => navigate('/admin/cinema')}
             onOpenWatchlist={() => setShowWatchlist(true)}

@@ -11,6 +11,7 @@ import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.SeatRow;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.RoomStatus;
 import com.sba301.cinemaai.enums.SeatStatus;
 import com.sba301.cinemaai.enums.SeatType;
@@ -21,6 +22,7 @@ import com.sba301.cinemaai.mapper.CinemaMapper;
 import com.sba301.cinemaai.repository.RoomRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.SeatRowRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.CinemaService;
 import com.sba301.cinemaai.service.RoomService;
 import java.util.Comparator;
@@ -40,6 +42,7 @@ public class RoomServiceImpl implements RoomService {
     private final SeatRowRepository seatRowRepository;
     private final CinemaService cinemaService;
     private final CinemaMapper cinemaMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<RoomResponse> getRooms() {
@@ -73,7 +76,9 @@ public class RoomServiceImpl implements RoomService {
         });
         Room room = new Room(cinema, roomName, request.roomType(), request.rowCount(), request.columnCount());
         room.setStatus(request.status() == null ? RoomStatus.ACTIVE : request.status());
-        return cinemaMapper.toRoomResponse(roomRepository.save(room));
+        Room saved = roomRepository.save(room);
+        auditLogService.record(AuditActionType.CREATE, "ROOM", saved.getId(), saved.getName());
+        return cinemaMapper.toRoomResponse(saved);
     }
 
     @Transactional
@@ -91,6 +96,7 @@ public class RoomServiceImpl implements RoomService {
         room.setRowCount(request.rowCount());
         room.setColumnCount(request.columnCount());
         room.setStatus(request.status() == null ? room.getStatus() : request.status());
+        auditLogService.record(AuditActionType.UPDATE, "ROOM", room.getId(), room.getName());
         return cinemaMapper.toRoomResponse(room);
     }
 
@@ -98,6 +104,7 @@ public class RoomServiceImpl implements RoomService {
     public RoomResponse updateStatus(Long id, RoomStatus status) {
         Room room = findById(id);
         room.setStatus(status);
+        auditLogService.record(AuditActionType.UPDATE, "ROOM", room.getId(), room.getName() + " -> " + status);
         return cinemaMapper.toRoomResponse(room);
     }
 
@@ -110,6 +117,7 @@ public class RoomServiceImpl implements RoomService {
         }
         validateSeatLayout(room, request);
         applySeatLayout(room, request);
+        auditLogService.record(AuditActionType.CREATE, "ROOM", room.getId(), room.getName() + " - tạo sơ đồ ghế");
         return getSeats(roomId);
     }
 
@@ -126,6 +134,7 @@ public class RoomServiceImpl implements RoomService {
         seatRowRepository.deleteAll(seatRowRepository.findByRoom(room));
         seatRowRepository.flush();
         applySeatLayout(room, request);
+        auditLogService.record(AuditActionType.UPDATE, "ROOM", room.getId(), room.getName() + " - thay sơ đồ ghế");
         return getSeats(roomId);
     }
 
@@ -195,6 +204,8 @@ public class RoomServiceImpl implements RoomService {
         }
         seat.setSeatType(request.seatType());
         seat.setStatus(request.status());
+        auditLogService.record(AuditActionType.UPDATE, "ROOM", seat.getRoom().getId(),
+                seat.getRoom().getName() + " - cập nhật ghế " + seat.getRowLabel() + seat.getSeatNumber());
         return cinemaMapper.toSeatResponse(seat);
     }
 
@@ -205,6 +216,8 @@ public class RoomServiceImpl implements RoomService {
             findCouplePartner(seat).setStatus(SeatStatus.UNAVAILABLE);
         }
         seat.setStatus(SeatStatus.UNAVAILABLE);
+        auditLogService.record(AuditActionType.DELETE, "ROOM", seat.getRoom().getId(),
+                seat.getRoom().getName() + " - vô hiệu ghế " + seat.getRowLabel() + seat.getSeatNumber());
         return cinemaMapper.toSeatResponse(seat);
     }
 

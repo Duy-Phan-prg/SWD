@@ -19,10 +19,13 @@ import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.CinemaMapper;
 import com.sba301.cinemaai.repository.*;
+import com.sba301.cinemaai.dto.response.cinema.AvailableSlotResponse;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.RefundService;
 import com.sba301.cinemaai.service.RoomService;
 import com.sba301.cinemaai.service.ShowtimeService;
 import com.sba301.cinemaai.service.BulkRefundService;
+import java.time.LocalTime;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -46,6 +49,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ShowtimeServiceImpl implements ShowtimeService {
 
     private static final int CLEANUP_MINUTES = 15;
+    // Giờ hoạt động của rạp (một rạp duy nhất) dùng cho gợi ý khung giờ trống
+    private static final LocalTime OPERATING_START = LocalTime.of(8, 0);
+    private static final LocalTime OPERATING_END = LocalTime.of(23, 59);
+    private static final int SLOT_STEP_MINUTES = 15;
+    private static final int MAX_SUGGESTED_SLOTS = 24;
     private static final List<BookingStatus> ACTIVE_BOOKING_STATUSES = List.of(
             BookingStatus.HOLDING,
             BookingStatus.PENDING_PAYMENT,
@@ -62,6 +70,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final CinemaMapper cinemaMapper;
     private final RefundService refundService;
     private final BulkRefundService bulkRefundService;
+    private final AuditLogService auditLogService;
 
 
     // -------------------------------------------------------------------------
@@ -76,6 +85,11 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     public PageResponse<ShowtimeResponse> searchPublic(Long movieId, Long roomId, LocalDate date, int page, int size) {
         LocalDateTime from = date == null ? LocalDate.now().atStartOfDay() : date.atStartOfDay();
         LocalDateTime to = date == null ? LocalDate.now().plusYears(1).atStartOfDay() : date.plusDays(1).atStartOfDay();
+        // Customers must not see showtimes that already started (today's earlier slots)
+        LocalDateTime now = LocalDateTime.now();
+        if (from.isBefore(now)) {
+            from = now;
+        }
         return PageResponse.from(showtimeRepository.searchPublic(
                 movieId,
                 roomId,
@@ -136,7 +150,70 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         Showtime showtime = new Showtime(movie, room, request.startTime(), endTime, request.basePrice());
         applyPricing(showtime, request);
         showtime.setStatus(request.status() == null ? ShowtimeStatus.SCHEDULED : request.status());
-        return cinemaMapper.toShowtimeResponse(showtimeRepository.save(showtime));
+        Showtime saved = showtimeRepository.save(showtime);
+        auditLogService.record(AuditActionType.CREATE, "SHOWTIME", saved.getId(),
+                movie.getTitle() + " @ " + saved.getStartTime());
+        return cinemaMapper.toShowtimeResponse(saved);
+    }
+
+    /**
+     * Gợi ý các khung giờ trống của một phòng trong ngày cho phim đã chọn.
+     * Duyệt các khoảng trống giữa những suất hiện có (không CANCELLED),
+     * đề xuất giờ bắt đầu theo bước 15 phút trong giờ hoạt động của rạp.
+     */
+    @Transactional(readOnly = true)
+    public List<AvailableSlotResponse> getAvailableSlots(Long roomId, Long movieId, LocalDate date) {
+        Movie movie = findMovie(movieId);
+        Room room = roomService.findById(roomId);
+        int slotMinutes = movie.getDurationMinutes() + CLEANUP_MINUTES;
+
+        LocalDateTime windowStart = date.atTime(OPERATING_START);
+        LocalDateTime windowEnd = date.atTime(OPERATING_END);
+        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        if (windowStart.isBefore(now)) {
+            int remainder = now.getMinute() % SLOT_STEP_MINUTES;
+            windowStart = remainder == 0 ? now : now.plusMinutes(SLOT_STEP_MINUTES - remainder);
+        }
+        if (movie.getReleaseDate() != null && date.isBefore(movie.getReleaseDate())) {
+            return List.of();
+        }
+        if (movie.getEndDate() != null && date.isAfter(movie.getEndDate())) {
+            return List.of();
+        }
+        if (!windowStart.plusMinutes(slotMinutes).isBefore(windowEnd)) {
+            return List.of();
+        }
+
+        List<Showtime> existing = showtimeRepository.findByStartTimeBetween(
+                        date.atStartOfDay(), date.plusDays(1).atStartOfDay())
+                .stream()
+                .filter(st -> st.getRoom().getId().equals(roomId))
+                .filter(st -> st.getStatus() != ShowtimeStatus.CANCELLED)
+                .sorted(Comparator.comparing(Showtime::getStartTime))
+                .toList();
+
+        List<AvailableSlotResponse> slots = new java.util.ArrayList<>();
+        LocalDateTime cursor = windowStart;
+        while (slots.size() < MAX_SUGGESTED_SLOTS && cursor.plusMinutes(slotMinutes).isBefore(windowEnd)) {
+            LocalDateTime candidateStart = cursor;
+            LocalDateTime candidateEnd = cursor.plusMinutes(slotMinutes);
+            Showtime conflict = existing.stream()
+                    .filter(st -> st.getStartTime().isBefore(candidateEnd)
+                            && (st.getEndTime() == null || st.getEndTime().isAfter(candidateStart)))
+                    .findFirst()
+                    .orElse(null);
+            if (conflict == null) {
+                slots.add(new AvailableSlotResponse(candidateStart, candidateEnd));
+                cursor = cursor.plusMinutes(SLOT_STEP_MINUTES);
+            } else {
+                // Nhảy tới sau suất đang chiếm chỗ, làm tròn lên bước 15 phút
+                LocalDateTime next = (conflict.getEndTime() != null ? conflict.getEndTime() : candidateEnd)
+                        .withSecond(0).withNano(0);
+                int remainder = next.getMinute() % SLOT_STEP_MINUTES;
+                cursor = remainder == 0 ? next : next.plusMinutes(SLOT_STEP_MINUTES - remainder);
+            }
+        }
+        return slots;
     }
 
     /**
@@ -211,6 +288,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         showtime.setEndTime(endTime);
         applyPricing(showtime, request);
         showtime.setStatus(requestedStatus);
+        auditLogService.record(AuditActionType.UPDATE, "SHOWTIME", showtime.getId(),
+                movie.getTitle() + " @ " + showtime.getStartTime());
         return cinemaMapper.toShowtimeResponse(showtime);
     }
 
@@ -223,6 +302,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             refundService.processShowtimeCancellation(showtime, null);
         }
         showtime.setStatus(status);
+        auditLogService.record(AuditActionType.UPDATE, "SHOWTIME", showtime.getId(),
+                showtime.getMovie().getTitle() + " -> " + status);
         return cinemaMapper.toShowtimeResponse(showtime);
     }
 
@@ -234,6 +315,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         applyShowtimeCancellation(showtime, reason);
         refundService.processShowtimeCancellation(showtime, reason);
         showtime.setStatus(ShowtimeStatus.CANCELLED);
+        auditLogService.record(AuditActionType.DELETE, "SHOWTIME", showtime.getId(),
+                "Cancelled: " + (reason == null ? "" : reason));
         return cinemaMapper.toShowtimeResponse(showtime);
     }
 
@@ -245,6 +328,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         validateStatusTransition(showtime, ShowtimeStatus.CANCELLED);
         applyShowtimeCancellation(showtime, reason);
         showtime.setStatus(ShowtimeStatus.CANCELLED);
+        auditLogService.record(AuditActionType.REFUND, "SHOWTIME", showtime.getId(),
+                "Cancelled with bulk refund: " + (reason == null ? "" : reason));
         return bulkRefundService.processBulkRefund(showtime, reason);
     }
 
@@ -261,6 +346,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             throw new ConflictException(
                     "Cannot delete showtime because it has active bookings. Cancel the showtime first.");
         }
+        auditLogService.record(AuditActionType.DELETE, "SHOWTIME", showtime.getId(),
+                showtime.getMovie().getTitle() + " @ " + showtime.getStartTime());
         showtimeRepository.delete(showtime);
     }
 
@@ -574,7 +661,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     }
 
     private Showtime findById(Long id) {
-        return showtimeRepository.findById(id)
+        return showtimeRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new NotFoundException("Showtime not found"));
     }
 

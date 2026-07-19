@@ -3,6 +3,7 @@ package com.sba301.cinemaai.ai.client;
 import com.sba301.cinemaai.ai.dto.request.ChatRequest;
 import com.sba301.cinemaai.ai.dto.response.AIChatResult;
 import com.sba301.cinemaai.ai.dto.response.RecommendMovieResponse;
+import com.sba301.cinemaai.ai.dto.response.RecommendStatsResponse;
 import com.sba301.cinemaai.config.AIProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class AIClient {
                     RecommendMovieResponse[].class
             );
             return result == null ? List.of() : Arrays.asList(result);
-        } catch (RestClientException e) {
+        } catch (Exception e) {
             log.warn("AI Service unavailable for content recommendation (movieId={}): {}", movieId, e.getMessage());
             return List.of();
         }
@@ -45,9 +46,18 @@ public class AIClient {
                     RecommendMovieResponse[].class
             );
             return result == null ? List.of() : Arrays.asList(result);
-        } catch (RestClientException e) {
+        } catch (Exception e) {
             log.warn("AI Service unavailable for collaborative recommendation (userId={}): {}", userId, e.getMessage());
             return List.of();
+        }
+    }
+
+    public RecommendStatsResponse stats() {
+        try {
+            return restTemplate.getForObject(url("/recommend/stats"), RecommendStatsResponse.class);
+        } catch (Exception e) {
+            log.warn("AI Service unavailable for recommend stats: {}", e.getMessage());
+            return null;
         }
     }
 

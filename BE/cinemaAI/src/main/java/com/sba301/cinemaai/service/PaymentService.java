@@ -13,5 +13,9 @@ public interface PaymentService {
 
         public PaymentResponse mockPayment(String email, Long bookingId);
 
+        public PaymentResponse createVnpayFoodOrderPayment(String email, Long foodOrderId, String clientIp);
+
+        public PaymentResponse mockFoodOrderPayment(String email, Long foodOrderId);
+
         public PaymentResponse getByBooking(String email, Long bookingId);
 }

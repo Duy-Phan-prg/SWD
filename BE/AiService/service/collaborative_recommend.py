@@ -68,6 +68,18 @@ def get_movie_info(movie_ids: list) -> dict:
         conn.close()
 
 
+def get_movie_title(movie_id: int) -> str | None:
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cursor.execute("SELECT title FROM movies WHERE id = %s", (movie_id,))
+        row = cursor.fetchone()
+        return row["title"] if row else None
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def cosine_similarity_dicts(a: dict, b: dict) -> float:
     common = set(a.keys()) & set(b.keys())
     if not common:
@@ -98,6 +110,7 @@ def recommend_collaborative(user_id: int) -> list:
     # Predicted rating = sum(sim * rating) / sum(sim), normalized to 0..1 by /5
     weighted: dict[int, float] = {}
     sim_sums: dict[int, float] = {}
+    contrib_counts: dict[int, int] = {}
     for uid, sim in similar_users:
         if sim <= 0:
             continue
@@ -106,6 +119,7 @@ def recommend_collaborative(user_id: int) -> list:
                 continue
             weighted[mid] = weighted.get(mid, 0) + sim * rating
             sim_sums[mid] = sim_sums.get(mid, 0) + sim
+            contrib_counts[mid] = contrib_counts.get(mid, 0) + 1
 
     movie_scores = {
         mid: min(weighted[mid] / sim_sums[mid] / 5.0, 1.0)
@@ -117,15 +131,33 @@ def recommend_collaborative(user_id: int) -> list:
     top_ids = sorted(movie_scores, key=movie_scores.get, reverse=True)[:TOP_K]
     movies = get_movie_info(top_ids)
 
-    return [
-        {
+    anchor_title = None
+    try:
+        anchor_title = get_movie_title(max(user_vec, key=user_vec.get))
+    except Exception:
+        pass
+
+    results = []
+    for mid in top_ids:
+        if mid not in movies:
+            continue
+        predicted = round(weighted[mid] / sim_sums[mid], 1)
+        neighbor_count = contrib_counts.get(mid, 0)
+        reason = f"{neighbor_count} khán giả có gu giống bạn chấm trung bình {predicted}/5"
+        if anchor_title:
+            reason += f" · vì bạn thích {anchor_title}"
+        results.append({
             "movieId": mid,
-            "title": movies[mid]["title"] if mid in movies else "",
-            "posterUrl": movies[mid].get("poster_url", "") if mid in movies else "",
-            "similarity": round(movie_scores[mid], 4)
-        }
-        for mid in top_ids if mid in movies
-    ]
+            "title": movies[mid]["title"],
+            "posterUrl": movies[mid].get("poster_url", ""),
+            "similarity": round(movie_scores[mid], 4),
+            "source": "collaborative",
+            "predictedRating": predicted,
+            "neighborCount": neighbor_count,
+            "anchorTitle": anchor_title,
+            "reason": reason,
+        })
+    return results
 
 
 def _fallback(seen: set) -> list:
@@ -134,7 +166,8 @@ def _fallback(seen: set) -> list:
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute("""
-            SELECT m.id, m.title, m.poster_url, AVG(r.rating) as avg_score
+            SELECT m.id, m.title, m.poster_url, AVG(r.rating) as avg_score,
+                   COUNT(r.id) as rating_count
             FROM movies m
             JOIN reviews r ON r.movie_id = m.id
             GROUP BY m.id, m.title, m.poster_url
@@ -145,11 +178,17 @@ def _fallback(seen: set) -> list:
         for row in cursor.fetchall():
             if row["id"] in seen:
                 continue
+            avg_rating = round(float(row["avg_score"]), 1)
+            rating_count = row["rating_count"]
             results.append({
                 "movieId": row["id"],
                 "title": row["title"],
                 "posterUrl": row.get("poster_url", ""),
-                "similarity": round(float(row["avg_score"]) / 5.0, 4)
+                "similarity": round(float(row["avg_score"]) / 5.0, 4),
+                "source": "fallback_rating",
+                "avgRating": avg_rating,
+                "ratingCount": rating_count,
+                "reason": f"Điểm trung bình {avg_rating}/5 từ {rating_count} đánh giá thực",
             })
             if len(results) >= TOP_K:
                 break
@@ -174,7 +213,10 @@ def _fallback(seen: set) -> list:
                 "movieId": row["id"],
                 "title": row["title"],
                 "posterUrl": row.get("poster_url", ""),
-                "similarity": round(row["booking_count"] / max_count, 4)
+                "similarity": round(row["booking_count"] / max_count, 4),
+                "source": "fallback_popularity",
+                "bookingCount": row["booking_count"],
+                "reason": f"Top đặt vé — {row['booking_count']} vé đã bán",
             }
             for row in rows[:TOP_K]
         ]

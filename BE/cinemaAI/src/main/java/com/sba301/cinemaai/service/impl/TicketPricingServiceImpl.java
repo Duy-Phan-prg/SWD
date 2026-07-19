@@ -16,6 +16,7 @@ import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.TicketCombo;
 import com.sba301.cinemaai.entity.TicketPricingRule;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.SeatType;
 import com.sba301.cinemaai.enums.TicketType;
 import com.sba301.cinemaai.exception.BadRequestException;
@@ -25,6 +26,7 @@ import com.sba301.cinemaai.repository.ShowtimeRepository;
 import com.sba301.cinemaai.repository.SeatRepository;
 import com.sba301.cinemaai.repository.TicketComboRepository;
 import com.sba301.cinemaai.repository.TicketPricingRuleRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
@@ -48,6 +50,7 @@ public class TicketPricingServiceImpl implements TicketPricingService {
     private final TicketComboRepository ticketComboRepository;
     private final ShowtimeRepository showtimeRepository;
     private final SeatRepository seatRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<TicketPricingRuleResponse> getRules() {
@@ -88,7 +91,9 @@ public class TicketPricingServiceImpl implements TicketPricingService {
                 request.price()
         );
         applyRuleFields(rule, request);
-        return toRuleResponse(ticketPricingRuleRepository.save(rule));
+        TicketPricingRule saved = ticketPricingRuleRepository.save(rule);
+        auditLogService.record(AuditActionType.CREATE, "TICKET_PRICING", saved.getId(), describeRule(saved));
+        return toRuleResponse(saved);
     }
 
     @Transactional
@@ -97,12 +102,15 @@ public class TicketPricingServiceImpl implements TicketPricingService {
         validateRulePolicy(request);
         validateUniqueActiveRule(id, request);
         applyRuleFields(rule, request);
+        auditLogService.record(AuditActionType.UPDATE, "TICKET_PRICING", rule.getId(), describeRule(rule));
         return toRuleResponse(rule);
     }
 
     @Transactional
     public void deleteRule(Long id) {
-        findRule(id).setActive(false);
+        TicketPricingRule rule = findRule(id);
+        rule.setActive(false);
+        auditLogService.record(AuditActionType.DELETE, "TICKET_PRICING", rule.getId(), describeRule(rule));
     }
 
     @Transactional(readOnly = true)
@@ -152,7 +160,9 @@ public class TicketPricingServiceImpl implements TicketPricingService {
                 request.price()
         );
         applyComboFields(combo, request);
-        return toComboResponse(ticketComboRepository.save(combo));
+        TicketCombo saved = ticketComboRepository.save(combo);
+        auditLogService.record(AuditActionType.CREATE, "TICKET_PRICING", saved.getId(), "Combo " + saved.getName());
+        return toComboResponse(saved);
     }
 
     @Transactional
@@ -165,12 +175,15 @@ public class TicketPricingServiceImpl implements TicketPricingService {
                     throw new ConflictException("Ticket combo name already exists");
                 });
         applyComboFields(combo, request);
+        auditLogService.record(AuditActionType.UPDATE, "TICKET_PRICING", combo.getId(), "Combo " + combo.getName());
         return toComboResponse(combo);
     }
 
     @Transactional
     public void deleteCombo(Long id) {
-        findCombo(id).setActive(false);
+        TicketCombo combo = findCombo(id);
+        combo.setActive(false);
+        auditLogService.record(AuditActionType.DELETE, "TICKET_PRICING", combo.getId(), "Combo " + combo.getName());
     }
 
     @Transactional(readOnly = true)
@@ -329,6 +342,10 @@ public class TicketPricingServiceImpl implements TicketPricingService {
         if (exists) {
             throw new ConflictException("Active ticket pricing rule already exists for this ticket type, room type, seat type, weekend, and holiday");
         }
+    }
+
+    private String describeRule(TicketPricingRule rule) {
+        return rule.getTicketType() + "/" + rule.getRoomType() + "/" + rule.getSeatType() + " = " + rule.getPrice();
     }
 
     private TicketPricingRule findRule(Long id) {

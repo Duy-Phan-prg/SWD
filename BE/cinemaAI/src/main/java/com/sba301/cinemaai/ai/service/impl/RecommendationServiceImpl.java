@@ -2,6 +2,7 @@ package com.sba301.cinemaai.ai.service.impl;
 
 import com.sba301.cinemaai.ai.client.AIClient;
 import com.sba301.cinemaai.ai.dto.response.RecommendMovieResponse;
+import com.sba301.cinemaai.ai.dto.response.RecommendStatsResponse;
 import com.sba301.cinemaai.ai.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,11 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Override
     public List<RecommendMovieResponse> collaborative(Long userId) {
         return client.collaborative(userId);
+    }
+
+    @Override
+    public RecommendStatsResponse stats() {
+        return client.stats();
     }
 
 }

@@ -20,6 +20,8 @@ MOVIE_LIST_TOOLS = {
 }
 DATA_LIMIT = 5
 
+CHAT_REC_LIMIT = 4
+
 
 def build_response_data(tool_name: str | None, result) -> dict | None:
     if tool_name in MOVIE_LIST_TOOLS and isinstance(result, list) and result:

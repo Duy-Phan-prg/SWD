@@ -3,6 +3,7 @@ package com.sba301.cinemaai.controller;
 import com.sba301.cinemaai.dto.response.booking.BookingResponse;
 import com.sba301.cinemaai.dto.request.booking.CreateBookingRequest;
 import com.sba301.cinemaai.dto.request.booking.HoldSeatsRequest;
+import com.sba301.cinemaai.dto.request.booking.UpdateHoldingBookingRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.security.AuthenticatedUser;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -46,6 +48,17 @@ public class BookingController {
             @Valid @RequestBody CreateBookingRequest request
     ) {
         return ApiResponse.success(bookingService.createBooking(user.getUsername(), request), "Booking created successfully");
+    }
+
+    @PutMapping("/{bookingId}/items")
+    public ApiResponse<BookingResponse> updateHoldingItems(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long bookingId,
+            @Valid @RequestBody UpdateHoldingBookingRequest request
+    ) {
+        return ApiResponse.success(
+                bookingService.updateHoldingItems(user.getUsername(), bookingId, request),
+                "Booking items updated");
     }
 
     @GetMapping

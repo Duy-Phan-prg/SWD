@@ -2,8 +2,12 @@ package com.sba301.cinemaai.controller;
 
 import com.sba301.cinemaai.dto.response.booking.BookingResponse;
 import com.sba301.cinemaai.dto.request.booking.CheckInRequest;
+import com.sba301.cinemaai.dto.request.booking.CheckInSeatsRequest;
+import com.sba301.cinemaai.dto.request.booking.FoodOrderRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
+import com.sba301.cinemaai.dto.response.booking.FoodOrderResponse;
 import com.sba301.cinemaai.service.BookingService;
+import com.sba301.cinemaai.service.FoodOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class StaffCheckInController {
 
     private final BookingService bookingService;
+    private final FoodOrderService foodOrderService;
 
     @PostMapping
     @Operation(summary = "Check in ticket (Staff/Admin)", description = "Check in a ticket using QR code (Admin or Staff only)")
@@ -39,6 +44,25 @@ public class StaffCheckInController {
     })
     public ApiResponse<BookingResponse> checkIn(@Valid @RequestBody CheckInRequest request) {
         return ApiResponse.success(bookingService.checkIn(request.qrCode()), "Ticket checked in successfully");
+    }
+
+    @PostMapping("/seats")
+    @Operation(summary = "Check in selected seats (Staff/Admin)",
+            description = "Check in a subset of seats of a booking by their ticket codes - airline style partial check-in")
+    public ApiResponse<BookingResponse> checkInSeats(@Valid @RequestBody CheckInSeatsRequest request) {
+        return ApiResponse.success(
+                bookingService.checkInSeats(request.bookingCode(), request.ticketCodes()),
+                "Seats checked in successfully");
+    }
+
+    @PostMapping("/food-orders")
+    @Operation(summary = "Sell food at the counter for a booking (Staff/Admin)",
+            description = "Creates and immediately confirms (cash) a food order for a PAID/USED booking, looked up by booking code, ticket code or QR")
+    public ApiResponse<FoodOrderResponse> createFoodOrder(
+            @RequestParam String code,
+            @Valid @RequestBody FoodOrderRequest request
+    ) {
+        return ApiResponse.success(foodOrderService.createStaffOrder(code, request), "Food order confirmed");
     }
 
     @GetMapping("/lookup")

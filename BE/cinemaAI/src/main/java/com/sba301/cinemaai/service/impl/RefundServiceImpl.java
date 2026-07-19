@@ -5,6 +5,7 @@ import com.sba301.cinemaai.entity.CineWallet;
 import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.entity.Showtime;
 import com.sba301.cinemaai.entity.WalletTransaction;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.BookingStatus;
 import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
@@ -14,6 +15,7 @@ import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.CineWalletRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.repository.WalletTransactionRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import com.sba301.cinemaai.service.MailService;
 import com.sba301.cinemaai.service.NotificationService;
@@ -38,6 +40,7 @@ public class RefundServiceImpl implements RefundService {
     private final LoyaltyPointService loyaltyPointService;
     private final NotificationService notificationService;
     private final MailService mailService;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -97,7 +100,7 @@ public class RefundServiceImpl implements RefundService {
         bookingRepository.save(booking);
 
         // 5. Cập nhật payment
-        Payment payment = paymentRepository.findByBookingIdAndStatus(booking.getId(), PaymentStatus.SUCCESS)
+        Payment payment = paymentRepository.findFirstByBookingIdAndStatusAndFoodOrderIsNullOrderByIdDesc(booking.getId(), PaymentStatus.SUCCESS)
                 .orElse(null);
         if (payment != null) {
             payment.setStatus(PaymentStatus.REFUNDED);
@@ -122,6 +125,8 @@ public class RefundServiceImpl implements RefundService {
 
         log.info("Refunded {} VND to CineWallet for booking {} (new balance: {})",
                 refundAmount, booking.getBookingCode(), newBalance);
+        auditLogService.record(AuditActionType.REFUND, "BOOKING", booking.getId(),
+                booking.getBookingCode() + " - " + refundAmount + " VND");
     }
 
     private void cancelUnpaidBooking(Booking booking) {

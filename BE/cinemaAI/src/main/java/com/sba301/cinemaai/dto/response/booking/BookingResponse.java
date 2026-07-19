@@ -34,6 +34,10 @@ public record BookingResponse(
         LocalDateTime lastRefundAttemptAt,
         String qrCode,
         String paymentAccount,
+        String customerName,
+        String customerPhone,
+        String userEmail,
+        LocalDateTime showtimeEnd,
         List<BookingSeatResponse> seats,
         List<BookingTicketResponse> tickets,
         List<BookingFoodResponse> foods

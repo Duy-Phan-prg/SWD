@@ -11,6 +11,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -34,10 +35,15 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     boolean existsByRoomAndMovieAndStartTime(Room room, Movie movie, LocalDateTime startTime);
 
+    /** Single-row lookup with movie/room/cinema pre-fetched — avoids lazy N+1 when mapping to response. */
+    @EntityGraph(attributePaths = {"movie", "room", "room.cinema"})
+    Optional<Showtime> findWithDetailsById(Long id);
+
     /**
      * Admin paged search – every filter is optional.
      * When a parameter is null the corresponding WHERE clause is skipped.
      */
+    @EntityGraph(attributePaths = {"movie", "room", "room.cinema"})
     @Query("""
             select s from Showtime s
             where (:movieId   is null or s.movie.id             = :movieId)
@@ -57,6 +63,7 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             Pageable pageable
     );
 
+    @EntityGraph(attributePaths = {"movie", "room", "room.cinema"})
     @Query("""
             select s from Showtime s
             where (:movieId is null or s.movie.id = :movieId)

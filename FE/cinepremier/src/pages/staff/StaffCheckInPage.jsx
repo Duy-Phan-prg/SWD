@@ -23,6 +23,8 @@ import { staffService } from '../../services/staffService';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const FOOD_PAGE_SIZE = 10;
+const BOOKINGS_PAGE_SIZE = 8;
+const RECENT_BOOKINGS_LIMIT = 50;
 const CHECK_IN_LEAD_MINUTES = 30;
 
 const FOOD_STATUS_META = {
@@ -113,7 +115,15 @@ function StatusBadge({ status }) {
   );
 }
 
-function ResultCard({ result }) {
+const TICKET_TYPE_BADGES = {
+  STUDENT: { label: 'SINH VIÊN — KIỂM TRA THẺ', className: 'border-amber-400/50 bg-amber-400/10 text-amber-300' },
+  CHILD: { label: 'TRẺ EM', className: 'border-sky-400/40 bg-sky-400/10 text-sky-300' },
+  ADULT: { label: 'NGƯỜI LỚN', className: 'border-neutral-700 bg-neutral-900 text-neutral-300' },
+};
+
+const getTicketTypeBadge = (ticketType) => TICKET_TYPE_BADGES[String(ticketType || 'ADULT').toUpperCase()] || TICKET_TYPE_BADGES.ADULT;
+
+function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmSeats, isCheckingIn, onOpenCounterSale }) {
   if (!result) {
     return (
       <div className="flex min-h-[260px] flex-col items-center justify-center border border-dashed border-neutral-800 bg-[#070707] p-6 text-center">
@@ -128,6 +138,12 @@ function ResultCard({ result }) {
 
   const Icon = result.type === 'success' ? CheckCircle2 : result.type === 'warning' ? AlertCircle : XCircle;
   const color = result.type === 'success' ? 'text-emerald-300' : result.type === 'warning' ? 'text-purple-300' : 'text-rose-300';
+  const booking = result.booking;
+  const seats = Array.isArray(booking?.seats) ? booking.seats : [];
+  const hasSeatTickets = seats.some((seat) => seat.ticketCode);
+  const canPartialCheckIn = booking && booking.status === 'PAID' && isBookingCheckInOpen(booking) && hasSeatTickets;
+  const canSellFood = booking && ['PAID', 'USED'].includes(booking.status)
+    && (!booking.showtimeEnd || new Date(booking.showtimeEnd).getTime() > Date.now());
 
   return (
     <motion.div
@@ -145,23 +161,77 @@ function ResultCard({ result }) {
         </div>
       </div>
 
-      {result.booking && (
+      {booking && (
         <div className="mt-5 space-y-3 border border-neutral-800 bg-black p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-mono text-sm font-black text-white">{result.booking.bookingCode}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Booking #{result.booking.id}</p>
+              <p className="font-mono text-sm font-black text-white">{booking.bookingCode}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Booking #{booking.id}</p>
             </div>
-            <StatusBadge status={result.booking.status} />
+            <StatusBadge status={booking.status} />
           </div>
           <div className="grid gap-3 text-xs text-neutral-400 sm:grid-cols-2">
-            <div><span className="font-black text-white">Phim:</span> {result.booking.movieTitle}</div>
-            <div><span className="font-black text-white">Phòng:</span> {result.booking.roomName}</div>
-            <div><span className="font-black text-white">Suất:</span> {formatDateTime(result.booking.showtimeStart)}</div>
-            <div><span className="font-black text-white">Ghế:</span> {formatSeats(result.booking)}</div>
-            <div><span className="font-black text-white">Tổng tiền:</span> {Number(result.booking.totalAmount || 0).toLocaleString('vi-VN')}đ</div>
-            <div><span className="font-black text-white">Check-in:</span> {formatDateTime(result.booking.checkedInAt)}</div>
+            <div><span className="font-black text-white">Khách:</span> {booking.customerName || '—'}</div>
+            <div><span className="font-black text-white">SĐT:</span> {booking.customerPhone || '—'}</div>
+            <div><span className="font-black text-white">Phim:</span> {booking.movieTitle}</div>
+            <div><span className="font-black text-white">Phòng:</span> {booking.roomName}</div>
+            <div><span className="font-black text-white">Suất:</span> {formatDateTime(booking.showtimeStart)}</div>
+            <div><span className="font-black text-white">Tổng tiền:</span> {Number(booking.totalAmount || 0).toLocaleString('vi-VN')}đ</div>
           </div>
+
+          {seats.length > 0 && (
+            <div className="border-t border-neutral-800 pt-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Check-in từng ghế</p>
+              <div className="mt-2 space-y-1.5">
+                {seats.map((seat) => {
+                  const badge = getTicketTypeBadge(seat.ticketType);
+                  const isCheckedIn = seat.status === 'CHECKED_IN';
+                  const selectable = canPartialCheckIn && !isCheckedIn && seat.ticketCode;
+                  return (
+                    <label
+                      key={seat.ticketCode || seat.seatId}
+                      className={`flex items-center gap-3 border border-neutral-800 bg-[#070707] px-3 py-2 ${selectable ? 'cursor-pointer hover:border-emerald-400/50' : 'opacity-80'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTicketCodes.includes(seat.ticketCode)}
+                        disabled={!selectable}
+                        onChange={() => onToggleSeat?.(seat.ticketCode)}
+                        className="h-3.5 w-3.5 accent-emerald-400"
+                      />
+                      <span className="w-9 font-mono text-xs font-black text-white">{seat.rowLabel}{seat.seatNumber}</span>
+                      <span className={`border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${badge.className}`}>{badge.label}</span>
+                      <span className="ml-auto text-[9px] font-black uppercase tracking-wider">
+                        {isCheckedIn
+                          ? <span className="text-emerald-300">✓ Đã vào {seat.checkedInAt ? new Date(seat.checkedInAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                          : <span className="text-neutral-500">Chưa vào</span>}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {canPartialCheckIn && (
+                <button
+                  type="button"
+                  onClick={onConfirmSeats}
+                  disabled={isCheckingIn || selectedTicketCodes.length === 0}
+                  className="mt-3 flex w-full items-center justify-center gap-2 bg-emerald-400 px-4 py-3 text-[9px] font-black uppercase tracking-widest text-black transition hover:bg-emerald-300 disabled:opacity-40"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Xác nhận ghế đã chọn ({selectedTicketCodes.length})
+                </button>
+              )}
+            </div>
+          )}
+
+          {canSellFood && (
+            <button
+              type="button"
+              onClick={onOpenCounterSale}
+              className="flex w-full items-center justify-center gap-2 border border-purple-400/40 bg-purple-500/10 px-4 py-3 text-[9px] font-black uppercase tracking-widest text-purple-300 transition hover:bg-purple-400 hover:text-black"
+            >
+              🍿 Bán thêm bắp nước cho booking này
+            </button>
+          )}
         </div>
       )}
 
@@ -206,6 +276,13 @@ export default function StaffCheckInPage() {
   const [manualRefundModal, setManualRefundModal] = useState(null);
   const [manualRefundForm, setManualRefundForm] = useState({ refundMethod: 'MANUAL_BANK_TRANSFER', notes: '' });
   const [isSavingManualRefund, setIsSavingManualRefund] = useState(false);
+  const [selectedTicketCodes, setSelectedTicketCodes] = useState([]);
+  const [counterSaleBooking, setCounterSaleBooking] = useState(null);
+  const [counterSaleQuantities, setCounterSaleQuantities] = useState({});
+  const [isSavingCounterSale, setIsSavingCounterSale] = useState(false);
+  const [counterSaleMessage, setCounterSaleMessage] = useState('');
+  const [cashGiven, setCashGiven] = useState(''); // tiền khách đưa (trống = thu đúng số)
+  const [counterSaleReceipt, setCounterSaleReceipt] = useState(null); // biên lai sau khi thu
   const qrVideoRef = useRef(null);
   const qrCanvasRef = useRef(null);
   const qrStreamRef = useRef(null);
@@ -214,6 +291,23 @@ export default function StaffCheckInPage() {
 
   const visibleBookings = showtimeBookings.length > 0 ? showtimeBookings : recentBookings;
   const isShowingShowtimeBookings = showtimeBookings.length > 0;
+
+  // Phân trang client-side cho bảng booking (cùng pattern với danh sách bắp nước)
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const bookingsTotalPages = Math.max(1, Math.ceil(visibleBookings.length / BOOKINGS_PAGE_SIZE));
+  const safeBookingsPage = Math.min(bookingsPage, bookingsTotalPages);
+  const bookingsStartIndex = (safeBookingsPage - 1) * BOOKINGS_PAGE_SIZE;
+  const paginatedBookings = visibleBookings.slice(bookingsStartIndex, bookingsStartIndex + BOOKINGS_PAGE_SIZE);
+  const bookingsDisplayStart = visibleBookings.length === 0 ? 0 : bookingsStartIndex + 1;
+  const bookingsDisplayEnd = Math.min(bookingsStartIndex + BOOKINGS_PAGE_SIZE, visibleBookings.length);
+
+  useEffect(() => {
+    setBookingsPage((page) => Math.min(page, bookingsTotalPages));
+  }, [bookingsTotalPages]);
+
+  useEffect(() => {
+    setBookingsPage(1);
+  }, [isShowingShowtimeBookings]);
   const staffFoods = useMemo(() => [
     ...staffFoodCombos.map((item) => ({ ...item, kind: 'combo' })),
     ...staffFoodItems.map((item) => ({ ...item, kind: 'item' })),
@@ -348,7 +442,7 @@ export default function StaffCheckInPage() {
     setRecentBookings((current) => [
       booking,
       ...current.filter((item) => String(item.id) !== String(booking.id)),
-    ].slice(0, 8));
+    ].slice(0, RECENT_BOOKINGS_LIMIT));
   };
 
   const loadRecentBookings = async (seedBooking = null) => {
@@ -361,12 +455,12 @@ export default function StaffCheckInPage() {
     setIsLoadingRecentBookings(true);
     setRecentBookingsError('');
     try {
-      const bookings = await staffService.getRecentStaffCheckInBookings(token, 8);
+      const bookings = await staffService.getRecentStaffCheckInBookings(token, RECENT_BOOKINGS_LIMIT);
       const source = Array.isArray(bookings) ? bookings : [];
       const merged = seedBooking
         ? [seedBooking, ...source.filter((item) => String(item.id) !== String(seedBooking.id))]
         : source;
-      setRecentBookings(merged.slice(0, 8));
+      setRecentBookings(merged.slice(0, RECENT_BOOKINGS_LIMIT));
     } catch (error) {
       if (seedBooking) rememberBooking(seedBooking);
       setRecentBookingsError(error.message || 'Không thể tải booking vừa tra cứu/check-in từ API.');
@@ -505,6 +599,14 @@ export default function StaffCheckInPage() {
         bookingCode: preferQr ? parsedQrInput.bookingCode : trimmedCode,
       });
       rememberBooking(booking);
+      // Quét QR của một ghế cụ thể → tự tick ghế đó để staff xác nhận nhanh
+      const seatQrMatch = String(parsedQrInput.qrCode || '').match(/^CINEAI:SEAT:([^:]+):/i);
+      const scannedTicketCode = seatQrMatch ? seatQrMatch[1] : null;
+      setSelectedTicketCodes(
+        scannedTicketCode && (booking.seats || []).some((seat) => seat.ticketCode === scannedTicketCode && seat.status !== 'CHECKED_IN')
+          ? [scannedTicketCode]
+          : []
+      );
       const canCheckIn = isBookingCheckInOpen(booking);
       const isPaid = booking.status === 'PAID';
       setResult({
@@ -524,6 +626,137 @@ export default function StaffCheckInPage() {
       return null;
     } finally {
       setIsLookingUp(false);
+    }
+  };
+
+  const toggleSeatSelection = (ticketCode) => {
+    if (!ticketCode) return;
+    setSelectedTicketCodes((current) => (
+      current.includes(ticketCode)
+        ? current.filter((code) => code !== ticketCode)
+        : [...current, ticketCode]
+    ));
+  };
+
+  const checkInSelectedSeats = async () => {
+    const token = getToken();
+    const booking = result?.booking;
+    if (!token || !booking?.bookingCode || selectedTicketCodes.length === 0) return;
+
+    setIsCheckingIn(true);
+    try {
+      const updated = await staffService.checkInStaffSeats(token, {
+        bookingCode: booking.bookingCode,
+        ticketCodes: selectedTicketCodes,
+      });
+      rememberBooking(updated);
+      setSelectedTicketCodes([]);
+      const remaining = (updated.seats || []).filter((seat) => seat.status !== 'CHECKED_IN').length;
+      setResult({
+        type: 'success',
+        title: remaining === 0 ? 'Đã check-in toàn bộ ghế.' : `Đã check-in ${selectedTicketCodes.length} ghế.`,
+        message: remaining === 0
+          ? 'Toàn bộ ghế của booking đã vào phòng chiếu.'
+          : `Còn ${remaining} ghế chưa vào. Quét tiếp hoặc chọn ghế để xác nhận.`,
+        booking: updated,
+      });
+      void loadRecentBookings(updated);
+    } catch (error) {
+      setResult((current) => ({
+        type: 'error',
+        title: 'Không thể check-in ghế.',
+        message: error.message || 'Ghế không đủ điều kiện check-in.',
+        booking: current?.booking || null,
+      }));
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
+  const openCounterSale = () => {
+    if (!result?.booking) return;
+    setCounterSaleQuantities({});
+    setCounterSaleMessage('');
+    setCashGiven('');
+    setCounterSaleReceipt(null);
+    setCounterSaleBooking(result.booking);
+  };
+
+  const changeCounterSaleQuantity = (foodKey, delta) => {
+    setCounterSaleQuantities((prev) => {
+      const next = Math.max(0, (prev[foodKey] || 0) + delta);
+      const copy = { ...prev };
+      if (next === 0) delete copy[foodKey];
+      else copy[foodKey] = next;
+      return copy;
+    });
+  };
+
+  const counterSaleTotal = useMemo(() => Object.entries(counterSaleQuantities).reduce((sum, [foodKey, qty]) => {
+    const food = staffFoods.find((item) => `${item.kind}-${item.id}` === foodKey);
+    return sum + (food ? Number(food.price || 0) * qty : 0);
+  }, 0), [counterSaleQuantities, staffFoods]);
+
+  const counterSaleLines = useMemo(() => Object.entries(counterSaleQuantities)
+    .filter(([, qty]) => qty > 0)
+    .map(([foodKey, qty]) => {
+      const food = staffFoods.find((item) => `${item.kind}-${item.id}` === foodKey);
+      if (!food) return null;
+      const price = Number(food.price || 0);
+      return { key: foodKey, name: food.name, qty, price, lineTotal: price * qty };
+    })
+    .filter(Boolean), [counterSaleQuantities, staffFoods]);
+
+  // Tiền khách đưa / thối lại — nghiệp vụ thu ngân
+  const cashGivenValue = cashGiven === '' ? null : Number(cashGiven) || 0;
+  const cashChange = cashGivenValue !== null ? cashGivenValue - counterSaleTotal : null;
+  const cashInsufficient = cashGivenValue !== null && cashGivenValue < counterSaleTotal;
+
+  const submitCounterSale = async () => {
+    const token = getToken();
+    if (!token || !counterSaleBooking?.bookingCode || isSavingCounterSale) return;
+    const foods = Object.entries(counterSaleQuantities)
+      .map(([foodKey, quantity]) => {
+        const food = staffFoods.find((item) => `${item.kind}-${item.id}` === foodKey);
+        if (!food) return null;
+        return food.kind === 'combo'
+          ? { foodItemId: null, foodComboId: food.id, quantity }
+          : { foodItemId: food.id, foodComboId: null, quantity };
+      })
+      .filter(Boolean);
+    if (foods.length === 0) {
+      setCounterSaleMessage('Chọn ít nhất một món.');
+      return;
+    }
+    if (cashInsufficient) {
+      setCounterSaleMessage('Tiền khách đưa chưa đủ — kiểm tra lại trước khi xác nhận.');
+      return;
+    }
+    setIsSavingCounterSale(true);
+    setCounterSaleMessage('');
+    try {
+      const order = await staffService.createStaffFoodOrder(token, counterSaleBooking.bookingCode, { foods });
+      // Chuyển sang màn BIÊN LAI thay vì đóng modal — staff đối chiếu tiền ngay tại chỗ
+      setCounterSaleReceipt({
+        orderCode: order.orderCode,
+        total: Number(order.totalAmount || 0),
+        cashGiven: cashGivenValue,
+        change: cashChange !== null && cashChange >= 0 ? cashChange : null,
+        time: new Date().toLocaleString('vi-VN'),
+        collector: currentUser?.fullName || currentUser?.name || currentUser?.email || 'STAFF',
+      });
+      setCounterSaleQuantities({});
+      setCashGiven('');
+      setResult((current) => (current ? {
+        ...current,
+        type: 'success',
+        title: 'Đã bán bắp nước tại quầy.',
+        message: `Đơn ${order.orderCode} (${Number(order.totalAmount || 0).toLocaleString('vi-VN')}đ) đã thu tiền mặt.`,
+      } : current));
+    } catch (error) {
+      setCounterSaleMessage(error.message || 'Không thể tạo đơn bắp nước.');
+    } finally {
+      setIsSavingCounterSale(false);
     }
   };
 
@@ -617,7 +850,7 @@ export default function StaffCheckInPage() {
               </div>
               <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Kiểm soát vé bằng QR booking</h2>
               <p className="mt-3 max-w-2xl text-xs leading-6 text-neutral-400">
-                Mỗi QR gắn với một booking thật. Khi xác nhận, toàn bộ booking chuyển sang trạng thái đã check-in theo API backend.
+                Mỗi ghế có một mã QR riêng như thẻ lên máy bay. Quét mã ghế để check-in từng người, hoặc quét mã booking để xác nhận cả nhóm cùng lúc.
               </p>
               <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
                 Nhân viên: {currentUser?.fullName || currentUser?.name || currentUser?.email || 'STAFF'}
@@ -629,8 +862,8 @@ export default function StaffCheckInPage() {
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Phiên hiện tại</p>
             <p className="mt-1 text-2xl font-black text-white">{stats.checked}/{stats.total}</p>
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="border border-emerald-400/20 bg-emerald-400/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã vào</p></div>
-              <div className="border border-purple-400/20 bg-purple-500/10 p-2.5"><p className="text-lg font-black text-purple-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Chờ vào</p></div>
+              <div className="border border-emerald-400/20 bg-emerald-400/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-emerald-200/70">Đã vào</p></div>
+              <div className="border border-purple-400/20 bg-purple-500/10 p-2.5"><p className="text-lg font-black text-purple-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-purple-200/70">Chờ vào</p></div>
               <div className="border border-neutral-800 bg-black p-2.5"><p className="text-lg font-black text-white">{stats.total}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã tra</p></div>
             </div>
           </motion.div>
@@ -738,7 +971,14 @@ export default function StaffCheckInPage() {
             </div>
           </div>
 
-          <ResultCard result={result} />
+          <ResultCard
+            result={result}
+            selectedTicketCodes={selectedTicketCodes}
+            onToggleSeat={toggleSeatSelection}
+            onConfirmSeats={checkInSelectedSeats}
+            isCheckingIn={isCheckingIn}
+            onOpenCounterSale={openCounterSale}
+          />
         </section>
 
         <section className="border border-neutral-800 bg-[#070707] p-5">
@@ -1021,7 +1261,7 @@ export default function StaffCheckInPage() {
                       <p className="mt-3 text-xs font-bold text-neutral-500">Đang tải booking gần đây từ API...</p>
                     </td>
                   </tr>
-                ) : visibleBookings.length > 0 ? visibleBookings.map((booking) => {
+                ) : visibleBookings.length > 0 ? paginatedBookings.map((booking) => {
                   const canCheckIn = isBookingCheckInOpen(booking);
                   return (
                     <tr key={booking.id} className="transition hover:bg-emerald-400/5">
@@ -1061,10 +1301,213 @@ export default function StaffCheckInPage() {
             </table>
           </div>
           <div className="flex flex-col justify-between gap-3 border-t border-neutral-800 px-5 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-500 sm:flex-row sm:items-center">
-            <span>{isShowingShowtimeBookings ? 'Danh sách booking lấy trực tiếp theo showtimeId' : 'Hiển thị tối đa 10 booking gần nhất từ API staff/check-in/recent'}</span>
-
+            <span>
+              {visibleBookings.length > 0
+                ? `Hiển thị ${bookingsDisplayStart}-${bookingsDisplayEnd}/${visibleBookings.length} booking - Trang ${safeBookingsPage}/${bookingsTotalPages}`
+                : isShowingShowtimeBookings
+                  ? 'Danh sách booking lấy trực tiếp theo showtimeId'
+                  : `Hiển thị tối đa ${RECENT_BOOKINGS_LIMIT} booking gần nhất từ API staff/check-in/recent`}
+            </span>
+            {bookingsTotalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={safeBookingsPage <= 1}
+                  onClick={() => setBookingsPage((page) => Math.max(1, page - 1))}
+                  className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Trước
+                </button>
+                <button
+                  type="button"
+                  disabled={safeBookingsPage >= bookingsTotalPages}
+                  onClick={() => setBookingsPage((page) => Math.min(bookingsTotalPages, page + 1))}
+                  className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+                >
+                  Sau <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </section>
+        {counterSaleBooking && (
+          <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-lg border border-purple-400/30 bg-[#070707] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-300">Quầy bắp nước</p>
+                  <h3 className="mt-1 text-lg font-black uppercase text-white">Bán thêm cho {counterSaleBooking.bookingCode}</h3>
+                  <p className="mt-1 text-xs text-neutral-500">{counterSaleBooking.customerName || counterSaleBooking.movieTitle} · thanh toán tiền mặt tại quầy</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCounterSaleBooking(null)}
+                  className="border border-neutral-700 px-3 py-2 text-[10px] font-black uppercase text-neutral-300 hover:border-white hover:text-white"
+                >
+                  Đóng
+                </button>
+              </div>
+
+              {counterSaleReceipt ? (
+                <div className="mt-4">
+                  <div className="border border-emerald-400/40 bg-emerald-500/5 px-4 py-4 text-center">
+                    <p className="text-2xl">✓</p>
+                    <p className="mt-1 text-sm font-black uppercase tracking-widest text-emerald-300">Đã thu tiền mặt</p>
+                    <p className="mt-1 font-mono text-xs text-neutral-400">Mã đơn: <span className="font-black text-white">{counterSaleReceipt.orderCode}</span></p>
+                  </div>
+                  <div className="mt-3 divide-y divide-neutral-900 border border-neutral-800 bg-black text-xs">
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                      <span className="font-bold uppercase tracking-widest text-neutral-500">Tổng thu</span>
+                      <span className="font-mono text-base font-black text-emerald-300">{formatCurrency(counterSaleReceipt.total)}</span>
+                    </div>
+                    {counterSaleReceipt.cashGiven !== null && (
+                      <>
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="font-bold uppercase tracking-widest text-neutral-500">Tiền khách đưa</span>
+                          <span className="font-mono font-black text-white">{formatCurrency(counterSaleReceipt.cashGiven)}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="font-bold uppercase tracking-widest text-neutral-500">Thối lại khách</span>
+                          <span className="font-mono font-black text-amber-300">{formatCurrency(counterSaleReceipt.change || 0)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                      <span className="font-bold uppercase tracking-widest text-neutral-500">Thời gian</span>
+                      <span className="font-mono text-neutral-300">{counterSaleReceipt.time}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                      <span className="font-bold uppercase tracking-widest text-neutral-500">Người thu</span>
+                      <span className="font-bold text-neutral-300">{counterSaleReceipt.collector}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCounterSaleBooking(null)}
+                      className="border border-neutral-700 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-white hover:text-white"
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setCounterSaleReceipt(null); setCounterSaleMessage(''); }}
+                      className="bg-purple-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-purple-300"
+                    >
+                      Bán đơn khác
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="mt-4 max-h-52 overflow-y-auto divide-y divide-neutral-900 border border-neutral-800 bg-black">
+                    {staffFoods.filter((food) => food.status === 'ACTIVE' || food.status === 'LOW_STOCK').map((food) => {
+                      const foodKey = `${food.kind}-${food.id}`;
+                      return (
+                        <div key={foodKey} className="flex items-center justify-between gap-3 px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-black uppercase text-white">{food.name}</p>
+                            <p className="mt-0.5 font-mono text-[10px] text-amber-300">{formatCurrency(food.price)} · {food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => changeCounterSaleQuantity(foodKey, -1)}
+                              className="h-7 w-7 border border-neutral-700 text-white transition hover:border-purple-400"
+                            >−</button>
+                            <span className="w-6 text-center font-mono text-xs font-black text-white">{counterSaleQuantities[foodKey] || 0}</span>
+                            <button
+                              type="button"
+                              onClick={() => changeCounterSaleQuantity(foodKey, 1)}
+                              className="h-7 w-7 border border-neutral-700 text-white transition hover:border-purple-400"
+                            >+</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {staffFoods.length === 0 && (
+                      <p className="px-4 py-6 text-center text-xs font-bold text-neutral-500">Chưa tải được danh sách bắp nước.</p>
+                    )}
+                  </div>
+
+                  {counterSaleLines.length > 0 && (
+                    <div className="mt-3 border border-purple-400/20 bg-purple-500/5">
+                      <p className="border-b border-purple-400/20 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-purple-300">Soát đơn trước khi thu</p>
+                      <div className="divide-y divide-neutral-900">
+                        {counterSaleLines.map((line) => (
+                          <div key={line.key} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
+                            <span className="min-w-0 truncate font-bold text-neutral-300">{line.name} <span className="font-mono text-neutral-500">× {line.qty}</span></span>
+                            <span className="shrink-0 font-mono text-neutral-400">{formatCurrency(line.price)} = <span className="font-black text-white">{formatCurrency(line.lineTotal)}</span></span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between border-t border-purple-400/20 px-4 py-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Cần thu</span>
+                        <span className="font-mono text-xl font-black text-purple-300">{formatCurrency(counterSaleTotal)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Tiền khách đưa (bỏ trống nếu thu đúng số)</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={cashGiven}
+                        onChange={(event) => setCashGiven(event.target.value)}
+                        placeholder="VD: 200000"
+                        className="w-full border border-neutral-700 bg-black px-3 py-2.5 font-mono text-sm font-black text-white outline-none focus:border-purple-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCashGiven('')}
+                        className="shrink-0 border border-neutral-700 px-3 py-2.5 text-[9px] font-black uppercase text-neutral-400 transition hover:border-white hover:text-white"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {[50000, 100000, 200000, 500000].map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => setCashGiven(String(amount))}
+                          className="border border-neutral-700 px-3 py-1.5 font-mono text-[10px] font-black text-neutral-300 transition hover:border-purple-400 hover:text-purple-300"
+                        >
+                          {(amount / 1000).toLocaleString('vi-VN')}k
+                        </button>
+                      ))}
+                    </div>
+                    {cashGivenValue !== null && counterSaleTotal > 0 && (
+                      cashInsufficient ? (
+                        <p className="mt-2 text-xs font-black text-rose-400">Khách đưa thiếu {formatCurrency(counterSaleTotal - cashGivenValue)} — chưa thể xác nhận.</p>
+                      ) : (
+                        <p className="mt-2 text-xs font-bold text-neutral-300">Thối lại khách: <span className="font-mono text-base font-black text-emerald-300">{formatCurrency(cashChange)}</span></p>
+                      )
+                    )}
+                  </div>
+
+                  {counterSaleMessage && <p className="mt-3 text-xs font-bold text-rose-400">{counterSaleMessage}</p>}
+
+                  <button
+                    type="button"
+                    onClick={submitCounterSale}
+                    disabled={isSavingCounterSale || counterSaleTotal <= 0 || cashInsufficient}
+                    className="mt-4 w-full bg-purple-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-purple-300 disabled:opacity-40"
+                  >
+                    {isSavingCounterSale ? 'Đang xác nhận...' : `Xác nhận đã thu ${counterSaleTotal > 0 ? formatCurrency(counterSaleTotal) : 'tiền mặt'}`}
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
         {manualRefundModal && (
           <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
             <motion.div

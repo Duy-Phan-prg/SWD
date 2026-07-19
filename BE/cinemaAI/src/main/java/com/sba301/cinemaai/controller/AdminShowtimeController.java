@@ -46,6 +46,19 @@ public class AdminShowtimeController {
     // READ
     // -------------------------------------------------------------------------
 
+    @GetMapping("/available-slots")
+    @Operation(
+            summary = "Suggest free time slots (Admin)",
+            description = "Lists free start/end time slots for a room on a given date, sized to the movie duration plus cleanup time. Slots step every 15 minutes within operating hours (08:00-23:59)."
+    )
+    public ApiResponse<List<com.sba301.cinemaai.dto.response.cinema.AvailableSlotResponse>> availableSlots(
+            @RequestParam Long roomId,
+            @RequestParam Long movieId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        return ApiResponse.success(showtimeService.getAvailableSlots(roomId, movieId, date));
+    }
+
     @GetMapping
     @Operation(
             summary = "Search showtimes with paging (Admin)",

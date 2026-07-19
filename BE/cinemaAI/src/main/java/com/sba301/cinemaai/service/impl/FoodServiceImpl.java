@@ -7,11 +7,13 @@ import com.sba301.cinemaai.dto.response.PageResponse;
 import com.sba301.cinemaai.dto.response.food.FoodItemResponse;
 import com.sba301.cinemaai.entity.FoodCombo;
 import com.sba301.cinemaai.entity.FoodItem;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.FoodItemStatus;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.FoodMapper;
 import com.sba301.cinemaai.repository.FoodComboRepository;
 import com.sba301.cinemaai.repository.FoodItemRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.FoodService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class FoodServiceImpl implements FoodService {
     private final FoodItemRepository foodItemRepository;
     private final FoodComboRepository foodComboRepository;
     private final FoodMapper foodMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<FoodItemResponse> getActiveItems() {
@@ -92,7 +95,9 @@ public class FoodServiceImpl implements FoodService {
         FoodItem foodItem = new FoodItem(request.name(), request.description(), request.price());
         applyItemFields(foodItem, request);
         foodItem.setStatus(normalizeStatus(request.status(), FoodItemStatus.ACTIVE));
-        return foodMapper.toFoodItemResponse(foodItemRepository.save(foodItem));
+        FoodItem saved = foodItemRepository.save(foodItem);
+        auditLogService.record(AuditActionType.CREATE, "FOOD_ITEM", saved.getId(), saved.getName());
+        return foodMapper.toFoodItemResponse(saved);
     }
 
     @Transactional
@@ -100,7 +105,9 @@ public class FoodServiceImpl implements FoodService {
         FoodCombo foodCombo = new FoodCombo(request.name(), request.description(), request.price());
         applyComboFields(foodCombo, request);
         foodCombo.setStatus(normalizeStatus(request.status(), FoodItemStatus.ACTIVE));
-        return foodMapper.toFoodComboResponse(foodComboRepository.save(foodCombo));
+        FoodCombo saved = foodComboRepository.save(foodCombo);
+        auditLogService.record(AuditActionType.CREATE, "FOOD_COMBO", saved.getId(), saved.getName());
+        return foodMapper.toFoodComboResponse(saved);
     }
 
     @Transactional
@@ -108,6 +115,7 @@ public class FoodServiceImpl implements FoodService {
         FoodItem foodItem = findItem(id);
         applyItemFields(foodItem, request);
         foodItem.setStatus(normalizeStatus(request.status(), foodItem.getStatus()));
+        auditLogService.record(AuditActionType.UPDATE, "FOOD_ITEM", foodItem.getId(), foodItem.getName());
         return foodMapper.toFoodItemResponse(foodItem);
     }
 
@@ -116,6 +124,7 @@ public class FoodServiceImpl implements FoodService {
         FoodCombo foodCombo = findCombo(id);
         applyComboFields(foodCombo, request);
         foodCombo.setStatus(normalizeStatus(request.status(), foodCombo.getStatus()));
+        auditLogService.record(AuditActionType.UPDATE, "FOOD_COMBO", foodCombo.getId(), foodCombo.getName());
         return foodMapper.toFoodComboResponse(foodCombo);
     }
 
@@ -137,6 +146,7 @@ public class FoodServiceImpl implements FoodService {
     public FoodItemResponse deleteItem(Long id) {
         FoodItem foodItem = findItem(id);
         foodItem.setStatus(FoodItemStatus.OUT_OF_STOCK);
+        auditLogService.record(AuditActionType.DELETE, "FOOD_ITEM", foodItem.getId(), foodItem.getName());
         return foodMapper.toFoodItemResponse(foodItem);
     }
 
@@ -144,6 +154,7 @@ public class FoodServiceImpl implements FoodService {
     public FoodComboResponse deleteCombo(Long id) {
         FoodCombo foodCombo = findCombo(id);
         foodCombo.setStatus(FoodItemStatus.OUT_OF_STOCK);
+        auditLogService.record(AuditActionType.DELETE, "FOOD_COMBO", foodCombo.getId(), foodCombo.getName());
         return foodMapper.toFoodComboResponse(foodCombo);
     }
 

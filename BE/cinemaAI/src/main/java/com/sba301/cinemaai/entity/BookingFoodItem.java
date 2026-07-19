@@ -40,6 +40,11 @@ public class BookingFoodItem extends BaseEntity {
     @JoinColumn(name = "food_combo_id")
     private FoodCombo foodCombo;
 
+    @lombok.Setter
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "food_order_id")
+    private FoodOrder foodOrder;
+
     @Column(nullable = false)
     private int quantity;
 

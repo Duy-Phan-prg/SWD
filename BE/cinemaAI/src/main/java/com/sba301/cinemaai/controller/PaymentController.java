@@ -79,6 +79,30 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success(paymentService.mockPayment(user.email(), bookingId), "Payment confirmed"));
     }
 
+    @PostMapping("/food-orders/{foodOrderId}/vnpay/create")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Create VNPAY payment URL for a food order")
+    public ResponseEntity<ApiResponse<PaymentResponse>> createVnpayFoodOrderPayment(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long foodOrderId,
+            HttpServletRequest request
+    ) {
+        String clientIp = getClientIp(request);
+        PaymentResponse response = paymentService.createVnpayFoodOrderPayment(user.email(), foodOrderId, clientIp);
+        return ResponseEntity.ok(ApiResponse.success(response, "Payment URL created"));
+    }
+
+    @PostMapping("/food-orders/{foodOrderId}/mock")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Mock payment for a food order (dev only)")
+    public ResponseEntity<ApiResponse<PaymentResponse>> mockFoodOrderPayment(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long foodOrderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                paymentService.mockFoodOrderPayment(user.email(), foodOrderId), "Payment confirmed"));
+    }
+
     @GetMapping("/booking/{bookingId}")
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Get payment by booking")

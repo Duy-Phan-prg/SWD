@@ -1,6 +1,7 @@
 package com.sba301.cinemaai.entity;
 
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
+import com.sba301.cinemaai.enums.TicketType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,6 +15,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,6 +57,23 @@ public class BookingSeat extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private SeatRuntimeStatus status = SeatRuntimeStatus.HOLDING;
+
+    @Setter
+    @Column(name = "ticket_code", unique = true, length = 60)
+    private String ticketCode;
+
+    @Setter
+    @Column(name = "qr_code", length = 500)
+    private String qrCode;
+
+    @Setter
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ticket_type", length = 30)
+    private TicketType ticketType;
+
+    @Setter
+    @Column(name = "checked_in_at")
+    private LocalDateTime checkedInAt;
 
     public BookingSeat(Booking booking, Showtime showtime, Seat seat, BigDecimal unitPrice) {
         this.booking = booking;

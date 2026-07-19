@@ -11,7 +11,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -48,7 +47,7 @@ public class AuditLog extends BaseEntity {
     @Column(name = "target_id")
     private Long targetId;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String detail;
 
     @Column(name = "ip_address", length = 100)

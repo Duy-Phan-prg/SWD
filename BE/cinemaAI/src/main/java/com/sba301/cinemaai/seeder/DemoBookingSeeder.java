@@ -182,7 +182,11 @@ public class DemoBookingSeeder implements Seeder {
             if (occupied) continue;
 
             BookingSeat bs = new BookingSeat(booking, showtime, seat, unitPrice);
-            bs.setStatus(SeatRuntimeStatus.BOOKED);
+            bs.setStatus(SeatRuntimeStatus.CHECKED_IN);
+            bs.setTicketType(TicketType.ADULT);
+            bs.setTicketCode(code + "-" + seat.getRowLabel() + seat.getSeatNumber());
+            bs.setQrCode("CINEAI:SEAT:" + code + "-" + seat.getRowLabel() + seat.getSeatNumber() + ":" + user.getId());
+            bs.setCheckedInAt(showtime.getStartTime().minusMinutes(10));
             bookingSeatRepository.save(bs);
             taken++;
         }

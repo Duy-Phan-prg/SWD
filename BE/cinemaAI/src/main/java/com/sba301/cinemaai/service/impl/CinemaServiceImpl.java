@@ -5,11 +5,13 @@ import com.sba301.cinemaai.service.CinemaService;
 import com.sba301.cinemaai.dto.request.cinema.CinemaRequest;
 import com.sba301.cinemaai.dto.response.cinema.CinemaResponse;
 import com.sba301.cinemaai.entity.Cinema;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.CinemaStatus;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.CinemaMapper;
 import com.sba301.cinemaai.repository.CinemaRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ public class CinemaServiceImpl implements CinemaService {
 
     private final CinemaRepository cinemaRepository;
     private final CinemaMapper cinemaMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public CinemaResponse getPublicCinema() {
@@ -56,6 +59,7 @@ public class CinemaServiceImpl implements CinemaService {
         cinema.setCity(request.city());
         cinema.setPhone(request.phone());
         cinema.setStatus(request.status() == null ? cinema.getStatus() : request.status());
+        auditLogService.record(AuditActionType.UPDATE, "CINEMA", cinema.getId(), cinema.getName());
         return cinemaMapper.toCinemaResponse(cinema);
     }
 
@@ -68,6 +72,7 @@ public class CinemaServiceImpl implements CinemaService {
     public CinemaResponse updateStatus(Long id, CinemaStatus status) {
         Cinema cinema = findById(id);
         cinema.setStatus(status);
+        auditLogService.record(AuditActionType.UPDATE, "CINEMA", cinema.getId(), cinema.getName() + " -> " + status);
         return cinemaMapper.toCinemaResponse(cinema);
     }
 

@@ -6,12 +6,14 @@ import com.sba301.cinemaai.dto.response.staff.StaffProfileResponse;
 import com.sba301.cinemaai.entity.Cinema;
 import com.sba301.cinemaai.entity.StaffProfile;
 import com.sba301.cinemaai.entity.User;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.StaffStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.repository.CinemaRepository;
 import com.sba301.cinemaai.repository.StaffProfileRepository;
 import com.sba301.cinemaai.repository.UserRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.StaffProfileService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class StaffProfileServiceImpl implements StaffProfileService {
     private final StaffProfileRepository staffProfileRepository;
     private final UserRepository userRepository;
     private final CinemaRepository cinemaRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<StaffProfileResponse> list() {
@@ -49,7 +52,9 @@ public class StaffProfileServiceImpl implements StaffProfileService {
         if (request.status() != null) {
             profile.setStatus(request.status());
         }
-        return StaffProfileResponse.from(staffProfileRepository.save(profile));
+        StaffProfile saved = staffProfileRepository.save(profile);
+        auditLogService.record(AuditActionType.CREATE, "STAFF_PROFILE", saved.getId(), saved.getEmployeeCode());
+        return StaffProfileResponse.from(saved);
     }
 
     @Transactional
@@ -64,7 +69,9 @@ public class StaffProfileServiceImpl implements StaffProfileService {
         if (request.status() != null) {
             profile.setStatus(request.status());
         }
-        return StaffProfileResponse.from(staffProfileRepository.save(profile));
+        StaffProfile saved = staffProfileRepository.save(profile);
+        auditLogService.record(AuditActionType.UPDATE, "STAFF_PROFILE", saved.getId(), saved.getEmployeeCode());
+        return StaffProfileResponse.from(saved);
     }
 
     @Transactional
@@ -74,7 +81,10 @@ public class StaffProfileServiceImpl implements StaffProfileService {
         }
         StaffProfile profile = findProfile(profileId);
         profile.setStatus(status);
-        return StaffProfileResponse.from(staffProfileRepository.save(profile));
+        StaffProfile saved = staffProfileRepository.save(profile);
+        auditLogService.record(AuditActionType.UPDATE, "STAFF_PROFILE", saved.getId(),
+                saved.getEmployeeCode() + " -> " + status);
+        return StaffProfileResponse.from(saved);
     }
 
     private StaffProfile findProfile(Long profileId) {

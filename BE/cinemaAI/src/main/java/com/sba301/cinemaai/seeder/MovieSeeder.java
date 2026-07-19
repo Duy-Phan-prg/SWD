@@ -23,8 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MovieSeeder implements Seeder {
 
-    private static final String TMDB = "https://image.tmdb.org/t/p/w500";
-    private static final String YT = "https://www.youtube.com/watch?v=";
+    private static final String CLD_IMG = "https://res.cloudinary.com/dmcodhbcc/image/upload/";
+    private static final String CLD_VID = "https://res.cloudinary.com/dmcodhbcc/video/upload/";
 
     private final MovieRepository movieRepository;
     private final GenreRepository genreRepository;
@@ -43,7 +43,7 @@ public class MovieSeeder implements Seeder {
                 169, MovieStatus.NOW_SHOWING, today.minusDays(14), today.plusDays(30),
                 "English", "Vietnamese", "13+", "Christopher Nolan",
                 "Sci-Fi,Adventure,Drama",
-                TMDB + "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", YT + "zSWdZVtXT7E",
+                CLD_IMG + "v1784275441/cinemams/posters/interstellar.jpg", CLD_VID + "v1784275531/cinemams/trailers/interstellar.mp4",
                 List.of("Matthew McConaughey", "Anne Hathaway", "Jessica Chastain")
         ));
         seedMovie(new MovieSeed(
@@ -52,7 +52,7 @@ public class MovieSeeder implements Seeder {
                 132, MovieStatus.NOW_SHOWING, today.minusDays(7), today.plusDays(30),
                 "Korean", "Vietnamese", "16+", "Bong Joon-ho",
                 "Drama,Thriller,Comedy",
-                TMDB + "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", YT + "5xH0HfJHsaY",
+                CLD_IMG + "v1784275442/cinemams/posters/parasite.jpg", CLD_VID + "v1784275537/cinemams/trailers/parasite.mp4",
                 List.of("Song Kang-ho", "Lee Sun-kyun", "Cho Yeo-jeong")
         ));
         seedMovie(new MovieSeed(
@@ -61,7 +61,7 @@ public class MovieSeeder implements Seeder {
                 99, MovieStatus.NOW_SHOWING, today.minusDays(10), today.plusDays(25),
                 "English", "Vietnamese", "13+", "Wes Anderson",
                 "Comedy,Drama",
-                TMDB + "/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg", YT + "1Fg5iWmQjwk",
+                CLD_IMG + "v1784275444/cinemams/posters/grand-budapest.jpg", CLD_VID + "v1784275608/cinemams/trailers/grand-budapest.mp4",
                 List.of("Ralph Fiennes", "Tony Revolori", "Saoirse Ronan")
         ));
         seedMovie(new MovieSeed(
@@ -70,7 +70,7 @@ public class MovieSeeder implements Seeder {
                 117, MovieStatus.NOW_SHOWING, today.minusDays(5), today.plusDays(40),
                 "English", "Vietnamese", "P", "Bob Persichetti",
                 "Animation,Action,Adventure",
-                TMDB + "/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg", YT + "tg52up16eq0",
+                CLD_IMG + "v1784275445/cinemams/posters/spider-verse.jpg", CLD_VID + "v1784275545/cinemams/trailers/spider-verse.mp4",
                 List.of("Shameik Moore", "Jake Johnson", "Hailee Steinfeld")
         ));
         seedMovie(new MovieSeed(
@@ -79,7 +79,7 @@ public class MovieSeeder implements Seeder {
                 152, MovieStatus.NOW_SHOWING, today.minusDays(12), today.plusDays(20),
                 "English", "Vietnamese", "16+", "Christopher Nolan",
                 "Action,Crime,Drama",
-                TMDB + "/qJ2tW6WMUDux911r6m7haRef0WH.jpg", YT + "EXeTwQWrcwY",
+                CLD_IMG + "v1784275446/cinemams/posters/dark-knight.jpg", CLD_VID + "v1784275554/cinemams/trailers/dark-knight.mp4",
                 List.of("Christian Bale", "Heath Ledger", "Aaron Eckhart")
         ));
         seedMovie(new MovieSeed(
@@ -88,7 +88,7 @@ public class MovieSeeder implements Seeder {
                 134, MovieStatus.NOW_SHOWING, today.minusDays(9), today.plusDays(28),
                 "English", "Vietnamese", "13+", "Ryan Coogler",
                 "Action,Sci-Fi,Adventure",
-                TMDB + "/uxzzxijgPIY7slzFvMotPv8wjKA.jpg", YT + "xjDjIWPwcPU",
+                CLD_IMG + "v1784275448/cinemams/posters/black-panther.jpg", CLD_VID + "v1784275450/cinemams/trailers/black-panther.mp4",
                 List.of("Chadwick Boseman", "Michael B. Jordan", "Lupita Nyong'o")
         ));
         seedMovie(new MovieSeed(
@@ -97,7 +97,7 @@ public class MovieSeeder implements Seeder {
                 189, MovieStatus.NOW_SHOWING, today.minusDays(6), today.plusDays(24),
                 "English", "Vietnamese", "16+", "Frank Darabont",
                 "Drama,Crime",
-                TMDB + "/velWPhVMQeQKcxggNEU8YmIo52R.jpg", YT + "Ki4haFrqSrw",
+                CLD_IMG + "v1784275451/cinemams/posters/green-mile.jpg", CLD_VID + "v1784275452/cinemams/trailers/green-mile.mp4",
                 List.of("Tom Hanks", "Michael Clarke Duncan", "David Morse")
         ));
         seedMovie(new MovieSeed(
@@ -106,7 +106,7 @@ public class MovieSeeder implements Seeder {
                 148, MovieStatus.NOW_SHOWING, today.minusDays(3), today.plusDays(35),
                 "English", "Vietnamese", "13+", "Christopher Nolan",
                 "Sci-Fi,Action,Thriller",
-                TMDB + "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", YT + "YoHD9XEInc0",
+                CLD_IMG + "v1784275454/cinemams/posters/inception.jpg", CLD_VID + "v1784275455/cinemams/trailers/inception.mp4",
                 List.of("Leonardo DiCaprio", "Joseph Gordon-Levitt", "Elliot Page")
         ));
         seedMovie(new MovieSeed(
@@ -115,7 +115,7 @@ public class MovieSeeder implements Seeder {
                 181, MovieStatus.NOW_SHOWING, today.minusDays(2), today.plusDays(38),
                 "English", "Vietnamese", "13+", "Anthony Russo, Joe Russo",
                 "Action,Sci-Fi,Adventure",
-                TMDB + "/or06FN3Dka5tukK1e9sl16pB3iy.jpg", YT + "TcMBFSGVi1c",
+                CLD_IMG + "v1784275457/cinemams/posters/endgame.jpg", CLD_VID + "v1784275459/cinemams/trailers/endgame.mp4",
                 List.of("Robert Downey Jr.", "Chris Evans", "Scarlett Johansson")
         ));
         seedMovie(new MovieSeed(
@@ -124,7 +124,7 @@ public class MovieSeeder implements Seeder {
                 128, MovieStatus.UPCOMING, today.plusDays(7), today.plusDays(50),
                 "English", "Vietnamese", "P", "Damien Chazelle",
                 "Romance,Drama,Musical",
-                TMDB + "/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg", YT + "0pdqf4P9MB8",
+                CLD_IMG + "v1784275461/cinemams/posters/la-la-land.jpg", CLD_VID + "v1784275465/cinemams/trailers/la-la-land.mp4",
                 List.of("Ryan Gosling", "Emma Stone", "John Legend")
         ));
         seedMovie(new MovieSeed(
@@ -133,7 +133,7 @@ public class MovieSeeder implements Seeder {
                 105, MovieStatus.UPCOMING, today.plusDays(10), today.plusDays(55),
                 "English", "Vietnamese", "P", "Lee Unkrich",
                 "Animation,Family,Adventure",
-                TMDB + "/gGEsBPAijhVUFoiNpgZXqRVWJt2.jpg", YT + "Ga6RYejo6Hk",
+                CLD_IMG + "v1784275467/cinemams/posters/coco.jpg", CLD_VID + "v1784275563/cinemams/trailers/coco.mp4",
                 List.of("Anthony Gonzalez", "Gael García Bernal", "Benjamin Bratt")
         ));
         seedMovie(new MovieSeed(
@@ -142,7 +142,7 @@ public class MovieSeeder implements Seeder {
                 122, MovieStatus.UPCOMING, today.plusDays(14), today.plusDays(60),
                 "English", "Vietnamese", "18+", "Todd Phillips",
                 "Drama,Thriller,Crime",
-                TMDB + "/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg", YT + "zAGVQLHvwOY",
+                CLD_IMG + "v1784275468/cinemams/posters/joker.jpg", CLD_VID + "v1784275469/cinemams/trailers/joker.mp4",
                 List.of("Joaquin Phoenix", "Robert De Niro", "Zazie Beetz")
         ));
     }

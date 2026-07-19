@@ -8,7 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import lombok.AccessLevel;
@@ -31,7 +30,7 @@ public class FoodCombo extends BaseEntity {
     private String name;
 
     @Setter
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Setter

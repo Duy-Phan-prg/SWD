@@ -1,11 +1,22 @@
 package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.entity.Booking;
-import org.springframework.stereotype.Service;
+import com.sba301.cinemaai.entity.BookingSeat;
 
 public interface QrTicketService {
 
-        public String generate(Booking booking);
+    String generate(Booking booking);
 
-        public String extractBookingCode(String qrCode);
+    String generateTicketCode(BookingSeat bookingSeat);
+
+    String generateSeatQr(BookingSeat bookingSeat);
+
+    String extractBookingCode(String qrCode);
+
+    QrPayload parse(String qrCode);
+
+    enum QrPayloadType { BOOKING, SEAT }
+
+    record QrPayload(QrPayloadType type, String code) {
+    }
 }

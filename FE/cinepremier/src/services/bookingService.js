@@ -6,8 +6,11 @@ export const bookingService = {
   getShowtimeDetail: (showtimeId) => request(`/api/v1/showtimes/${showtimeId}`),
   validateTicketPrice: (token, body) => request('/api/v1/ticket-pricing/validate', { method: 'POST', token, body }),
   holdSeats: (token, body) => request('/api/v1/bookings/hold', { method: 'POST', token, body }),
+  updateHoldingBooking: (token, bookingId, body) => request(`/api/v1/bookings/${bookingId}/items`, { method: 'PUT', token, body }),
   createBooking: (token, body) => request('/api/v1/bookings', { method: 'POST', token, body }),
   getMyBookings: (token) => request('/api/v1/bookings', { token }).then(unwrapListPayload),
   getMyBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { token }),
-  cancelBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { method: 'DELETE', token })
+  cancelBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { method: 'DELETE', token }),
+  createFoodOrder: (token, bookingId, body) => request(`/api/v1/bookings/${bookingId}/food-orders`, { method: 'POST', token, body }),
+  getFoodOrders: (token, bookingId) => request(`/api/v1/bookings/${bookingId}/food-orders`, { token })
 };

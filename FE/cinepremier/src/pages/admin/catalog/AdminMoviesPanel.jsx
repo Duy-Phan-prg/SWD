@@ -795,7 +795,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Ngày phát hành</label>
+                      <label className="text-[10px] font-sans font-bold uppercase tracking-[0.18em] text-neutral-400 block">Ngày bắt đầu chiếu</label>
                       <input
                         type={focusedDateField === 'release' ? 'date' : 'text'}
                         lang="en-GB"
@@ -817,11 +817,11 @@ export default function AdminMoviesPanel({ ctx }) {
                         placeholder="dd/mm/yyyy"
                         className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
                       />
-                      <p className="text-[10px] font-bold text-neutral-500">Định dạng dd/mm/yyyy, không chọn ngày quá khứ.</p>
+                      <p className="text-[10px] font-sans font-bold text-neutral-500">Ngày phim bắt đầu được xếp suất chiếu. Định dạng dd/mm/yyyy, không chọn ngày quá khứ.</p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Ngày kết thúc</label>
+                      <label className="text-[10px] font-sans font-bold uppercase tracking-[0.18em] text-neutral-400 block">Ngày kết thúc chiếu</label>
                       <input
                         type={focusedDateField === 'end' ? 'date' : 'text'}
                         lang="en-GB"
@@ -840,10 +840,10 @@ export default function AdminMoviesPanel({ ctx }) {
                         className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
                       />
                       {formData.releaseDate && formData.endDate && new Date(formData.endDate) < new Date(formData.releaseDate) ? (
-                        <p className="text-[9px] font-bold text-rose-300">Ngày kết thúc phải bằng hoặc sau ngày phát hành.</p>
+                        <p className="text-[9px] font-sans font-bold text-rose-300">Ngày kết thúc chiếu phải bằng hoặc sau ngày bắt đầu chiếu.</p>
                       ) : (
-                        <p className="text-[9px] font-bold text-amber-300">
-                          Trạng thái tự động: {resolveMovieStatusFromDates(formData.releaseDate, formData.endDate)}
+                        <p className="text-[9px] font-sans font-bold text-amber-300">
+                          Suất chiếu chỉ xếp được trong khoảng này · Trạng thái tự tính: {resolveMovieStatusFromDates(formData.releaseDate, formData.endDate)}
                         </p>
                       )}
                     </div>

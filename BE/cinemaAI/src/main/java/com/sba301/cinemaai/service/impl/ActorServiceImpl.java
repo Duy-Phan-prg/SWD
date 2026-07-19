@@ -6,12 +6,14 @@ import com.sba301.cinemaai.dto.response.movie.ActorResponse;
 import com.sba301.cinemaai.entity.Actor;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.MovieActor;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.mapper.MovieMapper;
 import com.sba301.cinemaai.repository.ActorRepository;
 import com.sba301.cinemaai.repository.MovieActorRepository;
 import com.sba301.cinemaai.service.ActorService;
+import com.sba301.cinemaai.service.AuditLogService;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class ActorServiceImpl implements ActorService {
     private final ActorRepository actorRepository;
     private final MovieActorRepository movieActorRepository;
     private final MovieMapper movieMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public PageResponse<ActorResponse> searchAdminActors(String keyword, int page, int size) {
@@ -60,7 +63,9 @@ public class ActorServiceImpl implements ActorService {
         if (actorRepository.existsByNameIgnoreCase(name)) {
             throw new ConflictException("Actor name already exists");
         }
-        return toResponse(actorRepository.save(new Actor(name, request.biography(), request.avatarUrl())));
+        Actor saved = actorRepository.save(new Actor(name, request.biography(), request.avatarUrl()));
+        auditLogService.record(AuditActionType.CREATE, "ACTOR", saved.getId(), saved.getName());
+        return toResponse(saved);
     }
 
     @Transactional
@@ -76,6 +81,7 @@ public class ActorServiceImpl implements ActorService {
         actor.setBiography(request.biography());
         actor.setAvatarUrl(request.avatarUrl());
         refreshMovieActorMetadata(actor);
+        auditLogService.record(AuditActionType.UPDATE, "ACTOR", actor.getId(), actor.getName());
         return toResponse(actor);
     }
 
@@ -86,6 +92,7 @@ public class ActorServiceImpl implements ActorService {
             throw new ConflictException("Actor is used by movies");
         }
         actorRepository.delete(actor);
+        auditLogService.record(AuditActionType.DELETE, "ACTOR", actor.getId(), actor.getName());
     }
 
     public Actor findById(Long id) {

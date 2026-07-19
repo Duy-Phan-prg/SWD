@@ -5,17 +5,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.response.payment.PaymentResponse;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingSeat;
+import com.sba301.cinemaai.entity.FoodOrder;
 import com.sba301.cinemaai.entity.Payment;
 import com.sba301.cinemaai.enums.BookingStatus;
+import com.sba301.cinemaai.enums.FoodOrderStatus;
 import com.sba301.cinemaai.enums.PaymentProvider;
 import com.sba301.cinemaai.util.PaymentAccountSupport;
 import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.SeatRuntimeStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
-import com.sba301.cinemaai.exception.ConflictException;
 import com.sba301.cinemaai.exception.NotFoundException;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
+import com.sba301.cinemaai.repository.FoodOrderRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import com.sba301.cinemaai.service.NotificationService;
@@ -38,6 +40,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final BookingSeatRepository bookingSeatRepository;
+    private final FoodOrderRepository foodOrderRepository;
     private final VNPayService vnpayService;
     private final QrTicketService qrTicketService;
     private final LoyaltyPointService loyaltyPointService;
@@ -53,12 +56,9 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BadRequestException("Only HOLDING or PENDING_PAYMENT bookings can be paid");
         }
 
-        boolean alreadyPending = paymentRepository.findByBooking(booking)
-                .stream()
-                .anyMatch(p -> p.getStatus() == PaymentStatus.PENDING);
-        if (alreadyPending) {
-            throw new ConflictException("A pending payment already exists for this booking");
-        }
+        // Retry thanh toán là bình thường (user thoát VNPay giữa chừng rồi "Tiếp tục thanh toán"):
+        // hủy các payment VÉ đang PENDING cũ rồi tạo phiên mới, thay vì ném 409.
+        supersedePendingTicketPayments(booking);
 
         Payment payment = paymentRepository.save(new Payment(booking, PaymentProvider.VNPAY, booking.getTotalAmount()));
         if (booking.getStatus() == BookingStatus.HOLDING) {
@@ -153,6 +153,54 @@ public class PaymentServiceImpl implements PaymentService {
         return toResponse(payment, null);
     }
 
+    @Transactional
+    public PaymentResponse createVnpayFoodOrderPayment(String email, Long foodOrderId, String clientIp) {
+        FoodOrder foodOrder = findFoodOrder(foodOrderId);
+        validateBookingOwner(foodOrder.getBooking(), email);
+        requirePayableFoodOrder(foodOrder);
+
+        // Retry: hủy payment PENDING cũ của đúng food order này rồi tạo phiên mới
+        paymentRepository.findByBooking(foodOrder.getBooking())
+                .stream()
+                .filter(p -> p.getStatus() == PaymentStatus.PENDING
+                        && p.getFoodOrder() != null
+                        && p.getFoodOrder().getId().equals(foodOrder.getId()))
+                .forEach(p -> markPaymentFailed(p, "SUPERSEDED_BY_RETRY"));
+
+        Payment payment = new Payment(foodOrder.getBooking(), PaymentProvider.VNPAY, foodOrder.getTotalAmount());
+        payment.setFoodOrder(foodOrder);
+        payment = paymentRepository.save(payment);
+
+        String txnRef = payment.getId() + "-" + foodOrder.getOrderCode();
+        String orderInfo = "Thanh toan bap nuoc " + foodOrder.getOrderCode();
+        String paymentUrl = vnpayService.buildPaymentUrl(txnRef, foodOrder.getTotalAmount(), orderInfo, clientIp);
+        return toResponse(payment, paymentUrl);
+    }
+
+    @Transactional
+    public PaymentResponse mockFoodOrderPayment(String email, Long foodOrderId) {
+        FoodOrder foodOrder = findFoodOrder(foodOrderId);
+        validateBookingOwner(foodOrder.getBooking(), email);
+        requirePayableFoodOrder(foodOrder);
+
+        Payment payment = new Payment(foodOrder.getBooking(), PaymentProvider.MOCK, foodOrder.getTotalAmount());
+        payment.setFoodOrder(foodOrder);
+        payment = paymentRepository.save(payment);
+        confirmPayment(payment, "MOCK-" + System.currentTimeMillis(), Map.of("provider", "MOCK"));
+        return toResponse(payment, null);
+    }
+
+    private void requirePayableFoodOrder(FoodOrder foodOrder) {
+        if (foodOrder.getStatus() != FoodOrderStatus.PENDING_PAYMENT) {
+            throw new BadRequestException("Only pending food orders can be paid");
+        }
+    }
+
+    private FoodOrder findFoodOrder(Long foodOrderId) {
+        return foodOrderRepository.findById(foodOrderId)
+                .orElseThrow(() -> new NotFoundException("Food order not found"));
+    }
+
     @Transactional(readOnly = true)
     public PaymentResponse getByBooking(String email, Long bookingId) {
         Booking booking = findBooking(bookingId);
@@ -168,13 +216,33 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() == PaymentStatus.SUCCESS) return;
 
         markPaymentSuccess(payment, transactionNo, toJson(params), params);
+
+        if (payment.getFoodOrder() != null) {
+            FoodOrder foodOrder = payment.getFoodOrder();
+            foodOrder.setStatus(FoodOrderStatus.PAID);
+            foodOrder.setPaidAt(LocalDateTime.now());
+            log.info("Payment {} confirmed for food order {}", payment.getId(), foodOrder.getOrderCode());
+            return;
+        }
+
         Booking booking = payment.getBooking();
         bookingSeatRepository.findByBooking(booking)
                 .forEach(seat -> changeBookingSeatStatus(seat, SeatRuntimeStatus.BOOKED));
         markPaid(booking, qrTicketService.generate(booking));
+        generateSeatTickets(booking);
         loyaltyPointService.addPointsFromBooking(booking.getUser(), booking);
         notificationService.notifyBookingPaid(booking);
         log.info("Payment {} confirmed for booking {}", payment.getId(), booking.getBookingCode());
+    }
+
+    private void generateSeatTickets(Booking booking) {
+        bookingSeatRepository.findByBooking(booking)
+                .stream()
+                .filter(seat -> seat.getTicketCode() == null)
+                .forEach(seat -> {
+                    seat.setTicketCode(qrTicketService.generateTicketCode(seat));
+                    seat.setQrCode(qrTicketService.generateSeatQr(seat));
+                });
     }
 
     private void markPendingPayment(Booking booking) {
@@ -200,6 +268,17 @@ public class PaymentServiceImpl implements PaymentService {
     private void markPaymentFailed(Payment payment, String callbackPayload) {
         payment.setCallbackPayload(callbackPayload);
         payment.setStatus(PaymentStatus.FAILED);
+    }
+
+    /** Hủy các payment VÉ (không tính food order) đang PENDING của booking khi user retry. */
+    private void supersedePendingTicketPayments(Booking booking) {
+        paymentRepository.findByBooking(booking)
+                .stream()
+                .filter(p -> p.getStatus() == PaymentStatus.PENDING && p.getFoodOrder() == null)
+                .forEach(p -> {
+                    log.info("Superseding pending payment {} of booking {} (retry)", p.getId(), booking.getBookingCode());
+                    markPaymentFailed(p, "SUPERSEDED_BY_RETRY");
+                });
     }
 
     private void changeBookingSeatStatus(BookingSeat bookingSeat, SeatRuntimeStatus status) {

@@ -22,6 +22,7 @@ public class BookingMapper {
             String paymentAccount
     ) {
         boolean hideSensitiveOrderInfo = booking.getStatus() == com.sba301.cinemaai.enums.BookingStatus.REFUNDED;
+        com.sba301.cinemaai.entity.UserProfile profile = booking.getUser().getProfile();
         return new BookingResponse(
                 booking.getId(),
                 booking.getBookingCode(),
@@ -51,6 +52,10 @@ public class BookingMapper {
                 booking.getLastRefundAttemptAt(),
                 hideSensitiveOrderInfo ? null : booking.getQrCode(),
                 hideSensitiveOrderInfo ? null : paymentAccount,
+                profile == null ? null : profile.getFullName(),
+                profile == null ? null : profile.getPhone(),
+                booking.getUser().getEmail(),
+                booking.getShowtime().getEndTime(),
                 seats.stream().map(this::toSeatResponse).toList(),
                 tickets.stream().map(this::toTicketResponse).toList(),
                 foods.stream().map(this::toFoodResponse).toList()
@@ -58,12 +63,18 @@ public class BookingMapper {
     }
 
     private BookingSeatResponse toSeatResponse(BookingSeat bookingSeat) {
+        boolean hideSensitiveOrderInfo =
+                bookingSeat.getBooking().getStatus() == com.sba301.cinemaai.enums.BookingStatus.REFUNDED;
         return new BookingSeatResponse(
                 bookingSeat.getSeat().getId(),
                 bookingSeat.getSeat().getRowLabel(),
                 bookingSeat.getSeat().getSeatNumber(),
                 bookingSeat.getUnitPrice(),
-                bookingSeat.getStatus()
+                bookingSeat.getStatus(),
+                hideSensitiveOrderInfo ? null : bookingSeat.getTicketCode(),
+                hideSensitiveOrderInfo ? null : bookingSeat.getQrCode(),
+                bookingSeat.getTicketType(),
+                bookingSeat.getCheckedInAt()
         );
     }
 

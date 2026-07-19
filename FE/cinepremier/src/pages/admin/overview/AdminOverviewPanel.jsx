@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, LabelList, PieChart, Pie, Cell, Legend
+  Tooltip, LabelList, PieChart, Pie, Cell, Legend, AreaChart, Area
 } from "recharts";
 import { adminService } from "../../../services/adminService";
 
@@ -21,35 +21,6 @@ const RANGE_PRESETS = [
   { days: 90, label: "90D" },
 ];
 
-/* ─── Seed / Demo fallback (mirrors DemoBookingSeeder + MovieSeeder data) ─── */
-const SEED_REVENUE = { totalRevenue: 518_400_000, totalTransactions: 28, totalTicketsSold: 56 };
-const SEED_LOYALTY = { newMembers: 8, totalIssuedPoints: 462, totalBurnedPoints: 0, pointFlowRatio: 0 };
-const SEED_TOP_MOVIES = [
-  { movieTitle: "Interstellar",                    revenue: 108_000_000, ticketsSold: 12 },
-  { movieTitle: "The Dark Knight",                 revenue: 90_000_000,  ticketsSold: 10 },
-  { movieTitle: "Avengers: Endgame",               revenue: 90_000_000,  ticketsSold: 10 },
-  { movieTitle: "Inception",                       revenue: 72_000_000,  ticketsSold: 8  },
-  { movieTitle: "Parasite",                        revenue: 54_000_000,  ticketsSold: 6  },
-  { movieTitle: "Spider-Man: Into the Spider-Verse",revenue: 54_000_000, ticketsSold: 6  },
-  { movieTitle: "The Green Mile",                  revenue: 36_000_000,  ticketsSold: 4  },
-  { movieTitle: "Black Panther",                   revenue: 14_400_000,  ticketsSold: 2  },
-];
-const SEED_OCCUPANCY = [
-  { roomName: "Room A", occupancyRate: 72.5, ticketsSold: 29, roomCapacity: 40 },
-  { roomName: "Room B", occupancyRate: 65.0, ticketsSold: 26, roomCapacity: 40 },
-  { roomName: "Room C", occupancyRate: 27.5, ticketsSold: 11, roomCapacity: 40 },
-];
-const SEED_AUDIT_LOGS = [
-  { id: "s1", time: "09:58:02", action: "SUCCESS", target: "DemoBookingSeeder: 28 bookings seeded",          user: "system" },
-  { id: "s2", time: "09:57:44", action: "CREATE",  target: "MovieSeeder: 12 phim NOW_SHOWING/UPCOMING",     user: "system" },
-  { id: "s3", time: "09:57:17", action: "ADD",     target: "CinemaScheduleSeeder: Room A, B, C — 60 ghế",  user: "system" },
-  { id: "s4", time: "09:56:50", action: "SUCCESS", target: "AdminAccountSeeder: admin@cinemaai.com",        user: "system" },
-  { id: "s5", time: "09:56:30", action: "LOGIN",   target: "Admin đăng nhập lần đầu",                      user: "admin"  },
-  { id: "s6", time: "09:56:10", action: "SUCCESS", target: "LoyaltySeeder: 8 tài khoản khách hàng demo",   user: "system" },
-  { id: "s7", time: "09:55:55", action: "ADD",     target: "FoodSeeder: combo bắp nước",                   user: "system" },
-  { id: "s8", time: "09:55:30", action: "SUCCESS", target: "Hệ thống khởi động thành công",                user: "system" },
-];
-
 const fmtVND = (v) => `${Number(v || 0).toLocaleString("vi-VN")}đ`;
 const fmtNumber = (v) => Number(v || 0).toLocaleString("vi-VN");
 const fmtCompact = (v) => {
@@ -59,9 +30,11 @@ const fmtCompact = (v) => {
   return String(n);
 };
 const isoDaysAgo = (days) => {
+  // Ngày LOCAL, không dùng toISOString() (UTC) — trước 7h sáng VN sẽ bị lùi 1 ngày,
+  // làm rơi mất giao dịch trong ngày khỏi báo cáo
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
 const ChartTooltip = ({ active, payload, label, formatter }) => {
@@ -174,14 +147,16 @@ const ChartCard = ({ children, style = {} }) => (
 );
 
 export default function AdminOverviewPanel({ ctx }) {
-  const { activeTab, getAdminToken, auditLogs, playPulseSound } = ctx;
+  const { activeTab, getAdminToken, playPulseSound } = ctx;
 
   const [rangeDays, setRangeDays] = useState(30);
   const [isLoadingReports, setIsLoadingReports] = useState(false);
   const [revenueReport, setRevenueReport] = useState(null);
   const [loyaltyReport, setLoyaltyReport] = useState(null);
   const [topMovies, setTopMovies] = useState([]);
-  const [occupancy, setOccupancy] = useState([]);
+  const [dailyOccupancy, setDailyOccupancy] = useState([]);
+  const [occupancyGroupBy, setOccupancyGroupBy] = useState("day"); // 'day' | 'week' | 'month'
+  const [recentAuditLogs, setRecentAuditLogs] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   useEffect(() => {
@@ -192,26 +167,26 @@ export default function AdminOverviewPanel({ ctx }) {
     const params = { from: isoDaysAgo(rangeDays), to: isoDaysAgo(0) };
     setIsLoadingReports(true);
     Promise.all([
-      adminService.getRevenueReport(token, params),
-      adminService.getLoyaltyReport(token, { from: `${params.from}T00:00:00`, to: `${params.to}T23:59:59` }),
-      adminService.getTopMovies(token, { ...params, limit: 10 }),
-      adminService.getRoomOccupancy(token, params),
+      adminService.getRevenueReport(token, params).catch(() => null),
+      adminService.getLoyaltyReport(token, { from: `${params.from}T00:00:00`, to: `${params.to}T23:59:59` }).catch(() => null),
+      adminService.getTopMovies(token, { ...params, limit: 10 }).catch(() => []),
+      adminService.getAuditLogs(token, { page: 0, size: 8 }).catch(() => null),
+      adminService.getDailyOccupancy(token, params).catch(() => []),
     ])
-      .then(([revenue, loyalty, movies, rooms]) => {
+      .then(([revenue, loyalty, movies, audit, daily]) => {
         if (cancelled) return;
         setRevenueReport(revenue || null);
         setLoyaltyReport(loyalty || null);
         setTopMovies(Array.isArray(movies) ? movies : []);
-        setOccupancy(Array.isArray(rooms) ? rooms : []);
+        setDailyOccupancy(Array.isArray(daily) ? daily : []);
+        setRecentAuditLogs((audit?.items || []).map((log) => ({
+          id: log.id,
+          time: log.createdAt ? new Date(log.createdAt).toLocaleTimeString("vi-VN") : "--:--:--",
+          action: log.action,
+          target: `${log.targetType}${log.targetId ? ` #${log.targetId}` : ""}${log.detail ? ` — ${log.detail}` : ""}`,
+          user: log.actorEmail || "hệ thống",
+        })));
         setLastRefresh(new Date());
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // Fallback to seed data so the dashboard is never blank
-        setRevenueReport(SEED_REVENUE);
-        setLoyaltyReport(SEED_LOYALTY);
-        setTopMovies(SEED_TOP_MOVIES);
-        setOccupancy(SEED_OCCUPANCY);
       })
       .finally(() => { if (!cancelled) setIsLoadingReports(false); });
     return () => { cancelled = true; };
@@ -219,30 +194,67 @@ export default function AdminOverviewPanel({ ctx }) {
 
   if (activeTab !== "overview") return null;
 
-  // Use real API data when available, fall back to seed constants
-  const isUsingDemo      = !revenueReport && topMovies.length === 0;
-  const effectiveRevenue  = revenueReport || SEED_REVENUE;
-  const effectiveLoyalty  = loyaltyReport  || SEED_LOYALTY;
-  const effectiveMovies   = topMovies.length   > 0 ? topMovies   : SEED_TOP_MOVIES;
-  const effectiveOccupancy= occupancy.length   > 0 ? occupancy   : SEED_OCCUPANCY;
-  const effectiveAuditLogs= auditLogs && auditLogs.length > 0 ? auditLogs : SEED_AUDIT_LOGS;
+  // Chỉ dùng dữ liệu thật; DB rỗng thì hiện empty state, không còn số liệu SEED giả
+  const effectiveRevenue = revenueReport || { totalRevenue: 0, totalTransactions: 0, totalTicketsSold: 0 };
+  const effectiveLoyalty = loyaltyReport || { newMembers: 0, totalIssuedPoints: 0, totalBurnedPoints: 0, pointFlowRatio: 0 };
+  const effectiveMovies = topMovies;
+  const effectiveAuditLogs = recentAuditLogs;
 
   const revenueByMovie = effectiveMovies
     .map((m) => ({ name: m.movieTitle, revenue: Number(m.revenue || 0), tickets: m.ticketsSold }))
     .sort((a, b) => b.revenue - a.revenue);
 
-  const occupancyByRoom = effectiveOccupancy.map((r) => ({
-    name: r.roomName,
-    rate: Math.round((r.occupancyRate || 0) * 10) / 10,
-    tickets: r.ticketsSold,
-    capacity: r.roomCapacity,
-  }));
+  // Gộp dữ liệu lấp đầy theo mức Ngày / Tuần / Tháng do admin chọn
+  const GROUP_LABELS = { day: "ngày", week: "tuần", month: "tháng" };
+  const occupancyChartData = (() => {
+    if (occupancyGroupBy === "day") {
+      return dailyOccupancy.map((d) => ({
+        label: d.date ? d.date.slice(5).split("-").reverse().join("/") : "",
+        rate: Math.round((d.occupancyRate || 0) * 10) / 10,
+        sold: d.ticketsSold,
+        capacity: d.totalCapacity,
+        shows: d.totalShowtimes,
+      }));
+    }
+    const buckets = new Map();
+    dailyOccupancy.forEach((d) => {
+      if (!d.date) return;
+      const date = new Date(`${d.date}T00:00:00`);
+      let key; let label;
+      if (occupancyGroupBy === "week") {
+        // Đầu tuần = thứ Hai
+        const monday = new Date(date);
+        monday.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+        key = monday.toISOString().slice(0, 10);
+        label = `Tuần ${String(monday.getDate()).padStart(2, "0")}/${String(monday.getMonth() + 1).padStart(2, "0")}`;
+      } else {
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        label = `Th${date.getMonth() + 1}/${date.getFullYear()}`;
+      }
+      const bucket = buckets.get(key) || { label, sold: 0, capacity: 0, shows: 0 };
+      bucket.sold += d.ticketsSold || 0;
+      bucket.capacity += d.totalCapacity || 0;
+      bucket.shows += d.totalShowtimes || 0;
+      buckets.set(key, bucket);
+    });
+    return [...buckets.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, b]) => ({
+        ...b,
+        rate: b.capacity > 0 ? Math.round((b.sold / b.capacity) * 1000) / 10 : 0,
+      }));
+  })();
 
   const ticketShareSource = [...effectiveMovies].sort((a, b) => b.ticketsSold - a.ticketsSold);
   const ticketShare = ticketShareSource.slice(0, 4).map((m) => ({ name: m.movieTitle, value: m.ticketsSold }));
   const restTickets = ticketShareSource.slice(4).reduce((s, m) => s + (m.ticketsSold || 0), 0);
   if (restTickets > 0) ticketShare.push({ name: "Khác", value: restTickets });
   const totalTicketsInShare = ticketShare.reduce((s, t) => s + t.value, 0);
+
+  const PROVIDER_LABELS = { CASH: "Tiền mặt (quầy)", VNPAY: "VNPay", MOMO: "MoMo", MOCK: "Demo" };
+  const providerBreakdown = (effectiveRevenue.byProvider || [])
+    .filter((p) => Number(p.revenue) > 0)
+    .map((p) => ({ ...p, label: PROVIDER_LABELS[p.provider] || p.provider }));
 
   const kpis = [
     { label: "Tổng doanh thu",       value: fmtVND(effectiveRevenue.totalRevenue),        icon: DollarSign, accent: "#f59e0b", sub: `${rangeDays} ngày gần nhất` },
@@ -290,17 +302,6 @@ export default function AdminOverviewPanel({ ctx }) {
                 <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "Inter, sans-serif" }}>
                   Analytics Dashboard
                 </p>
-                {isUsingDemo && (
-                  <span style={{
-                    fontSize: 8, fontWeight: 800, letterSpacing: "0.12em",
-                    textTransform: "uppercase", fontFamily: "Inter, sans-serif",
-                    color: "#f59e0b", background: "rgba(245,158,11,0.12)",
-                    border: "1px solid rgba(245,158,11,0.3)",
-                    borderRadius: 4, padding: "1px 6px",
-                  }}>
-                    DEMO
-                  </span>
-                )}
               </div>
               <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
                 Tổng quan hệ thống
@@ -349,6 +350,22 @@ export default function AdminOverviewPanel({ ctx }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
         {kpis.map((kpi, i) => <KpiCard key={kpi.label} {...kpi} delay={i * 0.08} />)}
       </div>
+
+      {/* ── Phân rã doanh thu theo phương thức thanh toán ── */}
+      {providerBreakdown.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, border: "1px solid rgba(245,158,11,0.2)", background: "rgba(245,158,11,0.04)", padding: "10px 14px" }}>
+          <span style={{ fontSize: 9, fontWeight: 800, color: "#a3a3a3", fontFamily: "Inter, sans-serif", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            Theo phương thức
+          </span>
+          {providerBreakdown.map((p) => (
+            <span key={p.provider} style={{ fontSize: 11, fontFamily: "Inter, sans-serif", color: "#d4d4d4", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.35)", padding: "4px 10px" }}>
+              <b style={{ color: p.provider === "CASH" ? "#34d399" : "#fbbf24" }}>{p.label}</b>
+              {": "}{fmtVND(p.revenue)}
+              <span style={{ color: "#737373" }}> ({fmtNumber(p.transactions)} GD)</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* ── Loyalty Health ── */}
       <ChartCard>
@@ -423,26 +440,55 @@ export default function AdminOverviewPanel({ ctx }) {
         </ChartCard>
       </div>
 
-      {/* ── Room Occupancy ── */}
+      {/* ── Occupancy trend (Ngày / Tuần / Tháng) ── */}
       <ChartCard>
-        <SectionHeader eyebrow="Hiệu suất hạ tầng" title="Tỷ lệ lấp đầy theo phòng chiếu" color="#10b981" />
-        {occupancyByRoom.length === 0 ? <EmptyChart /> : (
-          <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={occupancyByRoom} margin={{ top: 20, right: 12, bottom: 4, left: 4 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <SectionHeader eyebrow="Hiệu suất hạ tầng" title={`Tỷ lệ lấp đầy theo ${GROUP_LABELS[occupancyGroupBy]} (${rangeDays} ngày gần nhất)`} color="#10b981" />
+          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3, border: "1px solid rgba(255,255,255,0.06)" }}>
+            {[
+              { key: "day", label: "Ngày" },
+              { key: "week", label: "Tuần" },
+              { key: "month", label: "Tháng" },
+            ].map((option) => {
+              const isActive = occupancyGroupBy === option.key;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => { playPulseSound?.(510, "sine", 0.03); setOccupancyGroupBy(option.key); }}
+                  style={{
+                    padding: "6px 14px", fontSize: 10, fontWeight: 700,
+                    fontFamily: "Inter, sans-serif", borderRadius: 7, border: "none",
+                    cursor: "pointer", transition: "all 0.2s",
+                    background: isActive ? "linear-gradient(135deg, #10b981, #059669)" : "transparent",
+                    color: isActive ? "#000" : "rgba(255,255,255,0.35)",
+                    boxShadow: isActive ? "0 4px 12px #10b98144" : "none",
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {occupancyChartData.length === 0 ? <EmptyChart /> : (
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={occupancyChartData} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
               <defs>
-                <linearGradient id="barGradOcc" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#059669" stopOpacity={0.45} />
+                <linearGradient id="areaGradOccTrend" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <CartesianGrid vertical={false} stroke={GRID_COLOR} />
-              <XAxis dataKey="name" tick={TICK_STYLE} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={TICK_STYLE} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTooltip formatter={(e) => `${e.payload.rate}% · ${e.payload.tickets}/${e.payload.capacity} ghế`} />} />
-              <Bar dataKey="rate" name="Lấp đầy" fill="url(#barGradOcc)" barSize={28} radius={[6, 6, 0, 0]}>
-                <LabelList dataKey="rate" position="top" formatter={(v) => `${v}%`} style={{ fill: "rgba(255,255,255,0.45)", fontSize: 10, fontFamily: "Inter, sans-serif" }} />
-              </Bar>
-            </BarChart>
+              <XAxis dataKey="label" tick={TICK_STYLE} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
+              <YAxis tickFormatter={(v) => `${v}%`} tick={TICK_STYLE} axisLine={false} tickLine={false} width={44} />
+              <Tooltip
+                cursor={{ stroke: "rgba(255,255,255,0.15)" }}
+                content={<ChartTooltip formatter={(e) => `${e.payload.rate}% · ${Number(e.payload.sold || 0).toLocaleString("vi-VN")}/${Number(e.payload.capacity || 0).toLocaleString("vi-VN")} ghế · ${e.payload.shows} suất`} />}
+              />
+              <Area type="monotone" dataKey="rate" name="Lấp đầy" stroke="#10b981" strokeWidth={2} fill="url(#areaGradOccTrend)" />
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </ChartCard>
@@ -468,6 +514,11 @@ export default function AdminOverviewPanel({ ctx }) {
 
         {/* Log body */}
         <div style={{ padding: "14px 20px", maxHeight: 220, overflowY: "auto" }} id="terminal-audit-box">
+          {effectiveAuditLogs.length === 0 && (
+            <p style={{ margin: 0, padding: "12px 0", fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "Fira Code, Courier New, monospace" }}>
+              Chưa có hoạt động quản trị nào được ghi nhận. Thao tác tạo/sửa/xóa phim, suất chiếu, bắp nước sẽ hiện tại đây.
+            </p>
+          )}
           {effectiveAuditLogs.map((log) => (
             <div key={log.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.03)", fontFamily: "Fira Code, Courier New, monospace" }}>
               <div style={{ display: "flex", gap: 8, fontSize: 11, flexWrap: "wrap" }}>

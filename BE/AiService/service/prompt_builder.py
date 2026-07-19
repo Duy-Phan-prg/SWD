@@ -55,7 +55,7 @@ def get_movie_context(movie_id: int) -> str:
         if showtimes:
             lines.append("Lịch chiếu sắp tới:")
             for s in showtimes:
-                lines.append(f"  - {s['start_time']} | {s['cinema_name']} - {s['room_name']}")
+                lines.append(f"  - {s['start_time']:%d/%m %H:%M} | {s['cinema_name']} - {s['room_name']}")
 
         return "\n".join(l for l in lines if l)
     finally:

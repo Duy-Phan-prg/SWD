@@ -35,6 +35,11 @@ public class Payment extends BaseEntity {
     @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
+    @Setter
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "food_order_id")
+    private FoodOrder foodOrder;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private PaymentProvider provider;
@@ -56,7 +61,6 @@ public class Payment extends BaseEntity {
     private LocalDateTime paidAt;
 
     @Setter
-    @Lob
     @Column(name = "callback_payload", columnDefinition = "TEXT")
     private String callbackPayload;
 

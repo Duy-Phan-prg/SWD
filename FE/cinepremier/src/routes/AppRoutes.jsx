@@ -7,6 +7,7 @@ import DetailView from '@/pages/user/MovieDetailPage';
 import BookingView from '@/pages/user/BookingPage';
 import ProfileView from '@/pages/user/ProfilePage';
 import MyTicketsView from '@/pages/user/MyTicketsPage';
+import ShowtimesPage from '@/pages/user/ShowtimesPage';
 import WishlistView from '@/pages/user/WishlistPage';
 import AdminDashboard from '@/pages/admin/AdminPage';
 import PoliciesPage from '@/pages/user/PoliciesPage';
@@ -106,6 +107,7 @@ export default function AppRoutes() {
       <Route path="/staff" element={<AppShell><StaffRoute><StaffCheckInPage /></StaffRoute></AppShell>} />
       <Route path="/" element={<AppShell><HomeRoute /></AppShell>} />
       <Route path="/movies" element={<AppShell><ExploreView /></AppShell>} />
+      <Route path="/showtimes" element={<AppShell><ShowtimesPage /></AppShell>} />
       <Route path="/movies/:id" element={<AppShell><DetailView /></AppShell>} />
       <Route path="/movies/:id/book" element={<AppShell><ProtectedRoute><BookingView /></ProtectedRoute></AppShell>} />
       <Route path="/tickets" element={<AppShell><ProtectedRoute><MyTicketsView /></ProtectedRoute></AppShell>} />

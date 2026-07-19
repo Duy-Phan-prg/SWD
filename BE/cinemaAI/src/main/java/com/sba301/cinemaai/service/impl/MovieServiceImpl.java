@@ -12,6 +12,7 @@ import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.MovieActor;
 import com.sba301.cinemaai.entity.MovieGenre;
 import com.sba301.cinemaai.enums.AgeRating;
+import com.sba301.cinemaai.enums.AuditActionType;
 import com.sba301.cinemaai.enums.MovieStatus;
 import com.sba301.cinemaai.exception.BadRequestException;
 import com.sba301.cinemaai.exception.ConflictException;
@@ -21,6 +22,7 @@ import com.sba301.cinemaai.repository.MovieGenreRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.ActorRepository;
 import com.sba301.cinemaai.repository.MovieActorRepository;
+import com.sba301.cinemaai.service.AuditLogService;
 import com.sba301.cinemaai.service.GenreService;
 import com.sba301.cinemaai.service.MovieService;
 import jakarta.persistence.criteria.Root;
@@ -55,6 +57,7 @@ public class MovieServiceImpl implements MovieService {
     private final ActorRepository actorRepository;
     private final GenreService genreService;
     private final MovieMapper movieMapper;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     @Cacheable(
@@ -125,6 +128,7 @@ public class MovieServiceImpl implements MovieService {
         Movie saved = movieRepository.save(movie);
         replaceGenres(saved, request.genreIds());
         replaceActors(saved, actors, mainActorIds);
+        auditLogService.record(AuditActionType.CREATE, "MOVIE", saved.getId(), saved.getTitle());
         return toResponse(saved);
     }
 
@@ -155,6 +159,7 @@ public class MovieServiceImpl implements MovieService {
         movie.setDurationMinutes(request.durationMinutes());
         replaceGenres(movie, request.genreIds());
         replaceActors(movie, actors, mainActorIds);
+        auditLogService.record(AuditActionType.UPDATE, "MOVIE", movie.getId(), movie.getTitle());
         return toResponse(movie);
     }
 
@@ -189,6 +194,8 @@ public class MovieServiceImpl implements MovieService {
     public MovieResponse updateStatus(Long id, MovieStatusUpdateRequest request) {
         Movie movie = findById(id);
         movie.setStatus(request.status());
+        auditLogService.record(AuditActionType.UPDATE, "MOVIE", movie.getId(),
+                movie.getTitle() + " -> " + request.status());
         return toResponse(movie);
     }
 
@@ -197,6 +204,7 @@ public class MovieServiceImpl implements MovieService {
     public void delete(Long id) {
         Movie movie = findById(id);
         movie.setStatus(MovieStatus.INACTIVE);
+        auditLogService.record(AuditActionType.DELETE, "MOVIE", movie.getId(), movie.getTitle());
     }
 
     private void applyMovieFields(
