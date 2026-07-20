@@ -179,6 +179,40 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
             <div><span className="font-black text-white">Tổng tiền:</span> {Number(booking.totalAmount || 0).toLocaleString('vi-VN')}đ</div>
           </div>
 
+          {/* Food & Concessions ordered with this booking */}
+          {Array.isArray(booking?.foods) && booking.foods.length > 0 && (
+            <div className="border-t border-neutral-800 pt-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-400">🍿 Bắp nước đã đặt</p>
+              <div className="mt-2 space-y-1.5">
+                {booking.foods.map((food, idx) => (
+                  <div
+                    key={`food-${food.foodItemId ?? food.foodComboId ?? idx}`}
+                    className="flex items-center justify-between gap-3 border border-neutral-800 bg-[#070707] px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-amber-400 font-black text-xs shrink-0">×{food.quantity}</span>
+                      <span className="text-white text-xs font-bold truncate">{food.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-[10px] text-neutral-500 font-mono">
+                        {Number(food.unitPrice || 0).toLocaleString('vi-VN')}đ/c
+                      </span>
+                      <span className="text-amber-300 font-black text-[11px] font-mono">
+                        {Number(food.totalPrice || 0).toLocaleString('vi-VN')}đ
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between border border-amber-500/20 bg-amber-950/10 px-3 py-2">
+                <span className="text-[9px] font-black uppercase tracking-widest text-amber-400">Tổng bắp nước</span>
+                <span className="font-mono text-sm font-black text-amber-300">
+                  {booking.foods.reduce((sum, f) => sum + Number(f.totalPrice || 0), 0).toLocaleString('vi-VN')}đ
+                </span>
+              </div>
+            </div>
+          )}
+
           {seats.length > 0 && (
             <div className="border-t border-neutral-800 pt-3">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Check-in từng ghế</p>
@@ -217,7 +251,7 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
                   disabled={isCheckingIn || selectedTicketCodes.length === 0}
                   className="mt-3 flex w-full items-center justify-center gap-2 bg-emerald-400 px-4 py-3 text-[9px] font-black uppercase tracking-widest text-black transition hover:bg-emerald-300 disabled:opacity-40"
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Xác nhận ghế đã chọn ({selectedTicketCodes.length})
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Check-in ghế đã chọn ({selectedTicketCodes.length})
                 </button>
               )}
             </div>
@@ -841,9 +875,7 @@ export default function StaffCheckInPage() {
             <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_62%)]" />
             <div className="relative">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1.5 border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-300">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" /> API thật
-                </span>
+
                 <span className="border border-purple-400/20 bg-purple-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-purple-300">
                   STAFF OPERATIONS
                 </span>

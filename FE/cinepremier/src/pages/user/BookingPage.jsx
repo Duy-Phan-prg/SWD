@@ -155,7 +155,10 @@ export default function BookingView() {
   const { moviesList, foodCatalog, fetchPublicFoodCatalog } = useMovies();
   const showToast = useUiStore((state) => state.showToast);
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
-  const isMovieBookable = movie?.status === 'NOW_SHOWING' || (!movie?.status && !movie?.isUpcoming);
+  // Cho phép đặt vé khi phim NOW_SHOWING hoặc SCHEDULED (có thể có suất chiếu mở từ trang Lịch chiếu)
+  const isMovieBookable = movie?.status === 'NOW_SHOWING'
+    || movie?.status === 'SCHEDULED'
+    || (!movie?.status && !movie?.isUpcoming);
   const childTicketsAllowed = getAgeRatingMinimum(movie?.ageRating) <= CHILD_TICKET_MAX_AGE;
   const onBack = () => navigate(-1);
   const onConfirmBooking = (booking) => {
@@ -174,9 +177,12 @@ export default function BookingView() {
   }, []);
 
   useEffect(() => {
+    // Chỉ redirect khi phim thực sự chưa mở bán (UPCOMING rõ ràng), không redirect SCHEDULED
     if (!movie || isMovieBookable) return;
-    showToast('Phim sắp chiếu chưa mở bán vé.');
-    navigate(`/movies/${movie.id}`, { replace: true });
+    if (movie.isUpcoming && movie.status !== 'SCHEDULED' && movie.status !== 'NOW_SHOWING') {
+      showToast('Phim sắp chiếu chưa mở bán vé.');
+      navigate(`/movies/${movie.id}`, { replace: true });
+    }
   }, [movie?.id, movie?.status, movie?.isUpcoming, isMovieBookable]);
 
   // Showtime & seat map from BE
@@ -707,9 +713,13 @@ export default function BookingView() {
     : requestedLoyaltyPoints > maxRedeemablePointsForSubtotal
       ? `Số điểm muốn dùng vượt quá mức giảm tối đa của hóa đơn (${maxRedeemablePointsForSubtotal.toLocaleString('vi-VN')} điểm).`
       : '';
+  
   const gatewayDiscountAmount = Number(heldPaymentSummary?.discountAmount ?? discountAmount);
-  const gatewayTotalAmount = Number(heldPaymentSummary?.totalAmount ?? totalAmount);
+  const gatewayTotalAmount = heldPaymentSummary
+    ? Number(heldPaymentSummary.totalAmount)
+    : totalAmount;
   const gatewayRedeemedPoints = Number(heldPaymentSummary?.loyaltyPointsRedeemed ?? loyaltyPointsToRedeem);
+  
   const formatHoldSeconds = (seconds) => {
     if (seconds === null || seconds === undefined) return '--:--';
     const normalizedSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -938,6 +948,8 @@ export default function BookingView() {
   const handleBackToBooking = () => {
     setPaymentState('booking');
     setBookingStep('combos');
+    // Xóa heldPaymentSummary cũ để tổng hóa đơn tính lại thực thời theo bắp nước mới thêm
+    setHeldPaymentSummary(null);
     if (concessions.length === 0) fetchPublicFoodCatalog({ force: true });
   };
 
@@ -1343,9 +1355,8 @@ export default function BookingView() {
                     {paidBooking.seats.map((seat) => (
                       <div key={seat.ticketCode || seat.seatId} className="flex items-center gap-3 border border-white/10 bg-neutral-950 px-3 py-2">
                         <span className="w-8 shrink-0 font-mono text-xs font-black text-white">{seat.rowLabel}{seat.seatNumber}</span>
-                        <span className={`shrink-0 text-[8px] font-sans font-black uppercase tracking-widest ${
-                          seat.ticketType === 'STUDENT' ? 'text-sky-400' : seat.ticketType === 'CHILD' ? 'text-amber-400' : 'text-zinc-400'
-                        }`}>
+                        <span className={`shrink-0 text-[8px] font-sans font-black uppercase tracking-widest ${seat.ticketType === 'STUDENT' ? 'text-sky-400' : seat.ticketType === 'CHILD' ? 'text-amber-400' : 'text-zinc-400'
+                          }`}>
                           {seat.ticketType === 'STUDENT' ? 'Sinh viên' : seat.ticketType === 'CHILD' ? 'Trẻ em' : 'Người lớn'}
                         </span>
                         <span className="ml-auto truncate font-mono text-[10px] text-zinc-500" title={seat.ticketCode}>
@@ -1407,29 +1418,29 @@ export default function BookingView() {
               {/* List booking details */}
               <div className="space-y-3.5 text-[10px] uppercase tracking-wider font-mono text-zinc-400">
                 <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span>Phòng chiếu:</span>
+                  <span className="text-white">Phòng chiếu:</span>
                   <span className="text-white font-bold">{(selectedShowtime?.roomName || 'Chưa chọn')}</span>
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span>Ngày chiếu:</span>
+                  <span className="text-white">Ngày chiếu:</span>
                   <span className="text-white font-bold">{selectedDate ? new Date(selectedDate).toLocaleDateString('vi-VN') : ''}</span>
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span>Giờ chiếu:</span>
+                  <span className="text-white">Giờ chiếu:</span>
                   <span className="text-white font-bold">{selectedShowtime ? new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span>Số ghế đã chọn ({selectedSeats.length}):</span>
+                  <span className="text-white">Số ghế đã chọn ({selectedSeats.length}):</span>
                   <span className="text-amber-400 font-bold">{selectedSeats.map(s => s.id).join(', ')}</span>
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span>Giữ ghế còn lại:</span>
+                  <span className="text-white">Giữ ghế còn lại:</span>
                   <span className={`font-black ${holdSecondsLeft !== null && holdSecondsLeft <= 15 ? 'text-red-400' : 'text-emerald-400'}`}>{holdCountdownLabel}</span>
                 </div>
 
                 {selectedSeats.length > 0 && (
                   <div className="border-b border-white/5 pb-3">
-                    <span className="mb-2 block text-zinc-500">Chi tiết vé từng ghế:</span>
+                    <span className="mb-2 block text-white">Chi tiết vé từng ghế:</span>
                     <div className="space-y-1.5">
                       {selectedSeats.map((seat, index) => {
                         const meta = TICKET_TYPE_META[seat.ticketType] || TICKET_TYPE_META.adult;
@@ -1437,7 +1448,7 @@ export default function BookingView() {
                         return (
                           <div key={seat.id} className="flex items-center justify-between gap-2">
                             <span className="truncate">
-                              <span className="text-amber-400 font-bold">Ghế {seat.id}</span>
+                              <span className="text-amber-400 font-bold"> - Ghế {seat.id}</span>
                               <span className="text-zinc-500"> · {meta.label}</span>
                               {normalizeSeatTypeKey(seat.type) === 'vip' && <span className="text-yellow-400"> · VIP</span>}
                               {normalizeSeatTypeKey(seat.type) === 'couple' && <span className="text-rose-400"> · Đôi</span>}
@@ -1452,14 +1463,14 @@ export default function BookingView() {
 
                 {Object.entries(selectedCombos).length > 0 && (
                   <div className="space-y-2 pt-2 text-[9px] font-sans tracking-tight text-zinc-500">
-                    <span className="text-[9px] font-mono tracking-widest text-zinc-600 block">Bắp nước (đơn giá × số lượng):</span>
+                    <span className="text-[10px] font-mono tracking-widest text-white block">Bắp nước (đơn giá × số lượng):</span>
                     {Object.entries(selectedCombos).map(([id, q]) => {
                       const it = concessions.find(item => item.id === id);
                       if (!it) return null;
                       return (
                         <div key={id} className="flex justify-between">
-                          <span className="truncate max-w-[170px]">{it.name} <span className="text-zinc-400">({it.price.toLocaleString()}đ × {q})</span></span>
-                          <span className="text-zinc-300">{(it.price * q).toLocaleString()}đ</span>
+                          <span className="truncate max-w-[170px] text-[10px]"> - {it.name} <span className="text">({it.price.toLocaleString()}đ × {q})</span></span>
+                          <span className="text-white" style={{ fontSize: "11px" }}>{(it.price * q).toLocaleString()}đ</span>
                         </div>
                       );
                     })}
@@ -1470,13 +1481,13 @@ export default function BookingView() {
               {/* Financial calculations recap */}
               <div className="pt-4 border-t border-white/10 space-y-3 text-[10px] uppercase tracking-wider font-mono">
                 <div className="flex justify-between text-zinc-500">
-                  <span>Tiền vé ghế xem:</span>
-                  <span>{priceTickets.toLocaleString()}đ</span>
+                  <span className="text-white">Tổng tiền vé ghế:</span>
+                  <span className="text-white">{priceTickets.toLocaleString()}đ</span>
                 </div>
                 {priceCombos > 0 && (
                   <div className="flex justify-between text-zinc-500">
-                    <span>Tiền bắp hoa nước:</span>
-                    <span>{priceCombos.toLocaleString()}đ</span>
+                    <span className="text-white">Tiền bắp nước:</span>
+                    <span className="text-white">{priceCombos.toLocaleString()}đ</span>
                   </div>
                 )}
                 {gatewayDiscountAmount > 0 && (
@@ -1810,7 +1821,10 @@ export default function BookingView() {
                     className="overflow-x-auto pb-4 max-w-full scrollbar-thin scroll-smooth"
                     style={{ WebkitOverflowScrolling: 'touch' }}
                   >
-                    <div className="w-max mx-auto flex flex-col items-center space-y-3.5 px-10 md:px-14 pb-2" id="seats-map-grid">
+                    <div className="w-max mx-auto flex flex-col items-start space-y-3.5 px-10 md:px-14 pb-2" id="seats-map-grid">
+
+                      {/* Pre-compute max column so all rows share the same width */}
+                      {(() => { const _maxCol = seats.reduce((m, s) => Math.max(m, s.displayColumn ?? s.col ?? 0), 0); return null; })()}
 
                       {/* Rows Mapping — dynamic from BE data */}
                       {[...new Map(seats.map(s => [s.row, s])).values()]
@@ -1842,100 +1856,119 @@ export default function BookingView() {
                               </div>
 
                               {isCoupleRow ? (
-                                // Couple row sweetbox representation
-                                <div className="flex items-center space-x-5">
-                                  {Array.from({ length: Math.ceil(rowSeats.length / 2) }).map((_, pairIdx) => {
-                                    const seat1 = rowSeats[pairIdx * 2];
-                                    const seat2 = rowSeats[pairIdx * 2 + 1]; if (!seat1 || !seat2) return null;
+                                // Couple row — same inter-seat gap as STD rows; paired seats share a rose border
+                                (() => {
+                                  const firstSeat1Col = rowSeats.length > 0 ? (rowSeats[0].displayColumn ?? rowSeats[0].col ?? 1) : 1;
+                                  // Leading placeholder slots = columns before the first seat of the first pair
+                                  const leadingPlaceholders = firstSeat1Col - 1;
+                                  return (
+                                    <div className="flex items-center gap-2 sm:gap-2.5">
+                                      {/* Leading placeholder cells to align pairs under correct columns */}
+                                      {Array.from({ length: leadingPlaceholders }, (_, i) => (
+                                        <div key={`lead-${i}`} className="h-9 w-9 sm:h-10 sm:w-10 shrink-0" />
+                                      ))}
+                                      {Array.from({ length: Math.ceil(rowSeats.length / 2) }).map((_, pairIdx) => {
+                                        const seat1 = rowSeats[pairIdx * 2];
+                                        const seat2 = rowSeats[pairIdx * 2 + 1];
+                                        if (!seat1 || !seat2) return null;
 
-                                    const s1Selected = !!selectedSeats.find(s => s.id === seat1.id);
-                                    const s2Selected = !!selectedSeats.find(s => s.id === seat2.id);
-                                    const isAnySelected = s1Selected || s2Selected;
-                                    const isPairBooked = seat1.isBooked || seat2.isBooked;
-                                    const isPairHeld = getSeatHoldSecondsLeft(seat1) > 0 || getSeatHoldSecondsLeft(seat2) > 0;
+                                        const s1Selected = !!selectedSeats.find(s => s.id === seat1.id);
+                                        const s2Selected = !!selectedSeats.find(s => s.id === seat2.id);
+                                        const isAnySelected = s1Selected || s2Selected;
+                                        const isPairBooked = seat1.isBooked || seat2.isBooked;
+                                        const isPairHeld = getSeatHoldSecondsLeft(seat1) > 0 || getSeatHoldSecondsLeft(seat2) > 0;
 
-                                    return (
-                                      <div
-                                        key={pairIdx}
-                                        className={`flex p-1 border transition-all rounded-sm ${isAnySelected
-                                          ? 'border-rose-500 bg-rose-950/30 shadow-[0_0_12px_rgba(244,63,94,0.4)] scale-105'
-                                          : 'border-rose-950 bg-[#0c0506]'
-                                          }`}
-                                      >
-                                        {/* Left member seat with large clear sequence numbering */}
-                                        <button
-                                          disabled={isPairBooked}
-                                          onClick={() => handleSelectSeat(seat1)}
-                                          className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${isPairBooked
-                                            ? isPairHeld
-                                              ? 'bg-amber-950/30 text-amber-300 cursor-not-allowed border-transparent'
-                                              : 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
-                                            : s1Selected
-                                              ? 'bg-rose-500 text-white font-black'
-                                              : 'bg-transparent text-rose-400 hover:bg-rose-950/20'
-                                            }`}
-                                        >
-                                          {renderSeatHoldCountdown(seat1)}
-                                          {seat1.col}
-                                        </button>
-                                        <div className="w-[1px] bg-rose-950 h-9 sm:h-10"></div>
-                                        {/* Right member seat with large clear sequence numbering */}
-                                        <button
-                                          disabled={isPairBooked}
-                                          onClick={() => handleSelectSeat(seat2)}
-                                          className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-xs sm:text-[14px] font-black font-mono flex items-center justify-center transition-all ${isPairBooked
-                                            ? isPairHeld
-                                              ? 'bg-amber-950/30 text-amber-300 cursor-not-allowed border-transparent'
-                                              : 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through border-transparent'
-                                            : s2Selected
-                                              ? 'bg-rose-500 text-white font-black'
-                                              : 'bg-transparent text-rose-400 hover:bg-rose-950/20'
-                                            }`}
-                                        >
-                                          {renderSeatHoldCountdown(seat2)}
-                                          {seat2.col}
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                                        const seatBtn = (seat, isSelected) => (
+                                          <button
+                                            key={seat.id}
+                                            disabled={isPairBooked}
+                                            onClick={() => handleSelectSeat(seat)}
+                                            title={`Ghế đôi ${seat.col}`}
+                                            className={`relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 text-[11.5px] sm:text-[14.5px] font-black font-mono flex items-center justify-center transition-all duration-150 rounded-none border-0 ${isPairBooked
+                                              ? isPairHeld
+                                                ? 'bg-amber-950/30 text-amber-300 cursor-not-allowed'
+                                                : 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through'
+                                              : isSelected
+                                                ? 'bg-rose-500 text-white font-black'
+                                                : 'bg-rose-950/20 text-rose-400 hover:bg-rose-950/50 hover:text-rose-200'
+                                              }`}
+                                          >
+                                            {renderSeatHoldCountdown(seat)}
+                                            {seat.col}
+                                          </button>
+                                        );
+
+                                        return (
+                                          // Pair wrapper: p-0.5 padding + matching gap-2/gap-2.5 so spacing matches standard columns
+                                          <div
+                                            key={pairIdx}
+                                            className={`flex items-center sm:gap-0.5 p-0.5 border transition-all rounded-sm ${isPairBooked
+                                              ? isPairHeld
+                                                ? 'border-amber-500/40'
+                                                : 'border-neutral-800'
+                                              : isAnySelected
+                                                ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]'
+                                                : 'border-rose-500/50 hover:border-rose-400'
+                                              }`}
+                                          >
+                                            {seatBtn(seat1, s1Selected)}
+                                            {/* 1px internal divider between paired seats */}
+                                            <div className="w-px self-stretch bg-rose-500/30 shrink-0" />
+                                            {seatBtn(seat2, s2Selected)}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()
                               ) : (
-                                // Standard & VIP row with larger seat buttons
-                                <div className="flex items-center space-x-2 sm:space-x-2.5">
-                                  {rowSeats.map((seat) => {
-                                    const selectedSeat = selectedSeats.find(s => s.id === seat.id);
-                                    const isSelected = !!selectedSeat;
-                                    const ticketMeta = selectedSeat ? TICKET_TYPE_META[selectedSeat.ticketType] : null;
-                                    const isVip = seat.type === 'vip';
-                                    const isChild = selectedSeat?.ticketType === 'child';
-                                    const isHeldOnActiveBooking = getSeatHoldSecondsLeft(seat) > 0;
-                                    const displayPrice = isSelected ? getSeatLineTotal(selectedSeat) : (getShowtimeTicketPrice(selectedShowtime, 'adult', seat.type) ?? seat.price);
+                                // Standard & VIP row — render slots for ALL columns so seats sit at their real positions
+                                (() => {
+                                  const maxCol = seats.reduce((m, s) => Math.max(m, s.displayColumn ?? s.col ?? 0), 0);
+                                  const seatByCol = Object.fromEntries(rowSeats.map(s => [s.displayColumn ?? s.col, s]));
+                                  return (
+                                    <div className="flex items-center space-x-2 sm:space-x-2.5">
+                                      {Array.from({ length: maxCol }, (_, i) => i + 1).map((colNum) => {
+                                        const seat = seatByCol[colNum];
+                                        if (!seat) {
+                                          // Transparent placeholder to preserve column position
+                                          return <div key={`empty-${colNum}`} className="h-9 w-9 sm:h-10 sm:w-10 shrink-0" />;
+                                        }
+                                        const selectedSeat = selectedSeats.find(s => s.id === seat.id);
+                                        const isSelected = !!selectedSeat;
+                                        const ticketMeta = selectedSeat ? TICKET_TYPE_META[selectedSeat.ticketType] : null;
+                                        const isVip = seat.type === 'vip';
+                                        const isChild = selectedSeat?.ticketType === 'child';
+                                        const isHeldOnActiveBooking = getSeatHoldSecondsLeft(seat) > 0;
+                                        const displayPrice = isSelected ? getSeatLineTotal(selectedSeat) : (getShowtimeTicketPrice(selectedShowtime, 'adult', seat.type) ?? seat.price);
 
-                                    return (
-                                      <button
-                                        key={seat.id}
-                                        disabled={seat.isBooked}
-                                        onClick={() => handleSelectSeat(seat)}
-                                        title={isSelected ? `${ticketMeta?.label || 'Người lớn'} · ${formatVnd(displayPrice)}` : `${formatVnd(displayPrice)}`}
-                                        className={`relative h-9 w-9 sm:h-10.5 sm:w-10.5 text-[11.5px] sm:text-[14.5px] font-black font-mono transition-all duration-150 rounded-none border ${seat.isBooked
-                                          ? isHeldOnActiveBooking
-                                            ? 'bg-amber-950/30 border-amber-500/40 text-amber-300 cursor-not-allowed'
-                                            : 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
-                                          : isSelected && isChild
-                                            ? 'bg-amber-400 text-black border-amber-400 font-black scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
-                                            : isSelected
-                                              ? 'bg-white text-black border-white font-black scale-110 shadow-[0_0_12px_rgba(255,255,255,0.6)]'
-                                              : isVip
-                                                ? 'border-yellow-500/40 bg-yellow-950/30 text-yellow-400 hover:border-yellow-300 hover:bg-yellow-950/50 hover:scale-105'
-                                                : 'border-white/15 bg-[#121212] text-neutral-200 hover:border-white/50 hover:text-white hover:scale-105'
-                                          }`}
-                                      >
-                                        {renderSeatHoldCountdown(seat)}
-                                        {seat.col}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
+                                        return (
+                                          <button
+                                            key={seat.id}
+                                            disabled={seat.isBooked}
+                                            onClick={() => handleSelectSeat(seat)}
+                                            title={isSelected ? `${ticketMeta?.label || 'Người lớn'} · ${formatVnd(displayPrice)}` : `${formatVnd(displayPrice)}`}
+                                            className={`relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 text-[11.5px] sm:text-[14.5px] font-black font-mono transition-all duration-150 rounded-none border ${seat.isBooked
+                                              ? isHeldOnActiveBooking
+                                                ? 'bg-amber-950/30 border-amber-500/40 text-amber-300 cursor-not-allowed'
+                                                : 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
+                                              : isSelected && isChild
+                                                ? 'bg-amber-400 text-black border-amber-400 font-black scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
+                                                : isSelected
+                                                  ? 'bg-white text-black border-white font-black scale-110 shadow-[0_0_12px_rgba(255,255,255,0.6)]'
+                                                  : isVip
+                                                    ? 'border-yellow-500/40 bg-yellow-950/30 text-yellow-400 hover:border-yellow-300 hover:bg-yellow-950/50 hover:scale-105'
+                                                    : 'border-white/15 bg-[#121212] text-neutral-200 hover:border-white/50 hover:text-white hover:scale-105'
+                                              }`}
+                                          >
+                                            {renderSeatHoldCountdown(seat)}
+                                            {seat.col}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()
                               )}
 
                               {/* Right Row Label */}
