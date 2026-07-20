@@ -98,6 +98,8 @@ export default function ProfileView() {
   const [loyaltyConfig, setLoyaltyConfig] = useState(DEFAULT_LOYALTY_CONFIG);
   const [wallet, setWallet] = useState(null);
   const [walletTxs, setWalletTxs] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [showWithdrawals, setShowWithdrawals] = useState(false);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({ amount: '', bankName: '', accountNumber: '', accountHolder: '', walletPhone: '' });
   const [withdrawLoading, setWithdrawLoading] = useState(false);
@@ -161,8 +163,16 @@ export default function ProfileView() {
         setRecentBookings(bookingList);
         setLoyaltyPoints(Number(loyalty?.points ?? 0));
         setLoyaltyConfig({ ...DEFAULT_LOYALTY_CONFIG, ...(loyaltyConfiguration || {}) });
-        // Fetch wallet
-        walletService.getWallet(accessToken).then(w => { setWallet(w); return walletService.getTransactions(accessToken, { page: 0, size: 5 }); }).then(txData => setWalletTxs(txData?.content ?? txData?.items ?? [])).catch(() => { });
+        // Fetch wallet + giao dịch + lịch sử rút tiền
+        Promise.all([
+          walletService.getWallet(accessToken),
+          walletService.getTransactions(accessToken, { page: 0, size: 5 }),
+          walletService.getMyWithdrawals(accessToken, { page: 0, size: 10 }),
+        ]).then(([w, txData, wdData]) => {
+          setWallet(w);
+          setWalletTxs(txData?.content ?? txData?.items ?? []);
+          setWithdrawals(wdData?.content ?? wdData?.items ?? []);
+        }).catch(() => { });
       })
       .catch((error) => {
         if (!cancelled) showToast(error.message || 'Không thể tải dữ liệu hồ sơ từ hệ thống.');
@@ -805,6 +815,62 @@ export default function ProfileView() {
                 </div>
               )}
 
+              {withdrawals.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowWithdrawals(s => !s)}
+                    className="flex w-full items-center justify-between border-t border-white/5 pt-3 text-left"
+                  >
+                    <span className="text-[8px] font-black uppercase tracking-[0.14em] text-neutral-500">
+                      Lịch sử rút tiền ({withdrawals.length})
+                    </span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform ${showWithdrawals ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {showWithdrawals && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="mt-2 space-y-2">
+                          {withdrawals.map((w, i) => {
+                            const meta = w.status === 'PAID'
+                              ? { label: 'Đã chuyển khoản', cls: 'border-emerald-500/30 bg-emerald-950/30 text-emerald-300' }
+                              : w.status === 'REJECTED'
+                              ? { label: 'Từ chối · đã hoàn ví', cls: 'border-rose-500/30 bg-rose-950/30 text-rose-300' }
+                              : { label: 'Đang chờ duyệt', cls: 'border-amber-500/30 bg-amber-950/30 text-amber-300' };
+                            const acc = w.accountNumber ? `•••• ${String(w.accountNumber).slice(-4)}` : '';
+                            return (
+                              <div key={w.id || i} className="border border-white/10 bg-black/40 p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="text-[12px] font-black font-mono text-white">
+                                      {Number(w.amount).toLocaleString('vi-VN')}đ
+                                    </p>
+                                    <p className="text-[9px] text-neutral-500">
+                                      {w.bankName} {acc} · {w.accountHolder}
+                                    </p>
+                                  </div>
+                                  <span className={`shrink-0 border px-2 py-0.5 text-[8px] font-black uppercase tracking-wider ${meta.cls}`}>
+                                    {meta.label}
+                                  </span>
+                                </div>
+                                <div className="mt-1.5 flex items-center justify-between text-[8.5px] text-neutral-600">
+                                  <span>Gửi: {w.createdAt ? new Date(w.createdAt).toLocaleDateString('vi-VN') : '—'}</span>
+                                  {w.processedAt && (
+                                    <span>Xử lý: {new Date(w.processedAt).toLocaleDateString('vi-VN')}{w.processedMethod ? ` · ${w.processedMethod}` : ''}</span>
+                                  )}
+                                </div>
+                                {w.processedNote && (
+                                  <p className="mt-1 text-[9px] italic text-neutral-500">"{w.processedNote}"</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               <AnimatePresence>
                 {showWithdrawForm && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -971,9 +1037,16 @@ export default function ProfileView() {
                               accountHolder: withdrawForm.accountHolder,
                               walletPhone: withdrawForm.walletPhone || null,
                             });
-                            const w = await walletService.getWallet(accessToken);
+                            const [w, txData, wdData] = await Promise.all([
+                              walletService.getWallet(accessToken),
+                              walletService.getTransactions(accessToken, { page: 0, size: 5 }),
+                              walletService.getMyWithdrawals(accessToken, { page: 0, size: 10 }),
+                            ]);
                             setWallet(w);
+                            setWalletTxs(txData?.content ?? txData?.items ?? []);
+                            setWithdrawals(wdData?.content ?? wdData?.items ?? []);
                             setShowWithdrawForm(false);
+                            setShowWithdrawals(true);
                             setWithdrawForm({ amount: '', bankName: '', accountNumber: '', accountHolder: '', walletPhone: '' });
                           } catch (e) {
                             setWithdrawErrors({ general: e.message || 'Không thể tạo yêu cầu rút tiền. Vui lòng thử lại.' });

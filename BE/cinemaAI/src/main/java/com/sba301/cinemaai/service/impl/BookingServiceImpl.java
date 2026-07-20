@@ -43,6 +43,7 @@ import com.sba301.cinemaai.service.BookingService;
 import com.sba301.cinemaai.service.FoodService;
 import com.sba301.cinemaai.service.LoyaltyPointService;
 import com.sba301.cinemaai.service.QrTicketService;
+import com.sba301.cinemaai.service.RefundService;
 import com.sba301.cinemaai.service.TicketPricingService;
 import com.sba301.cinemaai.service.UserService;
 import java.math.BigDecimal;
@@ -97,6 +98,7 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentRepository paymentRepository;
     private final ReviewRepository reviewRepository;
     private final AuditLogService auditLogService;
+    private final RefundService refundService;
 
     @Transactional
     public BookingResponse holdSeats(String email, HoldSeatsRequest request) {
@@ -277,8 +279,17 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Transactional
-    public BookingResponse cancelAdmin(Long bookingId) {
+    public BookingResponse cancelAdmin(Long bookingId, String reason) {
         Booking booking = findBooking(bookingId);
+        if (booking.getStatus() == BookingStatus.USED) {
+            throw new BadRequestException("Checked-in booking cannot be cancelled");
+        }
+        // Vé đã thanh toán: hoàn tiền về CineWallet (ghi audit REFUND bên trong)
+        if (booking.getStatus() == BookingStatus.PAID) {
+            refundService.refundPaidBooking(booking, reason);
+            return toResponse(booking);
+        }
+        // Vé chưa thanh toán: hủy như cũ, không phát sinh hoàn tiền
         BookingResponse response = cancelBooking(booking);
         auditLogService.record(com.sba301.cinemaai.enums.AuditActionType.DELETE, "BOOKING",
                 booking.getId(), booking.getBookingCode());

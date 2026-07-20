@@ -43,8 +43,11 @@ public class AdminBookingController {
     }
 
     @DeleteMapping("/{bookingId}")
-    public ApiResponse<BookingResponse> cancel(@PathVariable Long bookingId) {
-        return ApiResponse.success(bookingService.cancelAdmin(bookingId), "Booking cancelled successfully");
+    public ApiResponse<BookingResponse> cancel(
+            @PathVariable Long bookingId,
+            @RequestParam(required = false) String reason
+    ) {
+        return ApiResponse.success(bookingService.cancelAdmin(bookingId, reason), "Booking cancelled successfully");
     }
 
     @PostMapping("/{bookingId}/check-in")

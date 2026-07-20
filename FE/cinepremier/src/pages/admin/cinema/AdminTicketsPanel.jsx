@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Ticket } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Ticket, Wallet, X } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
+
+// Trạng thái vé còn có thể hủy. Vé PAID khi hủy sẽ được backend hoàn tiền về CineWallet.
+const CANCELLABLE_STATUSES = ['PAID', 'HOLDING', 'PENDING_PAYMENT'];
 
 const STATUS_FILTERS = ['ALL', 'PAID', 'USED', 'HOLDING', 'PENDING_PAYMENT', 'EXPIRED', 'CANCELLED', 'REFUNDED'];
 
@@ -34,6 +37,9 @@ export default function AdminTicketsPanel({ ctx }) {
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const loadBookings = async (nextPage = 0, status = statusFilter) => {
     const token = getAdminToken();
@@ -57,6 +63,30 @@ export default function AdminTicketsPanel({ ctx }) {
   };
 
   useEffect(() => { loadBookings(0); }, []);
+
+  const openCancel = (booking) => { setCancelTarget(booking); setCancelReason(''); };
+  const closeCancel = () => { if (!isCancelling) { setCancelTarget(null); setCancelReason(''); } };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    const token = getAdminToken();
+    if (!token) return;
+    setIsCancelling(true);
+    try {
+      await adminService.cancelBookingAdmin(token, cancelTarget.id, cancelReason.trim());
+      const wasPaid = cancelTarget.status === 'PAID';
+      showToast(wasPaid
+        ? `Đã hủy vé ${cancelTarget.bookingCode} và hoàn ${formatVnd(cancelTarget.totalAmount)} về ví CineWallet của khách.`
+        : `Đã hủy vé ${cancelTarget.bookingCode}.`);
+      setCancelTarget(null);
+      setCancelReason('');
+      loadBookings(page);
+    } catch (err) {
+      showToast(err?.message || 'Không thể hủy vé.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const pageStats = useMemo(() => {
     const seats = bookings.reduce((sum, b) => sum + (b.seats?.length || 0), 0);
@@ -235,6 +265,22 @@ export default function AdminTicketsPanel({ ctx }) {
                             )}
                           </div>
                         </div>
+                        {CANCELLABLE_STATUSES.includes(b.status) && (
+                          <div className="mt-4 flex items-center justify-end border-t border-white/10 pt-3">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openCancel(b); }}
+                              className={`flex items-center gap-2 border px-4 py-2 text-[10px] font-sans font-black uppercase tracking-widest transition ${
+                                b.status === 'PAID'
+                                  ? 'border-purple-500/40 bg-purple-950/30 text-purple-300 hover:border-purple-400 hover:text-white'
+                                  : 'border-rose-500/40 bg-rose-950/30 text-rose-300 hover:border-rose-400 hover:text-white'
+                              }`}
+                            >
+                              {b.status === 'PAID'
+                                ? (<><Wallet className="h-3.5 w-3.5" /> Hủy &amp; hoàn về ví</>)
+                                : (<><X className="h-3.5 w-3.5" /> Hủy vé</>)}
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )}
@@ -264,6 +310,70 @@ export default function AdminTicketsPanel({ ctx }) {
           </button>
         </div>
       </div>
+
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeCancel}>
+          <div className="w-full max-w-md border border-white/10 bg-[#0a0a0a] p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-500">Quản lý vé</p>
+                <h3 className="mt-1 text-lg font-sans font-black uppercase tracking-wide text-white">
+                  {cancelTarget.status === 'PAID' ? 'Hủy & hoàn tiền' : 'Hủy vé'}
+                </h3>
+              </div>
+              <button onClick={closeCancel} disabled={isCancelling} className="text-neutral-500 transition hover:text-white disabled:opacity-40">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="mt-3 text-xs text-neutral-400">
+              Vé <span className="font-mono font-bold text-white">{cancelTarget.bookingCode}</span> · {formatVnd(cancelTarget.totalAmount)}
+            </p>
+
+            {cancelTarget.status === 'PAID' ? (
+              <div className="mt-3 flex items-start gap-2 border border-purple-500/30 bg-purple-950/20 p-3 text-[11px] text-purple-200">
+                <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-purple-300" />
+                <span>Số tiền {formatVnd(cancelTarget.totalAmount)} sẽ được hoàn vào ví CineWallet của khách. Khách có thể rút về ngân hàng từ ví.</span>
+              </div>
+            ) : (
+              <p className="mt-3 text-[11px] text-neutral-500">Vé chưa thanh toán — hủy sẽ giải phóng ghế, không phát sinh hoàn tiền.</p>
+            )}
+
+            <label className="mt-4 block text-[9px] font-black uppercase tracking-widest text-neutral-500">Lý do (tùy chọn)</label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Ví dụ: khách yêu cầu hủy, đặt nhầm suất…"
+              className="mt-1.5 w-full resize-none border border-white/10 bg-black px-3 py-2 text-xs text-white outline-none transition focus:border-amber-500/50"
+            />
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={closeCancel}
+                disabled={isCancelling}
+                className="border border-white/10 bg-black px-4 py-2.5 text-[10px] font-sans font-black uppercase tracking-widest text-neutral-300 transition hover:border-white/30 hover:text-white disabled:opacity-40"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                disabled={isCancelling}
+                className={`flex items-center gap-2 border px-4 py-2.5 text-[10px] font-sans font-black uppercase tracking-widest transition disabled:opacity-40 ${
+                  cancelTarget.status === 'PAID'
+                    ? 'border-purple-500/50 bg-purple-500/15 text-purple-200 hover:border-purple-400 hover:text-white'
+                    : 'border-rose-500/50 bg-rose-500/15 text-rose-200 hover:border-rose-400 hover:text-white'
+                }`}
+              >
+                {isCancelling
+                  ? 'Đang xử lý…'
+                  : (cancelTarget.status === 'PAID' ? 'Xác nhận hoàn tiền' : 'Xác nhận hủy')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

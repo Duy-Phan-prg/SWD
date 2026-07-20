@@ -306,6 +306,101 @@ class BookingIntegrationTests {
                 .andExpect(jsonPath("$.data.paymentAccount").doesNotExist());
     }
 
+    @Test
+    void adminCancelPaidBookingShouldRefundToCineWallet() throws Exception {
+        String adminToken = loginAs("phase6.refund.admin.", RoleName.ADMIN);
+        String customerToken = loginAs("phase6.refund.customer.", RoleName.CUSTOMER);
+        Showtime showtime = createShowtimeFixture();
+        createAdultTicketRule(adminToken);
+        Seat firstSeat = seatRepository.findByRoom(showtime.getRoom()).get(0);
+
+        Long bookingId = createPaidBooking(customerToken, showtime, firstSeat);
+
+        // Admin hủy vé đã thanh toán -> tiền hoàn về CineWallet của khách
+        mockMvc.perform(delete("/api/v1/admin/bookings/{bookingId}", bookingId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("reason", "Khách yêu cầu hủy"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REFUNDED"))
+                .andExpect(jsonPath("$.data.refundedAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.refundReason").value("Admin hoàn/hủy vé: Khách yêu cầu hủy"))
+                .andExpect(jsonPath("$.data.qrCode").doesNotExist());
+
+        // Ghế được giải phóng
+        Booking refunded = bookingRepository.findById(bookingId).orElseThrow();
+        assertThat(refunded.getStatus()).isEqualTo(BookingStatus.REFUNDED);
+        assertThat(refunded.getRefundMethod()).isEqualTo("CINEWALLET");
+
+        // Số dư ví của khách được ghi có đúng totalAmount
+        mockMvc.perform(get("/api/v1/wallet")
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.balance").value(95000));
+    }
+
+    @Test
+    void adminCancelCheckedInBookingShouldBeRejected() throws Exception {
+        String adminToken = loginAs("phase6.used.admin.", RoleName.ADMIN);
+        String customerToken = loginAs("phase6.used.customer.", RoleName.CUSTOMER);
+        Showtime showtime = createShowtimeFixture();
+        createAdultTicketRule(adminToken);
+        Seat firstSeat = seatRepository.findByRoom(showtime.getRoom()).get(0);
+
+        Long bookingId = createPaidBooking(customerToken, showtime, firstSeat);
+
+        // Ép trạng thái USED (đã check-in) — không được phép hoàn
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow();
+        booking.setStatus(BookingStatus.USED);
+        bookingRepository.save(booking);
+
+        mockMvc.perform(delete("/api/v1/admin/bookings/{bookingId}", bookingId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest());
+
+        assertThat(bookingRepository.findById(bookingId).orElseThrow().getStatus())
+                .isEqualTo(BookingStatus.USED);
+    }
+
+    private Long createPaidBooking(String customerToken, Showtime showtime, Seat seat) throws Exception {
+        String holdResponse = mockMvc.perform(post("/api/v1/bookings/hold")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new HoldSeatsRequest(
+                                showtime.getId(),
+                                List.of(seat.getId())
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long holdBookingId = objectMapper.readTree(holdResponse).at("/data/id").asLong();
+
+        String bookingResponse = mockMvc.perform(post("/api/v1/bookings")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CreateBookingRequest(
+                                holdBookingId,
+                                List.of(),
+                                null,
+                                false,
+                                List.of(new TicketSelectionRequest(TicketType.ADULT, 20, 1)),
+                                null
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long bookingId = objectMapper.readTree(bookingResponse).at("/data/id").asLong();
+
+        mockMvc.perform(post("/api/v1/payments/mock")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .param("bookingId", bookingId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"));
+
+        return bookingId;
+    }
+
     private Long createFoodItem(String adminToken) throws Exception {
         String response = mockMvc.perform(post("/api/v1/admin/foods/items")
                         .header("Authorization", "Bearer " + adminToken)
@@ -325,7 +420,7 @@ class BookingIntegrationTests {
     }
 
     private void createAdultTicketRule(String adminToken) throws Exception {
-        mockMvc.perform(post("/api/v1/admin/ticket-pricing/rules")
+        int status = mockMvc.perform(post("/api/v1/admin/ticket-pricing/rules")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new TicketPricingRuleRequest(
@@ -337,8 +432,11 @@ class BookingIntegrationTests {
                                 BigDecimal.valueOf(95000),
                                 true
                         ))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.ticketType").value("ADULT"));
+                .andReturn()
+                .getResponse()
+                .getStatus();
+        // 201 = tạo mới; 409 = quy tắc đã tồn tại (DB dùng chung giữa các test) — cả hai đều hợp lệ
+        assertThat(status).isIn(201, 409);
     }
 
     private Showtime createShowtimeFixture() {

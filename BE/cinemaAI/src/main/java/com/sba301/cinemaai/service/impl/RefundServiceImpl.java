@@ -59,7 +59,30 @@ public class RefundServiceImpl implements RefundService {
         });
     }
 
+    @Override
+    @Transactional
+    public void refundPaidBooking(Booking booking, String reason) {
+        applyPaidRefund(booking, buildBookingRefundReason(reason), false);
+        // Thông báo chung cho việc hủy vé lẻ (tránh gửi nhầm "suất chiếu bị hủy")
+        notificationService.notifyBookingCancelled(booking);
+    }
+
     private void processPaidBookingRefund(Booking booking, Showtime showtime, String refundReason) {
+        BigDecimal refundAmount = applyPaidRefund(booking, refundReason, true);
+        // Thông báo đặc thù cho hủy suất chiếu
+        notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
+        log.info("Refunded {} VND to CineWallet for booking {} due to showtime cancellation",
+                refundAmount, booking.getBookingCode());
+    }
+
+    /**
+     * Lõi hoàn tiền một vé PAID: ghi có CineWallet, ghi sổ giao dịch, giải phóng ghế,
+     * cập nhật booking + payment, gửi email, ghi audit. KHÔNG gửi push notification
+     * (để mỗi caller chọn thông điệp phù hợp). Idempotent theo booking.
+     *
+     * @return số tiền đã hoàn (totalAmount của vé)
+     */
+    private BigDecimal applyPaidRefund(Booking booking, String refundReason, boolean bulk) {
         BigDecimal refundAmount = booking.getTotalAmount();
 
         // 1. Hoàn điểm loyalty
@@ -74,7 +97,7 @@ public class RefundServiceImpl implements RefundService {
         wallet.setBalance(newBalance);
         cineWalletRepository.save(wallet);
 
-        // 3. Tạo giao dịch wallet
+        // 3. Tạo giao dịch wallet (idempotent theo booking)
         String refCode = "REFUND-" + booking.getBookingCode();
         if (!walletTransactionRepository.existsByBookingAndType(booking, WalletTransactionType.REFUND_CREDIT)) {
             walletTransactionRepository.save(new WalletTransaction(
@@ -96,7 +119,7 @@ public class RefundServiceImpl implements RefundService {
         booking.setRefundedAt(LocalDateTime.now());
         booking.setRefundReason(refundReason);
         booking.setRefundMethod("CINEWALLET");
-        booking.setBulkRefund(true);
+        booking.setBulkRefund(bulk);
         bookingRepository.save(booking);
 
         // 5. Cập nhật payment
@@ -113,8 +136,7 @@ public class RefundServiceImpl implements RefundService {
             paymentRepository.save(payment);
         }
 
-        // 6. Gửi thông báo + email
-        notificationService.notifyShowtimeCancelled(booking.getUser(), booking, showtime);
+        // 6. Gửi email
         mailService.sendWalletRefundNotice(
                 booking.getUser().getEmail(),
                 booking.getBookingCode(),
@@ -127,6 +149,15 @@ public class RefundServiceImpl implements RefundService {
                 refundAmount, booking.getBookingCode(), newBalance);
         auditLogService.record(AuditActionType.REFUND, "BOOKING", booking.getId(),
                 booking.getBookingCode() + " - " + refundAmount + " VND");
+
+        return refundAmount;
+    }
+
+    private String buildBookingRefundReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return "Admin hoàn/hủy vé";
+        }
+        return "Admin hoàn/hủy vé: " + reason.trim();
     }
 
     private void cancelUnpaidBooking(Booking booking) {

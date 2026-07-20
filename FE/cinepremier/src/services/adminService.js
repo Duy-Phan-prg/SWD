@@ -165,6 +165,6 @@ export const adminService = {
   // ── Bookings / Giao dịch ───────────────────────────────────────────────────
   getAdminBookings:     (token, params = {}) => bookingsApi.getAll(token, params),
   getAdminBooking:      (token, id)          => bookingsApi.getOne(token, id),
-  markBookingRefunded:  (token, id)          => request(`/api/v1/admin/bookings/${enc(id)}/mark-refunded`, { method: 'POST', token }),
-  requestBookingRefund: (token, id, reason)  => request(`/api/v1/admin/bookings/${enc(id)}/refund-request`, { method: 'POST', token, body: { reason } }),
+  // Hủy vé; nếu vé đã thanh toán (PAID) backend tự hoàn tiền về CineWallet của khách.
+  cancelBookingAdmin:   (token, id, reason)  => request(`/api/v1/admin/bookings/${enc(id)}${reason ? `?reason=${enc(reason)}` : ''}`, { method: 'DELETE', token }),
 };
