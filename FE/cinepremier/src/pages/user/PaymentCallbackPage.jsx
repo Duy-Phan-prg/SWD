@@ -19,8 +19,11 @@ export default function PaymentCallbackPage() {
     const orderInfo = params.get('vnp_OrderInfo');
     const transactionNo = params.get('vnp_TransactionNo');
 
-    // txnRef format: "{paymentId}-{bookingCode}"
-    const bookingCode = txnRef ? txnRef.split('-').slice(1).join('-') : null;
+    // txnRef format: "{paymentId}-{code}" — code là bookingCode ("BK...") cho vé,
+    // hoặc orderCode ("FO...") cho đơn bắp nước (food order add-on).
+    const code = txnRef ? txnRef.split('-').slice(1).join('-') : null;
+    const isFoodOrder = !!code && code.startsWith('FO');
+    const bookingCode = isFoodOrder ? null : code;
 
     setInfo({
       amount: amount ? (Number.parseInt(amount, 10) / 100).toLocaleString('vi-VN') + 'đ' : '',
@@ -28,12 +31,21 @@ export default function PaymentCallbackPage() {
       orderInfo,
       transactionNo,
       bookingCode,
+      isFoodOrder,
+      foodOrderCode: isFoodOrder ? code : null,
     });
 
     if (responseCode !== '00') {
       // VNPay báo thất bại rõ ràng
       setStatus(responseCode ? 'failed' : 'unknown');
       setFailReason('Giao dịch bị huỷ hoặc không thành công tại cổng VNPay.');
+      return;
+    }
+
+    // Đơn bắp nước: BE đã confirmPayment (set FoodOrder = PAID) ngay trong /vnpay/return
+    // trước khi redirect về đây, nên responseCode=00 là đủ tin cậy — không cần verify booking.
+    if (isFoodOrder) {
+      setStatus('success');
       return;
     }
 
@@ -96,12 +108,17 @@ export default function PaymentCallbackPage() {
             </div>
             <div>
               <h2 className="text-lg font-serif italic text-white uppercase tracking-wider font-bold">Thanh Toán Thành Công</h2>
-              <p className="text-[11px] text-zinc-400 mt-1">Giao dịch của bạn đã được xử lý. Vé đã được ghi nhận.</p>
+              <p className="text-[11px] text-zinc-400 mt-1">
+                {info.isFoodOrder
+                  ? 'Đã thanh toán bắp nước. Nhận tại quầy khi tới rạp!'
+                  : 'Giao dịch của bạn đã được xử lý. Vé đã được ghi nhận.'}
+              </p>
             </div>
             {info.amount && (
               <div className="border border-white/10 bg-black p-4 text-left space-y-2 text-[10px] font-mono text-neutral-400">
                 <div className="flex justify-between"><span>Số tiền:</span><span className="text-emerald-400 font-bold">{info.amount}</span></div>
-                {info.bookingCode && <div className="flex justify-between"><span>Mã đặt vé:</span><span className="text-white">{info.bookingCode}</span></div>}
+                {info.isFoodOrder && info.foodOrderCode && <div className="flex justify-between"><span>Mã đơn bắp nước:</span><span className="text-white">{info.foodOrderCode}</span></div>}
+                {!info.isFoodOrder && info.bookingCode && <div className="flex justify-between"><span>Mã đặt vé:</span><span className="text-white">{info.bookingCode}</span></div>}
                 {info.transactionNo && <div className="flex justify-between"><span>VNPAY Ref:</span><span className="text-white">{info.transactionNo}</span></div>}
               </div>
             )}

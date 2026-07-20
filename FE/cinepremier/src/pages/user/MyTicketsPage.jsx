@@ -85,11 +85,16 @@ export default function MyTicketsView() {
     setIsSubmittingFoodOrder(true);
     try {
       const order = await bookingService.createFoodOrder(accessToken, foodOrderTicket.bookingId, { foods });
-      await paymentService.mockFoodOrderPayment(accessToken, order.id);
-      showToast(`Đã đặt thêm bắp nước (${order.orderCode}). Nhận tại quầy khi tới rạp!`);
-      setFoodOrderTicket(null);
-      setFoodOrderQuantities({});
-      loadBookings();
+      // Thanh toán thật qua VNPay — redirect trình duyệt sang cổng thanh toán.
+      // Khi VNPay báo thành công, BE (confirmPayment) sẽ set FoodOrder = PAID và gắn vào mã đơn
+      // để staff theo dõi được. KHÔNG fallback mock: nếu tạo phiên lỗi thì báo và dừng.
+      const result = await paymentService.createVnpayFoodOrderPayment(accessToken, order.id);
+      const paymentUrl = result?.paymentUrl ?? result?.payment_url;
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+        return;
+      }
+      showToast('Không tạo được phiên thanh toán VNPay. Vui lòng thử lại.');
     } catch (err) {
       showToast(err?.message || 'Không thể đặt thêm bắp nước. Vui lòng thử lại.');
     } finally {
@@ -256,6 +261,18 @@ export default function MyTicketsView() {
       const isWatching = b.status === 'USED' && b.showtimeEnd
         && Date.now() < new Date(b.showtimeEnd).getTime();
 
+      // Gộp bắp nước đã đặt (cả chọn lúc đặt vé lẫn đặt thêm qua VNPay) theo tên
+      // để hiển thị gọn trên vé của khách. BE chỉ trả các món đã thanh toán (food order PAID).
+      const foods = Array.isArray(b.foods)
+        ? Object.values(b.foods.reduce((acc, f) => {
+            const key = f.name || f.foodItemId || f.foodComboId;
+            if (!acc[key]) acc[key] = { name: f.name || 'Bắp nước', quantity: 0, totalPrice: 0 };
+            acc[key].quantity += Number(f.quantity || 0);
+            acc[key].totalPrice += Number(f.totalPrice || 0);
+            return acc;
+          }, {}))
+        : [];
+
       return {
         bookingId: b.id,
         id: b.bookingCode || String(b.id),
@@ -287,6 +304,7 @@ export default function MyTicketsView() {
         isClientExpired,
         isHoldActive,
         canCancel: canCancelBooking(b),
+        foods,
         totalAmount: b.totalAmount,
         seatDetails: Array.isArray(b.seats) ? b.seats : [],
         showtimeEnd: b.showtimeEnd || null,
@@ -689,6 +707,23 @@ export default function MyTicketsView() {
                       </div>
 
                     </div>
+
+                    {/* BẮP NƯỚC ĐÃ ĐẶT (đã thanh toán) */}
+                    {Array.isArray(t.foods) && t.foods.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-neutral-850">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-emerald-400/80 mb-1.5">🍿 Bắp nước đã đặt</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {t.foods.map((f, i) => (
+                            <span
+                              key={`${t.bookingId}-food-${i}`}
+                              className="inline-flex items-center gap-1 border border-emerald-500/20 bg-emerald-950/20 px-2 py-0.5 text-[9px] font-mono text-emerald-200"
+                            >
+                              {f.name} <span className="text-emerald-400/60">×{f.quantity}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                   </div>
 
