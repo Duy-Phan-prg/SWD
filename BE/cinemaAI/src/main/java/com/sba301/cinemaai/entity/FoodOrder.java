@@ -20,6 +20,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Đơn bắp nước đặt sau khi booking đã thanh toán (add-on order).
+ * <p>
+ * Khác với {@code BookingFoodItem} (chọn đồ ăn lúc đặt vé), FoodOrder
+ * đại diện cho một lần mua tại quầy (staff) hoặc online trong khi chưa hết suất chiếu.
+ * Mỗi đơn có bản ghi {@code Payment} riêng, cho phép tách doanh thu bắp nước
+ * khỏi doanh thu vé trong báo cáo.
+ * </p>
+ */
 @Getter
 @Entity
 @Table(

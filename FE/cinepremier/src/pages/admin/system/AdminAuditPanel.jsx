@@ -32,7 +32,12 @@ const TARGET_TABS = [
 
 const getActionMeta = (action) => ACTION_META[action] || { label: action, className: 'border-white/10 bg-neutral-900 text-neutral-300' };
 
-// Audit log thật từ backend: ai làm gì, lúc nào — refresh vẫn còn dữ liệu
+/**
+ * Panel hiển thị audit log toàn hệ thống — ai làm gì, với đối tượng nào, lúc mấy giờ.
+ * Hỗ trợ lọc theo loại đối tượng (targetType prefix) và phân trang 20 bản ghi/trang.
+ *
+ * @param {{ getAdminToken: () => string|null, showToast: (msg: string) => void }} ctx
+ */
 export default function AdminAuditPanel({ ctx }) {
   const { getAdminToken, showToast } = ctx;
   const [logs, setLogs] = useState([]);

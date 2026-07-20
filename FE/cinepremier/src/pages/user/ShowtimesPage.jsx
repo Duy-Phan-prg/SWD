@@ -38,7 +38,11 @@ const fetchShowtimesForDate = async (dateKey) => {
   return rawList;
 };
 
-// Trang "Lịch chiếu": chọn rạp + ngày trước, xổ phim và giờ chiếu, chọn phim cuối cùng
+/**
+ * Trang Lịch Chiếu: chọn ngày (7 ngày tới) → danh sách phim có suất → expand phim để xem giờ.
+ * Các ngày được prefetch ngầm sau khi ngày đầu load xong; cache TTL 90 giây.
+ * Bấm vào giờ chiếu chuyển thẳng sang trang đặt vé với showtimeId được chọn sẵn.
+ */
 export default function ShowtimesPage() {
   const navigate = useNavigate();
   const { moviesList = [], publicCinema, fetchPublicCinema } = useMovies();

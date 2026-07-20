@@ -18,7 +18,13 @@ const TICKET_TYPE_LABELS = { ADULT: 'Người lớn', CHILD: 'Trẻ em', STUDENT
 
 const formatVnd = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
-// Panel quản lý vé: xem vé đã bán ra gồm gì, thiếu gì; số lượng bắp nước bán ra
+/**
+ * Panel quản lý vé — xem toàn bộ booking, ghế, loại vé, bắp nước kèm theo.
+ * Row có thể expand để xem vé từng ghế (ticketCode), bắp nước, và flag dữ liệu thiếu.
+ * Bộ lọc trạng thái + phân trang 15 đơn/trang.
+ *
+ * @param {{ getAdminToken: () => string|null, showToast: (msg: string) => void }} ctx
+ */
 export default function AdminTicketsPanel({ ctx }) {
   const { getAdminToken, showToast } = ctx;
   const [statusFilter, setStatusFilter] = useState('ALL');

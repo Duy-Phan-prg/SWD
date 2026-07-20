@@ -11,8 +11,9 @@ public class RestTemplateConfig {
     @Bean
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(3_000);
-        factory.setReadTimeout(20_000);
+        factory.setConnectTimeout(5_000);
+        // Ollama chạy CPU cần 30-60s+ mỗi lượt — timeout phải dài hơn FE (120s)
+        factory.setReadTimeout(130_000);
         return new RestTemplate(factory);
     }
 

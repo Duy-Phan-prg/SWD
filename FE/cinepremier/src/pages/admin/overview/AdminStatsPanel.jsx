@@ -8,8 +8,13 @@ import { adminService } from '../../../services/adminService';
 const toDateInput = (date) => date.toISOString().split('T')[0];
 const formatVnd = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
 
-// Thống kê phục vụ quyết định giá: ghế trống theo suất, no-show, giờ cao điểm,
-// tỷ lệ đặt-không-thanh-toán và doanh số bắp nước
+/**
+ * Panel thống kê vận hành — cung cấp số liệu để ra quyết định giá và lịch chiếu:
+ * tỷ lệ lấp đầy suất chiếu, no-show, giờ cao điểm, đặt-bỏ (abandoned), doanh thu bắp nước,
+ * heatmap ghế theo phòng, và danh sách tài khoản loyalty sắp hết hạn điểm.
+ *
+ * @param {{ getAdminToken: () => string|null, showToast: (msg: string) => void }} ctx
+ */
 export default function AdminStatsPanel({ ctx }) {
   const { getAdminToken, showToast } = ctx;
   const [fromDate, setFromDate] = useState(() => toDateInput(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
