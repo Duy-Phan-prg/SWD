@@ -215,6 +215,21 @@ public class PaymentServiceImpl implements PaymentService {
     private void confirmPayment(Payment payment, String transactionNo, Map<String, String> params) {
         if (payment.getStatus() == PaymentStatus.SUCCESS) return;
 
+        // Food order payments have no hold window — skip expiry check
+        if (payment.getFoodOrder() == null) {
+            Booking booking = payment.getBooking();
+            LocalDateTime holdExpiry = booking.getHoldExpiresAt();
+            if (holdExpiry != null && LocalDateTime.now().isAfter(holdExpiry)) {
+                // Hold đã hết hạn — từ chối xác nhận, không được bán ghế
+                log.warn(
+                    "Payment {} for booking {} REJECTED: hold expired at {} (now={}). Seats NOT confirmed.",
+                    payment.getId(), booking.getBookingCode(), holdExpiry, LocalDateTime.now()
+                );
+                markPaymentFailed(payment, "HOLD_EXPIRED: " + toJson(params));
+                return;
+            }
+        }
+
         markPaymentSuccess(payment, transactionNo, toJson(params), params);
 
         if (payment.getFoodOrder() != null) {

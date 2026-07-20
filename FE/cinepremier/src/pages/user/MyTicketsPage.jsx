@@ -548,13 +548,12 @@ export default function MyTicketsView() {
                     />
 
                     {/* Tech Badge on poster */}
-                    <div className={`absolute left-2.5 top-2.5 border text-[9px] font-black tracking-widest px-2 py-0.5 uppercase shadow-sm ${
-                      t.isClientExpired
-                        ? 'bg-zinc-900/95 border-zinc-600 text-zinc-400'
-                        : t.isWatching
-                          ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300'
-                          : 'bg-red-950/90 border-red-500/50 text-white/90'
-                    }`}>
+                    <div className={`absolute left-2.5 top-2.5 border text-[9px] font-black tracking-widest px-2 py-0.5 uppercase shadow-sm ${t.isClientExpired
+                      ? 'bg-zinc-900/95 border-zinc-600 text-zinc-400'
+                      : t.isWatching
+                        ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300'
+                        : 'bg-red-950/90 border-red-500/50 text-white/90'
+                      }`}>
                       {t.badge}
                     </div>
                   </div>
@@ -615,9 +614,8 @@ export default function MyTicketsView() {
 
                         <div className="min-w-0">
                           {t.isHoldActive && t.holdSecondsLeft !== null ? (
-                            <p className={`text-[10px] font-mono font-black tracking-wider leading-tight ${
-                              t.holdSecondsLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-amber-400'
-                            }`}>
+                            <p className={`text-[10px] font-mono font-black tracking-wider leading-tight ${t.holdSecondsLeft <= 30 ? 'text-red-400 animate-pulse' : 'text-amber-400'
+                              }`}>
                               ⏳ Còn {formatCountdown(t.holdSecondsLeft)} để thanh toán
                             </p>
                           ) : (
@@ -709,14 +707,13 @@ export default function MyTicketsView() {
                             title={`QR vé ${t.code}`}
                           />
                         </div>
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">QR đặt chỗ · {t.seatDetails.length} vé bên trong</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">QR đặt chỗ · Bao gồm {t.seatDetails.length} ghế.</p>
                         <div className="w-full space-y-1">
                           {t.seatDetails.map((seat) => (
                             <div key={seat.ticketCode || seat.seatId} className="flex items-center gap-2 border border-white/8 bg-neutral-950 px-2 py-1.5">
                               <span className="w-7 shrink-0 font-mono text-[10px] font-black text-white">{seat.rowLabel}{seat.seatNumber}</span>
-                              <span className={`shrink-0 text-[7px] font-sans font-black uppercase tracking-widest ${
-                                seat.ticketType === 'STUDENT' ? 'text-sky-400' : seat.ticketType === 'CHILD' ? 'text-amber-400' : 'text-neutral-400'
-                              }`}>
+                              <span className={`shrink-0 text-[7px] font-sans font-black uppercase tracking-widest ${seat.ticketType === 'STUDENT' ? 'text-sky-400' : seat.ticketType === 'CHILD' ? 'text-amber-400' : 'text-neutral-400'
+                                }`}>
                                 {seat.ticketType === 'STUDENT' ? 'Sinh viên' : seat.ticketType === 'CHILD' ? 'Trẻ em' : 'Người lớn'}
                               </span>
                               <span className="ml-auto shrink-0">
@@ -729,7 +726,7 @@ export default function MyTicketsView() {
                             </div>
                           ))}
                         </div>
-                        <p className="text-[8px] leading-relaxed text-neutral-500 text-center">Một mã QR cho cả đơn — nhân viên quét là thấy đủ vé, xác nhận từng ghế như vé máy bay</p>
+                        {/* <p className="text-[8px] leading-relaxed text-neutral-500 text-center">Một mã QR cho cả đơn — nhân viên quét là thấy đủ vé, xác nhận từng ghế như vé máy bay</p> */}
                       </>
                     ) : t.qrCode ? (
                       <>

@@ -210,9 +210,8 @@ export default function Header({
                         aria-selected={index === activeSuggestion}
                         onMouseEnter={() => setActiveSuggestion(index)}
                         onClick={() => openMovieSuggestion(movie)}
-                        className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition ${
-                          index === activeSuggestion ? 'bg-white/10' : 'hover:bg-white/5'
-                        }`}
+                        className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition ${index === activeSuggestion ? 'bg-white/10' : 'hover:bg-white/5'
+                          }`}
                       >
                         {movie.posterUrl ? (
                           <img src={movie.posterUrl} alt="" className="h-11 w-8 shrink-0 rounded-sm border border-white/10 object-cover" referrerPolicy="no-referrer" />
@@ -423,8 +422,8 @@ export default function Header({
                 }`}
               id="nav-showtimes"
             >
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>LỊCH CHIẾU</span>
+              <Search className="h-3.5 w-3.5" />
+              <span>TÌM PHIM</span>
             </button>
 
             {!isAdminRole && (

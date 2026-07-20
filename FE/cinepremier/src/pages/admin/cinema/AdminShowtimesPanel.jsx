@@ -280,6 +280,21 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
   const effectiveMinDate = maxDateInput(today, minDate);
   const hasValidDateRange = !maxDate || !effectiveMinDate || effectiveMinDate <= maxDate;
 
+  // Local state cho phép user gõ tự do, không bị lock bởi controlled value
+  const [hourStr, setHourStr] = React.useState(() => timePart ? timePart.split(':')[0] : '');
+  const [minStr, setMinStr] = React.useState(() => timePart ? timePart.split(':')[1] : '');
+
+  // Sync local state khi external value thay đổi (vd: click suggested slot)
+  const prevValueRef = React.useRef(value);
+  React.useEffect(() => {
+    if (value !== prevValueRef.current) {
+      prevValueRef.current = value;
+      const tp = value && value.includes('T') ? value.split('T')[1].slice(0, 5) : '';
+      setHourStr(tp ? tp.split(':')[0] : '');
+      setMinStr(tp ? tp.split(':')[1] : '');
+    }
+  });
+
   const clampDateToRange = (dateValue) => {
     if (!dateValue) return '';
     if (effectiveMinDate && dateValue < effectiveMinDate) return effectiveMinDate;
@@ -528,6 +543,7 @@ export default function AdminShowtimesPanel({ ctx }) {
   const [confirmDelete, setConfirmDelete] = useState(null); // showtimeId
   const [confirmCancel, setConfirmCancel] = useState(null); // showtime object
   const [cancelReason, setCancelReason] = useState('');
+  const [refundSummary, setRefundSummary] = useState(null); // result từ cancelShowtimeAndRefund
   const [copySource, setCopySource] = useState(null); // showtime object
   const [copyDate, setCopyDate] = useState('');
   const [isCopying, setIsCopying] = useState(false);
@@ -1308,11 +1324,10 @@ export default function AdminShowtimesPanel({ ctx }) {
                             key={slot.startTime}
                             type="button"
                             onClick={() => setForm({ ...form, startTime: String(slot.startTime).slice(0, 16) })}
-                            className={`border px-2.5 py-1.5 font-mono text-[10px] font-bold transition ${
-                              isSelected
-                                ? 'border-emerald-400 bg-emerald-400 text-black'
-                                : 'border-emerald-500/30 bg-black text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15'
-                            }`}
+                            className={`border px-2.5 py-1.5 font-mono text-[10px] font-bold transition ${isSelected
+                              ? 'border-emerald-400 bg-emerald-400 text-black'
+                              : 'border-emerald-500/30 bg-black text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/15'
+                              }`}
                             title={`Suất ${startLabel} – ${endLabel} (đã gồm thời gian dọn phòng)`}
                           >
                             {startLabel} – {endLabel}
@@ -1486,28 +1501,28 @@ export default function AdminShowtimesPanel({ ctx }) {
                           e.preventDefault();
                           setEditingBulkSlotIndex(i);
                         }}
-                        className={`relative min-h-[132px] overflow-hidden rounded-lg border-2 bg-white text-left shadow-sm transition ${slotError ? 'border-rose-500 ring-2 ring-rose-500/50' : activeBulkSlotIndex === i ? 'border-sky-400 ring-2 ring-sky-400/40' : selected ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-zinc-300 opacity-45 hover:opacity-80'}`}>
-                        <div className="px-5 py-4">
+                        className={`relative min-h-[168px] overflow-hidden rounded-lg border-2 bg-white text-left shadow-sm transition ${slotError ? 'border-rose-500 ring-2 ring-rose-500/50' : activeBulkSlotIndex === i ? 'border-sky-400 ring-2 ring-sky-400/40' : selected ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-zinc-300 opacity-45 hover:opacity-80'}`}>
+                        <div className="px-5 py-4 pt-10">
                           {slot.startTime ? (
                             <>
                               <div className="flex items-baseline gap-1.5">
-                                <span className="text-3xl font-black tracking-normal text-zinc-950 font-mono">{formatTimeOnly(slot.startTime)}</span>
-                                <span className="text-xl font-semibold text-zinc-600">→ {formatTimeOnly(endTime)}</span>
+                                <span className="text-3xl font-black tracking-normal text-zinc-900 font-mono">{formatTimeOnly(slot.startTime)}</span>
+                                <span className="text-2xl font-black tracking-normal text-zinc-900 font-mono">→ {formatTimeOnly(endTime)}</span>
                               </div>
                               {bulkStepMinutes > 0 && (
                                 <p className="mt-0.5 text-[9px] font-semibold text-zinc-600">
-                                  Trả phòng {formatTimeOnly(addMinutes(slot.startTime, bulkStepMinutes))} (+15p dọn)
+                                  Phòng trống {formatTimeOnly(addMinutes(slot.startTime, bulkStepMinutes))} (+15p dọn)
                                 </p>
                               )}
                             </>
                           ) : (
-                            <p className="text-xl font-black uppercase tracking-wider text-zinc-400 py-1">Chưa đặt giờ</p>
+                            <p className="text-xl font-black uppercase tracking-wider text-zinc-400 py-2">Chưa khởi tạo</p>
                           )}
                           <p className="mt-2 truncate text-[10px] font-bold uppercase tracking-wider text-zinc-600">
                             {rooms.find(r => String(r.id) === String(slot.roomId))?.name || 'Chưa chọn phòng'}
                           </p>
                         </div>
-                        <div className={`border-t px-5 py-3 text-center text-sm font-bold ${night ? 'border-orange-100 bg-orange-50 text-orange-600' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}>
+                        <div className={`border px-5 pt-0 pb-5 text-center text-sm font-bold ${night ? 'border-orange-100 bg-orange-50 text-orange-600' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}>
                           {capacity ? `Sức chứa: ${capacity} ghế` : slot.roomId ? 'Chưa có dữ liệu ghế' : 'Chưa chọn phòng'}
                         </div>
                         <div className="absolute right-2 top-2 flex gap-1">

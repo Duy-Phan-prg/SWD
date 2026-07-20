@@ -1553,42 +1553,42 @@ export default function AdminDashboard({
                 >
                   <button
                     onClick={() => { playPulseSound(470, 'sine', 0.05); changeAdminSection('genres'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'genres'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'genres'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <Tags className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>THỂ LOẠI PHIM</span>
+                      <span className="whitespace-nowrap">THỂ LOẠI PHIM</span>
                     </span>
                     {activeTab === 'genres' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                   <button
                     onClick={() => { playPulseSound(465, 'sine', 0.05); changeAdminSection('actors'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'actors'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'actors'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <Users className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>DIỄN VIÊN</span>
+                      <span className="whitespace-nowrap">DIỄN VIÊN</span>
                     </span>
                     {activeTab === 'actors' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                   <button
                     onClick={() => { playPulseSound(460, 'sine', 0.05); changeAdminSection('movies'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'movies'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'movies'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <Film className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>THƯ VIỆN PHIM</span>
+                      <span className="whitespace-nowrap">THƯ VIỆN PHIM</span>
                     </span>
                     {activeTab === 'movies' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
@@ -1617,14 +1617,14 @@ export default function AdminDashboard({
                 >
                   <button
                     onClick={() => { playPulseSound(478, 'sine', 0.05); changeAdminSection('foods'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'foods'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'foods'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <ShoppingBag className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>QUẢN LÝ BẮP NƯỚC</span>
+                      <span className="whitespace-nowrap">QUẢN LÝ BẮP NƯỚC</span>
                     </span>
                     {activeTab === 'foods' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
@@ -1651,54 +1651,54 @@ export default function AdminDashboard({
                 >
                   <button
                     onClick={() => { playPulseSound(470, 'sine', 0.05); changeAdminSection('rooms'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'rooms'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'rooms'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <Layers className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>PHÒNG CHIẾU & GHẾ</span>
+                      <span className="whitespace-nowrap">PHÒNG CHIẾU & GHẾ</span>
                     </span>
                     {activeTab === 'rooms' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                   <button
                     onClick={() => { playPulseSound(480, 'sine', 0.05); changeAdminSection('showtimes'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'showtimes'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'showtimes'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <Calendar className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>ĐIỀU PHỐI LỊCH CHIẾU</span>
+                      <span className="whitespace-nowrap">ĐIỀU PHỐI LỊCH CHIẾU</span>
                     </span>
                     {activeTab === 'showtimes' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
                   <button
                     onClick={() => { playPulseSound(492, 'sine', 0.05); changeAdminSection('tickets'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'tickets'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'tickets'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <FileText className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>QUẢN LÝ VÉ</span>
+                      <span className="whitespace-nowrap">QUẢN LÝ VÉ</span>
                     </span>
                     {activeTab === 'tickets' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
                   <button
                     onClick={() => { playPulseSound(500, 'sine', 0.05); changeAdminSection('transactions'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'transactions'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'transactions'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <FileText className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>GIAO DỊCH</span>
+                      <span className="whitespace-nowrap">GIAO DỊCH</span>
                     </span>
                     {activeTab === 'transactions' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
@@ -1726,27 +1726,27 @@ export default function AdminDashboard({
                 >
                   <button
                     onClick={() => { playPulseSound(505, 'sine', 0.05); changeAdminSection('statistics'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'statistics'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'statistics'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <BarChart2 className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>THỐNG KÊ MUA BÁN</span>
+                      <span className="whitespace-nowrap">THỐNG KÊ MUA BÁN</span>
                     </span>
                     {activeTab === 'statistics' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
                   <button
                     onClick={() => { playPulseSound(508, 'sine', 0.05); changeAdminSection('audit'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'audit'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'audit'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <ShieldAlert className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>AUDIT LOG</span>
+                      <span className="whitespace-nowrap">AUDIT LOG</span>
                     </span>
                     {activeTab === 'audit' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
@@ -1773,56 +1773,56 @@ export default function AdminDashboard({
                 >
                   <button
                     onClick={() => { playPulseSound(510, 'sine', 0.05); changeAdminSection('users'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'users'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'users'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <Users className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>QUẢN LÝ NGƯỜI DÙNG</span>
+                      <span className="whitespace-nowrap">QUẢN LÝ NGƯỜI DÙNG</span>
                     </span>
                     {activeTab === 'users' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                   <button
                     onClick={() => { playPulseSound(515, 'sine', 0.05); changeAdminSection('reviews'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'reviews'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'reviews'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <MessageSquare className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>ĐÁNH GIÁ</span>
+                      <span className="whitespace-nowrap">ĐÁNH GIÁ</span>
                     </span>
                     {activeTab === 'reviews' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                   <button
                     onClick={() => { playPulseSound(520, 'sine', 0.05); changeAdminSection('loyalty'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'loyalty'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'loyalty'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <DollarSign className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>QUẢN LÝ ĐIỂM</span>
+                      <span className="whitespace-nowrap">QUẢN LÝ ĐIỂM</span>
                     </span>
                     {activeTab === 'loyalty' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
 
                   <button
                     onClick={() => { playPulseSound(525, 'sine', 0.05); changeAdminSection('cinewallet'); }}
-                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'cinewallet'
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'cinewallet'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
                       : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
                       <Wallet className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span>CINEWALLET</span>
+                      <span className="whitespace-nowrap">CINEWALLET</span>
                     </span>
                     {activeTab === 'cinewallet' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
