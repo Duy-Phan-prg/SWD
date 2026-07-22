@@ -243,6 +243,9 @@ export default function BookingView() {
   const [heldPaymentSummary, setHeldPaymentSummary] = useState(null);
   const [paidBooking, setPaidBooking] = useState(null);
   const heldSeatIdsRef = useRef(null);
+  // Lưu số điểm GỐC trước khi trừ tạm khi hold ghế.
+  // Khi quay lại: SET tuyệt đối về giá trị này, tránh cộng tích luỹ nhiều lần.
+  const loyaltyPointsBeforeHoldRef = useRef(null);
 
   // Sau khi thanh toán thành công: tải booking để lấy QR thật + mã vé từng ghế
   useEffect(() => {
@@ -981,6 +984,13 @@ export default function BookingView() {
   const handleBackToBooking = () => {
     setPaymentState('booking');
     setBookingStep('combos');
+    // Restore điểm TUYỆT ĐỐI từ ref (không cộng tích luỹ),
+    // tránh việc đi đi quay lại nhiều lần khiến điểm ngày càng tăng.
+    if (loyaltyPointsBeforeHoldRef.current !== null) {
+      setLoyaltyPoints(loyaltyPointsBeforeHoldRef.current);
+      loyaltyPointsBeforeHoldRef.current = null;
+    }
+    // Giữ nguyên loyaltyPointsInput để user thấy lại số điểm đã nhập.
     // Xóa heldPaymentSummary cũ để tổng hóa đơn tính lại thực thời theo bắp nước mới thêm
     setHeldPaymentSummary(null);
     if (concessions.length === 0) fetchPublicFoodCatalog({ force: true });
@@ -1107,7 +1117,10 @@ export default function BookingView() {
       setHoldSecondsLeft(holdResult.holdExpiresAt
         ? Math.max(0, Math.ceil((new Date(holdResult.holdExpiresAt).getTime() - Date.now()) / 1000))
         : HOLD_DURATION_SECONDS);
+      // Server trừ điểm ngay khi hold ghế (không phải khi thanh toán xong).
+      // Lưu giá trị gốc vào ref trước khi trừ, để khi quay lại có thể SET tuyệt đối (không cộng tích luỹ).
       if (loyaltyPointsToRedeem > 0) {
+        loyaltyPointsBeforeHoldRef.current = loyaltyPoints;
         setLoyaltyPoints(points => Math.max(0, points - loyaltyPointsToRedeem));
       }
 
