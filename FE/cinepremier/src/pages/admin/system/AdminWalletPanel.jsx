@@ -67,7 +67,7 @@ export default function AdminWalletPanel({ ctx }) {
   const [processing, setProcessing] = useState(null);
   const [selectedWd, setSelectedWd] = useState(null);
   const [processNote, setProcessNote] = useState("");
-  const [processMethod, setProcessMethod] = useState("Chuyển khoản ngân hàng");
+  const [processMethod] = useState("BANK_TRANSFER");
 
   const fetchDashboard = useCallback(async () => {
     const token = getAdminToken?.(false);
@@ -107,7 +107,7 @@ export default function AdminWalletPanel({ ctx }) {
       await adminService.approveWithdrawal(token, wd.id, { method: processMethod, note: processNote });
       showToast?.("Đã duyệt yêu cầu rút tiền #" + wd.id);
       playPulseSound?.(600, "sine", 0.06);
-      setSelectedWd(null); setProcessNote(""); setProcessMethod("Chuyển khoản ngân hàng");
+      setSelectedWd(null); setProcessNote("");
       fetchWithdrawals(wdPage.page);
       fetchDashboard();
     } catch (e) { showToast?.("Lỗi: " + (e.message || "Không thể duyệt")); }
@@ -353,31 +353,18 @@ export default function AdminWalletPanel({ ctx }) {
 
               {/* Process form */}
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "Inter, sans-serif" }}>
-                  Phương thức chuyển
-                </label>
-                <select
-                  value={processMethod}
-                  onChange={(e) => setProcessMethod(e.target.value)}
-                  style={{
-                    padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(255,255,255,0.04)", color: "#fff", fontSize: 12,
-                    fontFamily: "Inter, sans-serif", outline: "none",
-                  }}
-                >
-                  <option value="Chuyển khoản ngân hàng">Chuyển khoản ngân hàng</option>
-                  <option value="Ví MoMo">Ví MoMo</option>
-                  <option value="Ví ZaloPay">Ví ZaloPay</option>
-                  <option value="Tiền mặt">Tiền mặt</option>
-                </select>
+                <div style={{ padding: "10px 14px", background: "rgba(6,182,212,0.06)", borderRadius: 8, border: "1px solid rgba(6,182,212,0.2)", display: "flex", alignItems: "center", gap: 8 }}>
+                  <CreditCard size={13} color="#06b6d4" />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#06b6d4", fontFamily: "Inter, sans-serif" }}>Chuyển khoản ngân hàng</span>
+                </div>
 
                 <label style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "Inter, sans-serif", marginTop: 4 }}>
-                  Ghi chú
+                  Ghi chú / Mã giao dịch
                 </label>
                 <textarea
                   value={processNote}
                   onChange={(e) => setProcessNote(e.target.value)}
-                  placeholder="Mã giao dịch, ghi chú xử lý..."
+                  placeholder="Mã giao dịch ngân hàng, ghi chú xử lý..."
                   rows={3}
                   style={{
                     padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",

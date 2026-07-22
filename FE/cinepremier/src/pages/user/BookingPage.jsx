@@ -157,7 +157,7 @@ export default function BookingView() {
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
   // Cho phép đặt vé khi phim NOW_SHOWING hoặc SCHEDULED (có thể có suất chiếu mở từ trang Lịch chiếu)
   const isMovieBookable = movie?.status === 'NOW_SHOWING'
-    || movie?.status === 'SCHEDULED'
+
     || (!movie?.status && !movie?.isUpcoming);
   const childTicketsAllowed = getAgeRatingMinimum(movie?.ageRating) <= CHILD_TICKET_MAX_AGE;
   const onBack = () => navigate(-1);

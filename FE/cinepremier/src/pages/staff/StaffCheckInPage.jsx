@@ -14,6 +14,7 @@ import {
   Search,
   ShieldCheck,
   Ticket,
+  Wallet,
   XCircle,
 } from 'lucide-react';
 import jsQR from 'jsqr';
@@ -21,6 +22,7 @@ import { motion } from 'motion/react';
 import { getStoredAuth } from '../../services/authService';
 import { staffService } from '../../services/staffService';
 import { useAuthStore } from '../../stores/useAuthStore';
+import StaffWalletPanel from './StaffWalletPanel';
 
 const FOOD_PAGE_SIZE = 10;
 const BOOKINGS_PAGE_SIZE = 8;
@@ -257,15 +259,15 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
             </div>
           )}
 
-          {canSellFood && (
-            <button
-              type="button"
-              onClick={onOpenCounterSale}
-              className="flex w-full items-center justify-center gap-2 border border-purple-400/40 bg-purple-500/10 px-4 py-3 text-[9px] font-black uppercase tracking-widest text-purple-300 transition hover:bg-purple-400 hover:text-black"
-            >
-              🍿 Bán thêm bắp nước cho booking này
-            </button>
-          )}
+          {/* {canSellFood && (
+            // <button
+            //   type="button"
+            //   onClick={onOpenCounterSale}
+            //   className="flex w-full items-center justify-center gap-2 border border-purple-400/40 bg-purple-500/10 px-4 py-3 text-[9px] font-black uppercase tracking-widest text-purple-300 transition hover:bg-purple-400 hover:text-black"
+            // >
+            //   🍿 Bán thêm bắp nước cho booking này
+            // </button>
+          )} */}
         </div>
       )}
 
@@ -280,6 +282,7 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
 
 export default function StaffCheckInPage() {
   const currentUser = useAuthStore((state) => state.currentUser);
+  const [activeSection, setActiveSection] = useState('checkin'); // 'checkin' | 'wallet'
   const [qrCode, setQrCode] = useState('');
   const [bookingCode, setBookingCode] = useState('');
   const [result, setResult] = useState(null);
@@ -870,758 +873,785 @@ export default function StaffCheckInPage() {
       <div className="staff-grid-bg" />
 
       <main className="relative z-10 mx-auto max-w-[1500px] space-y-5 px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-        <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden border border-neutral-800 bg-gradient-to-r from-[#090909] to-[#050505] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-6">
-            <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_62%)]" />
-            <div className="relative">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
 
-                <span className="border border-purple-400/20 bg-purple-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-purple-300">
-                  STAFF OPERATIONS
-                </span>
-              </div>
-              <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Kiểm soát vé bằng QR booking</h2>
-              <p className="mt-3 max-w-2xl text-xs leading-6 text-neutral-400">
-                Mỗi ghế có một mã QR riêng như thẻ lên máy bay. Quét mã ghế để check-in từng người, hoặc quét mã booking để xác nhận cả nhóm cùng lúc.
-              </p>
-              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
-                Nhân viên: {currentUser?.fullName || currentUser?.name || currentUser?.email || 'STAFF'}
-              </p>
-            </div>
-          </motion.div>
+        {/* Tab Navigation */}
+        <div style={{ display: 'flex', gap: 6, padding: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, width: 'fit-content' }}>
+          <button
+            onClick={() => setActiveSection('checkin')}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'checkin' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent', color: activeSection === 'checkin' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'checkin' ? '0 2px 12px rgba(16,185,129,0.35)' : 'none', transition: 'all 0.2s' }}
+          >
+            <ScanLine size={14} /> Check-in & Vận hành
+          </button>
+          <button
+            onClick={() => setActiveSection('wallet')}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'wallet' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent', color: activeSection === 'wallet' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'wallet' ? '0 2px 12px rgba(245,158,11,0.35)' : 'none', transition: 'all 0.2s' }}
+          >
+            <Wallet size={14} /> Quản lý ví
+          </button>
+        </div>
 
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="border border-neutral-800 bg-[#070707] p-5">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Phiên hiện tại</p>
-            <p className="mt-1 text-2xl font-black text-white">{stats.checked}/{stats.total}</p>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="border border-emerald-400/20 bg-emerald-400/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-emerald-200/70">Đã vào</p></div>
-              <div className="border border-purple-400/20 bg-purple-500/10 p-2.5"><p className="text-lg font-black text-purple-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-purple-200/70">Chờ vào</p></div>
-              <div className="border border-neutral-800 bg-black p-2.5"><p className="text-lg font-black text-white">{stats.total}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã tra</p></div>
-            </div>
-          </motion.div>
-        </section>
+        {/* Wallet Panel */}
+        {activeSection === 'wallet' && (
+          <StaffWalletPanel token={getToken()} showToast={(msg) => console.log('[Wallet]', msg)} />
+        )}
 
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.75fr)]">
-          <div className="border border-neutral-800 bg-[#070707] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.35)] sm:p-7">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-400">Quét/Xác nhận QR</p>
-                  <h3 className="mt-2 text-xl font-black uppercase text-white">Check-in bằng mã QR</h3>
-                  <p className="mt-2 text-xs leading-6 text-neutral-500">Quét QR trên vé, hoặc dán chuỗi `CINEAI:...` / mã booking `BK...` để tra cứu và check-in.</p>
-                </div>
-                <div className="space-y-3 border border-neutral-800 bg-black p-3">
-                  <button
-                    type="button"
-                    onClick={isCameraOpen ? stopQrScanner : startQrScanner}
-                    className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-[#070707] px-4 py-3 text-[9px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white"
-                  >
-                    {isCameraOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                    {isCameraOpen ? 'Tắt camera' : 'Mở camera quét QR'}
-                  </button>
-                  {isCameraOpen && (
-                    <div className="relative overflow-hidden border border-emerald-400/30 bg-neutral-950">
-                      <video
-                        ref={qrVideoRef}
-                        className="aspect-video w-full object-cover"
-                        muted
-                        playsInline
-                      />
-                      <canvas ref={qrCanvasRef} className="hidden" />
-                      <div className="pointer-events-none absolute inset-0 grid place-items-center">
-                        <div className="h-40 w-40 border-2 border-emerald-300/80 shadow-[0_0_0_999px_rgba(0,0,0,0.35)]" />
-                      </div>
-                    </div>
-                  )}
-                  {(scannerMessage || scannerError) && (
-                    <p className={`text-[10px] font-bold leading-5 ${scannerError ? 'text-rose-400' : 'text-emerald-300'}`}>
-                      {scannerError || scannerMessage}
-                    </p>
-                  )}
-                </div>
-                <textarea
-                  value={qrCode}
-                  onChange={(event) => setQrCode(event.target.value)}
-                  placeholder="Dán mã QR CINEAI:... hoặc mã booking BK..."
-                  rows={6}
-                  className="w-full resize-none border border-neutral-800 bg-black p-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
-                />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => lookupBooking({ preferQr: true })}
-                    disabled={isLookingUp || !qrCode.trim()}
-                    className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
-                  >
-                    {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Kiểm tra mã
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => checkInByQr()}
-                    disabled={isCheckingIn || !qrCode.trim()}
-                    className="flex items-center justify-center gap-2 bg-emerald-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-300 disabled:opacity-50"
-                  >
-                    {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} Xác nhận check-in
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400">Tra cứu thủ công</p>
-                  <h3 className="mt-2 text-xl font-black uppercase text-white">Tìm theo mã booking</h3>
-                  <p className="mt-2 text-xs leading-6 text-neutral-500">Dùng khi khách đọc mã booking nhưng chưa mở được QR.</p>
-                </div>
+        {/* Check-in Content */}
+        {activeSection === 'checkin' && (
+          <>
+            <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
+              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden border border-neutral-800 bg-gradient-to-r from-[#090909] to-[#050505] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-6">
+                <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_62%)]" />
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600" />
-                  <input
-                    value={bookingCode}
-                    onChange={(event) => setBookingCode(event.target.value)}
-                    placeholder="VD: BKABC123..."
-                    className="w-full border border-neutral-800 bg-black py-4 pl-11 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => lookupBooking()}
-                  disabled={isLookingUp || !bookingCode.trim()}
-                  className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-purple-400 hover:text-white disabled:opacity-50"
-                >
-                  {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tra cứu booking
-                </button>
-                {result?.booking?.qrCode && result.booking.status === 'PAID' && isBookingCheckInOpen(result.booking) && (
-                  <button
-                    type="button"
-                    onClick={() => checkInByQr(result.booking.qrCode)}
-                    disabled={isCheckingIn}
-                    className="flex w-full items-center justify-center gap-2 border border-emerald-400/40 bg-emerald-400/10 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300 transition hover:bg-emerald-400 hover:text-black disabled:opacity-50"
-                  >
-                    {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Check-in booking vừa tra
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
 
-          <ResultCard
-            result={result}
-            selectedTicketCodes={selectedTicketCodes}
-            onToggleSeat={toggleSeatSelection}
-            onConfirmSeats={checkInSelectedSeats}
-            isCheckingIn={isCheckingIn}
-            onOpenCounterSale={openCounterSale}
-          />
-        </section>
-
-        <section className="border border-neutral-800 bg-[#070707] p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-xl">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Danh sách theo suất chiếu</p>
-              <h3 className="mt-1 text-lg font-black uppercase text-white">Tải booking của một showtime</h3>
-              <p className="mt-2 text-xs leading-6 text-neutral-500">
-                STAFF có thể nhập showtimeId để xem toàn bộ booking thật của suất đó, sau đó check-in trực tiếp các booking PAID.
-              </p>
-            </div>
-            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-              <input
-                value={showtimeId}
-                onChange={(event) => setShowtimeId(event.target.value)}
-                placeholder="showtimeId..."
-                className="min-w-[220px] border border-neutral-800 bg-black px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
-              />
-              <button
-                type="button"
-                onClick={loadShowtimeBookings}
-                disabled={isLoadingShowtime || !showtimeId.trim()}
-                className="flex items-center justify-center gap-2 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-400 disabled:opacity-50"
-              >
-                {isLoadingShowtime ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tải danh sách
-              </button>
-              {isShowingShowtimeBookings && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowtimeBookings([]);
-                    setShowtimeError('');
-                  }}
-                  className="border border-neutral-700 bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-white hover:text-white"
-                >
-                  Về danh sách phiên
-                </button>
-              )}
-            </div>
-          </div>
-          {showtimeError && <p className="mt-3 text-xs font-bold text-rose-400">{showtimeError}</p>}
-        </section>
-
-        <section className="border border-neutral-800 bg-[#070707] p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-rose-300">Bulk refund failed</p>
-              <h3 className="mt-1 text-lg font-black uppercase text-white">Xu ly hoan tien thu cong</h3>
-              <p className="mt-2 text-xs leading-6 text-neutral-500">
-                STAFF xem cac booking VNPay refund loi, hoan tien ngoai he thong, roi xac nhan de can bang diem loyalty.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => loadFailedRefunds(failedRefundPage)}
-              disabled={isLoadingFailedRefunds}
-              className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-rose-300 hover:text-white disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoadingFailedRefunds ? 'animate-spin' : ''}`} /> Lam moi
-            </button>
-          </div>
-          {failedRefundError && <p className="mt-3 text-xs font-bold text-rose-400">{failedRefundError}</p>}
-          <div className="mt-4 overflow-x-auto border border-neutral-800 bg-black">
-            <table className="w-full min-w-[860px] text-left">
-              <thead className="border-b border-neutral-800 bg-[#050505] text-[8px] font-black uppercase tracking-[0.18em] text-neutral-500">
-                <tr>
-                  <th className="px-4 py-3">Booking</th>
-                  <th className="px-3 py-3">Khach</th>
-                  <th className="px-3 py-3">Phim / suat</th>
-                  <th className="px-3 py-3">So tien</th>
-                  <th className="px-3 py-3">Diem NET</th>
-                  <th className="px-4 py-3 text-right">Thao tac</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-900">
-                {isLoadingFailedRefunds ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-xs font-bold text-neutral-500">
-                      Dang tai danh sach refund loi...
-                    </td>
-                  </tr>
-                ) : failedRefunds.length > 0 ? failedRefunds.map((refund) => (
-                  <tr key={refund.bookingId} className="transition hover:bg-rose-400/5">
-                    <td className="px-4 py-4">
-                      <p className="font-mono text-[11px] font-black text-white">{refund.bookingCode}</p>
-                      <p className="mt-1 font-mono text-[8px] text-neutral-600">#{refund.bookingId}</p>
-                    </td>
-                    <td className="px-3 py-4">
-                      <p className="max-w-[180px] truncate text-xs font-bold text-neutral-300">{refund.customerName || '--'}</p>
-                      <p className="max-w-[180px] truncate text-[10px] text-neutral-600">{refund.customerEmail}</p>
-                    </td>
-                    <td className="px-3 py-4">
-                      <p className="max-w-[220px] truncate text-xs font-bold text-neutral-300">{refund.movieName}</p>
-                      <p className="text-[10px] font-bold text-neutral-500">{formatDateTime(refund.showtimeStart)}</p>
-                    </td>
-                    <td className="px-3 py-4 font-mono text-xs font-black text-amber-300">{formatCurrency(refund.refundAmount)}</td>
-                    <td className="px-3 py-4 font-mono text-xs font-black text-emerald-300">
-                      {Number(refund.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openManualRefundModal(refund)}
-                        className="border border-amber-400/40 bg-amber-400 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300"
-                      >
-                        Xac nhan ngoai
-                      </button>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-xs font-bold text-neutral-500">
-                      Khong co booking refund loi.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
-            <span>Trang {failedRefundPage + 1}/{failedRefundTotalPages}</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={failedRefundPage <= 0}
-                onClick={() => loadFailedRefunds(failedRefundPage - 1)}
-                className="border border-neutral-700 px-3 py-2 text-white transition hover:border-rose-300 disabled:opacity-30"
-              >
-                Truoc
-              </button>
-              <button
-                type="button"
-                disabled={failedRefundPage >= failedRefundTotalPages - 1}
-                onClick={() => loadFailedRefunds(failedRefundPage + 1)}
-                className="border border-neutral-700 px-3 py-2 text-white transition hover:border-rose-300 disabled:opacity-30"
-              >
-                Sau
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="border border-neutral-800 bg-[#070707] p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400">Quầy bắp nước</p>
-              <h3 className="mt-1 text-lg font-black uppercase text-white">Trạng thái món/combo</h3>
-              <p className="mt-2 text-xs leading-6 text-neutral-500">
-                STAFF có thể đổi nhanh trạng thái bắp nước theo quầy: mở bán, sắp hết hoặc hết.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="border border-neutral-700 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300">
-                {foodStats.active}/{foodStats.total} đang bán
-              </span>
-              <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
-                {foodStats.lowStock} sắp hết
-              </span>
-              <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
-                {foodStats.outOfStock} hết
-              </span>
-              <button
-                type="button"
-                onClick={loadStaffFoods}
-                disabled={isLoadingStaffFoods}
-                className="flex items-center gap-2 border border-neutral-700 bg-black px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isLoadingStaffFoods ? 'animate-spin' : ''}`} /> Làm mới
-              </button>
-            </div>
-          </div>
-
-          {staffFoodError && <p className="mt-3 text-xs font-bold text-rose-400">{staffFoodError}</p>}
-
-          <div className="mt-4 flex flex-col gap-2 border border-neutral-800 bg-black p-3 sm:flex-row sm:items-center">
-            <div className="flex min-w-0 flex-1 items-center gap-3 border border-neutral-800 bg-[#070707] px-3 py-2.5 focus-within:border-purple-400">
-              <Search className="h-4 w-4 shrink-0 text-neutral-500" />
-              <input
-                type="search"
-                value={staffFoodSearch}
-                onChange={(event) => setStaffFoodSearch(event.target.value)}
-                placeholder="Tìm gần đúng theo tên món/combo..."
-                className="w-full bg-transparent text-xs font-bold text-white outline-none placeholder:text-neutral-600"
-              />
-            </div>
-            <span className="shrink-0 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
-              {filteredStaffFoods.length}/{staffFoods.length} kết quả
-            </span>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {isLoadingStaffFoods ? (
-              <div className="border border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">Đang tải danh sách bắp nước...</div>
-            ) : filteredStaffFoods.length > 0 ? paginatedStaffFoods.map((food) => {
-              const foodKey = `${food.kind}-${food.id}`;
-              const statusMeta = getFoodStatusMeta(food.status);
-              return (
-                <div key={foodKey} className="border border-neutral-800 bg-black p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black uppercase text-white">{food.name}</p>
-                      <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-neutral-500">{food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
-                    </div>
-                    <span className={`px-2 py-1 text-[9px] font-black uppercase ${statusMeta.className}`}>
-                      {statusMeta.label}
+                    <span className="border border-purple-400/20 bg-purple-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-purple-300">
+                      STAFF OPERATIONS
                     </span>
                   </div>
-                  <select
-                    value={food.status || 'ACTIVE'}
-                    onChange={(event) => updateStaffFoodStatus(food, event.target.value)}
-                    disabled={savingStaffFoodKey === foodKey}
-                    className="mt-4 w-full border border-neutral-800 bg-[#070707] px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-purple-400 disabled:opacity-50"
-                  >
-                    <option value="ACTIVE">Mở bán</option>
-                    <option value="LOW_STOCK">Sắp hết</option>
-                    <option value="OUT_OF_STOCK">Hết</option>
-                  </select>
+                  <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">Kiểm soát vé bằng QR booking</h2>
+                  <p className="mt-3 max-w-2xl text-xs leading-6 text-neutral-400">
+                    Mỗi ghế có một mã QR riêng như thẻ lên máy bay. Quét mã ghế để check-in từng người, hoặc quét mã booking để xác nhận cả nhóm cùng lúc.
+                  </p>
+                  <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                    Nhân viên: {currentUser?.fullName || currentUser?.name || currentUser?.email || 'STAFF'}
+                  </p>
                 </div>
-              );
-            }) : (
-              <div className="border border-dashed border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">
-                {staffFoodSearch.trim() ? 'Không tìm thấy món/combo phù hợp.' : 'Chưa có món bắp nước nào.'}
-              </div>
-            )}
-          </div>
-          <div className="mt-4 flex flex-col gap-3 border border-neutral-800 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              Hiển thị {staffFoodDisplayStart}-{staffFoodDisplayEnd}/{filteredStaffFoods.length} món - Trang {safeStaffFoodPage}/{staffFoodTotalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={safeStaffFoodPage <= 1}
-                onClick={() => setStaffFoodPage((page) => Math.max(1, page - 1))}
-                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" /> Trước
-              </button>
-              <button
-                type="button"
-                disabled={safeStaffFoodPage >= staffFoodTotalPages}
-                onClick={() => setStaffFoodPage((page) => Math.min(staffFoodTotalPages, page + 1))}
-                className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
-              >
-                Sau <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        </section>
+              </motion.div>
 
-        <section className="overflow-hidden border border-neutral-800 bg-[#070707]">
-          <div className="border-b border-neutral-800 p-5">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
-              {isShowingShowtimeBookings ? 'Dữ liệu showtime từ API' : 'Dữ liệu recent từ API'}
-            </p>
-            <h3 className="mt-1 text-lg font-black uppercase text-white">
-              {isShowingShowtimeBookings ? `Booking của showtime #${showtimeId}` : 'Booking vừa tra cứu/check-in'}
-            </h3>
-            {!isShowingShowtimeBookings && recentBookingsError && (
-              <p className="mt-2 text-xs font-bold text-rose-400">{recentBookingsError}</p>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left">
-              <thead className="border-b border-neutral-800 bg-black text-[8px] font-black uppercase tracking-[0.18em] text-neutral-500">
-                <tr>
-                  <th className="px-5 py-3">Booking</th>
-                  <th className="px-3 py-3">Phim</th>
-                  <th className="px-3 py-3">Suất</th>
-                  <th className="px-3 py-3">Ghế</th>
-                  <th className="px-3 py-3">Trạng thái</th>
-                  <th className="px-5 py-3 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-900">
-                {!isShowingShowtimeBookings && isLoadingRecentBookings ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center">
-                      <RefreshCw className="mx-auto h-8 w-8 animate-spin text-emerald-400/70" />
-                      <p className="mt-3 text-xs font-bold text-neutral-500">Đang tải booking gần đây từ API...</p>
-                    </td>
-                  </tr>
-                ) : visibleBookings.length > 0 ? paginatedBookings.map((booking) => {
-                  const canCheckIn = isBookingCheckInOpen(booking);
-                  return (
-                    <tr key={booking.id} className="transition hover:bg-emerald-400/5">
-                      <td className="px-5 py-4"><p className="font-mono text-[11px] font-black text-white">{booking.bookingCode}</p><p className="mt-1 font-mono text-[8px] text-neutral-600">#{booking.id}</p></td>
-                      <td className="px-3 py-4 text-xs font-bold text-neutral-300">{booking.movieTitle}</td>
-                      <td className="px-3 py-4 text-[10px] font-bold text-neutral-500">
-                        {formatDateTime(booking.showtimeStart)}
-                        {booking.status === 'PAID' && !canCheckIn && (
-                          <p className="mt-1 text-[8px] font-black uppercase tracking-wider text-purple-300">Mở check-in trước 30 phút</p>
-                        )}
-                      </td>
-                      <td className="px-3 py-4 text-xs font-black text-white">{formatSeats(booking)}</td>
-                      <td className="px-3 py-4"><StatusBadge status={booking.status} /></td>
-                      <td className="px-5 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => checkInByQr(booking.qrCode)}
-                          disabled={!canCheckIn || !booking.qrCode || isCheckingIn}
-                          title={booking.status === 'PAID' && !canCheckIn ? getCheckInWindowMessage(booking) : undefined}
-                          className="border border-neutral-700 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-emerald-300 disabled:border-neutral-900 disabled:text-neutral-700"
-                        >
-                          {booking.status === 'USED' ? 'Đã xác nhận' : booking.status === 'PAID' && !canCheckIn ? 'Chưa mở' : 'Check-in'}
-                        </button>
-                      </td>
+              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="border border-neutral-800 bg-[#070707] p-5">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Phiên hiện tại</p>
+                <p className="mt-1 text-2xl font-black text-white">{stats.checked}/{stats.total}</p>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="border border-emerald-400/20 bg-emerald-400/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-emerald-200/70">Đã vào</p></div>
+                  <div className="border border-purple-400/20 bg-purple-500/10 p-2.5"><p className="text-lg font-black text-purple-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-purple-200/70">Chờ vào</p></div>
+                  <div className="border border-neutral-800 bg-black p-2.5"><p className="text-lg font-black text-white">{stats.total}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã tra</p></div>
+                </div>
+              </motion.div>
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.75fr)]">
+              <div className="border border-neutral-800 bg-[#070707] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.35)] sm:p-7">
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-400">Quét/Xác nhận QR</p>
+                      <h3 className="mt-2 text-xl font-black uppercase text-white">Check-in bằng mã QR</h3>
+                      <p className="mt-2 text-xs leading-6 text-neutral-500">Quét QR trên vé, hoặc dán chuỗi `CINEAI:...` / mã booking `BK...` để tra cứu và check-in.</p>
+                    </div>
+                    <div className="space-y-3 border border-neutral-800 bg-black p-3">
+                      <button
+                        type="button"
+                        onClick={isCameraOpen ? stopQrScanner : startQrScanner}
+                        className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-[#070707] px-4 py-3 text-[9px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white"
+                      >
+                        {isCameraOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                        {isCameraOpen ? 'Tắt camera' : 'Mở camera quét QR'}
+                      </button>
+                      {isCameraOpen && (
+                        <div className="relative overflow-hidden border border-emerald-400/30 bg-neutral-950">
+                          <video
+                            ref={qrVideoRef}
+                            className="aspect-video w-full object-cover"
+                            muted
+                            playsInline
+                          />
+                          <canvas ref={qrCanvasRef} className="hidden" />
+                          <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                            <div className="h-40 w-40 border-2 border-emerald-300/80 shadow-[0_0_0_999px_rgba(0,0,0,0.35)]" />
+                          </div>
+                        </div>
+                      )}
+                      {(scannerMessage || scannerError) && (
+                        <p className={`text-[10px] font-bold leading-5 ${scannerError ? 'text-rose-400' : 'text-emerald-300'}`}>
+                          {scannerError || scannerMessage}
+                        </p>
+                      )}
+                    </div>
+                    <textarea
+                      value={qrCode}
+                      onChange={(event) => setQrCode(event.target.value)}
+                      placeholder="Dán mã QR CINEAI:... hoặc mã booking BK..."
+                      rows={6}
+                      className="w-full resize-none border border-neutral-800 bg-black p-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+                    />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => lookupBooking({ preferQr: true })}
+                        disabled={isLookingUp || !qrCode.trim()}
+                        className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+                      >
+                        {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Kiểm tra mã
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => checkInByQr()}
+                        disabled={isCheckingIn || !qrCode.trim()}
+                        className="flex items-center justify-center gap-2 bg-emerald-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-300 disabled:opacity-50"
+                      >
+                        {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} Xác nhận check-in
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400">Tra cứu thủ công</p>
+                      <h3 className="mt-2 text-xl font-black uppercase text-white">Tìm theo mã booking</h3>
+                      <p className="mt-2 text-xs leading-6 text-neutral-500">Dùng khi khách đọc mã booking nhưng chưa mở được QR.</p>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600" />
+                      <input
+                        value={bookingCode}
+                        onChange={(event) => setBookingCode(event.target.value)}
+                        placeholder="VD: BKABC123..."
+                        className="w-full border border-neutral-800 bg-black py-4 pl-11 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => lookupBooking()}
+                      disabled={isLookingUp || !bookingCode.trim()}
+                      className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-purple-400 hover:text-white disabled:opacity-50"
+                    >
+                      {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tra cứu booking
+                    </button>
+                    {result?.booking?.qrCode && result.booking.status === 'PAID' && isBookingCheckInOpen(result.booking) && (
+                      <button
+                        type="button"
+                        onClick={() => checkInByQr(result.booking.qrCode)}
+                        disabled={isCheckingIn}
+                        className="flex w-full items-center justify-center gap-2 border border-emerald-400/40 bg-emerald-400/10 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300 transition hover:bg-emerald-400 hover:text-black disabled:opacity-50"
+                      >
+                        {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Check-in booking vừa tra
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <ResultCard
+                result={result}
+                selectedTicketCodes={selectedTicketCodes}
+                onToggleSeat={toggleSeatSelection}
+                onConfirmSeats={checkInSelectedSeats}
+                isCheckingIn={isCheckingIn}
+                onOpenCounterSale={openCounterSale}
+              />
+            </section>
+
+            {/* <section className="border border-neutral-800 bg-[#070707] p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="max-w-xl">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Danh sách theo suất chiếu</p>
+                  <h3 className="mt-1 text-lg font-black uppercase text-white">Tải booking của một showtime</h3>
+                  <p className="mt-2 text-xs leading-6 text-neutral-500">
+                    STAFF có thể nhập showtimeId để xem toàn bộ booking thật của suất đó, sau đó check-in trực tiếp các booking PAID.
+                  </p>
+                </div>
+                <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+                  <input
+                    value={showtimeId}
+                    onChange={(event) => setShowtimeId(event.target.value)}
+                    placeholder="showtimeId..."
+                    className="min-w-[220px] border border-neutral-800 bg-black px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+                  />
+                  <button
+                    type="button"
+                    onClick={loadShowtimeBookings}
+                    disabled={isLoadingShowtime || !showtimeId.trim()}
+                    className="flex items-center justify-center gap-2 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-400 disabled:opacity-50"
+                  >
+                    {isLoadingShowtime ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tải danh sách
+                  </button>
+                  {isShowingShowtimeBookings && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowtimeBookings([]);
+                        setShowtimeError('');
+                      }}
+                      className="border border-neutral-700 bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-white hover:text-white"
+                    >
+                      Về danh sách phiên
+                    </button>
+                  )}
+                </div>
+              </div>
+              {showtimeError && <p className="mt-3 text-xs font-bold text-rose-400">{showtimeError}</p>}
+            </section> */}
+
+            {/* <section className="border border-neutral-800 bg-[#070707] p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-rose-300">Bulk refund failed</p>
+                  <h3 className="mt-1 text-lg font-black uppercase text-white">Xu ly hoan tien thu cong</h3>
+                  <p className="mt-2 text-xs leading-6 text-neutral-500">
+                    STAFF xem cac booking VNPay refund loi, hoan tien ngoai he thong, roi xac nhan de can bang diem loyalty.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadFailedRefunds(failedRefundPage)}
+                  disabled={isLoadingFailedRefunds}
+                  className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-rose-300 hover:text-white disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isLoadingFailedRefunds ? 'animate-spin' : ''}`} /> Lam moi
+                </button>
+              </div>
+              {failedRefundError && <p className="mt-3 text-xs font-bold text-rose-400">{failedRefundError}</p>}
+              <div className="mt-4 overflow-x-auto border border-neutral-800 bg-black">
+                <table className="w-full min-w-[860px] text-left">
+                  <thead className="border-b border-neutral-800 bg-[#050505] text-[8px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                    <tr>
+                      <th className="px-4 py-3">Booking</th>
+                      <th className="px-3 py-3">Khach</th>
+                      <th className="px-3 py-3">Phim / suat</th>
+                      <th className="px-3 py-3">So tien</th>
+                      <th className="px-3 py-3">Diem NET</th>
+                      <th className="px-4 py-3 text-right">Thao tac</th>
                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-900">
+                    {isLoadingFailedRefunds ? (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-10 text-center text-xs font-bold text-neutral-500">
+                          Dang tai danh sach refund loi...
+                        </td>
+                      </tr>
+                    ) : failedRefunds.length > 0 ? failedRefunds.map((refund) => (
+                      <tr key={refund.bookingId} className="transition hover:bg-rose-400/5">
+                        <td className="px-4 py-4">
+                          <p className="font-mono text-[11px] font-black text-white">{refund.bookingCode}</p>
+                          <p className="mt-1 font-mono text-[8px] text-neutral-600">#{refund.bookingId}</p>
+                        </td>
+                        <td className="px-3 py-4">
+                          <p className="max-w-[180px] truncate text-xs font-bold text-neutral-300">{refund.customerName || '--'}</p>
+                          <p className="max-w-[180px] truncate text-[10px] text-neutral-600">{refund.customerEmail}</p>
+                        </td>
+                        <td className="px-3 py-4">
+                          <p className="max-w-[220px] truncate text-xs font-bold text-neutral-300">{refund.movieName}</p>
+                          <p className="text-[10px] font-bold text-neutral-500">{formatDateTime(refund.showtimeStart)}</p>
+                        </td>
+                        <td className="px-3 py-4 font-mono text-xs font-black text-amber-300">{formatCurrency(refund.refundAmount)}</td>
+                        <td className="px-3 py-4 font-mono text-xs font-black text-emerald-300">
+                          {Number(refund.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => openManualRefundModal(refund)}
+                            className="border border-amber-400/40 bg-amber-400 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300"
+                          >
+                            Xac nhan ngoai
+                          </button>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-10 text-center text-xs font-bold text-neutral-500">
+                          Khong co booking refund loi.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                <span>Trang {failedRefundPage + 1}/{failedRefundTotalPages}</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={failedRefundPage <= 0}
+                    onClick={() => loadFailedRefunds(failedRefundPage - 1)}
+                    className="border border-neutral-700 px-3 py-2 text-white transition hover:border-rose-300 disabled:opacity-30"
+                  >
+                    Truoc
+                  </button>
+                  <button
+                    type="button"
+                    disabled={failedRefundPage >= failedRefundTotalPages - 1}
+                    onClick={() => loadFailedRefunds(failedRefundPage + 1)}
+                    className="border border-neutral-700 px-3 py-2 text-white transition hover:border-rose-300 disabled:opacity-30"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            </section> */}
+
+            <section className="border border-neutral-800 bg-[#070707] p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400">Quầy bắp nước</p>
+                  <h3 className="mt-1 text-lg font-black uppercase text-white">Trạng thái món/combo</h3>
+                  <p className="mt-2 text-xs leading-6 text-neutral-500">
+                    STAFF có thể đổi nhanh trạng thái bắp nước theo quầy: mở bán, sắp hết hoặc hết.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="border border-neutral-700 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300">
+                    {foodStats.active}/{foodStats.total} đang bán
+                  </span>
+                  <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
+                    {foodStats.lowStock} sắp hết
+                  </span>
+                  <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
+                    {foodStats.outOfStock} hết
+                  </span>
+                  <button
+                    type="button"
+                    onClick={loadStaffFoods}
+                    disabled={isLoadingStaffFoods}
+                    className="flex items-center gap-2 border border-neutral-700 bg-black px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${isLoadingStaffFoods ? 'animate-spin' : ''}`} /> Làm mới
+                  </button>
+                </div>
+              </div>
+
+              {staffFoodError && <p className="mt-3 text-xs font-bold text-rose-400">{staffFoodError}</p>}
+
+              <div className="mt-4 flex flex-col gap-2 border border-neutral-800 bg-black p-3 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3 border border-neutral-800 bg-[#070707] px-3 py-2.5 focus-within:border-purple-400">
+                  <Search className="h-4 w-4 shrink-0 text-neutral-500" />
+                  <input
+                    type="search"
+                    value={staffFoodSearch}
+                    onChange={(event) => setStaffFoodSearch(event.target.value)}
+                    placeholder="Tìm gần đúng theo tên món/combo..."
+                    className="w-full bg-transparent text-xs font-bold text-white outline-none placeholder:text-neutral-600"
+                  />
+                </div>
+                <span className="shrink-0 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                  {filteredStaffFoods.length}/{staffFoods.length} kết quả
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {isLoadingStaffFoods ? (
+                  <div className="border border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">Đang tải danh sách bắp nước...</div>
+                ) : filteredStaffFoods.length > 0 ? paginatedStaffFoods.map((food) => {
+                  const foodKey = `${food.kind}-${food.id}`;
+                  const statusMeta = getFoodStatusMeta(food.status);
+                  return (
+                    <div key={foodKey} className="border border-neutral-800 bg-black p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black uppercase text-white">{food.name}</p>
+                          <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-neutral-500">{food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
+                        </div>
+                        <span className={`px-2 py-1 text-[9px] font-black uppercase ${statusMeta.className}`}>
+                          {statusMeta.label}
+                        </span>
+                      </div>
+                      <select
+                        value={food.status || 'ACTIVE'}
+                        onChange={(event) => updateStaffFoodStatus(food, event.target.value)}
+                        disabled={savingStaffFoodKey === foodKey}
+                        className="mt-4 w-full border border-neutral-800 bg-[#070707] px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-purple-400 disabled:opacity-50"
+                      >
+                        <option value="ACTIVE">Mở bán</option>
+                        <option value="LOW_STOCK">Sắp hết</option>
+                        <option value="OUT_OF_STOCK">Hết</option>
+                      </select>
+                    </div>
                   );
                 }) : (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center">
-                      <Ticket className="mx-auto h-8 w-8 text-neutral-700" />
-                      <p className="mt-3 text-xs font-bold text-neutral-500">Chưa có booking nào trong phiên này.</p>
-                      {isShowingShowtimeBookings && <p className="mt-1 text-[10px] font-bold text-neutral-600">Showtime này chưa có booking.</p>}
-                    </td>
-                  </tr>
+                  <div className="border border-dashed border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">
+                    {staffFoodSearch.trim() ? 'Không tìm thấy món/combo phù hợp.' : 'Chưa có món bắp nước nào.'}
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-col justify-between gap-3 border-t border-neutral-800 px-5 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-500 sm:flex-row sm:items-center">
-            <span>
-              {visibleBookings.length > 0
-                ? `Hiển thị ${bookingsDisplayStart}-${bookingsDisplayEnd}/${visibleBookings.length} booking - Trang ${safeBookingsPage}/${bookingsTotalPages}`
-                : isShowingShowtimeBookings
-                  ? 'Danh sách booking lấy trực tiếp theo showtimeId'
-                  : `Hiển thị tối đa ${RECENT_BOOKINGS_LIMIT} booking gần nhất từ API staff/check-in/recent`}
-            </span>
-            {bookingsTotalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={safeBookingsPage <= 1}
-                  onClick={() => setBookingsPage((page) => Math.max(1, page - 1))}
-                  className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" /> Trước
-                </button>
-                <button
-                  type="button"
-                  disabled={safeBookingsPage >= bookingsTotalPages}
-                  onClick={() => setBookingsPage((page) => Math.min(bookingsTotalPages, page + 1))}
-                  className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
-                >
-                  Sau <ChevronRight className="h-3.5 w-3.5" />
-                </button>
               </div>
-            )}
-          </div>
-        </section>
-        {counterSaleBooking && (
-          <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-lg border border-purple-400/30 bg-[#070707] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-300">Quầy bắp nước</p>
-                  <h3 className="mt-1 text-lg font-black uppercase text-white">Bán thêm cho {counterSaleBooking.bookingCode}</h3>
-                  <p className="mt-1 text-xs text-neutral-500">{counterSaleBooking.customerName || counterSaleBooking.movieTitle} · thanh toán tiền mặt tại quầy</p>
+              <div className="mt-4 flex flex-col gap-3 border border-neutral-800 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  Hiển thị {staffFoodDisplayStart}-{staffFoodDisplayEnd}/{filteredStaffFoods.length} món - Trang {safeStaffFoodPage}/{staffFoodTotalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={safeStaffFoodPage <= 1}
+                    onClick={() => setStaffFoodPage((page) => Math.max(1, page - 1))}
+                    className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" /> Trước
+                  </button>
+                  <button
+                    type="button"
+                    disabled={safeStaffFoodPage >= staffFoodTotalPages}
+                    onClick={() => setStaffFoodPage((page) => Math.min(staffFoodTotalPages, page + 1))}
+                    className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
+                  >
+                    Sau <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCounterSaleBooking(null)}
-                  className="border border-neutral-700 px-3 py-2 text-[10px] font-black uppercase text-neutral-300 hover:border-white hover:text-white"
-                >
-                  Đóng
-                </button>
               </div>
+            </section>
 
-              {counterSaleReceipt ? (
-                <div className="mt-4">
-                  <div className="border border-emerald-400/40 bg-emerald-500/5 px-4 py-4 text-center">
-                    <p className="text-2xl">✓</p>
-                    <p className="mt-1 text-sm font-black uppercase tracking-widest text-emerald-300">Đã thu tiền mặt</p>
-                    <p className="mt-1 font-mono text-xs text-neutral-400">Mã đơn: <span className="font-black text-white">{counterSaleReceipt.orderCode}</span></p>
-                  </div>
-                  <div className="mt-3 divide-y divide-neutral-900 border border-neutral-800 bg-black text-xs">
-                    <div className="flex items-center justify-between px-4 py-2.5">
-                      <span className="font-bold uppercase tracking-widest text-neutral-500">Tổng thu</span>
-                      <span className="font-mono text-base font-black text-emerald-300">{formatCurrency(counterSaleReceipt.total)}</span>
-                    </div>
-                    {counterSaleReceipt.cashGiven !== null && (
-                      <>
-                        <div className="flex items-center justify-between px-4 py-2.5">
-                          <span className="font-bold uppercase tracking-widest text-neutral-500">Tiền khách đưa</span>
-                          <span className="font-mono font-black text-white">{formatCurrency(counterSaleReceipt.cashGiven)}</span>
-                        </div>
-                        <div className="flex items-center justify-between px-4 py-2.5">
-                          <span className="font-bold uppercase tracking-widest text-neutral-500">Thối lại khách</span>
-                          <span className="font-mono font-black text-amber-300">{formatCurrency(counterSaleReceipt.change || 0)}</span>
-                        </div>
-                      </>
+            <section className="overflow-hidden border border-neutral-800 bg-[#070707]">
+              <div className="border-b border-neutral-800 p-5">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
+                  {isShowingShowtimeBookings ? 'Dữ liệu showtime từ API' : 'Dữ liệu recent từ API'}
+                </p>
+                <h3 className="mt-1 text-lg font-black uppercase text-white">
+                  {isShowingShowtimeBookings ? `Booking của showtime #${showtimeId}` : 'Booking vừa tra cứu/check-in'}
+                </h3>
+                {!isShowingShowtimeBookings && recentBookingsError && (
+                  <p className="mt-2 text-xs font-bold text-rose-400">{recentBookingsError}</p>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-left">
+                  <thead className="border-b border-neutral-800 bg-black text-[8px] font-black uppercase tracking-[0.18em] text-neutral-500">
+                    <tr>
+                      <th className="px-5 py-3">Booking</th>
+                      <th className="px-3 py-3">Phim</th>
+                      <th className="px-3 py-3">Suất</th>
+                      <th className="px-3 py-3">Ghế</th>
+                      <th className="px-3 py-3">Trạng thái</th>
+                      <th className="px-5 py-3 text-right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-900">
+                    {!isShowingShowtimeBookings && isLoadingRecentBookings ? (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-12 text-center">
+                          <RefreshCw className="mx-auto h-8 w-8 animate-spin text-emerald-400/70" />
+                          <p className="mt-3 text-xs font-bold text-neutral-500">Đang tải booking gần đây từ API...</p>
+                        </td>
+                      </tr>
+                    ) : visibleBookings.length > 0 ? paginatedBookings.map((booking) => {
+                      const canCheckIn = isBookingCheckInOpen(booking);
+                      return (
+                        <tr key={booking.id} className="transition hover:bg-emerald-400/5">
+                          <td className="px-5 py-4"><p className="font-mono text-[11px] font-black text-white">{booking.bookingCode}</p><p className="mt-1 font-mono text-[8px] text-neutral-600">#{booking.id}</p></td>
+                          <td className="px-3 py-4 text-xs font-bold text-neutral-300">{booking.movieTitle}</td>
+                          <td className="px-3 py-4 text-[10px] font-bold text-neutral-500">
+                            {formatDateTime(booking.showtimeStart)}
+                            {booking.status === 'PAID' && !canCheckIn && (
+                              <p className="mt-1 text-[8px] font-black uppercase tracking-wider text-purple-300">Mở check-in trước 30 phút</p>
+                            )}
+                          </td>
+                          <td className="px-3 py-4 text-xs font-black text-white">{formatSeats(booking)}</td>
+                          <td className="px-3 py-4"><StatusBadge status={booking.status} /></td>
+                          <td className="px-5 py-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => checkInByQr(booking.qrCode)}
+                              disabled={!canCheckIn || !booking.qrCode || isCheckingIn}
+                              title={booking.status === 'PAID' && !canCheckIn ? getCheckInWindowMessage(booking) : undefined}
+                              className="border border-neutral-700 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-emerald-300 disabled:border-neutral-900 disabled:text-neutral-700"
+                            >
+                              {booking.status === 'USED' ? 'Đã xác nhận' : booking.status === 'PAID' && !canCheckIn ? 'Chưa mở' : 'Check-in'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-12 text-center">
+                          <Ticket className="mx-auto h-8 w-8 text-neutral-700" />
+                          <p className="mt-3 text-xs font-bold text-neutral-500">Chưa có booking nào trong phiên này.</p>
+                          {isShowingShowtimeBookings && <p className="mt-1 text-[10px] font-bold text-neutral-600">Showtime này chưa có booking.</p>}
+                        </td>
+                      </tr>
                     )}
-                    <div className="flex items-center justify-between px-4 py-2.5">
-                      <span className="font-bold uppercase tracking-widest text-neutral-500">Thời gian</span>
-                      <span className="font-mono text-neutral-300">{counterSaleReceipt.time}</span>
-                    </div>
-                    <div className="flex items-center justify-between px-4 py-2.5">
-                      <span className="font-bold uppercase tracking-widest text-neutral-500">Người thu</span>
-                      <span className="font-bold text-neutral-300">{counterSaleReceipt.collector}</span>
-                    </div>
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-col justify-between gap-3 border-t border-neutral-800 px-5 py-4 text-[9px] font-bold uppercase tracking-widest text-neutral-500 sm:flex-row sm:items-center">
+                <span>
+                  {visibleBookings.length > 0
+                    ? `Hiển thị ${bookingsDisplayStart}-${bookingsDisplayEnd}/${visibleBookings.length} booking - Trang ${safeBookingsPage}/${bookingsTotalPages}`
+                    : isShowingShowtimeBookings
+                      ? 'Danh sách booking lấy trực tiếp theo showtimeId'
+                      : `Hiển thị tối đa ${RECENT_BOOKINGS_LIMIT} booking gần nhất từ API staff/check-in/recent`}
+                </span>
+                {bookingsTotalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={safeBookingsPage <= 1}
+                      onClick={() => setBookingsPage((page) => Math.max(1, page - 1))}
+                      className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" /> Trước
+                    </button>
+                    <button
+                      type="button"
+                      disabled={safeBookingsPage >= bookingsTotalPages}
+                      onClick={() => setBookingsPage((page) => Math.min(bookingsTotalPages, page + 1))}
+                      className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-emerald-400 disabled:opacity-30"
+                    >
+                      Sau <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                )}
+              </div>
+            </section>
+            {counterSaleBooking && (
+              <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full max-w-lg border border-purple-400/30 bg-[#070707] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-300">Quầy bắp nước</p>
+                      <h3 className="mt-1 text-lg font-black uppercase text-white">Bán thêm cho {counterSaleBooking.bookingCode}</h3>
+                      <p className="mt-1 text-xs text-neutral-500">{counterSaleBooking.customerName || counterSaleBooking.movieTitle} · thanh toán tiền mặt tại quầy</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setCounterSaleBooking(null)}
-                      className="border border-neutral-700 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-white hover:text-white"
+                      className="border border-neutral-700 px-3 py-2 text-[10px] font-black uppercase text-neutral-300 hover:border-white hover:text-white"
                     >
                       Đóng
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { setCounterSaleReceipt(null); setCounterSaleMessage(''); }}
-                      className="bg-purple-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-purple-300"
-                    >
-                      Bán đơn khác
-                    </button>
                   </div>
-                </div>
-              ) : (
-                <>
-                  <div className="mt-4 max-h-52 overflow-y-auto divide-y divide-neutral-900 border border-neutral-800 bg-black">
-                    {staffFoods.filter((food) => food.status === 'ACTIVE' || food.status === 'LOW_STOCK').map((food) => {
-                      const foodKey = `${food.kind}-${food.id}`;
-                      return (
-                        <div key={foodKey} className="flex items-center justify-between gap-3 px-4 py-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-black uppercase text-white">{food.name}</p>
-                            <p className="mt-0.5 font-mono text-[10px] text-amber-300">{formatCurrency(food.price)} · {food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
+
+                  {counterSaleReceipt ? (
+                    <div className="mt-4">
+                      <div className="border border-emerald-400/40 bg-emerald-500/5 px-4 py-4 text-center">
+                        <p className="text-2xl">✓</p>
+                        <p className="mt-1 text-sm font-black uppercase tracking-widest text-emerald-300">Đã thu tiền mặt</p>
+                        <p className="mt-1 font-mono text-xs text-neutral-400">Mã đơn: <span className="font-black text-white">{counterSaleReceipt.orderCode}</span></p>
+                      </div>
+                      <div className="mt-3 divide-y divide-neutral-900 border border-neutral-800 bg-black text-xs">
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="font-bold uppercase tracking-widest text-neutral-500">Tổng thu</span>
+                          <span className="font-mono text-base font-black text-emerald-300">{formatCurrency(counterSaleReceipt.total)}</span>
+                        </div>
+                        {counterSaleReceipt.cashGiven !== null && (
+                          <>
+                            <div className="flex items-center justify-between px-4 py-2.5">
+                              <span className="font-bold uppercase tracking-widest text-neutral-500">Tiền khách đưa</span>
+                              <span className="font-mono font-black text-white">{formatCurrency(counterSaleReceipt.cashGiven)}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-2.5">
+                              <span className="font-bold uppercase tracking-widest text-neutral-500">Thối lại khách</span>
+                              <span className="font-mono font-black text-amber-300">{formatCurrency(counterSaleReceipt.change || 0)}</span>
+                            </div>
+                          </>
+                        )}
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="font-bold uppercase tracking-widest text-neutral-500">Thời gian</span>
+                          <span className="font-mono text-neutral-300">{counterSaleReceipt.time}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="font-bold uppercase tracking-widest text-neutral-500">Người thu</span>
+                          <span className="font-bold text-neutral-300">{counterSaleReceipt.collector}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCounterSaleBooking(null)}
+                          className="border border-neutral-700 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-white hover:text-white"
+                        >
+                          Đóng
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setCounterSaleReceipt(null); setCounterSaleMessage(''); }}
+                          className="bg-purple-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-purple-300"
+                        >
+                          Bán đơn khác
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-4 max-h-52 overflow-y-auto divide-y divide-neutral-900 border border-neutral-800 bg-black">
+                        {staffFoods.filter((food) => food.status === 'ACTIVE' || food.status === 'LOW_STOCK').map((food) => {
+                          const foodKey = `${food.kind}-${food.id}`;
+                          return (
+                            <div key={foodKey} className="flex items-center justify-between gap-3 px-4 py-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-black uppercase text-white">{food.name}</p>
+                                <p className="mt-0.5 font-mono text-[10px] text-amber-300">{formatCurrency(food.price)} · {food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => changeCounterSaleQuantity(foodKey, -1)}
+                                  className="h-7 w-7 border border-neutral-700 text-white transition hover:border-purple-400"
+                                >−</button>
+                                <span className="w-6 text-center font-mono text-xs font-black text-white">{counterSaleQuantities[foodKey] || 0}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => changeCounterSaleQuantity(foodKey, 1)}
+                                  className="h-7 w-7 border border-neutral-700 text-white transition hover:border-purple-400"
+                                >+</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {staffFoods.length === 0 && (
+                          <p className="px-4 py-6 text-center text-xs font-bold text-neutral-500">Chưa tải được danh sách bắp nước.</p>
+                        )}
+                      </div>
+
+                      {counterSaleLines.length > 0 && (
+                        <div className="mt-3 border border-purple-400/20 bg-purple-500/5">
+                          <p className="border-b border-purple-400/20 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-purple-300">Soát đơn trước khi thu</p>
+                          <div className="divide-y divide-neutral-900">
+                            {counterSaleLines.map((line) => (
+                              <div key={line.key} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
+                                <span className="min-w-0 truncate font-bold text-neutral-300">{line.name} <span className="font-mono text-neutral-500">× {line.qty}</span></span>
+                                <span className="shrink-0 font-mono text-neutral-400">{formatCurrency(line.price)} = <span className="font-black text-white">{formatCurrency(line.lineTotal)}</span></span>
+                              </div>
+                            ))}
                           </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => changeCounterSaleQuantity(foodKey, -1)}
-                              className="h-7 w-7 border border-neutral-700 text-white transition hover:border-purple-400"
-                            >−</button>
-                            <span className="w-6 text-center font-mono text-xs font-black text-white">{counterSaleQuantities[foodKey] || 0}</span>
-                            <button
-                              type="button"
-                              onClick={() => changeCounterSaleQuantity(foodKey, 1)}
-                              className="h-7 w-7 border border-neutral-700 text-white transition hover:border-purple-400"
-                            >+</button>
+                          <div className="flex items-center justify-between border-t border-purple-400/20 px-4 py-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Cần thu</span>
+                            <span className="font-mono text-xl font-black text-purple-300">{formatCurrency(counterSaleTotal)}</span>
                           </div>
                         </div>
-                      );
-                    })}
-                    {staffFoods.length === 0 && (
-                      <p className="px-4 py-6 text-center text-xs font-bold text-neutral-500">Chưa tải được danh sách bắp nước.</p>
-                    )}
-                  </div>
+                      )}
 
-                  {counterSaleLines.length > 0 && (
-                    <div className="mt-3 border border-purple-400/20 bg-purple-500/5">
-                      <p className="border-b border-purple-400/20 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-purple-300">Soát đơn trước khi thu</p>
-                      <div className="divide-y divide-neutral-900">
-                        {counterSaleLines.map((line) => (
-                          <div key={line.key} className="flex items-center justify-between gap-3 px-4 py-2 text-xs">
-                            <span className="min-w-0 truncate font-bold text-neutral-300">{line.name} <span className="font-mono text-neutral-500">× {line.qty}</span></span>
-                            <span className="shrink-0 font-mono text-neutral-400">{formatCurrency(line.price)} = <span className="font-black text-white">{formatCurrency(line.lineTotal)}</span></span>
-                          </div>
-                        ))}
+                      <div className="mt-3">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Tiền khách đưa (bỏ trống nếu thu đúng số)</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value={cashGiven}
+                            onChange={(event) => setCashGiven(event.target.value)}
+                            placeholder="VD: 200000"
+                            className="w-full border border-neutral-700 bg-black px-3 py-2.5 font-mono text-sm font-black text-white outline-none focus:border-purple-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setCashGiven('')}
+                            className="shrink-0 border border-neutral-700 px-3 py-2.5 text-[9px] font-black uppercase text-neutral-400 transition hover:border-white hover:text-white"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {[50000, 100000, 200000, 500000].map((amount) => (
+                            <button
+                              key={amount}
+                              type="button"
+                              onClick={() => setCashGiven(String(amount))}
+                              className="border border-neutral-700 px-3 py-1.5 font-mono text-[10px] font-black text-neutral-300 transition hover:border-purple-400 hover:text-purple-300"
+                            >
+                              {(amount / 1000).toLocaleString('vi-VN')}k
+                            </button>
+                          ))}
+                        </div>
+                        {cashGivenValue !== null && counterSaleTotal > 0 && (
+                          cashInsufficient ? (
+                            <p className="mt-2 text-xs font-black text-rose-400">Khách đưa thiếu {formatCurrency(counterSaleTotal - cashGivenValue)} — chưa thể xác nhận.</p>
+                          ) : (
+                            <p className="mt-2 text-xs font-bold text-neutral-300">Thối lại khách: <span className="font-mono text-base font-black text-emerald-300">{formatCurrency(cashChange)}</span></p>
+                          )
+                        )}
                       </div>
-                      <div className="flex items-center justify-between border-t border-purple-400/20 px-4 py-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Cần thu</span>
-                        <span className="font-mono text-xl font-black text-purple-300">{formatCurrency(counterSaleTotal)}</span>
-                      </div>
-                    </div>
-                  )}
 
-                  <div className="mt-3">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Tiền khách đưa (bỏ trống nếu thu đúng số)</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        value={cashGiven}
-                        onChange={(event) => setCashGiven(event.target.value)}
-                        placeholder="VD: 200000"
-                        className="w-full border border-neutral-700 bg-black px-3 py-2.5 font-mono text-sm font-black text-white outline-none focus:border-purple-400"
-                      />
+                      {counterSaleMessage && <p className="mt-3 text-xs font-bold text-rose-400">{counterSaleMessage}</p>}
+
                       <button
                         type="button"
-                        onClick={() => setCashGiven('')}
-                        className="shrink-0 border border-neutral-700 px-3 py-2.5 text-[9px] font-black uppercase text-neutral-400 transition hover:border-white hover:text-white"
+                        onClick={submitCounterSale}
+                        disabled={isSavingCounterSale || counterSaleTotal <= 0 || cashInsufficient}
+                        className="mt-4 w-full bg-purple-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-purple-300 disabled:opacity-40"
                       >
-                        Xóa
+                        {isSavingCounterSale ? 'Đang xác nhận...' : `Xác nhận đã thu ${counterSaleTotal > 0 ? formatCurrency(counterSaleTotal) : 'tiền mặt'}`}
                       </button>
+                    </>
+                  )}
+                </motion.div>
+              </div>
+            )}
+            {manualRefundModal && (
+              <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full max-w-lg border border-amber-400/30 bg-[#070707] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-300">Manual refund</p>
+                      <h3 className="mt-1 text-lg font-black uppercase text-white">Xac nhan da hoan tien ngoai</h3>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {[50000, 100000, 200000, 500000].map((amount) => (
-                        <button
-                          key={amount}
-                          type="button"
-                          onClick={() => setCashGiven(String(amount))}
-                          className="border border-neutral-700 px-3 py-1.5 font-mono text-[10px] font-black text-neutral-300 transition hover:border-purple-400 hover:text-purple-300"
-                        >
-                          {(amount / 1000).toLocaleString('vi-VN')}k
-                        </button>
-                      ))}
-                    </div>
-                    {cashGivenValue !== null && counterSaleTotal > 0 && (
-                      cashInsufficient ? (
-                        <p className="mt-2 text-xs font-black text-rose-400">Khách đưa thiếu {formatCurrency(counterSaleTotal - cashGivenValue)} — chưa thể xác nhận.</p>
-                      ) : (
-                        <p className="mt-2 text-xs font-bold text-neutral-300">Thối lại khách: <span className="font-mono text-base font-black text-emerald-300">{formatCurrency(cashChange)}</span></p>
-                      )
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setManualRefundModal(null)}
+                      className="border border-neutral-700 px-3 py-2 text-[10px] font-black uppercase text-neutral-300 hover:border-white hover:text-white"
+                    >
+                      Dong
+                    </button>
                   </div>
-
-                  {counterSaleMessage && <p className="mt-3 text-xs font-bold text-rose-400">{counterSaleMessage}</p>}
-
-                  <button
-                    type="button"
-                    onClick={submitCounterSale}
-                    disabled={isSavingCounterSale || counterSaleTotal <= 0 || cashInsufficient}
-                    className="mt-4 w-full bg-purple-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-purple-300 disabled:opacity-40"
-                  >
-                    {isSavingCounterSale ? 'Đang xác nhận...' : `Xác nhận đã thu ${counterSaleTotal > 0 ? formatCurrency(counterSaleTotal) : 'tiền mặt'}`}
-                  </button>
-                </>
-              )}
-            </motion.div>
-          </div>
-        )}
-        {manualRefundModal && (
-          <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-lg border border-amber-400/30 bg-[#070707] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-300">Manual refund</p>
-                  <h3 className="mt-1 text-lg font-black uppercase text-white">Xac nhan da hoan tien ngoai</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setManualRefundModal(null)}
-                  className="border border-neutral-700 px-3 py-2 text-[10px] font-black uppercase text-neutral-300 hover:border-white hover:text-white"
-                >
-                  Dong
-                </button>
+                  <div className="mt-5 grid gap-3 text-xs sm:grid-cols-2">
+                    <div className="border border-neutral-800 bg-black p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Booking</p>
+                      <p className="mt-1 font-mono font-black text-white">{manualRefundModal.bookingCode}</p>
+                    </div>
+                    <div className="border border-neutral-800 bg-black p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">So tien</p>
+                      <p className="mt-1 font-mono font-black text-amber-300">{formatCurrency(manualRefundModal.refundAmount)}</p>
+                    </div>
+                    <div className="border border-neutral-800 bg-black p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Khach hang</p>
+                      <p className="mt-1 truncate font-bold text-neutral-300">{manualRefundModal.customerName || manualRefundModal.customerEmail}</p>
+                    </div>
+                    <div className="border border-neutral-800 bg-black p-3">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Diem NET</p>
+                      <p className="mt-1 font-mono font-black text-emerald-300">
+                        {Number(manualRefundModal.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="space-y-1.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Phuong thuc</span>
+                      <select
+                        value={manualRefundForm.refundMethod}
+                        onChange={(event) => setManualRefundForm((current) => ({ ...current, refundMethod: event.target.value }))}
+                        className="w-full border border-neutral-800 bg-black px-3 py-3 text-xs font-bold text-white outline-none focus:border-amber-300"
+                      >
+                        <option value="MANUAL_BANK_TRANSFER">Bank Transfer</option>
+                        <option value="CASH">Cash</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Ghi chu</span>
+                      <input
+                        value={manualRefundForm.notes}
+                        onChange={(event) => setManualRefundForm((current) => ({ ...current, notes: event.target.value }))}
+                        maxLength={500}
+                        placeholder="Transaction ID, STK, ca truc..."
+                        className="w-full border border-neutral-800 bg-black px-3 py-3 text-xs font-bold text-white outline-none placeholder:text-neutral-700 focus:border-amber-300"
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-5 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setManualRefundModal(null)}
+                      className="flex-1 border border-neutral-700 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-white hover:text-white"
+                    >
+                      Quay lai
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmManualRefund}
+                      disabled={isSavingManualRefund}
+                      className="flex-1 bg-amber-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300 disabled:opacity-50"
+                    >
+                      {isSavingManualRefund ? 'Dang luu...' : 'Da hoan tien ngoai'}
+                    </button>
+                  </div>
+                </motion.div>
               </div>
-              <div className="mt-5 grid gap-3 text-xs sm:grid-cols-2">
-                <div className="border border-neutral-800 bg-black p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Booking</p>
-                  <p className="mt-1 font-mono font-black text-white">{manualRefundModal.bookingCode}</p>
-                </div>
-                <div className="border border-neutral-800 bg-black p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">So tien</p>
-                  <p className="mt-1 font-mono font-black text-amber-300">{formatCurrency(manualRefundModal.refundAmount)}</p>
-                </div>
-                <div className="border border-neutral-800 bg-black p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Khach hang</p>
-                  <p className="mt-1 truncate font-bold text-neutral-300">{manualRefundModal.customerName || manualRefundModal.customerEmail}</p>
-                </div>
-                <div className="border border-neutral-800 bg-black p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Diem NET</p>
-                  <p className="mt-1 font-mono font-black text-emerald-300">
-                    {Number(manualRefundModal.loyaltyCalculation?.netBalanceChange || 0).toLocaleString('vi-VN')}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Phuong thuc</span>
-                  <select
-                    value={manualRefundForm.refundMethod}
-                    onChange={(event) => setManualRefundForm((current) => ({ ...current, refundMethod: event.target.value }))}
-                    className="w-full border border-neutral-800 bg-black px-3 py-3 text-xs font-bold text-white outline-none focus:border-amber-300"
-                  >
-                    <option value="MANUAL_BANK_TRANSFER">Bank Transfer</option>
-                    <option value="CASH">Cash</option>
-                  </select>
-                </label>
-                <label className="space-y-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Ghi chu</span>
-                  <input
-                    value={manualRefundForm.notes}
-                    onChange={(event) => setManualRefundForm((current) => ({ ...current, notes: event.target.value }))}
-                    maxLength={500}
-                    placeholder="Transaction ID, STK, ca truc..."
-                    className="w-full border border-neutral-800 bg-black px-3 py-3 text-xs font-bold text-white outline-none placeholder:text-neutral-700 focus:border-amber-300"
-                  />
-                </label>
-              </div>
-              <div className="mt-5 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setManualRefundModal(null)}
-                  className="flex-1 border border-neutral-700 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-white hover:text-white"
-                >
-                  Quay lai
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmManualRefund}
-                  disabled={isSavingManualRefund}
-                  className="flex-1 bg-amber-400 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-amber-300 disabled:opacity-50"
-                >
-                  {isSavingManualRefund ? 'Dang luu...' : 'Da hoan tien ngoai'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
+            )}
+          </>
         )}
       </main>
     </div>

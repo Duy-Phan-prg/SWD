@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, Clock, Loader2, Search } from 'lucide-react';
+import { CalendarDays, ChevronDown, Clock, Loader2, Search, Tag, X } from 'lucide-react';
 import { bookingService } from '../../services/bookingService';
 import { useMovies } from '../../stores/useMovieStore';
 
@@ -11,9 +11,8 @@ const toDateKey = (date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// Cache lịch chiếu theo ngày — TTL ngắn vì suất chiếu nhạy cảm thời gian.
 const SHOWTIME_CACHE_TTL_MS = 90 * 1000;
-const showtimeCacheByDate = new Map(); // dateKey -> { data, updatedAt }
+const showtimeCacheByDate = new Map();
 
 const getFreshShowtimes = (dateKey) => {
   const entry = showtimeCacheByDate.get(dateKey);
@@ -35,31 +34,115 @@ const fetchShowtimesForDate = async (dateKey) => {
   return rawList;
 };
 
-// ─── Tiện ích ngày ──────────────────────────────────────────────
 const today = new Date();
 const todayKey = toDateKey(today);
 
-// Tạo dải 7 ngày tới (dùng cho prefetch nền)
 const PREFETCH_DATES = Array.from({ length: 7 }, (_, i) => {
   const d = new Date();
   d.setDate(d.getDate() + i);
   return toDateKey(d);
 });
 
-/**
- * Trang Lịch Chiếu: tìm theo tên phim và/hoặc ngày chiếu.
- * Các ngày được prefetch ngầm; cache TTL 90 giây.
- * Bấm vào giờ chiếu chuyển thẳng sang trang đặt vé với showtimeId được chọn sẵn.
- */
+// ─── Dropdown tìm kiếm thể loại ─────────────────────────────────────────────
+function GenreDropdown({ genres, selectedGenre, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return genres;
+    const q = search.trim().toLowerCase();
+    return genres.filter((g) => g.toLowerCase().includes(q));
+  }, [genres, search]);
+
+  const handleSelect = (g) => {
+    onChange(selectedGenre === g ? null : g);
+    setOpen(false);
+    setSearch('');
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`flex w-full items-center gap-2 border bg-neutral-950 py-3 pl-10 pr-4 text-sm text-left transition
+          ${open ? 'border-purple-400 ring-1 ring-purple-500/40' : 'border-white/10 hover:border-white/20'}`}
+      >
+        <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
+        <span className={`flex-1 truncate ${selectedGenre ? 'text-white' : 'text-neutral-500'}`}>
+          {selectedGenre || 'Thể loại'}
+        </span>
+        {selectedGenre ? (
+          <X
+            className="h-3.5 w-3.5 shrink-0 text-neutral-400 hover:text-white"
+            onClick={(e) => { e.stopPropagation(); onChange(null); setSearch(''); }}
+          />
+        ) : (
+          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-neutral-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full border border-white/10 bg-neutral-950 shadow-2xl">
+          <div className="relative border-b border-white/10">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm thể loại…"
+              className="w-full bg-transparent py-2.5 pl-9 pr-4 text-xs text-white placeholder-neutral-600 outline-none"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto">
+            <button
+              onClick={() => { onChange(null); setOpen(false); setSearch(''); }}
+              className={`flex w-full items-center px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition
+                ${!selectedGenre ? 'bg-purple-500/15 text-purple-300' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
+            >
+              Tất cả thể loại
+            </button>
+            {genres.length === 0 ? (
+              <p className="py-6 text-center text-[11px] text-neutral-600">Chưa có dữ liệu thể loại</p>
+            ) : filtered.length === 0 ? (
+              <p className="py-6 text-center text-[11px] text-neutral-600">Không tìm thấy thể loại</p>
+            ) : (
+              filtered.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => handleSelect(g)}
+                  className={`flex w-full items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition
+                    ${selectedGenre === g ? 'bg-purple-500/15 text-purple-300' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
+                >
+                  <span>{g}</span>
+                  {selectedGenre === g && <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Trang chính ─────────────────────────────────────────────────────────────
 export default function ShowtimesPage() {
   const navigate = useNavigate();
   const { moviesList = [] } = useMovies();
 
-  // ── State bộ lọc ──────────────────────────────────────────────
   const [keyword, setKeyword] = useState('');
   const [selectedDate, setSelectedDate] = useState(todayKey);
+  const [selectedGenre, setSelectedGenre] = useState(null);
 
-  // ── State dữ liệu ─────────────────────────────────────────────
   const [showtimes, setShowtimes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedMovieId, setExpandedMovieId] = useState(null);
@@ -96,7 +179,19 @@ export default function ShowtimesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Gom suất chiếu theo phim, join thông tin từ store, lọc theo keyword
+  // Tổng hợp genres từ moviesList — movie.genre là array of strings sau normalize
+  const genreOptions = useMemo(() => {
+    const set = new Set();
+    moviesList.forEach((m) => {
+      const gList = Array.isArray(m.genre) ? m.genre : [];
+      gList.forEach((g) => {
+        const name = (typeof g === 'string' ? g : g?.name || '').trim();
+        if (name && name !== 'Dang cap nhat') set.add(name.toUpperCase());
+      });
+    });
+    return [...set].sort();
+  }, [moviesList]);
+
   const movieGroups = useMemo(() => {
     const groups = new Map();
     showtimes.forEach((st) => {
@@ -106,31 +201,40 @@ export default function ShowtimesPage() {
     });
 
     const allGroups = [...groups.values()].map((group) => {
-      // Ưu tiên match theo backendId/id, fallback theo tiêu đề phim
       const movie = moviesList.find((m) => String(m.backendId || m.id) === String(group.movieId))
         || moviesList.find((m) => String(m.title || m.englishTitle || '').toLowerCase() === String(group.movieTitle || '').toLowerCase());
-      // routeId: ưu tiên backendId (BE id) để BookingPage tìm được bằng m.backendId
       const routeId = movie?.backendId ?? movie?.id ?? group.movieId;
+      const movieGenreStrings = Array.isArray(movie?.genre) ? movie.genre : [];
       return {
         ...group,
         routeId,
         poster: movie?.posterUrl,
         duration: movie?.durationMinutes || movie?.duration,
         ageRating: movie?.ageRating,
+        movieGenres: movieGenreStrings,
         slots: group.slots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)),
       };
     }).sort((a, b) => String(a.movieTitle).localeCompare(String(b.movieTitle), 'vi'));
 
-    // Lọc theo keyword tên phim
-    if (!keyword.trim()) return allGroups;
-    const kw = keyword.trim().toLowerCase();
-    return allGroups.filter((g) => g.movieTitle?.toLowerCase().includes(kw));
-  }, [showtimes, moviesList, keyword]);
+    let filtered = allGroups;
+    if (keyword.trim()) {
+      const kw = keyword.trim().toLowerCase();
+      filtered = filtered.filter((g) => g.movieTitle?.toLowerCase().includes(kw));
+    }
+    if (selectedGenre) {
+      filtered = filtered.filter((g) =>
+        g.movieGenres.some((genre) => genre.toUpperCase() === selectedGenre.toUpperCase())
+      );
+    }
+
+    return filtered;
+  }, [showtimes, moviesList, keyword, selectedGenre]);
 
   const formatTime = (value) =>
     new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-  // ── Render ────────────────────────────────────────────────────
+  const hasActiveFilters = keyword.trim() || selectedGenre;
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
       {/* Tiêu đề */}
@@ -142,13 +246,13 @@ export default function ShowtimesPage() {
           THEO MONG MUỐN CỦA BẠN
         </h1>
         <p className="mt-1 text-xs text-neutral-500">
-          Nhập tên phim hoặc chọn ngày — bấm vào phim để xổ ra khung giờ chiếu.
+          Lọc theo tên phim, thể loại hoặc chọn ngày — bấm vào phim để xổ ra khung giờ chiếu.
         </p>
       </div>
 
-      {/* ── Bộ lọc tìm kiếm ── */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {/* Ô tìm kiếm theo tên phim */}
+      {/* ── 3 filter cùng 1 hàng ── */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {/* 1. Tìm theo tên phim */}
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
           <input
@@ -161,16 +265,21 @@ export default function ShowtimesPage() {
           />
         </div>
 
-        {/* Ô chọn ngày chiếu */}
+        {/* 2. Lọc theo thể loại (dropdown có tìm kiếm) */}
+        <GenreDropdown
+          genres={genreOptions}
+          selectedGenre={selectedGenre}
+          onChange={setSelectedGenre}
+        />
+
+        {/* 3. Chọn ngày chiếu */}
         <div className="relative">
           <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
           <input
             type="date"
             value={selectedDate}
             min={todayKey}
-            onChange={(e) => {
-              if (e.target.value) setSelectedDate(e.target.value);
-            }}
+            onChange={(e) => { if (e.target.value) setSelectedDate(e.target.value); }}
             className="w-full border border-white/10 bg-neutral-950 py-3 pl-10 pr-4 text-sm text-white
                        outline-none transition focus:border-purple-400 focus:ring-1 focus:ring-purple-500/40
                        [color-scheme:dark]"
@@ -178,7 +287,7 @@ export default function ShowtimesPage() {
         </div>
       </div>
 
-      {/* ── Danh sách phim có suất trong ngày đã chọn ── */}
+      {/* ── Danh sách phim ── */}
       {isLoading ? (
         <div className="flex items-center justify-center gap-2 border border-white/10 bg-neutral-950 py-16 text-neutral-500">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -188,10 +297,18 @@ export default function ShowtimesPage() {
         <div className="border border-dashed border-white/10 bg-neutral-950 py-16 text-center">
           <CalendarDays className="mx-auto h-10 w-10 text-neutral-700" />
           <p className="mt-3 text-xs font-bold uppercase tracking-widest text-neutral-500">
-            {keyword.trim()
-              ? 'Không tìm thấy phim phù hợp trong ngày này'
+            {hasActiveFilters
+              ? 'Không tìm thấy phim phù hợp với bộ lọc'
               : 'Chưa có suất chiếu nào trong ngày này'}
           </p>
+          {hasActiveFilters && (
+            <button
+              onClick={() => { setKeyword(''); setSelectedGenre(null); }}
+              className="mt-3 text-[10px] text-purple-400 hover:text-purple-300 uppercase tracking-widest font-bold underline underline-offset-2"
+            >
+              Xoá bộ lọc
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -222,6 +339,18 @@ export default function ShowtimesPage() {
                       {group.duration ? `${group.duration} phút · ` : ''}
                       {group.slots.length} suất chiếu
                     </p>
+                    {group.movieGenres.length > 0 && group.movieGenres[0] !== 'Dang cap nhat' && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {group.movieGenres.slice(0, 4).map((g) => (
+                          <span
+                            key={g}
+                            className="border border-purple-500/30 bg-purple-950/30 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-purple-400"
+                          >
+                            {g}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <svg
                     className={`h-4 w-4 shrink-0 text-neutral-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}

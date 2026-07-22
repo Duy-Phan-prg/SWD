@@ -48,7 +48,10 @@ public class BulkRefundServiceImpl implements BulkRefundService {
     @Transactional
     public BulkRefundResponse processBulkRefund(Showtime showtime, String reason) {
         String refundReason = buildRefundReason(reason);
-        List<Booking> bookings = bookingRepository.findByShowtimeIdAndStatusForUpdate(showtime.getId(), BookingStatus.PAID);
+        List<Booking> bookings = bookingRepository.findByShowtimeIdAndStatusInForUpdate(
+                showtime.getId(),
+                java.util.List.of(BookingStatus.PAID, BookingStatus.USED)
+        );
         int successCount = 0;
 
         for (Booking booking : bookings) {

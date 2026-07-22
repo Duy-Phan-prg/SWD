@@ -111,7 +111,7 @@ export default function AdminLoyaltyPanel({ ctx }) {
         adminService.getLoyaltyTransactions(token, {
           keyword: keyword.trim() || undefined,
           page,
-          size: 20
+          size: 10
         })
       ]);
       setConfig({ ...DEFAULT_CONFIG, ...nextConfig, expiryDate: getExpiryDateValue(nextConfig) });

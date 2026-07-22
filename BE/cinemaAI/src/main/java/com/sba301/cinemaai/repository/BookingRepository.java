@@ -164,6 +164,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("status") BookingStatus status
     );
 
+    // Tìm và KHÓA nhiều trạng thái cùng lúc (dùng cho bulk refund khi hủy suất chiếu)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Booking b WHERE b.showtime.id = :showtimeId AND b.status IN :statuses")
+    List<Booking> findByShowtimeIdAndStatusInForUpdate(
+            @Param("showtimeId") Long showtimeId,
+            @Param("statuses") List<BookingStatus> statuses
+    );
+
     // 2. Hàm tìm và KHÓA ĐƠN LẺ (Dùng cho Staff khi bấm duyệt xử lý lỗi thủ công offline)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM Booking b WHERE b.id = :id")

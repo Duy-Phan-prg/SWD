@@ -1712,7 +1712,7 @@ export default function AdminDashboard({
               onClick={() => setOpenNavGroup(openNavGroup === 'insights' ? null : 'insights')}
               className={`mt-2 flex w-full items-center justify-between border-2 px-4 py-4 transition ${openNavGroup === 'insights' ? 'border-amber-500/60 bg-amber-500/[0.14] text-amber-300 shadow-[inset_3px_0_0_rgba(245,158,11,0.9)]' : 'border-white/10 bg-black/70 text-neutral-300 hover:border-amber-500/40 hover:text-white'}`}
             >
-              <span className="text-xs font-sans font-black uppercase tracking-[0.16em] drop-shadow-sm">Phân tích & Giám sát</span>
+              <span className="text-xs font-sans font-black uppercase tracking-[0.15em] drop-shadow-sm">Thống kê/Giám sát</span>
               <ChevronDown className={`!h-4 !w-4 transition-transform duration-300 ${openNavGroup === 'insights' ? 'rotate-180' : ''}`} />
             </button>
 

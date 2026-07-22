@@ -1,11 +1,9 @@
 package com.sba301.cinemaai.dto.request.wallet;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record WithdrawalProcessRequest(
-        @NotBlank(message = "Process method is required")
         @Pattern(regexp = "MANUAL_BANK_TRANSFER|BANK_TRANSFER|CASH|E_WALLET", message = "Process method is invalid")
         String method,
 

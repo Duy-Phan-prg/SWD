@@ -1505,9 +1505,16 @@ export default function AdminShowtimesPanel({ ctx }) {
                         <div className="px-5 py-4 pt-10">
                           {slot.startTime ? (
                             <>
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-3xl font-black tracking-normal text-zinc-900 font-mono">{formatTimeOnly(slot.startTime)}</span>
-                                <span className="text-2xl font-black tracking-normal text-zinc-900 font-mono">→ {formatTimeOnly(endTime)}</span>
+                              <div className="flex items-end gap-1.5">
+                                <div className="flex flex-col items-start">
+                                  <span className="text-[9px] font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Giờ bắt đầu</span>
+                                  <span className="text-3xl font-black tracking-normal text-zinc-900 font-mono">{formatTimeOnly(slot.startTime)}</span>
+                                </div>
+                                <span className="text-3xl font-black text-zinc-400 mb-0.5">→</span>
+                                <div className="flex flex-col items-start">
+                                  <span className="text-[9px] font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Giờ kết thúc</span>
+                                  <span className="text-3xl font-black tracking-normal text-zinc-900 font-mono">{formatTimeOnly(endTime)}</span>
+                                </div>
                               </div>
                               {bulkStepMinutes > 0 && (
                                 <p className="mt-0.5 text-[9px] font-semibold text-zinc-600">
