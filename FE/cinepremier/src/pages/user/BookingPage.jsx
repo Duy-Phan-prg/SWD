@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check, ShieldCheck, CircleAlert } from 'lucide-react';
 import { expireAuthSession, getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
 import { paymentService } from '../../services/paymentService';
@@ -144,6 +145,7 @@ const sortShowtimes = (showtimes) => [...showtimes].sort((a, b) => {
 
 export default function BookingView() {
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const draftKey = `cp:bookingDraft:${id}`;
@@ -152,6 +154,9 @@ export default function BookingView() {
   // Ghế chờ áp lại sau khi seat map tải xong
   const pendingSeatRestoreRef = useRef(null);
   const resumeAppliedRef = useRef(false);
+  const audienceDialogRef = useRef(null);
+  const audienceConfirmButtonRef = useRef(null);
+  const audienceReturnFocusRef = useRef(null);
   const { moviesList, foodCatalog, fetchPublicFoodCatalog } = useMovies();
   const showToast = useUiStore((state) => state.showToast);
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
@@ -236,6 +241,7 @@ export default function BookingView() {
   const [seatClockTick, setSeatClockTick] = useState(Date.now());
   const [isHolding, setIsHolding] = useState(false);
   const [paymentState, setPaymentState] = useState('booking');
+  const [showAudienceConfirmation, setShowAudienceConfirmation] = useState(false);
   const [ticketPriceValidation, setTicketPriceValidation] = useState(null);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [loyaltyPointsInput, setLoyaltyPointsInput] = useState('');
@@ -752,6 +758,53 @@ export default function BookingView() {
     ? Number(heldPaymentSummary.totalAmount)
     : totalAmount;
   const gatewayRedeemedPoints = Number(heldPaymentSummary?.loyaltyPointsRedeemed ?? loyaltyPointsToRedeem);
+  const audienceMinimumAge = getAgeRatingMinimum(movie?.ageRating);
+  const selectedShowtimeEnd = (() => {
+    const explicitEnd = selectedShowtime?.endTime ? new Date(selectedShowtime.endTime) : null;
+    if (explicitEnd && !Number.isNaN(explicitEnd.getTime())) return explicitEnd;
+    const start = selectedShowtime?.startTime ? new Date(selectedShowtime.startTime) : null;
+    if (!start || Number.isNaN(start.getTime())) return null;
+    return new Date(start.getTime() + Number(movie?.duration || 0) * 60 * 1000);
+  })();
+  const isLateNightShow = (() => {
+    if (!selectedShowtimeEnd || !selectedShowtime?.startTime) return false;
+    const start = new Date(selectedShowtime.startTime);
+    if (Number.isNaN(start.getTime())) return false;
+    const lateNightCutoff = new Date(start);
+    lateNightCutoff.setHours(23, 0, 0, 0);
+    return selectedShowtimeEnd.getTime() > lateNightCutoff.getTime();
+  })();
+
+  useEffect(() => {
+    if (!showAudienceConfirmation) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    audienceConfirmButtonRef.current?.focus();
+    const handleDialogKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowAudienceConfirmation(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = audienceDialogRef.current?.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleDialogKeyDown);
+      audienceReturnFocusRef.current?.focus?.();
+    };
+  }, [showAudienceConfirmation]);
 
   const formatHoldSeconds = (seconds) => {
     if (seconds === null || seconds === undefined) return '--:--';
@@ -1014,6 +1067,12 @@ export default function BookingView() {
 
   const handleContinueToCombos = () => {
     if (!canMovePastSeats()) return;
+    audienceReturnFocusRef.current = document.activeElement;
+    setShowAudienceConfirmation(true);
+  };
+
+  const handleConfirmAudience = () => {
+    setShowAudienceConfirmation(false);
     setBookingStep('combos');
     if (concessions.length === 0) fetchPublicFoodCatalog({ force: true });
   };
@@ -1651,7 +1710,9 @@ export default function BookingView() {
           <ChevronRight className="h-3 w-3 text-neutral-700" />
           <button
             disabled={selectedSeats.length === 0}
-            onClick={() => setBookingStep('combos')}
+            onClick={() => {
+              if (bookingStep === 'seats') handleContinueToCombos();
+            }}
             className={`px-3 py-1.5 transition ${bookingStep === 'combos' ? 'text-white border-b border-white font-bold' : 'text-neutral-500 hover:text-white disabled:opacity-30'}`}
           >
             2. BẮP NƯỚC
@@ -2493,6 +2554,104 @@ export default function BookingView() {
         </div>
 
       </div>
+
+      {/* Hallmark · component: confirmation-dialog · genre: modern-minimal · theme: CinePremier OLED · critique: P4 H5 E5 S5 R5 V4 */}
+      <AnimatePresence>
+        {showAudienceConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0.1 : 0.18, ease: 'easeOut' }}
+            className="fixed inset-0 z-[140] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setShowAudienceConfirmation(false);
+            }}
+            role="presentation"
+          >
+            <motion.section
+              ref={audienceDialogRef}
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.985 }}
+              transition={{ duration: shouldReduceMotion ? 0.1 : 0.22, ease: 'easeOut' }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="audience-confirmation-title"
+              aria-describedby="audience-confirmation-description"
+              className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto border border-white/15 bg-neutral-950 shadow-2xl"
+            >
+              <div className="h-1 bg-amber-400" aria-hidden="true" />
+
+              <div className="border-b border-white/10 p-5 sm:px-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-amber-400/40 bg-amber-400/10 text-amber-300" aria-hidden="true">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Xác nhận điều kiện</p>
+                    <h2 id="audience-confirmation-title" className="mt-1 min-w-0 text-xl font-black text-white [overflow-wrap:anywhere]">Độ tuổi người xem</h2>
+                    <p className="mt-1 truncate text-xs text-neutral-400">
+                      {movie?.title} · {selectedSeats.length} ghế đã chọn
+                    </p>
+                  </div>
+                  <span className="shrink-0 border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">
+                    {movie?.ageRating || 'Phân loại phim'}
+                  </span>
+                </div>
+              </div>
+
+              <div id="audience-confirmation-description" className="space-y-4 p-5 text-sm leading-6 text-neutral-200 sm:px-6">
+                <p>
+                  Tôi xác nhận mua vé cho người xem{' '}
+                  <strong className="font-black text-white">
+                    {audienceMinimumAge > 0
+                      ? `từ đủ ${audienceMinimumAge} tuổi trở lên`
+                      : `phù hợp với phân loại ${movie?.ageRating || 'của phim'}`}
+                  </strong>{' '}
+                  và đồng ý cung cấp giấy tờ tùy thân để xác thực độ tuổi khi được yêu cầu.
+                </p>
+
+                {isLateNightShow && (
+                  <div className="flex gap-3 border-l-2 border-amber-400 bg-amber-400/5 px-4 py-3 text-amber-100">
+                    <CircleAlert className="mt-1 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-amber-300">Lưu ý suất chiếu muộn</p>
+                      <p className="mt-1 text-sm leading-6">Suất chiếu kết thúc sau 23:00. Rạp không phục vụ khách hàng dưới 16 tuổi cho suất chiếu này.</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 border-t border-white/10 pt-4">
+                  <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-neutral-300" aria-hidden="true" />
+                  <p className="text-sm leading-6 text-neutral-300">
+                    Vé không được hoàn nếu người xem không đáp ứng quy định về độ tuổi tại thời điểm kiểm tra.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-t border-white/10 bg-black/30 p-4 sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+                <button
+                  type="button"
+                  onClick={() => setShowAudienceConfirmation(false)}
+                  className="min-h-12 cursor-pointer border border-white/15 px-5 text-xs font-black uppercase tracking-[0.16em] text-neutral-300 outline-none transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-white active:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  ref={audienceConfirmButtonRef}
+                  type="button"
+                  onClick={handleConfirmAudience}
+                  className="flex min-h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap bg-amber-400 px-5 text-xs font-black uppercase tracking-[0.16em] text-black outline-none transition-colors hover:bg-amber-300 focus-visible:ring-2 focus-visible:ring-white active:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  Xác nhận & tiếp tục
+                </button>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
