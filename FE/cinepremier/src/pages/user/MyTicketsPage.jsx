@@ -607,7 +607,7 @@ export default function MyTicketsView() {
 
                       {/* GHẾ */}
                       <div className="min-w-0 px-1">
-                        <span className="block text-[8px] text-amber-500 font-extrabold uppercase tracking-widest mb-1 text-center font-mono">GHẾ VIP:</span>
+                        <span className="block text-[8px] text-amber-500 font-extrabold uppercase tracking-widest mb-1 text-center font-mono">SỐ GHẾ:</span>
                         <span className="text-[10px] sm:text-[11px] font-extrabold text-amber-400 bg-amber-950/15 border border-amber-500/20 px-1.5 py-0.5 rounded-sm block truncate text-center font-mono">
                           {t.seats}
                         </span>
