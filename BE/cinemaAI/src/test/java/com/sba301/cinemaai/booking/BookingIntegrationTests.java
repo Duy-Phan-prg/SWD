@@ -244,6 +244,55 @@ class BookingIntegrationTests {
     }
 
     @Test
+    void shouldAllowOnlyOneActiveCheckoutPerCustomerAndShowtime() throws Exception {
+        String customerToken = loginAs("phase5.single.checkout.", RoleName.CUSTOMER);
+        Showtime showtime = createShowtimeFixture();
+        List<Seat> seats = seatRepository.findByRoom(showtime.getRoom());
+        Seat firstSeat = seats.get(0);
+        Seat secondSeat = seats.get(1);
+
+        String firstHoldResponse = mockMvc.perform(post("/api/v1/bookings/hold")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new HoldSeatsRequest(
+                                showtime.getId(),
+                                List.of(firstSeat.getId())
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Long firstBookingId = objectMapper.readTree(firstHoldResponse).at("/data/id").asLong();
+
+        mockMvc.perform(post("/api/v1/bookings/hold")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new HoldSeatsRequest(
+                                showtime.getId(),
+                                List.of(secondSeat.getId())
+                        ))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "Bạn đã có đơn đang giữ ghế cho suất chiếu này. Hãy tiếp tục thanh toán hoặc hủy đơn trước khi chọn ghế mới"
+                ));
+
+        mockMvc.perform(delete("/api/v1/bookings/{bookingId}", firstBookingId)
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+
+        mockMvc.perform(post("/api/v1/bookings/hold")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new HoldSeatsRequest(
+                                showtime.getId(),
+                                List.of(secondSeat.getId())
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("HOLDING"));
+    }
+
+    @Test
     void shouldCreateBookingWithTicketValidationAndRefundFlow() throws Exception {
         String adminToken = loginAs("phase6.ticket.admin.", RoleName.ADMIN);
         String customerToken = loginAs("phase6.ticket.customer.", RoleName.CUSTOMER);
@@ -458,13 +507,16 @@ class BookingIntegrationTests {
         seatRepository.save(new Seat(room, seatRow, 1, 1, SeatType.NORMAL));
         seatRepository.save(new Seat(room, seatRow, 2, 2, SeatType.NORMAL));
 
+        LocalDateTime startTime = LocalDateTime.now().plusMinutes(5);
         Showtime showtime = new Showtime(
                 savedMovie,
                 room,
-                LocalDateTime.of(2026, 5, 21, 19, 0),
-                LocalDateTime.of(2026, 5, 21, 21, 5),
+                startTime,
+                startTime.plusMinutes(125),
                 BigDecimal.valueOf(95000)
         );
+        // Keep fixture pricing deterministic even when the suite runs after 22:00.
+        showtime.setLateNightSurchargeAmount(BigDecimal.ZERO);
         showtime.setStatus(ShowtimeStatus.OPEN);
         return showtimeRepository.save(showtime);
     }

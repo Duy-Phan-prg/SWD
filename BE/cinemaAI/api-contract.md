@@ -217,6 +217,30 @@ Ticket-pricing admin endpoints đang `@Hidden` trong Swagger nhưng vẫn tồn 
 
 | Method + path | Request | Response | Success |
 |---|---|---|---|
+| `POST /food-orders` | `FoodOrderRequest` | `FoodOrderResponse` (`bookingId`/`bookingCode` are `null`) | `201` |
+| `GET /food-orders/my` | — | `List<FoodOrderResponse>` | `200` |
+| `DELETE /food-orders/{foodOrderId}` | path | `FoodOrderResponse` | `200` |
+| `POST /bookings/{bookingId}/food-orders` | `FoodOrderRequest` | `FoodOrderResponse` | `200` |
+| `GET /bookings/{bookingId}/food-orders` | path | `List<FoodOrderResponse>` | `200` |
+| `POST /payments/food-orders/{foodOrderId}/vnpay/create` | path | `PaymentResponse` | `200` |
+| `POST /payments/food-orders/{foodOrderId}/mock` | path | `PaymentResponse` | `200` |
+
+Standalone pickup QR (STAFF/ADMIN):
+
+| Endpoint | Input | Output | Success |
+|---|---|---|---|
+| `GET /staff/check-in/food-orders/lookup` | query `code` (order code or `CINEAI:FOOD:...`) | `FoodOrderResponse` | `200` |
+| `POST /staff/check-in/food-orders/pickup` | `{ "code": "CINEAI:FOOD:..." }` | `FoodOrderResponse` with `PICKED_UP` | `200` |
+
+For a paid standalone order, `FoodOrderResponse.qrCode` contains a one-time pickup QR. After pickup,
+`status` is `PICKED_UP`, `pickedUpAt` is populated, and `qrCode` is no longer returned. A repeated pickup
+request returns `409 Conflict`.
+
+Standalone food orders use a 15-minute `PENDING_PAYMENT` window. `FoodOrderResponse.expiresAt`
+is the source of truth for the customer countdown and is also sent to VNPay as `vnp_ExpireDate`.
+Cancelling or failing a VNPay attempt does not cancel the order; the customer may retry until
+`expiresAt`. Customer cancellation changes the order to `CANCELLED`; automatic timeout changes it
+to `EXPIRED`.
 | `GET /bookings` | query `status,page,size` | `PageResponse<BookingResponse>` | `200` |
 | `GET /bookings/{bookingId}` | path | `BookingResponse` | `200` |
 | `DELETE /bookings/{bookingId}` | path | `BookingResponse` | `200` |

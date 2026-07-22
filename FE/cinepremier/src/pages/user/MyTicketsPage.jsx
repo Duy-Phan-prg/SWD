@@ -4,18 +4,17 @@ import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertic
 import { QRCodeSVG } from 'qrcode.react';
 import { getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
-import { paymentService } from '../../services/paymentService';
 import { reviewService } from '../../services/reviewService';
 import { useMovies } from '../../stores/useMovieStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUiStore } from '../../stores/useUiStore';
 
-export default function MyTicketsView() {
+export default function MyTicketsView({ embedded = false }) {
   const navigate = useNavigate();
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const showToast = useUiStore((state) => state.showToast);
   const setShowOTP = useUiStore((state) => state.setShowOTP);
-  const { publicCinema, moviesList = [], foodCatalog, fetchPublicFoodCatalog } = useMovies();
+  const { publicCinema, moviesList = [] } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onOpenOTP = () => setShowOTP(true);
   const [reviewContent, setReviewContent] = useState('');
@@ -33,74 +32,11 @@ export default function MyTicketsView() {
   const [deletingReviewId, setDeletingReviewId] = useState('');
   const reviewSectionRef = useRef(null);
 
-  // Đặt thêm bắp nước cho booking đã thanh toán (khi suất chưa kết thúc)
-  const [foodOrderTicket, setFoodOrderTicket] = useState(null);
-  const [foodOrderQuantities, setFoodOrderQuantities] = useState({});
-  const [isSubmittingFoodOrder, setIsSubmittingFoodOrder] = useState(false);
-
   const canOrderMoreFood = (t) => (
     ['PAID', 'USED'].includes(t.status)
     && t.showtimeEnd
     && new Date(t.showtimeEnd).getTime() > Date.now()
   );
-
-  const openFoodOrderModal = (t) => {
-    setFoodOrderQuantities({});
-    setFoodOrderTicket(t);
-    if (!Array.isArray(foodCatalog) || foodCatalog.length === 0) {
-      fetchPublicFoodCatalog();
-    }
-  };
-
-  const changeFoodQuantity = (id, delta) => {
-    setFoodOrderQuantities((prev) => {
-      const next = Math.max(0, (prev[id] || 0) + delta);
-      const copy = { ...prev };
-      if (next === 0) delete copy[id];
-      else copy[id] = next;
-      return copy;
-    });
-  };
-
-  const foodOrderTotal = Object.entries(foodOrderQuantities).reduce((sum, [id, qty]) => {
-    const item = (foodCatalog || []).find((i) => i.id === id);
-    return sum + (item ? Number(item.price || 0) * qty : 0);
-  }, 0);
-
-  const handleSubmitFoodOrder = async () => {
-    if (!foodOrderTicket || isSubmittingFoodOrder) return;
-    const { accessToken } = getStoredAuth();
-    if (!accessToken) return;
-    const foods = Object.entries(foodOrderQuantities)
-      .map(([id, quantity]) => {
-        const item = (foodCatalog || []).find((i) => i.id === id);
-        if (!item) return null;
-        return { foodItemId: item.foodItemId ?? null, foodComboId: item.foodComboId ?? null, quantity };
-      })
-      .filter(Boolean);
-    if (foods.length === 0) {
-      showToast('Chọn ít nhất một món bắp nước.');
-      return;
-    }
-    setIsSubmittingFoodOrder(true);
-    try {
-      const order = await bookingService.createFoodOrder(accessToken, foodOrderTicket.bookingId, { foods });
-      // Thanh toán thật qua VNPay — redirect trình duyệt sang cổng thanh toán.
-      // Khi VNPay báo thành công, BE (confirmPayment) sẽ set FoodOrder = PAID và gắn vào mã đơn
-      // để staff theo dõi được. KHÔNG fallback mock: nếu tạo phiên lỗi thì báo và dừng.
-      const result = await paymentService.createVnpayFoodOrderPayment(accessToken, order.id);
-      const paymentUrl = result?.paymentUrl ?? result?.payment_url;
-      if (paymentUrl) {
-        window.location.href = paymentUrl;
-        return;
-      }
-      showToast('Không tạo được phiên thanh toán VNPay. Vui lòng thử lại.');
-    } catch (err) {
-      showToast(err?.message || 'Không thể đặt thêm bắp nước. Vui lòng thử lại.');
-    } finally {
-      setIsSubmittingFoodOrder(false);
-    }
-  };
 
   const loadBookings = () => {
     if (!isLoggedIn) return;
@@ -515,7 +451,7 @@ export default function MyTicketsView() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
+    <div className={embedded ? 'space-y-12' : 'mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12'}>
 
       {!isLoggedIn && (
         <div className="border border-white/10 bg-[#0E0E0E] p-6 text-center space-y-4 max-w-sm mx-auto my-12" id="guest-tickets-gate">
@@ -535,15 +471,14 @@ export default function MyTicketsView() {
 
       {isLoggedIn && (
         <>
-          {/* HEADER SECTION */}
-          <div className="space-y-1 text-center sm:text-left">
+          {!embedded && <div className="space-y-1 text-center sm:text-left">
             <h1 className="text-3xl font-serif font-light text-white tracking-widest leading-none uppercase italic">
               Vé của tôi
             </h1>
             <p className="text-xs font-sans tracking-[0.2em] text-neutral-400 uppercase">
               Quản lý trải nghiệm điện ảnh cao cấp của bạn
             </p>
-          </div>
+          </div>}
 
           {/* SECTION: VÉ HIỆN TẠI */}
           <div className="space-y-4">
@@ -695,7 +630,7 @@ export default function MyTicketsView() {
                         {canOrderMoreFood(t) && (
                           <button
                             type="button"
-                            onClick={() => openFoodOrderModal(t)}
+                            onClick={() => navigate(`/concessions?bookingId=${t.bookingId}`)}
                             className="inline-flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-emerald-300 transition hover:bg-emerald-500 hover:text-black"
                             title="Đặt thêm bắp nước khi suất chiếu chưa kết thúc"
                           >
@@ -1060,64 +995,6 @@ export default function MyTicketsView() {
 
           </div>
         </>
-      )}
-
-      {/* MODAL: ĐẶT THÊM BẮP NƯỚC */}
-      {foodOrderTicket && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4" onClick={() => !isSubmittingFoodOrder && setFoodOrderTicket(null)}>
-          <div className="w-full max-w-md border border-white/10 bg-[#0a0a0a] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">🍿 Đặt thêm bắp nước</p>
-                <p className="mt-1 text-[10px] font-mono text-neutral-500">{foodOrderTicket.title} · {foodOrderTicket.code}</p>
-              </div>
-              <button onClick={() => !isSubmittingFoodOrder && setFoodOrderTicket(null)} className="p-1.5 text-neutral-500 hover:text-white transition">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
-              {!Array.isArray(foodCatalog) || foodCatalog.length === 0 ? (
-                <div className="flex items-center justify-center gap-2 p-8 text-neutral-500 text-xs">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Đang tải thực đơn…
-                </div>
-              ) : foodCatalog.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{item.name}</p>
-                    <p className="text-[10px] font-mono text-amber-400">{Number(item.price || 0).toLocaleString()}đ</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => changeFoodQuantity(item.id, -1)}
-                      className="h-7 w-7 border border-white/15 text-white hover:bg-white/10 transition text-sm leading-none"
-                    >−</button>
-                    <span className="w-6 text-center text-xs font-mono text-white">{foodOrderQuantities[item.id] || 0}</span>
-                    <button
-                      onClick={() => changeFoodQuantity(item.id, 1)}
-                      className="h-7 w-7 border border-white/15 text-white hover:bg-white/10 transition text-sm leading-none"
-                    >+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-white/10 px-5 py-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Tổng cộng</span>
-                <span className="text-base font-black font-mono text-emerald-400">{foodOrderTotal.toLocaleString()}đ</span>
-              </div>
-              <button
-                onClick={handleSubmitFoodOrder}
-                disabled={isSubmittingFoodOrder || foodOrderTotal <= 0}
-                className="w-full bg-emerald-500 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSubmittingFoodOrder ? 'Đang xử lý…' : 'Xác nhận & thanh toán'}
-              </button>
-              <p className="text-center text-[8px] text-neutral-600 uppercase tracking-widest">Chỉ đặt được khi suất chiếu chưa kết thúc</p>
-            </div>
-          </div>
-        </div>
       )}
 
     </div>

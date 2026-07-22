@@ -166,7 +166,7 @@ export default function Header({
             <Ticket className="h-3.5 w-3.5" /> ĐẶT VÉ NGAY
           </button>
           <button
-            onClick={() => onTabChange('explore')}
+            onClick={() => onTabChange('concessions')}
             className="hidden lg:flex h-9 items-center gap-1.5 bg-purple-700 hover:bg-purple-800 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-white transition whitespace-nowrap rounded"
             id="btn-order-food"
           >
@@ -436,7 +436,7 @@ export default function Header({
                 id="nav-my-bookings"
               >
                 <Ticket className="h-3.5 w-3.5" />
-                <span>VÉ CỦA TÔI</span>
+                <span>ĐƠN CỦA TÔI</span>
               </button>
             )}
 

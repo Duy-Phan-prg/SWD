@@ -6,12 +6,13 @@ import ExploreView from '@/pages/user/ExplorePage';
 import DetailView from '@/pages/user/MovieDetailPage';
 import BookingView from '@/pages/user/BookingPage';
 import ProfileView from '@/pages/user/ProfilePage';
-import MyTicketsView from '@/pages/user/MyTicketsPage';
+import MyOrdersPage from '@/pages/user/MyOrdersPage';
 import ShowtimesPage from '@/pages/user/ShowtimesPage';
 import WishlistView from '@/pages/user/WishlistPage';
 import AdminDashboard from '@/pages/admin/AdminPage';
 import PoliciesPage from '@/pages/user/PoliciesPage';
 import PaymentCallbackPage from '@/pages/user/PaymentCallbackPage';
+import ConcessionsPage from '@/pages/user/ConcessionsPage';
 import StaffCheckInPage from '@/pages/staff/StaffCheckInPage';
 import GooglePasswordSetupPage from '@/pages/auth/GooglePasswordSetupPage';
 import AdminRoute from './AdminRoute';
@@ -110,7 +111,8 @@ export default function AppRoutes() {
       <Route path="/showtimes" element={<AppShell><ShowtimesPage /></AppShell>} />
       <Route path="/movies/:id" element={<AppShell><DetailView /></AppShell>} />
       <Route path="/movies/:id/book" element={<AppShell><ProtectedRoute><BookingView /></ProtectedRoute></AppShell>} />
-      <Route path="/tickets" element={<AppShell><ProtectedRoute><MyTicketsView /></ProtectedRoute></AppShell>} />
+      <Route path="/concessions" element={<AppShell><ProtectedRoute><ConcessionsPage /></ProtectedRoute></AppShell>} />
+      <Route path="/tickets" element={<AppShell><ProtectedRoute><MyOrdersPage /></ProtectedRoute></AppShell>} />
       <Route path="/watchlist" element={isAdmin ? <Navigate to="/admin/overview" replace /> : isStaff ? <Navigate to="/staff" replace /> : <AppShell><ProtectedRoute><WishlistView /></ProtectedRoute></AppShell>} />
       <Route path="/profile" element={<AppShell><ProtectedRoute><ProfileView /></ProtectedRoute></AppShell>} />
       <Route path="/policies" element={<AppShell><PoliciesPage /></AppShell>} />

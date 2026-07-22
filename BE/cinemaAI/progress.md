@@ -1,5 +1,59 @@
 # CinemaAI Progress
 
+## Session update - 2026-07-23 recoverable standalone concession checkout
+
+Scope:
+
+- Added a 15-minute backend-owned payment deadline for standalone food orders and synchronized it with VNPay `vnp_ExpireDate`.
+- Updated PostgreSQL `food_orders_status_check` so the new `EXPIRED` lifecycle state is accepted on existing databases.
+- Added customer food-order listing and explicit cancellation APIs, plus automatic `EXPIRED` cleanup.
+- Preserved pending food orders after a failed/cancelled VNPay attempt so customers can retry without creating another order.
+- Added a separate "Đơn bắp nước của tôi" UI with countdown, retry, cancellation, paid pickup code and duplicate-checkout prevention.
+- Updated the payment callback to return standalone concession customers to their food orders instead of movie tickets.
+- Consolidated customer history under "Đơn của tôi" with separate movie-ticket and standalone-concession tabs; the concessions storefront now shows only an active pending checkout.
+
+Verification:
+
+- `mvnw.cmd -DskipTests package`: passed.
+- `PaymentIntegrationTests`: passed (5 tests), including standalone create/pay and list/cancel coverage.
+- Frontend `npm run build`: passed (2799 modules; existing bundle-size warning only).
+
+## Session update - 2026-07-23 standalone concessions checkout
+
+Scope:
+
+- Added authenticated standalone food orders that do not require a movie booking.
+- Made booking references optional for standalone food-order items and payments while retaining the booking-linked add-on flow.
+- Added direct VNPay/mock-payment ownership checks through the food-order customer.
+- Updated the concessions page so the header flow selects food immediately; a booking is linked only when entering from My Tickets.
+- Added PostgreSQL migration `V13__standalone_food_orders.sql` and included paid standalone orders in concession revenue aggregation.
+- Removed the redundant standalone-order explanation card from the bill and added current/estimated CinePoints information.
+- Food orders now earn CinePoints exactly once after successful payment; point redemption remains intentionally disabled until abandoned-order restoration is supported.
+- Added a PostgreSQL startup compatibility step because Flyway is currently disabled and Hibernate does not relax legacy `booking_id NOT NULL` constraints automatically.
+- Refined the concessions bill empty/error/loading states with an actionable empty state, inline payment recovery and accessible quantity controls.
+
+Verification:
+
+- `mvnw.cmd -DskipTests package`: passed.
+- `PaymentIntegrationTests#shouldCreateAndPayStandaloneFoodOrderWithoutBooking`: passed (1 test), including the post-payment loyalty balance assertion.
+- `PaymentIntegrationTests`: standalone create/VNPay/mock flow passed; the full run exposed an old-payment lookup bug, and the focused retry/supersede scenario passed after changing the lookup to return the newest payment.
+- Frontend `npm run build`: passed (2799 modules; existing bundle-size warning only).
+- Local PostgreSQL metadata check: standalone-order booking references are nullable and `food_orders.customer_id` remains required after startup compatibility ran.
+
+## Session update - 2026-07-23 single active checkout per showtime
+
+Scope:
+
+- Enforced one active `HOLDING`/`PENDING_PAYMENT` booking per customer and showtime.
+- Serialized hold creation with a pessimistic showtime lock so concurrent tabs cannot bypass the rule.
+- Added an integration test covering duplicate rejection, manual cancellation and successful rebooking.
+- Aligned the documented hold duration with the implemented three-minute session.
+
+Verification:
+
+- `BookingIntegrationTests#shouldAllowOnlyOneActiveCheckoutPerCustomerAndShowtime` passed independently (1 test).
+- Full `BookingIntegrationTests` passed after making its date and late-night pricing fixture deterministic (6 tests).
+
 ## Session update - 2026-06-27 configuration externalization
 
 Scope:
@@ -80,7 +134,7 @@ Results:
 | 2 — Auth, Customer & Security | Done with RBAC mismatch | Register/login/Google/refresh/logout/OTP/reset/profile/admin user management; auth tests pass | Role flow says check-in is STAFF-only, but code also permits ADMIN |
 | 3 — Movie, Genre & Actor | Done | Public catalog, admin CRUD, relations; movie/actor integration and inventory tests pass | No material backend gap identified |
 | 4 — Cinema, Room, Seat & Showtime | Partial | Single-cinema service, room/seat/layout, showtime CRUD/bulk/overlap, seat map and automatic `SCHEDULED -> OPEN -> COMPLETED` scheduler exist; integration test passes | Contract mismatch: mapping says no cinema CREATE/DELETE, code exposes both; one stale inventory assertion |
-| 5 — Booking, Seat Locking, F&B & QR | Partial | Hold, booking, ticket pricing, F&B, QR, cleanup scheduler and check-in exist; booking tests pass | No DB lock/unique guarantee against concurrent double booking; QR is not signed; STAFF-only role policy not enforced |
+| 5 — Booking, Seat Locking, F&B & QR | Partial | Hold, booking, ticket pricing, F&B, QR, cleanup scheduler and check-in exist; showtime-level pessimistic locking enforces one active checkout per customer/showtime | No database active-seat unique constraint; QR is not signed; STAFF-only role policy not enforced |
 | 6 — Payment & Refund | Partial | VNPay/mock payment, return/IPN, amount/signature/idempotency basics, customer refund request, admin request/mark-refunded, wallet refund on showtime cancellation | No VNPay Refund API; no dedicated refund entity/proof/history/claim; customer refund lacks time-policy check; manual mark-refunded does not update `Payment.status` |
 | 7 — Loyalty & Notification | Partial | Earn/redeem/revoke loyalty, notification persistence, unread list, mark one/all read, payment and showtime-cancel notifications exist | No transaction ledger; no complete refund event types/claim notifications; no realtime push |
 | 8 — Review | Partial, not “not implemented” | Customer create/update/delete, `USED` eligibility, one review/movie, public list/average and admin moderation are implemented | No dedicated integration suite; current review starts `VISIBLE` rather than requiring approval as stated in mapping |
@@ -164,7 +218,7 @@ The following mapping statements are stale relative to current code:
 1. Decide and enforce role ownership for check-in and incident refund.
 2. Fix `CinemaShowtimeEndpointInventoryTests` to understand class-level + method-level mappings.
 3. Convert migrations to PostgreSQL and enable Flyway with Hibernate `validate`.
-4. Add concurrency-safe seat locking/constraint and concurrent hold tests.
+4. Add a database-level active-seat constraint and a true parallel-request hold test; service-level showtime locking is now in place.
 5. Implement Cinema Incident Refund in isolated phases: schema, incident, gateway refund, claim, proof/history, notification/audit/tests.
 6. Add dedicated review, report, scheduler and RBAC integration tests.
 
@@ -180,3 +234,13 @@ Future sessions must update:
 - unresolved blocker and next concrete action.
 
 Do not mark a partial phase `done` merely because its primary controller exists.
+
+## 2026-07-23 — Standalone concession pickup QR
+
+- Added a one-time `CINEAI:FOOD` QR for paid standalone food orders.
+- Added staff/admin lookup and pickup-confirmation endpoints with an audited `PAID -> PICKED_UP` transition.
+- Added `picked_up_at`, PostgreSQL status-constraint compatibility, and migration `V16`.
+- Updated customer order history to render the QR only while it is valid and show completion time afterward.
+- Updated the staff scanner to distinguish ticket QR from food QR, display receipt lines, and prevent duplicate handoff.
+- Verification passed: `mvnw -DskipTests compile`, `mvnw -Dtest=PaymentIntegrationTests test` (6 tests), and frontend `npm run build`.
+- Startup follow-up: clean Spring context test passed and both `FoodOrderServiceImpl`/`QrTicketServiceImpl` are discoverable. The reported missing-bean state was caused by an IntelliJ/DevTools process restarting while `target/classes` was being rebuilt. Legacy `commons-logging` was excluded from Cloudinary because Spring already supplies `spring-jcl`.

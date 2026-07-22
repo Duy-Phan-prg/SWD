@@ -8,6 +8,7 @@ import com.sba301.cinemaai.dto.response.loyalty.LoyaltyReportResponse;
 import com.sba301.cinemaai.dto.response.loyalty.LoyaltyResponse;
 import com.sba301.cinemaai.dto.response.loyalty.LoyaltyTransactionResponse;
 import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.FoodOrder;
 import com.sba301.cinemaai.entity.User;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,6 +25,8 @@ public interface LoyaltyPointService {
         LoyaltyResponse redeemMyPoints(String email, int points);
 
         void addPointsFromBooking(User user, Booking booking);
+
+        void addPointsFromFoodOrder(User user, FoodOrder foodOrder);
 
         int redeemPointsForBooking(User user, Booking booking, int points);
 
