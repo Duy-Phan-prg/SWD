@@ -202,6 +202,7 @@ export default function UserLayout({ children }) {
             isLoggedIn={isLoggedIn}
             currentUser={currentUser}
             currentRole={currentRole}
+            loyaltyRefreshKey={location.key}
             onRoleChange={setCurrentRole}
             handleLogout={handleLogout}
             navigate={navigate}
