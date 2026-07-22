@@ -152,6 +152,11 @@ export default function PaymentCallbackPage() {
             <div>
               <h2 className="text-lg font-bold text-red-400 uppercase tracking-wider">Thanh Toán Thất Bại</h2>
               <p className="text-[11px] text-zinc-400 mt-1">{failReason || 'Giao dịch bị huỷ hoặc không thành công.'}</p>
+              {!info.isFoodOrder && (
+                <p className="mt-2 text-[10px] leading-relaxed text-amber-300/80">
+                  Đơn vé vẫn nằm trong “Vé của tôi” và có thể thanh toán lại cho đến khi hết thời gian giữ ghế.
+                </p>
+              )}
             </div>
           </>
         )}

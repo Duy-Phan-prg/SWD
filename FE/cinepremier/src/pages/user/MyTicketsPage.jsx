@@ -157,12 +157,6 @@ export default function MyTicketsView() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const canCancelBooking = (booking) => {
-    if (!['HOLDING', 'PENDING_PAYMENT'].includes(booking.status)) return false;
-    if (!booking.holdExpiresAt) return true;
-    return new Date(booking.holdExpiresAt).getTime() > Date.now();
-  };
-
   const getBookingBadge = (status) => {
     switch (status) {
       case 'PAID':
@@ -205,7 +199,7 @@ export default function MyTicketsView() {
 
   const getBookingHelperText = (booking) => {
     if (booking.status === 'PAID') return 'Sẵn sàng quét / Đưa mã cho nhân viên soát vé';
-    if (booking.status === 'PENDING_PAYMENT') return 'Có thể hủy trước thanh toán hoặc tiếp tục thanh toán';
+    if (booking.status === 'PENDING_PAYMENT') return 'Có thể tiếp tục thanh toán khi thời gian giữ ghế còn hiệu lực';
     if (booking.status === 'HOLDING') {
       return `Ghế giữ đến ${booking.holdExpiresAt ? new Date(booking.holdExpiresAt).toLocaleTimeString('vi-VN') : ''}`;
     }
@@ -213,23 +207,29 @@ export default function MyTicketsView() {
   };
 
   const handleCancelBooking = async (booking) => {
-    if (!booking?.bookingId || !canCancelBooking(booking)) return;
-    const confirmed = window.confirm('Hủy booking này? Ghế đang giữ sẽ được giải phóng và vé đã thanh toán không thể hủy theo yêu cầu khách hàng.');
+    const isCancellable = booking?.bookingId
+      && ['HOLDING', 'PENDING_PAYMENT'].includes(booking.status)
+      && (!booking.holdExpiresAt || new Date(booking.holdExpiresAt).getTime() > Date.now());
+    if (!isCancellable) return;
+
+    const confirmed = window.confirm(
+      'Hủy đặt vé này? Ghế đang giữ sẽ được giải phóng ngay để bạn có thể chọn lại số ghế hoặc thông tin vé.'
+    );
     if (!confirmed) return;
 
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
-      showToast('Vui lòng đăng nhập lại để hủy booking.', 4500, null, 'sad');
+      showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 4500, null, 'sad');
       return;
     }
 
     setCancellingBookingId(String(booking.bookingId));
     try {
       await bookingService.cancelBooking(accessToken, booking.bookingId);
-      showToast('Đã hủy booking trước thanh toán và giải phóng ghế.');
+      showToast('Đã hủy đặt vé và giải phóng ghế. Bạn có thể đặt lại ngay.');
       await loadBookings();
     } catch (error) {
-      showToast(error.message || 'Không thể hủy booking này.', 4500, null, 'sad');
+      showToast(error.message || 'Không thể hủy đặt vé này.', 4500, null, 'sad');
     } finally {
       setCancellingBookingId('');
     }
@@ -245,9 +245,20 @@ export default function MyTicketsView() {
     )) || null;
   };
 
-  // Map BE booking sang display format
+  const isPendingBooking = (booking) => ['HOLDING', 'PENDING_PAYMENT'].includes(booking.status);
+  const hasHoldExpired = (booking) => Boolean(
+    isPendingBooking(booking)
+    && booking.holdExpiresAt
+    && new Date(booking.holdExpiresAt).getTime() <= clockTick
+  );
+
+  // Đơn chờ thanh toán chỉ nằm trong "Vé của tôi" khi session giữ ghế còn hiệu lực.
   const activeTickets = realBookings
-    .filter(b => b.status === 'PAID' || b.status === 'USED' || b.status === 'HOLDING' || b.status === 'PENDING_PAYMENT')
+    .filter((booking) => (
+      booking.status === 'PAID'
+      || booking.status === 'USED'
+      || (isPendingBooking(booking) && !hasHoldExpired(booking))
+    ))
     .map(b => {
       // Trạng thái giữ ghế realtime: đếm ngược tới holdExpiresAt; hết giờ thì
       // hiển thị "ĐÃ HẾT HẠN" ngay cả khi BE scheduler (60s/lần) chưa kịp đổi status
@@ -303,7 +314,6 @@ export default function MyTicketsView() {
         holdSecondsLeft,
         isClientExpired,
         isHoldActive,
-        canCancel: canCancelBooking(b),
         foods,
         totalAmount: b.totalAmount,
         seatDetails: Array.isArray(b.seats) ? b.seats : [],
@@ -315,7 +325,11 @@ export default function MyTicketsView() {
 
   const displayTickets = activeTickets;
 
-  const bookingHistory = realBookings.map((booking) => {
+  // HOLDING/PENDING_PAYMENT chỉ chuyển xuống lịch sử sau đúng thời điểm holdExpiresAt.
+  const bookingHistory = realBookings
+    .filter((booking) => !isPendingBooking(booking) || hasHoldExpired(booking))
+    .map((booking) => {
+    const isExpiredHold = hasHoldExpired(booking);
     const isWatching = booking.status === 'USED' && booking.showtimeEnd
       && Date.now() < new Date(booking.showtimeEnd).getTime();
     return {
@@ -323,10 +337,12 @@ export default function MyTicketsView() {
       date: booking.showtimeStart ? new Date(booking.showtimeStart).toLocaleDateString('vi-VN') : '—',
       location: booking.cinemaName || publicCinema?.name || 'Rạp chưa được cấu hình',
       seats: booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || '—',
-      status: isWatching ? 'ĐÃ CHECK-IN' : getBookingBadge(booking.status),
-      statusColor: isWatching
-        ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
-        : getBookingBadgeColor(booking.status)
+      status: isExpiredHold ? 'ĐÃ HẾT HẠN' : isWatching ? 'ĐÃ CHECK-IN' : getBookingBadge(booking.status),
+      statusColor: isExpiredHold
+        ? getBookingBadgeColor('EXPIRED')
+        : isWatching
+          ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+          : getBookingBadgeColor(booking.status)
     };
   });
 
@@ -666,14 +682,14 @@ export default function MyTicketsView() {
                             onClick={() => handleCancelBooking(t)}
                             disabled={cancellingBookingId === String(t.bookingId)}
                             className="inline-flex items-center gap-1.5 border border-rose-500/30 bg-rose-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-rose-300 transition hover:bg-rose-500 hover:text-white disabled:cursor-wait disabled:opacity-60"
-                            title="Hủy giữ ghế trước khi thanh toán"
+                            title="Hủy đặt vé và giải phóng ghế để đặt lại"
                           >
                             {cancellingBookingId === String(t.bookingId) ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <XCircle className="h-3.5 w-3.5" />
                             )}
-                            Hủy thanh toán
+                            Hủy đặt vé
                           </button>
                         )}
                         {canOrderMoreFood(t) && (
