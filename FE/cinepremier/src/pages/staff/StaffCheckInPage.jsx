@@ -68,13 +68,25 @@ const getCheckInOpenAt = (booking) => {
   return new Date(showtimeStart.getTime() - CHECK_IN_LEAD_MINUTES * 60 * 1000);
 };
 
+const isShowtimeOver = (booking) => {
+  if (!booking?.showtimeEnd) return false;
+  const endTime = new Date(booking.showtimeEnd);
+  if (Number.isNaN(endTime.getTime())) return false;
+  return Date.now() > endTime.getTime();
+};
+
 const isBookingCheckInOpen = (booking) => {
   if (String(booking?.status || '').toUpperCase() !== 'PAID') return false;
+  if (isShowtimeOver(booking)) return false;
   const checkInOpenAt = getCheckInOpenAt(booking);
   return !checkInOpenAt || Date.now() >= checkInOpenAt.getTime();
 };
 
 const getCheckInWindowMessage = (booking) => {
+  if (isShowtimeOver(booking)) {
+    const endTime = booking.showtimeEnd ? new Date(booking.showtimeEnd).toLocaleString('vi-VN') : '';
+    return `Suất chiếu đã kết thúc${endTime ? ` lúc ${endTime}` : ''}. Không thể check-in.`;
+  }
   const checkInOpenAt = getCheckInOpenAt(booking);
   if (!checkInOpenAt) return 'Check-in chỉ mở trong vòng 30 phút trước giờ chiếu.';
   return `Check-in chỉ mở từ ${checkInOpenAt.toLocaleString('vi-VN')} (30 phút trước giờ chiếu).`;
@@ -143,6 +155,7 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
   const booking = result.booking;
   const seats = Array.isArray(booking?.seats) ? booking.seats : [];
   const hasSeatTickets = seats.some((seat) => seat.ticketCode);
+  const showtimeOver = isShowtimeOver(booking);
   const canPartialCheckIn = booking && booking.status === 'PAID' && isBookingCheckInOpen(booking) && hasSeatTickets;
   const canSellFood = booking && ['PAID', 'USED'].includes(booking.status)
     && (!booking.showtimeEnd || new Date(booking.showtimeEnd).getTime() > Date.now());
@@ -177,47 +190,186 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
             <div><span className="font-black text-white">SĐT:</span> {booking.customerPhone || '—'}</div>
             <div><span className="font-black text-white">Phim:</span> {booking.movieTitle}</div>
             <div><span className="font-black text-white">Phòng:</span> {booking.roomName}</div>
-            <div><span className="font-black text-white">Suất:</span> {formatDateTime(booking.showtimeStart)}</div>
+            <div><span className="font-black text-white">Giờ chiếu:</span> {formatDateTime(booking.showtimeStart)}</div>
+            <div><span className="font-black text-white">Kết thúc:</span> {booking.showtimeEnd ? formatDateTime(booking.showtimeEnd) : '—'}</div>
             <div><span className="font-black text-white">Tổng tiền:</span> {Number(booking.totalAmount || 0).toLocaleString('vi-VN')}đ</div>
           </div>
 
-          {/* Food & Concessions ordered with this booking */}
-          {Array.isArray(booking?.foods) && booking.foods.length > 0 && (
-            <div className="border-t border-neutral-800 pt-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-400">🍿 Bắp nước đã đặt</p>
-              <div className="mt-2 space-y-1.5">
-                {booking.foods.map((food, idx) => (
+          {/* Showtime timeline bar */}
+          {booking.showtimeStart && booking.showtimeEnd && (() => {
+            const start = new Date(booking.showtimeStart);
+            const end = new Date(booking.showtimeEnd);
+            const now = Date.now();
+            const totalMs = end.getTime() - start.getTime();
+            const elapsedMs = Math.min(Math.max(now - start.getTime(), 0), totalMs);
+            const progressPct = totalMs > 0 ? Math.round((elapsedMs / totalMs) * 100) : 0;
+            const durationMin = Math.round(totalMs / 60000);
+            const isOver = now > end.getTime();
+            const isNotStarted = now < start.getTime();
+            return (
+              <div className="border-t border-white/5 pt-3">
+                <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-neutral-500 mb-1.5">
+                  <span className="text-purple-400">
+                    {start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    <span className="text-neutral-600 font-normal ml-1">{start.toLocaleDateString('vi-VN')}</span>
+                  </span>
+                  <span className="text-neutral-600">{durationMin} phút</span>
+                  <span className={isOver ? 'text-rose-400' : 'text-emerald-400'}>
+                    {end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    <span className="text-neutral-600 font-normal ml-1">{end.toLocaleDateString('vi-VN')}</span>
+                  </span>
+                </div>
+                <div className="relative h-1.5 w-full rounded-full bg-neutral-800 overflow-hidden">
                   <div
-                    key={`food-${food.foodItemId ?? food.foodComboId ?? idx}`}
-                    className="flex items-center justify-between gap-3 border border-neutral-800 bg-[#070707] px-3 py-2"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-amber-400 font-black text-xs shrink-0">×{food.quantity}</span>
-                      <span className="text-white text-xs font-bold truncate">{food.name}</span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[10px] text-neutral-500 font-mono">
-                        {Number(food.unitPrice || 0).toLocaleString('vi-VN')}đ/c
-                      </span>
-                      <span className="text-amber-300 font-black text-[11px] font-mono">
-                        {Number(food.totalPrice || 0).toLocaleString('vi-VN')}đ
+                    className={`h-full rounded-full transition-all ${isOver ? 'bg-rose-500' : isNotStarted ? 'bg-neutral-600' : 'bg-purple-500'}`}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <div className="mt-1.5 text-center text-[8px] font-bold uppercase tracking-widest">
+                  {isOver
+                    ? <span className="text-rose-400">⛔ Đã kết thúc chiếu</span>
+                    : isNotStarted
+                      ? <span className="text-neutral-500">Chưa bắt đầu chiếu</span>
+                      : <span className="text-purple-400">🎬 Đang chiếu · {progressPct}%</span>}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── ORDER DETAIL RECEIPT ── */}
+          {(() => {
+            const ticketRows = seats.map((seat) => ({
+              label: `Ghế ${seat.rowLabel}${seat.seatNumber}`,
+              type: seat.ticketType,
+              unitPrice: Number(seat.unitPrice ?? seat.price ?? 0),
+              qty: 1,
+            }));
+            const foodRows = Array.isArray(booking?.foods) ? booking.foods.map((f) => ({
+              name: f.name,
+              unitPrice: Number(f.unitPrice || 0),
+              qty: Number(f.quantity || 1),
+              total: Number(f.totalPrice || 0),
+            })) : [];
+            const ticketTotal = ticketRows.reduce((s, r) => s + r.unitPrice * r.qty, 0);
+            const foodTotal = foodRows.reduce((s, r) => s + r.total, 0);
+            const discount = Number(booking.discountAmount || 0);
+            const grandTotal = Number(booking.totalAmount || 0);
+            const TICKET_TYPE_LABELS = { ADULT: 'Người lớn', STUDENT: 'Sinh viên', CHILD: 'Trẻ em' };
+
+            return (
+              <div className="border-t border-white/5 pt-3">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400">📋 Chi tiết đơn hàng</p>
+                  <span className="text-[8px] font-mono text-neutral-600">#{booking.bookingCode}</span>
+                </div>
+
+                {/* Column headers */}
+                <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 text-[8px] font-black uppercase tracking-widest text-neutral-600 pb-1.5 border-b border-white/5 mb-1">
+                  <span>Hạng mục</span>
+                  <span className="text-right">Đơn giá</span>
+                  <span className="text-right">SL</span>
+                  <span className="text-right">Thành tiền</span>
+                </div>
+
+                {/* Seat ticket rows */}
+                {ticketRows.length > 0 && (
+                  <div className="space-y-0.5 mb-1">
+                    <div className="text-[8px] font-bold uppercase tracking-widest text-neutral-500 py-1">🎫 Vé xem phim</div>
+                    {ticketRows.map((row, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center py-1.5 border border-neutral-900 bg-[#0a0a0a] px-2">
+                        <div className="min-w-0">
+                          <span className="text-[11px] font-black text-white font-mono">{row.label}</span>
+                          <span className={`ml-1.5 text-[8px] font-bold uppercase px-1 py-0.5 border ${
+                            row.type === 'STUDENT' ? 'border-sky-500/30 text-sky-400 bg-sky-500/10'
+                            : row.type === 'CHILD' ? 'border-amber-500/30 text-amber-400 bg-amber-500/10'
+                            : 'border-neutral-700 text-neutral-400 bg-neutral-900'
+                          }`}>
+                            {TICKET_TYPE_LABELS[row.type?.toUpperCase()] || 'Người lớn'}
+                          </span>
+                        </div>
+                        <span className="text-right text-[10px] font-mono text-neutral-400 tabular-nums">
+                          {row.unitPrice > 0 ? `${row.unitPrice.toLocaleString('vi-VN')}đ` : '—'}
+                        </span>
+                        <span className="text-right text-[10px] font-mono text-neutral-500">×{row.qty}</span>
+                        <span className="text-right text-[11px] font-black font-mono text-white tabular-nums">
+                          {row.unitPrice > 0 ? `${(row.unitPrice * row.qty).toLocaleString('vi-VN')}đ` : '—'}
+                        </span>
+                      </div>
+                    ))}
+                    {/* Ticket subtotal */}
+                    <div className="grid grid-cols-[1fr_auto] gap-x-3 items-center px-2 py-1">
+                      <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest">Tổng vé</span>
+                      <span className="text-right text-[10px] font-mono font-black text-neutral-300 tabular-nums">
+                        {ticketTotal.toLocaleString('vi-VN')}đ
                       </span>
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Food rows */}
+                {foodRows.length > 0 && (
+                  <div className="space-y-0.5 mb-1">
+                    <div className="text-[8px] font-bold uppercase tracking-widest text-neutral-500 py-1">🍿 Bắp nước</div>
+                    {foodRows.map((row, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center py-1.5 border border-amber-900/20 bg-amber-950/5 px-2">
+                        <span className="text-[11px] font-bold text-white truncate">{row.name}</span>
+                        <span className="text-right text-[10px] font-mono text-neutral-400 tabular-nums">
+                          {row.unitPrice.toLocaleString('vi-VN')}đ
+                        </span>
+                        <span className="text-right text-[10px] font-mono text-neutral-500">×{row.qty}</span>
+                        <span className="text-right text-[11px] font-black font-mono text-amber-300 tabular-nums">
+                          {row.total.toLocaleString('vi-VN')}đ
+                        </span>
+                      </div>
+                    ))}
+                    {/* Food subtotal */}
+                    <div className="grid grid-cols-[1fr_auto] gap-x-3 items-center px-2 py-1">
+                      <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest">Tổng bắp nước</span>
+                      <span className="text-right text-[10px] font-mono font-black text-amber-300 tabular-nums">
+                        {foodTotal.toLocaleString('vi-VN')}đ
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Discount row */}
+                {discount > 0 && (
+                  <div className="grid grid-cols-[1fr_auto] gap-x-3 items-center px-2 py-1.5 border border-emerald-900/20 bg-emerald-950/10 mb-1">
+                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">🎁 Giảm giá / CinePoints</span>
+                    <span className="text-right text-[11px] font-black font-mono text-emerald-400 tabular-nums">
+                      -{discount.toLocaleString('vi-VN')}đ
+                    </span>
+                  </div>
+                )}
+
+                {/* Grand total */}
+                <div className="flex items-center justify-between border-t border-white/10 pt-3 mt-1">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-white">Tổng cộng hoá đơn</p>
+                    <p className="text-[8px] text-neutral-600 mt-0.5">{ticketRows.length} vé{foodRows.length > 0 ? ` · ${foodRows.length} món` : ''}{discount > 0 ? ' · có giảm giá' : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-black font-mono text-white tabular-nums tracking-tight">
+                      {grandTotal.toLocaleString('vi-VN')}đ
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="mt-2 flex items-center justify-between border border-amber-500/20 bg-amber-950/10 px-3 py-2">
-                <span className="text-[9px] font-black uppercase tracking-widest text-amber-400">Tổng bắp nước</span>
-                <span className="font-mono text-sm font-black text-amber-300">
-                  {booking.foods.reduce((sum, f) => sum + Number(f.totalPrice || 0), 0).toLocaleString('vi-VN')}đ
-                </span>
-              </div>
-            </div>
-          )}
+            );
+          })()}
+
 
           {seats.length > 0 && (
             <div className="border-t border-neutral-800 pt-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Check-in từng ghế</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">Check-in từng ghế</p>
+                {showtimeOver && (
+                  <span className="text-[8px] font-black uppercase tracking-wider text-rose-400 border border-rose-500/30 bg-rose-500/10 px-2 py-0.5">
+                    ⛔ Đã quá giờ chiếu
+                  </span>
+                )}
+              </div>
               <div className="mt-2 space-y-1.5">
                 {seats.map((seat) => {
                   const badge = getTicketTypeBadge(seat.ticketType);
@@ -226,7 +378,15 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
                   return (
                     <label
                       key={seat.ticketCode || seat.seatId}
-                      className={`flex items-center gap-3 border border-neutral-800 bg-[#070707] px-3 py-2 ${selectable ? 'cursor-pointer hover:border-emerald-400/50' : 'opacity-80'}`}
+                      className={`flex items-center gap-3 border bg-[#070707] px-3 py-2 ${
+                        isCheckedIn
+                          ? 'border-emerald-800/40 opacity-70'
+                          : showtimeOver
+                            ? 'border-rose-900/40 opacity-60 cursor-not-allowed'
+                            : selectable
+                              ? 'border-neutral-800 cursor-pointer hover:border-emerald-400/50'
+                              : 'border-neutral-800 opacity-80'
+                      }`}
                     >
                       <input
                         type="checkbox"
@@ -240,12 +400,22 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
                       <span className="ml-auto text-[9px] font-black uppercase tracking-wider">
                         {isCheckedIn
                           ? <span className="text-emerald-300">✓ Đã vào {seat.checkedInAt ? new Date(seat.checkedInAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                          : <span className="text-neutral-500">Chưa vào</span>}
+                          : showtimeOver
+                            ? <span className="text-rose-400/70">Đã quá giờ chiếu</span>
+                            : <span className="text-neutral-500">Chưa vào</span>}
                       </span>
                     </label>
                   );
                 })}
               </div>
+              {showtimeOver && seats.some((s) => s.status !== 'CHECKED_IN') && (
+                <div className="mt-3 flex items-center gap-2 border border-rose-500/20 bg-rose-950/20 px-3 py-2">
+                  <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                  <p className="text-[9px] font-bold text-rose-400">
+                    Suất chiếu đã kết thúc. Không thể check-in các ghế còn lại.
+                  </p>
+                </div>
+              )}
               {canPartialCheckIn && (
                 <button
                   type="button"
@@ -645,14 +815,23 @@ export default function StaffCheckInPage() {
           : []
       );
       const canCheckIn = isBookingCheckInOpen(booking);
+      const showtimeEnded = isShowtimeOver(booking);
       const isPaid = booking.status === 'PAID';
       setResult({
-        type: isPaid ? 'warning' : booking.status === 'USED' ? 'success' : 'error',
+        type: isPaid
+          ? (canCheckIn ? 'warning' : 'error')
+          : booking.status === 'USED' ? 'success' : 'error',
         title: isPaid
-          ? canCheckIn ? 'Booking hợp lệ, chờ check-in.' : 'Chưa đến giờ check-in.'
+          ? canCheckIn
+            ? 'Booking hợp lệ, chờ check-in.'
+            : showtimeEnded
+              ? 'Đã quá giờ chiếu.'
+              : 'Chưa đến giờ check-in.'
           : booking.status === 'USED' ? 'Booking đã check-in.' : 'Booking chưa đủ điều kiện.',
         message: isPaid
-          ? canCheckIn ? 'Có thể xác nhận check-in bằng mã QR của booking này.' : getCheckInWindowMessage(booking)
+          ? canCheckIn
+            ? 'Có thể xác nhận check-in bằng mã QR của booking này.'
+            : getCheckInWindowMessage(booking)
           : `Trạng thái hiện tại: ${booking.status}.`,
         booking,
       });

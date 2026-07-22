@@ -660,6 +660,19 @@ export default function BookingView() {
   const getSelectedSeatTotal = (ticketType) => selectedSeats
     .filter(seat => seat.ticketType === ticketType)
     .reduce((total, seat) => total + getSeatLineTotal(seat), 0);
+  const getTicketTypeUnitPriceLabel = (ticketType) => {
+    const seatsOfType = selectedSeats.filter(s => s.ticketType === ticketType);
+    if (seatsOfType.length === 0) return '';
+    const prices = seatsOfType.map(s => getSeatUnitPrice(s)).filter(p => p > 0);
+    if (prices.length === 0) return '';
+    const uniquePrices = [...new Set(prices)];
+    if (uniquePrices.length === 1) {
+      return `${formatVnd(uniquePrices[0])}/vé`;
+    }
+    const min = Math.min(...uniquePrices);
+    const max = Math.max(...uniquePrices);
+    return `${formatVnd(min)} - ${formatVnd(max)}/vé`;
+  };
   const getTicketStartingPrice = (ticketType) => {
     const prices = [...new Set(seats.map(seat => seat.type))]
       .map(seatType => getShowtimeTicketPrice(selectedShowtime, ticketType, seatType))
@@ -713,13 +726,13 @@ export default function BookingView() {
     : requestedLoyaltyPoints > maxRedeemablePointsForSubtotal
       ? `Số điểm muốn dùng vượt quá mức giảm tối đa của hóa đơn (${maxRedeemablePointsForSubtotal.toLocaleString('vi-VN')} điểm).`
       : '';
-  
+
   const gatewayDiscountAmount = Number(heldPaymentSummary?.discountAmount ?? discountAmount);
   const gatewayTotalAmount = heldPaymentSummary
     ? Number(heldPaymentSummary.totalAmount)
     : totalAmount;
   const gatewayRedeemedPoints = Number(heldPaymentSummary?.loyaltyPointsRedeemed ?? loyaltyPointsToRedeem);
-  
+
   const formatHoldSeconds = (seconds) => {
     if (seconds === null || seconds === undefined) return '--:--';
     const normalizedSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -1291,19 +1304,40 @@ export default function BookingView() {
               <div className="px-6 py-4 space-y-2 border-b border-white/5">
                 {selectedSeats.filter(s => s.ticketType === 'adult').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-zinc-400">
-                    <span>Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}</span>
+                    <span>
+                      Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}
+                      {getTicketTypeUnitPriceLabel('adult') && (
+                        <span className="text-[10px] text-zinc-500 font-normal ml-1">
+                          ({getTicketTypeUnitPriceLabel('adult')})
+                        </span>
+                      )}
+                    </span>
                     <span className="text-white">{formatVnd(getSelectedSeatTotal('adult'))}</span>
                   </div>
                 )}
                 {selectedSeats.filter(s => s.ticketType === 'child').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-amber-400">
-                    <span>Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}</span>
+                    <span>
+                      Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}
+                      {getTicketTypeUnitPriceLabel('child') && (
+                        <span className="text-[10px] text-amber-500/80 font-normal ml-1">
+                          ({getTicketTypeUnitPriceLabel('child')})
+                        </span>
+                      )}
+                    </span>
                     <span>{formatVnd(getSelectedSeatTotal('child'))}</span>
                   </div>
                 )}
                 {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-sky-400">
-                    <span>Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}</span>
+                    <span>
+                      Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}
+                      {getTicketTypeUnitPriceLabel('student') && (
+                        <span className="text-[10px] text-sky-500/80 font-normal ml-1">
+                          ({getTicketTypeUnitPriceLabel('student')})
+                        </span>
+                      )}
+                    </span>
                     <span>{formatVnd(getSelectedSeatTotal('student'))}</span>
                   </div>
                 )}
@@ -2341,20 +2375,41 @@ export default function BookingView() {
 
             {/* Adult / Child breakdown */}
             {selectedSeats.filter(s => s.ticketType === 'adult').length > 0 && (
-              <div className="flex justify-between">
-                <span>Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}:</span>
+              <div className="flex justify-between items-center">
+                <span>
+                  Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}
+                  {getTicketTypeUnitPriceLabel('adult') && (
+                    <span className="text-[10px] text-zinc-500 font-mono font-normal normal-case ml-1">
+                      ({getTicketTypeUnitPriceLabel('adult')})
+                    </span>
+                  )}:
+                </span>
                 <span className="font-mono text-zinc-300">{formatVnd(getSelectedSeatTotal('adult'))}</span>
               </div>
             )}
             {selectedSeats.filter(s => s.ticketType === 'child').length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-amber-400">Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-amber-400">
+                  Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}
+                  {getTicketTypeUnitPriceLabel('child') && (
+                    <span className="text-[10px] text-amber-500/80 font-mono font-normal normal-case ml-1">
+                      ({getTicketTypeUnitPriceLabel('child')})
+                    </span>
+                  )}:
+                </span>
                 <span className="font-mono text-amber-400">{formatVnd(getSelectedSeatTotal('child'))}</span>
               </div>
             )}
             {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-sky-400">Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sky-400">
+                  Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}
+                  {getTicketTypeUnitPriceLabel('student') && (
+                    <span className="text-[10px] text-sky-500/80 font-mono font-normal normal-case ml-1">
+                      ({getTicketTypeUnitPriceLabel('student')})
+                    </span>
+                  )}:
+                </span>
                 <span className="font-mono text-sky-400">{formatVnd(getSelectedSeatTotal('student'))}</span>
               </div>
             )}

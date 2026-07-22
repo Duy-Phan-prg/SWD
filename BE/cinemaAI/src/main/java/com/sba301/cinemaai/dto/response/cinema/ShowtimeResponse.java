@@ -3,11 +3,14 @@ package com.sba301.cinemaai.dto.response.cinema;
 import com.sba301.cinemaai.enums.ShowtimeStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ShowtimeResponse(
         Long id,
         Long movieId,
         String movieTitle,
+        String movieAgeRating,
+        List<String> movieGenreNames,
         Long cinemaId,
         String cinemaName,
         Long roomId,

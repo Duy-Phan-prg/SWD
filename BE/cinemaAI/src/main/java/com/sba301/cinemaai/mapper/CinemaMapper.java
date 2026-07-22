@@ -10,6 +10,8 @@ import com.sba301.cinemaai.entity.Seat;
 import com.sba301.cinemaai.entity.Room;
 import com.sba301.cinemaai.entity.Showtime;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -58,11 +60,22 @@ public class CinemaMapper {
         );
     }
 
+    /** Maps a Showtime to ShowtimeResponse without genre info (backward compat). */
     public ShowtimeResponse toShowtimeResponse(Showtime showtime) {
+        return toShowtimeResponse(showtime, Collections.emptyList());
+    }
+
+    /** Maps a Showtime to ShowtimeResponse with pre-fetched genre names. */
+    public ShowtimeResponse toShowtimeResponse(Showtime showtime, List<String> genreNames) {
+        com.sba301.cinemaai.entity.Movie movie = showtime.getMovie();
+        String ageRating = movie.getAgeRating() != null ? movie.getAgeRating().name() : null;
+
         return new ShowtimeResponse(
                 showtime.getId(),
-                showtime.getMovie().getId(),
-                showtime.getMovie().getTitle(),
+                movie.getId(),
+                movie.getTitle(),
+                ageRating,
+                genreNames != null ? genreNames : Collections.emptyList(),
                 showtime.getRoom().getCinema().getId(),
                 showtime.getRoom().getCinema().getName(),
                 showtime.getRoom().getId(),
