@@ -6,6 +6,7 @@ import {
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
   BarChart2, Clock, MapPin, Film, Play, Eye, EyeOff, Sparkles, TrendingUp, Info, Globe, Tags, ImagePlus, ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { adminService } from '../../../services/adminService';
 
 const FOOD_PAGE_SIZE = 10;
 
@@ -17,6 +18,15 @@ const FOOD_STATUS_META = {
 };
 
 const getFoodStatusMeta = (status) => FOOD_STATUS_META[status] || FOOD_STATUS_META.OUT_OF_STOCK;
+
+const formatVnd = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+
+const toLocalDateValue = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function AdminFoodsPanel({ ctx }) {
   const {
@@ -119,6 +129,9 @@ export default function AdminFoodsPanel({ ctx }) {
     isAdmin
   } = ctx;
   const [foodPage, setFoodPage] = React.useState(1);
+  const [salesSummary, setSalesSummary] = React.useState(null);
+  const [isSalesSummaryLoading, setIsSalesSummaryLoading] = React.useState(true);
+  const [salesSummaryError, setSalesSummaryError] = React.useState('');
   const totalFoodPages = Math.max(1, Math.ceil(visibleFoods.length / FOOD_PAGE_SIZE));
   const safeFoodPage = Math.min(foodPage, totalFoodPages);
   const foodStartIndex = (safeFoodPage - 1) * FOOD_PAGE_SIZE;
@@ -133,6 +146,36 @@ export default function AdminFoodsPanel({ ctx }) {
   React.useEffect(() => {
     setFoodPage((page) => Math.min(page, totalFoodPages));
   }, [totalFoodPages]);
+
+  const loadSalesSummary = React.useCallback(async () => {
+    setIsSalesSummaryLoading(true);
+    setSalesSummaryError('');
+
+    try {
+      const today = new Date();
+      const from = new Date(today.getFullYear(), today.getMonth(), 1);
+      const response = await adminService.getConcessionSales(getAdminToken(), {
+        from: toLocalDateValue(from),
+        to: toLocalDateValue(today),
+      });
+      setSalesSummary(response || null);
+    } catch (error) {
+      setSalesSummary(null);
+      setSalesSummaryError(error?.message || 'Không thể tải hiệu suất bán hàng.');
+    } finally {
+      setIsSalesSummaryLoading(false);
+    }
+  }, [getAdminToken]);
+
+  React.useEffect(() => {
+    loadSalesSummary();
+  }, [loadSalesSummary]);
+
+  const topSellingItem = salesSummary?.lines?.[0] || null;
+  const currentPeriodLabel = new Intl.DateTimeFormat('vi-VN', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date());
 
   return (
     <>
@@ -150,6 +193,88 @@ export default function AdminFoodsPanel({ ctx }) {
             <span className="text-[9px] font-mono tracking-[0.24em] text-neutral-300 uppercase font-black block">ADMIN FOOD</span>
             <h2 className="text-xs font-black uppercase tracking-[0.18em] text-white mt-1">Quản lý bắp nước & combo</h2>
           </div>
+
+          {/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 · component: operational KPI strip · genre: technical · theme: existing CinePremier */}
+          <section className="border border-white/10 bg-[#070707]" aria-labelledby="food-sales-summary-title">
+            <div className="flex flex-col gap-4 border-b border-white/10 px-5 py-4 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <BarChart2 className="h-4 w-4" aria-hidden="true" />
+                  <h3 id="food-sales-summary-title" className="text-[11px] font-black uppercase tracking-[0.2em]">
+                    Hiệu suất F&amp;B · {currentPeriodLabel}
+                  </h3>
+                </div>
+                <p className="mt-1 text-[10px] text-neutral-500">
+                  Chỉ tính món và combo thuộc đơn đã thanh toán hoặc đã giao cho khách.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={loadSalesSummary}
+                  disabled={isSalesSummaryLoading}
+                  className="inline-flex min-h-11 items-center gap-2 border border-white/10 px-3 text-[9px] font-black uppercase tracking-[0.16em] text-neutral-300 transition hover:border-amber-400/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 disabled:cursor-wait disabled:opacity-50"
+                  aria-label="Làm mới số liệu F&B"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isSalesSummaryLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  Làm mới
+                </button>
+                <button
+                  type="button"
+                  onClick={() => changeAdminSection('fnb-report')}
+                  className="inline-flex min-h-11 items-center gap-2 bg-amber-500 px-4 text-[9px] font-black uppercase tracking-[0.16em] text-black transition hover:bg-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                >
+                  Xem báo cáo chi tiết
+                  <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            {salesSummaryError ? (
+              <div className="flex min-h-24 items-center justify-between gap-4 px-5 py-4" role="alert">
+                <div>
+                  <p className="text-xs font-bold text-rose-300">Chưa tải được số liệu bán hàng</p>
+                  <p className="mt-1 text-[10px] text-neutral-500">{salesSummaryError}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadSalesSummary}
+                  className="min-h-11 border border-rose-400/40 px-4 text-[9px] font-black uppercase tracking-widest text-rose-200 transition hover:bg-rose-400 hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300"
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <div className="min-w-0 px-5 py-4">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-500">Món/combo đã bán</p>
+                  <p className="mt-2 font-mono text-2xl font-black text-white">
+                    {isSalesSummaryLoading ? '—' : Number(salesSummary?.totalItemsSold || 0).toLocaleString('vi-VN')}
+                  </p>
+                  <p className="mt-1 text-[9px] text-neutral-600">Mỗi combo được tính là một đơn vị bán</p>
+                </div>
+
+                <div className="min-w-0 px-5 py-4">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-500">Doanh thu F&amp;B</p>
+                  <p className="mt-2 truncate font-mono text-2xl font-black text-emerald-400">
+                    {isSalesSummaryLoading ? '—' : formatVnd(salesSummary?.totalRevenue)}
+                  </p>
+                  <p className="mt-1 text-[9px] text-neutral-600">Theo thời điểm ghi nhận thanh toán</p>
+                </div>
+
+                <div className="min-w-0 px-5 py-4">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-500">Bán chạy nhất</p>
+                  <p className="mt-2 truncate text-sm font-black uppercase tracking-wide text-amber-300" title={topSellingItem?.name || ''}>
+                    {isSalesSummaryLoading ? 'Đang tải…' : topSellingItem?.name || 'Chưa có dữ liệu'}
+                  </p>
+                  <p className="mt-1 text-[9px] text-neutral-600">
+                    {topSellingItem ? `${Number(topSellingItem.quantity).toLocaleString('vi-VN')} lượt bán · ${formatVnd(topSellingItem.revenue)}` : 'Chưa phát sinh giao dịch trong kỳ'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
 
           <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
             <form onSubmit={handleFoodSubmit} className="2xl:col-span-4 border border-white/[0.05] bg-[#070707] p-5 space-y-4">

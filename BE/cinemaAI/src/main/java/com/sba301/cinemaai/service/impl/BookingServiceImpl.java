@@ -73,6 +73,10 @@ public class BookingServiceImpl implements BookingService {
 
     private static final int HOLD_MINUTES = 3;
     private static final int CHECK_IN_LEAD_MINUTES = 30;
+    private static final List<BookingStatus> ACTIVE_CHECKOUT_STATUSES = List.of(
+            BookingStatus.HOLDING,
+            BookingStatus.PENDING_PAYMENT
+    );
     private static final List<SeatRuntimeStatus> BLOCKING_SEAT_STATUSES = List.of(
             SeatRuntimeStatus.HOLDING,
             SeatRuntimeStatus.BOOKED,
@@ -104,9 +108,17 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse holdSeats(String email, HoldSeatsRequest request) {
         releaseExpiredHolds();
         User user = userService.getByEmail(email);
-        Showtime showtime = findShowtime(request.showtimeId());
+        // Serialize holds for one showtime so two tabs cannot create concurrent
+        // active checkouts for the same customer and screening.
+        Showtime showtime = showtimeRepository.findByIdForUpdate(request.showtimeId())
+                .orElseThrow(() -> new NotFoundException("Showtime not found"));
         if (showtime.getStatus() != ShowtimeStatus.OPEN) {
             throw new BadRequestException("Showtime is not open for booking");
+        }
+        if (bookingRepository.existsByUserAndShowtimeAndStatusIn(user, showtime, ACTIVE_CHECKOUT_STATUSES)) {
+            throw new ConflictException(
+                    "You already have an active booking for this showtime. Continue payment or cancel it before selecting new seats"
+            );
         }
 
         List<Long> requestedSeatIds = request.seatIds().stream().distinct().toList();

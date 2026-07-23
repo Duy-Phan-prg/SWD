@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle, MessageSquare, Pencil, Trash2, Save, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle, MessageSquare, Pencil, Trash2, Save, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
-import { paymentService } from '../../services/paymentService';
 import { reviewService } from '../../services/reviewService';
 import { useMovies } from '../../stores/useMovieStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUiStore } from '../../stores/useUiStore';
 
-export default function MyTicketsView() {
+export default function MyTicketsView({ embedded = false }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightBookingId = searchParams.get('highlightBookingId') || searchParams.get('bookingId');
+  const [highlightedId, setHighlightedId] = useState(null);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const showToast = useUiStore((state) => state.showToast);
   const setShowOTP = useUiStore((state) => state.setShowOTP);
-  const { publicCinema, moviesList = [], foodCatalog, fetchPublicFoodCatalog } = useMovies();
+  const { publicCinema, moviesList = [] } = useMovies();
   const onSelectMovie = (id) => navigate(`/movies/${id}`);
   const onOpenOTP = () => setShowOTP(true);
   const [reviewContent, setReviewContent] = useState('');
@@ -31,76 +33,16 @@ export default function MyTicketsView() {
   const [editReviewRating, setEditReviewRating] = useState(5);
   const [savingReviewId, setSavingReviewId] = useState('');
   const [deletingReviewId, setDeletingReviewId] = useState('');
+  const [ticketPage, setTicketPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
   const reviewSectionRef = useRef(null);
 
-  // Đặt thêm bắp nước cho booking đã thanh toán (khi suất chưa kết thúc)
-  const [foodOrderTicket, setFoodOrderTicket] = useState(null);
-  const [foodOrderQuantities, setFoodOrderQuantities] = useState({});
-  const [isSubmittingFoodOrder, setIsSubmittingFoodOrder] = useState(false);
+  const TICKET_PAGE_SIZE = 5;
+  const HISTORY_PAGE_SIZE = 10;
 
   const canOrderMoreFood = (t) => (
-    ['PAID', 'USED'].includes(t.status)
-    && t.showtimeEnd
-    && new Date(t.showtimeEnd).getTime() > Date.now()
+    ['PAID', 'USED'].includes(t?.status) || Boolean(t?.isWatching)
   );
-
-  const openFoodOrderModal = (t) => {
-    setFoodOrderQuantities({});
-    setFoodOrderTicket(t);
-    if (!Array.isArray(foodCatalog) || foodCatalog.length === 0) {
-      fetchPublicFoodCatalog();
-    }
-  };
-
-  const changeFoodQuantity = (id, delta) => {
-    setFoodOrderQuantities((prev) => {
-      const next = Math.max(0, (prev[id] || 0) + delta);
-      const copy = { ...prev };
-      if (next === 0) delete copy[id];
-      else copy[id] = next;
-      return copy;
-    });
-  };
-
-  const foodOrderTotal = Object.entries(foodOrderQuantities).reduce((sum, [id, qty]) => {
-    const item = (foodCatalog || []).find((i) => i.id === id);
-    return sum + (item ? Number(item.price || 0) * qty : 0);
-  }, 0);
-
-  const handleSubmitFoodOrder = async () => {
-    if (!foodOrderTicket || isSubmittingFoodOrder) return;
-    const { accessToken } = getStoredAuth();
-    if (!accessToken) return;
-    const foods = Object.entries(foodOrderQuantities)
-      .map(([id, quantity]) => {
-        const item = (foodCatalog || []).find((i) => i.id === id);
-        if (!item) return null;
-        return { foodItemId: item.foodItemId ?? null, foodComboId: item.foodComboId ?? null, quantity };
-      })
-      .filter(Boolean);
-    if (foods.length === 0) {
-      showToast('Chọn ít nhất một món bắp nước.');
-      return;
-    }
-    setIsSubmittingFoodOrder(true);
-    try {
-      const order = await bookingService.createFoodOrder(accessToken, foodOrderTicket.bookingId, { foods });
-      // Thanh toán thật qua VNPay — redirect trình duyệt sang cổng thanh toán.
-      // Khi VNPay báo thành công, BE (confirmPayment) sẽ set FoodOrder = PAID và gắn vào mã đơn
-      // để staff theo dõi được. KHÔNG fallback mock: nếu tạo phiên lỗi thì báo và dừng.
-      const result = await paymentService.createVnpayFoodOrderPayment(accessToken, order.id);
-      const paymentUrl = result?.paymentUrl ?? result?.payment_url;
-      if (paymentUrl) {
-        window.location.href = paymentUrl;
-        return;
-      }
-      showToast('Không tạo được phiên thanh toán VNPay. Vui lòng thử lại.');
-    } catch (err) {
-      showToast(err?.message || 'Không thể đặt thêm bắp nước. Vui lòng thử lại.');
-    } finally {
-      setIsSubmittingFoodOrder(false);
-    }
-  };
 
   const loadBookings = () => {
     if (!isLoggedIn) return;
@@ -157,12 +99,6 @@ export default function MyTicketsView() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const canCancelBooking = (booking) => {
-    if (!['HOLDING', 'PENDING_PAYMENT'].includes(booking.status)) return false;
-    if (!booking.holdExpiresAt) return true;
-    return new Date(booking.holdExpiresAt).getTime() > Date.now();
-  };
-
   const getBookingBadge = (status) => {
     switch (status) {
       case 'PAID':
@@ -205,7 +141,7 @@ export default function MyTicketsView() {
 
   const getBookingHelperText = (booking) => {
     if (booking.status === 'PAID') return 'Sẵn sàng quét / Đưa mã cho nhân viên soát vé';
-    if (booking.status === 'PENDING_PAYMENT') return 'Có thể hủy trước thanh toán hoặc tiếp tục thanh toán';
+    if (booking.status === 'PENDING_PAYMENT') return 'Có thể tiếp tục thanh toán khi thời gian giữ ghế còn hiệu lực';
     if (booking.status === 'HOLDING') {
       return `Ghế giữ đến ${booking.holdExpiresAt ? new Date(booking.holdExpiresAt).toLocaleTimeString('vi-VN') : ''}`;
     }
@@ -213,23 +149,29 @@ export default function MyTicketsView() {
   };
 
   const handleCancelBooking = async (booking) => {
-    if (!booking?.bookingId || !canCancelBooking(booking)) return;
-    const confirmed = window.confirm('Hủy booking này? Ghế đang giữ sẽ được giải phóng và vé đã thanh toán không thể hủy theo yêu cầu khách hàng.');
+    const isCancellable = booking?.bookingId
+      && ['HOLDING', 'PENDING_PAYMENT'].includes(booking.status)
+      && (!booking.holdExpiresAt || new Date(booking.holdExpiresAt).getTime() > Date.now());
+    if (!isCancellable) return;
+
+    const confirmed = window.confirm(
+      'Hủy đặt vé này? Ghế đang giữ sẽ được giải phóng ngay để bạn có thể chọn lại số ghế hoặc thông tin vé.'
+    );
     if (!confirmed) return;
 
     const { accessToken } = getStoredAuth();
     if (!accessToken) {
-      showToast('Vui lòng đăng nhập lại để hủy booking.', 4500, null, 'sad');
+      showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 4500, null, 'sad');
       return;
     }
 
     setCancellingBookingId(String(booking.bookingId));
     try {
       await bookingService.cancelBooking(accessToken, booking.bookingId);
-      showToast('Đã hủy booking trước thanh toán và giải phóng ghế.');
+      showToast('Đã hủy đặt vé và giải phóng ghế. Bạn có thể đặt lại ngay.');
       await loadBookings();
     } catch (error) {
-      showToast(error.message || 'Không thể hủy booking này.', 4500, null, 'sad');
+      showToast(error.message || 'Không thể hủy đặt vé này.', 4500, null, 'sad');
     } finally {
       setCancellingBookingId('');
     }
@@ -245,9 +187,20 @@ export default function MyTicketsView() {
     )) || null;
   };
 
-  // Map BE booking sang display format
+  const isPendingBooking = (booking) => ['HOLDING', 'PENDING_PAYMENT'].includes(booking.status);
+  const hasHoldExpired = (booking) => Boolean(
+    isPendingBooking(booking)
+    && booking.holdExpiresAt
+    && new Date(booking.holdExpiresAt).getTime() <= clockTick
+  );
+
+  // Đơn chờ thanh toán chỉ nằm trong "Vé của tôi" khi session giữ ghế còn hiệu lực.
   const activeTickets = realBookings
-    .filter(b => b.status === 'PAID' || b.status === 'USED' || b.status === 'HOLDING' || b.status === 'PENDING_PAYMENT')
+    .filter((booking) => (
+      booking.status === 'PAID'
+      || booking.status === 'USED'
+      || (isPendingBooking(booking) && !hasHoldExpired(booking))
+    ))
     .map(b => {
       // Trạng thái giữ ghế realtime: đếm ngược tới holdExpiresAt; hết giờ thì
       // hiển thị "ĐÃ HẾT HẠN" ngay cả khi BE scheduler (60s/lần) chưa kịp đổi status
@@ -303,7 +256,6 @@ export default function MyTicketsView() {
         holdSecondsLeft,
         isClientExpired,
         isHoldActive,
-        canCancel: canCancelBooking(b),
         foods,
         totalAmount: b.totalAmount,
         seatDetails: Array.isArray(b.seats) ? b.seats : [],
@@ -313,22 +265,69 @@ export default function MyTicketsView() {
       };
     });
 
-  const displayTickets = activeTickets;
+  const totalActiveTickets = activeTickets.length;
+  const totalTicketPages = Math.ceil(totalActiveTickets / TICKET_PAGE_SIZE) || 1;
+  const safeTicketPage = Math.min(Math.max(1, ticketPage), totalTicketPages);
 
-  const bookingHistory = realBookings.map((booking) => {
-    const isWatching = booking.status === 'USED' && booking.showtimeEnd
-      && Date.now() < new Date(booking.showtimeEnd).getTime();
-    return {
-      movie: booking.movieTitle || booking.showtime?.movieTitle || 'Phim',
-      date: booking.showtimeStart ? new Date(booking.showtimeStart).toLocaleDateString('vi-VN') : '—',
-      location: booking.cinemaName || publicCinema?.name || 'Rạp chưa được cấu hình',
-      seats: booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || '—',
-      status: isWatching ? 'ĐÃ CHECK-IN' : getBookingBadge(booking.status),
-      statusColor: isWatching
-        ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
-        : getBookingBadgeColor(booking.status)
-    };
-  });
+  const paginatedActiveTickets = useMemo(() => {
+    const start = (safeTicketPage - 1) * TICKET_PAGE_SIZE;
+    return activeTickets.slice(start, start + TICKET_PAGE_SIZE);
+  }, [activeTickets, safeTicketPage]);
+
+  useEffect(() => {
+    if (!highlightBookingId || activeTickets.length === 0) return;
+    const targetIdx = activeTickets.findIndex(
+      (t) => String(t.bookingId) === String(highlightBookingId)
+        || String(t.id) === String(highlightBookingId)
+        || String(t.code) === String(highlightBookingId)
+    );
+    if (targetIdx !== -1) {
+      const targetPage = Math.floor(targetIdx / TICKET_PAGE_SIZE) + 1;
+      setTicketPage(targetPage);
+      const matchedTicket = activeTickets[targetIdx];
+      const matchId = String(matchedTicket.bookingId || matchedTicket.id);
+      setHighlightedId(matchId);
+
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`ticket-card-${matchId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 400);
+
+      return () => clearTimeout(timer);
+    }
+  }, [highlightBookingId, activeTickets]);
+
+  // HOLDING/PENDING_PAYMENT chỉ chuyển xuống lịch sử sau đúng thời điểm holdExpiresAt.
+  const bookingHistory = realBookings
+    .filter((booking) => !isPendingBooking(booking) || hasHoldExpired(booking))
+    .map((booking) => {
+      const isExpiredHold = hasHoldExpired(booking);
+      const isWatching = booking.status === 'USED' && booking.showtimeEnd
+        && Date.now() < new Date(booking.showtimeEnd).getTime();
+      return {
+        movie: booking.movieTitle || booking.showtime?.movieTitle || 'Phim',
+        date: booking.showtimeStart ? new Date(booking.showtimeStart).toLocaleDateString('vi-VN') : '—',
+        location: booking.cinemaName || publicCinema?.name || 'Rạp chưa được cấu hình',
+        seats: booking.seats?.map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || '—',
+        status: isExpiredHold ? 'ĐÃ HẾT HẠN' : isWatching ? 'ĐÃ CHECK-IN' : getBookingBadge(booking.status),
+        statusColor: isExpiredHold
+          ? getBookingBadgeColor('EXPIRED')
+          : isWatching
+            ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20'
+            : getBookingBadgeColor(booking.status)
+      };
+    });
+
+  const totalHistoryItems = bookingHistory.length;
+  const totalHistoryPages = Math.ceil(totalHistoryItems / HISTORY_PAGE_SIZE) || 1;
+  const safeHistoryPage = Math.min(Math.max(1, historyPage), totalHistoryPages);
+
+  const paginatedHistory = useMemo(() => {
+    const start = (safeHistoryPage - 1) * HISTORY_PAGE_SIZE;
+    return bookingHistory.slice(start, start + HISTORY_PAGE_SIZE);
+  }, [bookingHistory, safeHistoryPage]);
 
   const reviewedBookingIds = useMemo(() => new Set(
     reviewsList
@@ -339,7 +338,15 @@ export default function MyTicketsView() {
   ), [reviewsList]);
 
   const visibleReviews = useMemo(
-    () => reviewsList.filter((review) => review.status !== 'DELETED'),
+    () => reviewsList
+      .filter((review) => review.status !== 'DELETED')
+      .slice()
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (timeA !== timeB) return timeB - timeA;
+        return Number(b.id || 0) - Number(a.id || 0);
+      }),
     [reviewsList]
   );
 
@@ -499,7 +506,7 @@ export default function MyTicketsView() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
+    <div className={embedded ? 'space-y-12' : 'mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12'}>
 
       {!isLoggedIn && (
         <div className="border border-white/10 bg-[#0E0E0E] p-6 text-center space-y-4 max-w-sm mx-auto my-12" id="guest-tickets-gate">
@@ -519,15 +526,14 @@ export default function MyTicketsView() {
 
       {isLoggedIn && (
         <>
-          {/* HEADER SECTION */}
-          <div className="space-y-1 text-center sm:text-left">
+          {!embedded && <div className="space-y-1 text-center sm:text-left">
             <h1 className="text-3xl font-serif font-light text-white tracking-widest leading-none uppercase italic">
               Vé của tôi
             </h1>
             <p className="text-xs font-sans tracking-[0.2em] text-neutral-400 uppercase">
               Quản lý trải nghiệm điện ảnh cao cấp của bạn
             </p>
-          </div>
+          </div>}
 
           {/* SECTION: VÉ HIỆN TẠI */}
           <div className="space-y-4">
@@ -543,11 +549,27 @@ export default function MyTicketsView() {
 
             {/* Dynamic / Styled tickets flex grid matching secondary screenshot */}
             <div className="grid grid-cols-1 gap-8" id="tickets-current-grid">
-              {displayTickets.map((t) => (
-                <div
-                  key={t.id}
-                  className="group border border-neutral-800 bg-gradient-to-br from-[#0e0e11] via-[#07070a] to-[#020203] hover:border-neutral-700/80 transition-all duration-300 flex flex-col md:flex-row relative overflow-hidden shadow-2xl rounded-sm md:min-h-[260px]"
-                >
+              {paginatedActiveTickets.map((t) => {
+                const cardId = String(t.bookingId || t.id);
+                const isHighlighted = highlightedId && (
+                  String(t.bookingId) === String(highlightedId)
+                  || String(t.id) === String(highlightedId)
+                  || String(t.code) === String(highlightedId)
+                );
+                const isEnded = Boolean(t.showtimeEnd && new Date(t.showtimeEnd).getTime() <= Date.now());
+
+                return (
+                  <div
+                    key={t.id}
+                    id={`ticket-card-${cardId}`}
+                    className={`group border bg-gradient-to-br from-[#0e0e11] via-[#07070a] to-[#020203] transition-all duration-300 flex flex-col md:flex-row relative overflow-hidden shadow-2xl rounded-sm md:min-h-[260px] ${
+                      isHighlighted
+                        ? 'border-2 border-white ring-2 ring-white ring-offset-2 ring-offset-black shadow-[0_0_35px_rgba(255,255,255,0.9)] animate-pulse'
+                        : isEnded
+                          ? 'border-neutral-900 opacity-60 grayscale-[35%] bg-neutral-950/90'
+                          : 'border-neutral-800 hover:border-neutral-700/80'
+                    }`}
+                  >
 
                   {/* Semicircle paper ticket notch punches for authentic cinema pass feel */}
                   <div className="absolute -top-3 right-[220px] w-6 h-6 bg-black border border-neutral-850 rounded-full translate-x-1/2 z-20 hidden md:block"></div>
@@ -566,13 +588,16 @@ export default function MyTicketsView() {
                     />
 
                     {/* Tech Badge on poster */}
-                    <div className={`absolute left-2.5 top-2.5 border text-[9px] font-black tracking-widest px-2 py-0.5 uppercase shadow-sm ${t.isClientExpired
-                      ? 'bg-zinc-900/95 border-zinc-600 text-zinc-400'
-                      : t.isWatching
-                        ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300'
-                        : 'bg-red-950/90 border-red-500/50 text-white/90'
+                    <div className={`absolute left-2.5 top-2.5 border text-[9px] font-black tracking-widest px-2 py-0.5 uppercase shadow-sm ${
+                      isEnded
+                        ? 'bg-neutral-950/95 border-neutral-700 text-neutral-400'
+                        : t.isClientExpired
+                          ? 'bg-zinc-900/95 border-zinc-600 text-zinc-400'
+                          : t.isWatching
+                            ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300'
+                            : 'bg-red-950/90 border-red-500/50 text-white/90'
                       }`}>
-                      {t.badge}
+                      {isEnded ? 'SUẤT CHIẾU ĐÃ KẾT THÚC' : t.badge}
                     </div>
                   </div>
 
@@ -626,7 +651,11 @@ export default function MyTicketsView() {
                     <div className="flex items-center justify-between gap-2 pt-0.5">
 
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-emerald-500/20 bg-emerald-500/5 text-emerald-400">
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center border ${
+                          isEnded
+                            ? 'border-neutral-800 bg-neutral-900/40 text-neutral-600'
+                            : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
+                        }`}>
                           <ScanLine className="h-4 w-4" />
                         </div>
 
@@ -637,8 +666,10 @@ export default function MyTicketsView() {
                               ⏳ Còn {formatCountdown(t.holdSecondsLeft)} để thanh toán
                             </p>
                           ) : (
-                            <p className={`text-[8.5px] uppercase tracking-wide font-bold leading-tight truncate ${t.isClientExpired ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                              {t.helperText}
+                            <p className={`text-[8.5px] uppercase tracking-wide font-bold leading-tight truncate ${
+                              isEnded ? 'text-neutral-500 font-normal' : t.isClientExpired ? 'text-zinc-500' : 'text-zinc-400'
+                            }`}>
+                              {isEnded ? 'Suất chiếu đã kết thúc — vé không còn hiệu lực qua cửa' : t.helperText}
                             </p>
                           )}
                           <span className="text-[7.5px] font-mono text-neutral-500 block leading-none truncate uppercase mt-0.5">
@@ -666,26 +697,37 @@ export default function MyTicketsView() {
                             onClick={() => handleCancelBooking(t)}
                             disabled={cancellingBookingId === String(t.bookingId)}
                             className="inline-flex items-center gap-1.5 border border-rose-500/30 bg-rose-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-rose-300 transition hover:bg-rose-500 hover:text-white disabled:cursor-wait disabled:opacity-60"
-                            title="Hủy giữ ghế trước khi thanh toán"
+                            title="Hủy đặt vé và giải phóng ghế để đặt lại"
                           >
                             {cancellingBookingId === String(t.bookingId) ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <XCircle className="h-3.5 w-3.5" />
                             )}
-                            Hủy thanh toán
+                            Hủy đặt vé
                           </button>
                         )}
-                        {canOrderMoreFood(t) && (
-                          <button
-                            type="button"
-                            onClick={() => openFoodOrderModal(t)}
-                            className="inline-flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-emerald-300 transition hover:bg-emerald-500 hover:text-black"
-                            title="Đặt thêm bắp nước khi suất chiếu chưa kết thúc"
-                          >
-                            🍿 Đặt thêm bắp nước
-                          </button>
-                        )}
+                        {canOrderMoreFood(t) && (() => {
+                          const isCheckedIn = t.status === 'USED' || Boolean(t.isWatching);
+                          const isEnded = Boolean(t.showtimeEnd && new Date(t.showtimeEnd).getTime() <= Date.now());
+                          const isDisabled = isCheckedIn || isEnded;
+                          const buttonTitle = isCheckedIn
+                            ? "Vé đã check-in không thể đặt thêm bắp nước"
+                            : isEnded
+                              ? "Suất chiếu đã kết thúc — không thể đặt thêm bắp nước"
+                              : "Đặt thêm bắp nước cho vé này";
+                          return (
+                            <button
+                              type="button"
+                              disabled={isDisabled}
+                              onClick={() => !isDisabled && navigate(`/concessions?bookingId=${t.bookingId}`)}
+                              className="inline-flex items-center gap-1.5 border border-emerald-500/30 bg-emerald-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-emerald-300 transition hover:bg-emerald-500 hover:text-black disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900/40 disabled:text-neutral-500 disabled:opacity-40 disabled:hover:bg-neutral-900/40 disabled:hover:text-neutral-500"
+                              title={buttonTitle}
+                            >
+                              🍿 Đặt thêm bắp nước
+                            </button>
+                          );
+                        })()}
                         {t.status === 'USED' && (
                           <button
                             type="button"
@@ -728,7 +770,9 @@ export default function MyTicketsView() {
                   </div>
 
                   {/* MỘT QR CHUNG CHO CẢ ĐƠN — bên trong chứa danh sách mã vé từng ghế */}
-                  <div className="flex w-full shrink-0 flex-col items-center justify-center gap-3 border-t border-dashed border-neutral-800 bg-black/35 p-5 md:w-[220px] md:border-l md:border-t-0">
+                  <div className={`flex w-full shrink-0 flex-col items-center justify-center gap-3 border-t border-dashed border-neutral-800 bg-black/35 p-5 md:w-[220px] md:border-l md:border-t-0 ${
+                    isEnded ? 'opacity-35 grayscale pointer-events-none' : ''
+                  }`}>
                     {t.qrCode && t.seatDetails.some((s) => s.ticketCode) ? (
                       <>
                         <div className="bg-white p-3 shadow-[0_0_28px_rgba(255,255,255,0.16)]">
@@ -742,7 +786,9 @@ export default function MyTicketsView() {
                             title={`QR vé ${t.code}`}
                           />
                         </div>
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">QR đặt chỗ · Bao gồm {t.seatDetails.length} ghế.</p>
+                        <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${isEnded ? 'text-neutral-500' : 'text-emerald-400'}`}>
+                          {isEnded ? 'QR đã hết hạn' : `QR đặt chỗ · Bao gồm ${t.seatDetails.length} ghế.`}
+                        </p>
                         <div className="w-full space-y-1">
                           {t.seatDetails.map((seat) => (
                             <div key={seat.ticketCode || seat.seatId} className="flex items-center gap-2 border border-white/8 bg-neutral-950 px-2 py-1.5">
@@ -752,7 +798,9 @@ export default function MyTicketsView() {
                                 {seat.ticketType === 'STUDENT' ? 'Sinh viên' : seat.ticketType === 'CHILD' ? 'Trẻ em' : 'Người lớn'}
                               </span>
                               <span className="ml-auto shrink-0">
-                                {seat.status === 'CHECKED_IN' ? (
+                                {isEnded ? (
+                                  <span className="text-[7px] font-black uppercase tracking-widest text-neutral-600">Đã kết thúc</span>
+                                ) : seat.status === 'CHECKED_IN' ? (
                                   <span className="border border-emerald-500/30 bg-emerald-950/30 px-1 py-0.5 text-[7px] font-black uppercase tracking-widest text-emerald-400">✓ Đã vào</span>
                                 ) : (
                                   <span className="text-[7px] font-black uppercase tracking-widest text-neutral-600">Chưa vào</span>
@@ -761,7 +809,6 @@ export default function MyTicketsView() {
                             </div>
                           ))}
                         </div>
-                        {/* <p className="text-[8px] leading-relaxed text-neutral-500 text-center">Một mã QR cho cả đơn — nhân viên quét là thấy đủ vé, xác nhận từng ghế như vé máy bay</p> */}
                       </>
                     ) : t.qrCode ? (
                       <>
@@ -777,8 +824,12 @@ export default function MyTicketsView() {
                           />
                         </div>
                         <div className="text-center">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">QR Check-in</p>
-                          <p className="mt-1 text-[8px] leading-relaxed text-neutral-500">Nhân viên quét mã để lấy thông tin vé</p>
+                          <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${isEnded ? 'text-neutral-500' : 'text-emerald-400'}`}>
+                            {isEnded ? 'QR đã hết hạn' : 'QR Check-in'}
+                          </p>
+                          <p className="mt-1 text-[8px] leading-relaxed text-neutral-500">
+                            {isEnded ? 'Suất chiếu đã kết thúc' : 'Nhân viên quét mã để lấy thông tin vé'}
+                          </p>
                         </div>
                       </>
                     ) : (
@@ -788,19 +839,81 @@ export default function MyTicketsView() {
                       </div>
                     )}
                   </div>
-
                 </div>
-              ))}
+              );
+            })}
+
+              {paginatedActiveTickets.length === 0 && (
+                <div className="border border-white/10 bg-[#070707] p-8 text-center text-xs text-neutral-500 font-mono">
+                  Bạn chưa có vé hiện tại nào.
+                </div>
+              )}
             </div>
+
+            {/* Active Tickets Pagination Controls */}
+            {totalActiveTickets > 0 && (
+              <div className="flex flex-col gap-3 border border-white/10 bg-[#050505] p-3 text-[10px] font-mono uppercase text-neutral-400 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  Hiển thị {Math.min((safeTicketPage - 1) * TICKET_PAGE_SIZE + 1, totalActiveTickets)}-{Math.min(safeTicketPage * TICKET_PAGE_SIZE, totalActiveTickets)} / {totalActiveTickets} vé · Trang {safeTicketPage}/{totalTicketPages}
+                </span>
+                {totalTicketPages > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={safeTicketPage <= 1}
+                      onClick={() => setTicketPage((p) => Math.max(1, p - 1))}
+                      className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-white transition hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" /> Trước
+                    </button>
+                    {Array.from({ length: totalTicketPages }, (_, i) => i + 1).map((p) => {
+                      const isNear = Math.abs(p - safeTicketPage) <= 1 || p === 1 || p === totalTicketPages;
+                      if (!isNear && Math.abs(p - safeTicketPage) === 2) {
+                        return <span key={`ellipsis-${p}`} className="px-1 text-neutral-600 select-none">…</span>;
+                      }
+                      if (!isNear) return null;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setTicketPage(p)}
+                          className={`h-7 min-w-7 border px-2 py-1 text-[10px] font-black transition ${p === safeTicketPage
+                            ? 'border-amber-400 bg-amber-400 font-mono text-black'
+                            : 'border-neutral-800 bg-black text-neutral-300 hover:border-amber-400/50 hover:text-white'
+                            }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      disabled={safeTicketPage >= totalTicketPages}
+                      onClick={() => setTicketPage((p) => Math.min(totalTicketPages, p + 1))}
+                      className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-white transition hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      Sau <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* SECTION: LỊCH SỬ ĐẶT VÉ TABLE */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-              <Calendar className="h-4 w-4 text-white" />
-              <span className="text-[10px] uppercase font-sans font-black tracking-widest text-neutral-400">
-                ⏰ Lịch sử đặt vé
-              </span>
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-white" />
+                <span className="text-[10px] uppercase font-sans font-black tracking-widest text-neutral-400">
+                  ⏰ Lịch sử đặt vé
+                </span>
+              </div>
+              {totalHistoryItems > 0 && (
+                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-wider">
+                  Tổng {totalHistoryItems} đơn
+                </span>
+              )}
             </div>
 
             {/* Responsive layout list or elegant table matching the layout */}
@@ -816,7 +929,7 @@ export default function MyTicketsView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-neutral-300 font-light">
-                  {bookingHistory.map((row, idx) => (
+                  {paginatedHistory.map((row, idx) => (
                     <tr key={idx} className="hover:bg-white/5 transition duration-150">
                       <td className="px-4 py-2 whitespace-nowrap font-serif italic text-white font-bold">{row.movie}</td>
                       <td className="px-4 py-2 whitespace-nowrap font-mono">{row.date}</td>
@@ -829,9 +942,65 @@ export default function MyTicketsView() {
                       </td>
                     </tr>
                   ))}
+                  {paginatedHistory.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-xs text-neutral-500">
+                        Chưa có lịch sử đặt vé.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalHistoryItems > 0 && (
+              <div className="flex flex-col gap-3 border border-white/10 bg-[#050505] p-3 text-[10px] font-mono uppercase text-neutral-400 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  Hiển thị {Math.min((safeHistoryPage - 1) * HISTORY_PAGE_SIZE + 1, totalHistoryItems)}-{Math.min(safeHistoryPage * HISTORY_PAGE_SIZE, totalHistoryItems)} / {totalHistoryItems} đơn · Trang {safeHistoryPage}/{totalHistoryPages}
+                </span>
+                {totalHistoryPages > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={safeHistoryPage <= 1}
+                      onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                      className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-white transition hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" /> Trước
+                    </button>
+                    {Array.from({ length: totalHistoryPages }, (_, i) => i + 1).map((p) => {
+                      const isNear = Math.abs(p - safeHistoryPage) <= 1 || p === 1 || p === totalHistoryPages;
+                      if (!isNear && Math.abs(p - safeHistoryPage) === 2) {
+                        return <span key={`ellipsis-${p}`} className="px-1 text-neutral-600 select-none">…</span>;
+                      }
+                      if (!isNear) return null;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setHistoryPage(p)}
+                          className={`h-7 min-w-7 border px-2 py-1 text-[10px] font-black transition ${p === safeHistoryPage
+                            ? 'border-amber-400 bg-amber-400 font-mono text-black'
+                            : 'border-neutral-800 bg-black text-neutral-300 hover:border-amber-400/50 hover:text-white'
+                            }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      disabled={safeHistoryPage >= totalHistoryPages}
+                      onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                      className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-white transition hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      Sau <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* SECTION: ĐÁNH GIÁ PHIM ĐÃ XEM FEEDBACK AREA */}
@@ -1044,64 +1213,6 @@ export default function MyTicketsView() {
 
           </div>
         </>
-      )}
-
-      {/* MODAL: ĐẶT THÊM BẮP NƯỚC */}
-      {foodOrderTicket && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4" onClick={() => !isSubmittingFoodOrder && setFoodOrderTicket(null)}>
-          <div className="w-full max-w-md border border-white/10 bg-[#0a0a0a] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">🍿 Đặt thêm bắp nước</p>
-                <p className="mt-1 text-[10px] font-mono text-neutral-500">{foodOrderTicket.title} · {foodOrderTicket.code}</p>
-              </div>
-              <button onClick={() => !isSubmittingFoodOrder && setFoodOrderTicket(null)} className="p-1.5 text-neutral-500 hover:text-white transition">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
-              {!Array.isArray(foodCatalog) || foodCatalog.length === 0 ? (
-                <div className="flex items-center justify-center gap-2 p-8 text-neutral-500 text-xs">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Đang tải thực đơn…
-                </div>
-              ) : foodCatalog.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{item.name}</p>
-                    <p className="text-[10px] font-mono text-amber-400">{Number(item.price || 0).toLocaleString()}đ</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => changeFoodQuantity(item.id, -1)}
-                      className="h-7 w-7 border border-white/15 text-white hover:bg-white/10 transition text-sm leading-none"
-                    >−</button>
-                    <span className="w-6 text-center text-xs font-mono text-white">{foodOrderQuantities[item.id] || 0}</span>
-                    <button
-                      onClick={() => changeFoodQuantity(item.id, 1)}
-                      className="h-7 w-7 border border-white/15 text-white hover:bg-white/10 transition text-sm leading-none"
-                    >+</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-white/10 px-5 py-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">Tổng cộng</span>
-                <span className="text-base font-black font-mono text-emerald-400">{foodOrderTotal.toLocaleString()}đ</span>
-              </div>
-              <button
-                onClick={handleSubmitFoodOrder}
-                disabled={isSubmittingFoodOrder || foodOrderTotal <= 0}
-                className="w-full bg-emerald-500 py-3 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSubmittingFoodOrder ? 'Đang xử lý…' : 'Xác nhận & thanh toán'}
-              </button>
-              <p className="text-center text-[8px] text-neutral-600 uppercase tracking-widest">Chỉ đặt được khi suất chiếu chưa kết thúc</p>
-            </div>
-          </div>
-        </div>
       )}
 
     </div>

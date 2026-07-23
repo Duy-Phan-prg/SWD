@@ -4,6 +4,7 @@ import com.sba301.cinemaai.dto.response.booking.BookingResponse;
 import com.sba301.cinemaai.dto.request.booking.CheckInRequest;
 import com.sba301.cinemaai.dto.request.booking.CheckInSeatsRequest;
 import com.sba301.cinemaai.dto.request.booking.FoodOrderRequest;
+import com.sba301.cinemaai.dto.request.booking.FoodPickupRequest;
 import com.sba301.cinemaai.dto.response.ApiResponse;
 import com.sba301.cinemaai.dto.response.booking.FoodOrderResponse;
 import com.sba301.cinemaai.service.BookingService;
@@ -63,6 +64,20 @@ public class StaffCheckInController {
             @Valid @RequestBody FoodOrderRequest request
     ) {
         return ApiResponse.success(foodOrderService.createStaffOrder(code, request), "Food order confirmed");
+    }
+
+    @GetMapping("/food-orders/lookup")
+    @Operation(summary = "Lookup a food order for pickup (Staff/Admin)",
+            description = "Finds a paid standalone concession order by order code or pickup QR")
+    public ApiResponse<FoodOrderResponse> lookupFoodOrder(@RequestParam String code) {
+        return ApiResponse.success(foodOrderService.lookupForPickup(code), "Food order found");
+    }
+
+    @PostMapping("/food-orders/pickup")
+    @Operation(summary = "Confirm food-order pickup (Staff/Admin)",
+            description = "Marks a paid concession order as picked up. The operation can only succeed once")
+    public ApiResponse<FoodOrderResponse> pickUpFoodOrder(@Valid @RequestBody FoodPickupRequest request) {
+        return ApiResponse.success(foodOrderService.markPickedUp(request.code()), "Food order picked up");
     }
 
     @GetMapping("/lookup")

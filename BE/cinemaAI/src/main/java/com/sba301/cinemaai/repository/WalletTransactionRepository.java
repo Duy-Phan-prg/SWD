@@ -15,7 +15,13 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
 
     Page<WalletTransaction> findByWalletOrderByCreatedAtDesc(CineWallet wallet, Pageable pageable);
 
+    @Query("SELECT tx FROM WalletTransaction tx WHERE tx.wallet = :wallet AND tx.type <> com.sba301.cinemaai.enums.WalletTransactionType.WITHDRAWAL_PAID ORDER BY tx.createdAt DESC")
+    Page<WalletTransaction> findByWalletFiltered(@Param("wallet") CineWallet wallet, Pageable pageable);
+
     Page<WalletTransaction> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("SELECT tx FROM WalletTransaction tx WHERE tx.type <> com.sba301.cinemaai.enums.WalletTransactionType.WITHDRAWAL_PAID ORDER BY tx.createdAt DESC")
+    Page<WalletTransaction> findAllFiltered(Pageable pageable);
 
     boolean existsByBookingAndType(Booking booking, WalletTransactionType type);
 

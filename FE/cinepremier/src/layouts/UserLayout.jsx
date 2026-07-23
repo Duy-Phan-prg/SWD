@@ -39,6 +39,7 @@ export default function UserLayout({ children }) {
     if (p.startsWith('/staff')) return 'staff';
     if (p.startsWith('/admin')) return 'admin';
     if (p.startsWith('/movies')) return 'explore';
+    if (p === '/concessions') return 'concessions';
     if (p === '/showtimes') return 'showtimes';
     if (p === '/tickets') return 'my-tickets';
     if (p === '/watchlist') return 'wishlist';
@@ -51,7 +52,7 @@ export default function UserLayout({ children }) {
   const handleTabChange = (tab) => {
     if (tab === 'my-tickets' && !isLoggedIn) { setAuthMode('login'); setShowOTP(true); return; }
     if (tab === 'wishlist' && isWishlistRestricted) return;
-    const paths = { home: '/', explore: '/movies', showtimes: '/showtimes', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
+    const paths = { home: '/', explore: '/movies', concessions: '/concessions', showtimes: '/showtimes', 'my-tickets': '/tickets', wishlist: '/watchlist', profile: '/profile', policies: '/policies', staff: '/staff', admin: '/admin/overview' };
     navigate(paths[tab] || '/');
   };
 
@@ -95,6 +96,7 @@ export default function UserLayout({ children }) {
             isLoggedIn={isLoggedIn}
             currentUser={currentUser}
             currentRole={currentRole}
+            loyaltyRefreshKey={location.key}
             onRoleChange={setCurrentRole}
             handleLogout={handleLogout}
             navigate={navigate}

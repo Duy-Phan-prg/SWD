@@ -8,6 +8,7 @@ import com.sba301.cinemaai.dto.response.loyalty.LoyaltyReportResponse;
 import com.sba301.cinemaai.dto.response.loyalty.LoyaltyResponse;
 import com.sba301.cinemaai.dto.response.loyalty.LoyaltyTransactionResponse;
 import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.FoodOrder;
 import com.sba301.cinemaai.entity.LoyaltyConfiguration;
 import com.sba301.cinemaai.entity.LoyaltyPoint;
 import com.sba301.cinemaai.entity.LoyaltyPointTransaction;
@@ -108,6 +109,24 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
         addPoints(lp, earned);
         loyaltyPointRepository.save(lp);
         recordTransaction(user, booking, LoyaltyPointType.EARN, earned, lp.getPoints(), "Earned from booking " + booking.getBookingCode());
+    }
+
+    @Override
+    @Transactional
+    public void addPointsFromFoodOrder(User user, FoodOrder foodOrder) {
+        int earned = calculateEarnedPoints(foodOrder.getTotalAmount());
+        if (earned <= 0) return;
+        LoyaltyPoint loyaltyPoint = getOrCreate(user);
+        addPoints(loyaltyPoint, earned);
+        loyaltyPointRepository.save(loyaltyPoint);
+        recordTransaction(
+                user,
+                foodOrder.getBooking(),
+                LoyaltyPointType.EARN,
+                earned,
+                loyaltyPoint.getPoints(),
+                "Earned from food order " + foodOrder.getOrderCode()
+        );
     }
 
     @Override
@@ -300,6 +319,17 @@ public class LoyaltyPointServiceImpl implements LoyaltyPointService {
                 earned
         );
         return earned;
+    }
+
+    private int calculateEarnedPoints(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            return 0;
+        }
+        LoyaltyConfiguration config = getOrCreateConfiguration();
+        return amount
+                .multiply(config.getEarningRatePercent())
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.DOWN)
+                .intValue();
     }
 
     private int resolveEarnedPointsForBooking(Booking booking) {

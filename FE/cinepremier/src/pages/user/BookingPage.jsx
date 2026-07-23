@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check, ShieldCheck, CircleAlert } from 'lucide-react';
 import { expireAuthSession, getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
 import { paymentService } from '../../services/paymentService';
@@ -144,14 +145,20 @@ const sortShowtimes = (showtimes) => [...showtimes].sort((a, b) => {
 
 export default function BookingView() {
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const draftKey = `cp:bookingDraft:${id}`;
   // Draft đọc từ sessionStorage khi mở trang (khôi phục tiến trình sau refresh)
   const pendingDraftRef = useRef(undefined);
+  // Trì hoãn dọn draft để React Strict Mode có thể hủy lần cleanup mô phỏng.
+  const draftCleanupTimerRef = useRef(null);
   // Ghế chờ áp lại sau khi seat map tải xong
   const pendingSeatRestoreRef = useRef(null);
   const resumeAppliedRef = useRef(false);
+  const audienceDialogRef = useRef(null);
+  const audienceConfirmButtonRef = useRef(null);
+  const audienceReturnFocusRef = useRef(null);
   const { moviesList, foodCatalog, fetchPublicFoodCatalog } = useMovies();
   const showToast = useUiStore((state) => state.showToast);
   const movie = moviesList.find(m => String(m.id) === String(id) || String(m.backendId) === String(id));
@@ -175,6 +182,20 @@ export default function BookingView() {
   useEffect(() => {
     fetchPublicFoodCatalog();
   }, []);
+
+  useEffect(() => {
+    if (draftCleanupTimerRef.current !== null) {
+      window.clearTimeout(draftCleanupTimerRef.current);
+      draftCleanupTimerRef.current = null;
+    }
+
+    return () => {
+      draftCleanupTimerRef.current = window.setTimeout(() => {
+        try { sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
+        draftCleanupTimerRef.current = null;
+      }, 0);
+    };
+  }, [draftKey]);
 
   useEffect(() => {
     // Chỉ redirect khi phim thực sự chưa mở bán (UPCOMING rõ ràng), không redirect SCHEDULED
@@ -236,12 +257,15 @@ export default function BookingView() {
   const [seatClockTick, setSeatClockTick] = useState(Date.now());
   const [isHolding, setIsHolding] = useState(false);
   const [paymentState, setPaymentState] = useState('booking');
+  const [showAudienceConfirmation, setShowAudienceConfirmation] = useState(false);
   const [ticketPriceValidation, setTicketPriceValidation] = useState(null);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [loyaltyPointsInput, setLoyaltyPointsInput] = useState('');
   const [loyaltyConfig, setLoyaltyConfig] = useState(DEFAULT_LOYALTY_CONFIG);
   const [heldPaymentSummary, setHeldPaymentSummary] = useState(null);
   const [paidBooking, setPaidBooking] = useState(null);
+  const [activeHoldingBookings, setActiveHoldingBookings] = useState([]);
+  const [isCancellingExistingHold, setIsCancellingExistingHold] = useState(false);
   const heldSeatIdsRef = useRef(null);
   // Lưu số điểm GỐC trước khi trừ tạm khi hold ghế.
   // Khi quay lại: SET tuyệt đối về giá trị này — không cộng tích luỹ.
@@ -282,6 +306,32 @@ export default function BookingView() {
           setLoyaltyConfig(DEFAULT_LOYALTY_CONFIG);
         }
       });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Booking đang giữ là nguồn dữ liệu chính khi khách quay lại đúng suất chiếu.
+  useEffect(() => {
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      setActiveHoldingBookings([]);
+      return;
+    }
+
+    let cancelled = false;
+    bookingService.getMyBookings(accessToken)
+      .then((bookings) => {
+        if (cancelled) return;
+        const now = Date.now();
+        setActiveHoldingBookings((Array.isArray(bookings) ? bookings : []).filter((booking) => (
+          ['HOLDING', 'PENDING_PAYMENT'].includes(booking.status)
+          && booking.holdExpiresAt
+          && new Date(booking.holdExpiresAt).getTime() > now
+        )));
+      })
+      .catch(() => {
+        if (!cancelled) setActiveHoldingBookings([]);
+      });
+
     return () => { cancelled = true; };
   }, []);
 
@@ -383,6 +433,7 @@ export default function BookingView() {
       setSelectedShowtime(first);
     }
     setSelectedSeats([]);
+    setSelectedCombos({});
   };
 
   const handleSelectRoom = (roomKey) => {
@@ -390,16 +441,22 @@ export default function BookingView() {
     const first = showtimesForDate.find(st => getShowtimeRoomKey(st) === roomKey);
     if (first) setSelectedShowtime(first);
     setSelectedSeats([]);
+    setSelectedCombos({});
   };
 
   const handleSelectShowtime = (st) => {
     setSelectedRoomKey(getShowtimeRoomKey(st));
     setSelectedShowtime(st);
     setSelectedSeats([]);
+    setSelectedCombos({});
   };
 
   // Seat selection
   const handleSelectSeat = (seat) => {
+    if (matchingHoldingBooking) {
+      showToast('Bạn đã có đơn đang giữ ghế cho suất chiếu này. Hãy tiếp tục thanh toán hoặc hủy đơn hiện tại trước khi chọn ghế khác.');
+      return;
+    }
     if (seat.isBooked) return;
     const seatGroup = getCoupleSeatPair(seat, seats);
     const isCoupleSeat = normalizeSeatTypeKey(seat.type) === 'couple';
@@ -571,12 +628,23 @@ export default function BookingView() {
           id: `${seat.rowLabel}${seat.seatNumber}`,
           seatId: seat.seatId,
           type: 'standard',
-          ticketType: String(seat.ticketType || 'ADULT').toLowerCase()
+          ticketType: String(seat.ticketType || 'ADULT').toLowerCase(),
+          resumeUnitPrice: Number(seat.unitPrice || 0)
         }));
+        const restoredCombos = (booking.foods || []).reduce((result, food) => {
+          const foodId = food.foodItemId
+            ? `item-${food.foodItemId}`
+            : food.foodComboId
+              ? `combo-${food.foodComboId}`
+              : null;
+          if (foodId) result[foodId] = Number(food.quantity || 0);
+          return result;
+        }, {});
         setAdultCount(restoredSeats.filter(s => s.ticketType === 'adult').length);
         setChildCount(restoredSeats.filter(s => s.ticketType === 'child').length);
         setStudentCount(restoredSeats.filter(s => s.ticketType === 'student').length);
         setSelectedSeats(restoredSeats);
+        setSelectedCombos(restoredCombos);
         pendingSeatRestoreRef.current = { showtimeId: booking.showtimeId, seats: restoredSeats, allowHeld: true };
         heldSeatIdsRef.current = restoredSeats.map(s => s.seatId);
         setHoldBookingId(booking.id);
@@ -652,6 +720,7 @@ export default function BookingView() {
   const getSeatUnitPrice = (seat) => {
     const line = getSeatValidationLine(seat);
     return moneyValue(line?.unitPrice)
+      ?? moneyValue(seat.resumeUnitPrice)
       ?? getShowtimeTicketPrice(selectedShowtime, seat.ticketType || 'adult', seat.type)
       ?? moneyValue(seat.price)
       ?? 0;
@@ -686,14 +755,75 @@ export default function BookingView() {
     });
   };
 
+  // Nếu khách quay lại đúng suất đang giữ, hiển thị bill từ booking backend thay vì draft cục bộ.
+  const matchingHoldingBooking = activeHoldingBookings.find((booking) => (
+    String(booking.showtimeId) === String(selectedShowtime?.id)
+    && new Date(booking.holdExpiresAt).getTime() > seatClockTick
+  )) || null;
+  const isViewingExistingHold = Boolean(matchingHoldingBooking);
+
+  useEffect(() => {
+    if (!matchingHoldingBooking) return;
+    // Backend booking is the source of truth. Discard any stale local draft so
+    // the customer cannot accidentally build a second order for this showtime.
+    setSelectedSeats([]);
+    setSelectedCombos({});
+    setBookingStep('seats');
+    setTicketPriceValidation(null);
+  }, [matchingHoldingBooking?.id]);
+  const heldTicketRows = isViewingExistingHold
+    ? (matchingHoldingBooking.seats || []).map((seat) => {
+      const ticketType = String(seat.ticketType || 'ADULT').toLowerCase();
+      const unitPrice = Number(seat.unitPrice || 0);
+      return {
+        id: seat.seatId,
+        label: `Ghế ${seat.rowLabel}${seat.seatNumber}`,
+        ticketType,
+        unitPrice,
+        lineTotal: unitPrice
+      };
+    })
+    : [];
+  const localFoodRows = Object.entries(selectedCombos)
+    .map(([id, quantity]) => {
+      const item = concessions.find(candidate => candidate.id === id);
+      if (!item) return null;
+      return {
+        id,
+        name: item.name,
+        unitPrice: Number(item.price || 0),
+        quantity: Number(quantity || 0),
+        lineTotal: Number(item.price || 0) * Number(quantity || 0)
+      };
+    })
+    .filter(Boolean);
+  const heldFoodRows = isViewingExistingHold
+    ? (matchingHoldingBooking.foods || []).map((food, index) => ({
+      id: food.foodItemId ? `item-${food.foodItemId}` : food.foodComboId ? `combo-${food.foodComboId}` : `held-food-${index}`,
+      name: food.name || 'Bắp nước',
+      unitPrice: Number(food.unitPrice || 0),
+      quantity: Number(food.quantity || 0),
+      lineTotal: Number(food.totalPrice ?? (Number(food.unitPrice || 0) * Number(food.quantity || 0)))
+    }))
+    : [];
+
   // Financial calculations
   const fallbackTicketPrice = selectedSeats.reduce((total, s) => total + getSeatLineTotal(s), 0);
+  const heldTicketPrice = heldTicketRows.reduce((total, row) => total + row.lineTotal, 0);
   const priceTickets = Number(ticketPriceValidation?.finalAmount ?? ticketPriceValidation?.ticketSubtotal ?? fallbackTicketPrice);
-  const priceCombos = Object.entries(selectedCombos).reduce((total, [id, qty]) => {
-    const item = concessions.find(i => i.id === id);
-    return total + (item ? item.price * qty : 0);
-  }, 0);
-  const subTotal = priceTickets + priceCombos;
+  const displayTicketPrice = isViewingExistingHold ? heldTicketPrice : priceTickets;
+  const receiptTicketRows = isViewingExistingHold
+    ? heldTicketRows
+    : selectedSeats.map(seat => ({
+      id: seat.id,
+      label: `Ghế ${seat.id}`,
+      ticketType: seat.ticketType || 'adult',
+      unitPrice: getSeatUnitPrice(seat),
+      lineTotal: getSeatLineTotal(seat)
+    }));
+  const receiptFoodRows = isViewingExistingHold ? heldFoodRows : localFoodRows;
+  const priceCombos = receiptFoodRows.reduce((total, row) => total + row.lineTotal, 0);
+  const subTotal = displayTicketPrice + priceCombos;
   const requestedLoyaltyPoints = Math.max(0, Number(String(loyaltyPointsInput || '').replace(/\D/g, '')) || 0);
   const earningRatePercent = Math.max(0, Number(loyaltyConfig.earningRatePercent ?? DEFAULT_LOYALTY_CONFIG.earningRatePercent) || 0);
   const redemptionPoints = Math.max(1, Number(loyaltyConfig.redemptionPoints ?? DEFAULT_LOYALTY_CONFIG.redemptionPoints) || DEFAULT_LOYALTY_CONFIG.redemptionPoints);
@@ -717,11 +847,62 @@ export default function BookingView() {
       ? `Số điểm muốn dùng vượt quá mức giảm tối đa của hóa đơn (${maxRedeemablePointsForSubtotal.toLocaleString('vi-VN')} điểm).`
       : '';
 
-  const gatewayDiscountAmount = Number(heldPaymentSummary?.discountAmount ?? discountAmount);
+  const existingHoldDiscount = isViewingExistingHold ? Number(matchingHoldingBooking.discountAmount || 0) : null;
+  const existingHoldTotal = isViewingExistingHold ? Number(matchingHoldingBooking.totalAmount || subTotal) : null;
+  const gatewayDiscountAmount = Number(heldPaymentSummary?.discountAmount ?? existingHoldDiscount ?? discountAmount);
   const gatewayTotalAmount = heldPaymentSummary
     ? Number(heldPaymentSummary.totalAmount)
-    : totalAmount;
-  const gatewayRedeemedPoints = Number(heldPaymentSummary?.loyaltyPointsRedeemed ?? loyaltyPointsToRedeem);
+    : existingHoldTotal ?? totalAmount;
+  const gatewayRedeemedPoints = Number(heldPaymentSummary?.loyaltyPointsRedeemed
+    ?? (isViewingExistingHold ? matchingHoldingBooking.loyaltyPointsRedeemed : null)
+    ?? loyaltyPointsToRedeem);
+  const audienceMinimumAge = getAgeRatingMinimum(movie?.ageRating);
+  const selectedShowtimeEnd = (() => {
+    const explicitEnd = selectedShowtime?.endTime ? new Date(selectedShowtime.endTime) : null;
+    if (explicitEnd && !Number.isNaN(explicitEnd.getTime())) return explicitEnd;
+    const start = selectedShowtime?.startTime ? new Date(selectedShowtime.startTime) : null;
+    if (!start || Number.isNaN(start.getTime())) return null;
+    return new Date(start.getTime() + Number(movie?.duration || 0) * 60 * 1000);
+  })();
+  const isLateNightShow = (() => {
+    if (!selectedShowtimeEnd || !selectedShowtime?.startTime) return false;
+    const start = new Date(selectedShowtime.startTime);
+    if (Number.isNaN(start.getTime())) return false;
+    const lateNightCutoff = new Date(start);
+    lateNightCutoff.setHours(23, 0, 0, 0);
+    return selectedShowtimeEnd.getTime() > lateNightCutoff.getTime();
+  })();
+
+  useEffect(() => {
+    if (!showAudienceConfirmation) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    audienceConfirmButtonRef.current?.focus();
+    const handleDialogKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowAudienceConfirmation(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = audienceDialogRef.current?.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleDialogKeyDown);
+      audienceReturnFocusRef.current?.focus?.();
+    };
+  }, [showAudienceConfirmation]);
 
   const formatHoldSeconds = (seconds) => {
     if (seconds === null || seconds === undefined) return '--:--';
@@ -991,6 +1172,12 @@ export default function BookingView() {
 
   const handleContinueToCombos = () => {
     if (!canMovePastSeats()) return;
+    audienceReturnFocusRef.current = document.activeElement;
+    setShowAudienceConfirmation(true);
+  };
+
+  const handleConfirmAudience = () => {
+    setShowAudienceConfirmation(false);
     setBookingStep('combos');
     if (concessions.length === 0) fetchPublicFoodCatalog({ force: true });
   };
@@ -1117,27 +1304,62 @@ export default function BookingView() {
       return;
     }
     setPaymentState('payment_processing');
-    let vnpayError = null;
     try {
+      // Kiểm tra nguồn dữ liệu backend ngay trước khi mở VNPay để tránh dùng booking stale.
+      const latestBooking = await bookingService.getMyBooking(accessToken, holdBookingId);
+      const isPayable = ['HOLDING', 'PENDING_PAYMENT'].includes(latestBooking?.status);
+      const isExpired = latestBooking?.holdExpiresAt
+        && new Date(latestBooking.holdExpiresAt).getTime() <= Date.now();
+      if (!isPayable || isExpired) {
+        throw new Error(isExpired
+          ? 'Thời gian giữ ghế đã hết. Vui lòng chọn lại ghế.'
+          : 'Đơn này không còn ở trạng thái chờ thanh toán.');
+      }
+
+      setHoldExpiresAt(latestBooking.holdExpiresAt || holdExpiresAt);
       const result = await paymentService.createVnpayPayment(accessToken, holdBookingId);
       const paymentUrl = result?.paymentUrl ?? result?.payment_url;
       if (paymentUrl) {
         window.location.href = paymentUrl;
         return;
       }
-      vnpayError = 'không nhận được URL thanh toán';
+      throw new Error('Cổng VNPay không trả về đường dẫn thanh toán.');
     } catch (err) {
-      vnpayError = err?.message || 'lỗi không xác định';
+      const message = err?.message || 'Không thể kết nối tới cổng VNPay.';
+      showToast(`${message} Đơn vẫn được giữ nếu đồng hồ chưa hết.`);
+      setPaymentState('payment_failed');
+    }
+  };
+
+  const cancelExistingHoldAndUnlockSeats = async () => {
+    if (!matchingHoldingBooking || isCancellingExistingHold) return;
+    const confirmed = window.confirm(
+      'Hủy đơn đang giữ ghế? Ghế và bắp nước trong đơn hiện tại sẽ được giải phóng để bạn chọn lại.'
+    );
+    if (!confirmed) return;
+
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) {
+      navigate('/login');
+      return;
     }
 
-    // Phao cuối khi VNPay không tạo được phiên — báo rõ cho user, KHÔNG âm thầm mock
-    showToast(`Không tạo được phiên VNPay (${vnpayError}) — chuyển sang thanh toán demo.`);
+    setIsCancellingExistingHold(true);
     try {
-      await paymentService.mockPayment(accessToken, holdBookingId);
-      setPaymentState('payment_success');
-    } catch (err) {
-      showToast(err.message || 'Lỗi thanh toán.');
-      setPaymentState('payment_failed');
+      await bookingService.cancelBooking(accessToken, matchingHoldingBooking.id);
+      setActiveHoldingBookings((bookings) => bookings.filter(
+        (booking) => String(booking.id) !== String(matchingHoldingBooking.id)
+      ));
+      setSelectedSeats([]);
+      setSelectedCombos({});
+      setBookingStep('seats');
+      await refreshSeatMap();
+      await refreshLoyaltyBalance();
+      showToast('Đã hủy đơn cũ. Bạn có thể chọn ghế mới cho suất chiếu này.');
+    } catch (error) {
+      showToast(error?.message || 'Không thể hủy đơn đang giữ ghế. Vui lòng thử lại.');
+    } finally {
+      setIsCancellingExistingHold(false);
     }
   };
 
@@ -1227,7 +1449,7 @@ export default function BookingView() {
                 onClick={handleBackToSeats}
                 className="w-full border border-white/20 hover:border-white text-white hover:bg-neutral-900 py-3.5 text-xs font-bold uppercase tracking-widest font-sans transition"
               >
-                Quay lại thay đổi ghế
+                Hủy đơn & chọn ghế khác
               </button>
             </div>
           </div>
@@ -1450,69 +1672,86 @@ export default function BookingView() {
                   <span className={`font-black ${holdSecondsLeft !== null && holdSecondsLeft <= 15 ? 'text-red-400' : 'text-emerald-400'}`}>{holdCountdownLabel}</span>
                 </div>
 
-                {selectedSeats.length > 0 && (
-                  <div className="border-b border-white/5 pb-3">
-                    <span className="mb-2 block text-white">Chi tiết vé từng ghế:</span>
-                    <div className="space-y-1.5">
-                      {selectedSeats.map((seat, index) => {
-                        const meta = TICKET_TYPE_META[seat.ticketType] || TICKET_TYPE_META.adult;
-                        const unitPrice = moneyValue(ticketPriceValidation?.tickets?.[index]?.unitPrice);
-                        return (
-                          <div key={seat.id} className="flex items-center justify-between gap-2">
-                            <span className="truncate">
-                              <span className="text-amber-400 font-bold"> - Ghế {seat.id}</span>
-                              <span className="text-zinc-500"> · {meta.label}</span>
-                              {normalizeSeatTypeKey(seat.type) === 'vip' && <span className="text-yellow-400"> · VIP</span>}
-                              {normalizeSeatTypeKey(seat.type) === 'couple' && <span className="text-rose-400"> · Đôi</span>}
-                            </span>
-                            <span className="text-white font-bold shrink-0">{unitPrice !== null ? `${unitPrice.toLocaleString()}đ` : '—'}</span>
+              </div>
+
+              {/* Detailed receipt — mirrors the booking sidebar */}
+              <div className="border-t border-white/10 pt-4 font-sans">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400">Chi tiết đơn hàng</p>
+                  <span className="text-[8px] font-mono text-neutral-400">#{selectedSeats.length} vé</span>
+                </div>
+
+                <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 border-b border-white/5 pb-1.5 text-[8px] font-black uppercase tracking-widest text-neutral-400">
+                  <span>Hạng mục</span>
+                  <span className="text-right">Đơn giá</span>
+                  <span className="text-right">SL</span>
+                  <span className="text-right">Thành tiền</span>
+                </div>
+
+                {receiptTicketRows.length > 0 && (
+                  <div className="mb-1 space-y-0.5">
+                    <div className="flex items-center gap-1.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">
+                      <Ticket className="h-3 w-3 text-amber-400" /> Vé xem phim
+                    </div>
+                    {receiptTicketRows.map(row => {
+                      const typeMeta = TICKET_TYPE_META[row.ticketType] || TICKET_TYPE_META.adult;
+                      const typeClass = row.ticketType === 'student'
+                        ? 'border-sky-500/30 bg-sky-500/10 text-sky-400'
+                        : row.ticketType === 'child'
+                          ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                          : 'border-white/15 bg-white/5 text-neutral-300';
+                      return (
+                        <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 border border-white/10 bg-white/[0.025] px-2 py-2">
+                          <div className="min-w-0">
+                            <span className="block truncate text-[10px] font-bold text-white">{row.label}</span>
+                            <span className={`mt-0.5 inline-flex border px-1 py-0.5 text-[7px] font-black uppercase ${typeClass}`}>{typeMeta.label}</span>
                           </div>
-                        );
-                      })}
+                          <span className="text-right font-mono text-[9px] tabular-nums text-neutral-400">{formatVnd(row.unitPrice)}</span>
+                          <span className="text-right font-mono text-[9px] text-neutral-400">×1</span>
+                          <span className="text-right font-mono text-[10px] font-black tabular-nums text-white">{formatVnd(row.lineTotal)}</span>
+                        </div>
+                      );
+                    })}
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider text-neutral-400">
+                      <span>Tổng vé</span>
+                      <span className="text-right font-mono text-[10px] font-black tabular-nums text-neutral-300">{formatVnd(priceTickets)}</span>
                     </div>
                   </div>
                 )}
 
-                {Object.entries(selectedCombos).length > 0 && (
-                  <div className="space-y-2 pt-2 text-[9px] font-sans tracking-tight text-zinc-500">
-                    <span className="text-[10px] font-mono tracking-widest text-white block">Bắp nước (đơn giá × số lượng):</span>
-                    {Object.entries(selectedCombos).map(([id, q]) => {
-                      const it = concessions.find(item => item.id === id);
-                      if (!it) return null;
-                      return (
-                        <div key={id} className="flex justify-between">
-                          <span className="truncate max-w-[170px] text-[10px]"> - {it.name} <span className="text">({it.price.toLocaleString()}đ × {q})</span></span>
-                          <span className="text-white" style={{ fontSize: "11px" }}>{(it.price * q).toLocaleString()}đ</span>
-                        </div>
-                      );
-                    })}
+                {receiptFoodRows.length > 0 && (
+                  <div className="mb-1 space-y-0.5">
+                    <div className="flex items-center gap-1.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">
+                      <ShoppingBag className="h-3 w-3 text-rose-400" /> Bắp nước
+                    </div>
+                    {receiptFoodRows.map(row => (
+                      <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 border border-amber-900/20 bg-amber-950/5 px-2 py-2">
+                        <span className="min-w-0 truncate text-[10px] font-bold text-white" title={row.name}>{row.name}</span>
+                        <span className="text-right font-mono text-[9px] tabular-nums text-neutral-400">{formatVnd(row.unitPrice)}</span>
+                        <span className="text-right font-mono text-[9px] text-neutral-400">×{row.quantity}</span>
+                        <span className="text-right font-mono text-[10px] font-black tabular-nums text-amber-300">{formatVnd(row.lineTotal)}</span>
+                      </div>
+                    ))}
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-2 py-1.5 text-[8px] font-bold uppercase tracking-wider text-neutral-400">
+                      <span>Tổng bắp nước</span>
+                      <span className="text-right font-mono text-[10px] font-black tabular-nums text-amber-300">{formatVnd(priceCombos)}</span>
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {/* Financial calculations recap */}
-              <div className="pt-4 border-t border-white/10 space-y-3 text-[10px] uppercase tracking-wider font-mono">
-                <div className="flex justify-between text-zinc-500">
-                  <span className="text-white">Tổng tiền vé ghế:</span>
-                  <span className="text-white">{priceTickets.toLocaleString()}đ</span>
-                </div>
-                {priceCombos > 0 && (
-                  <div className="flex justify-between text-zinc-500">
-                    <span className="text-white">Tiền bắp nước:</span>
-                    <span className="text-white">{priceCombos.toLocaleString()}đ</span>
-                  </div>
-                )}
                 {gatewayDiscountAmount > 0 && (
-                  <div className="flex justify-between text-emerald-400">
-                    <span>CinePoints áp dụng:</span>
-                    <span>-{gatewayDiscountAmount.toLocaleString()}đ</span>
+                  <div className="flex items-center justify-between gap-3 border-t border-emerald-500/20 px-2 py-2 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
+                    <span>Giảm bằng CinePoints</span>
+                    <span className="font-mono font-black tabular-nums">-{formatVnd(gatewayDiscountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-end border-t border-white/10 pt-3 text-xs">
-                  <span className="text-white font-sans font-bold tracking-widest text-[10px]">TỔNG THÀNH TIỀN</span>
-                  <span className="text-base font-black text-white bg-[#0e0e0e] p-2 border border-white/15">
-                    {gatewayTotalAmount.toLocaleString()}đ
-                  </span>
+
+                <div className="mt-2 flex items-end justify-between gap-4 border-y border-white/10 py-3">
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-widest text-white">Tổng cộng hóa đơn</span>
+                    <span className="mt-0.5 block text-[8px] text-neutral-400">{selectedSeats.length} vé · {receiptFoodRows.reduce((sum, row) => sum + row.quantity, 0)} món</span>
+                  </div>
+                  <span className="shrink-0 border border-white/15 bg-[#0e0e0e] p-2 font-mono text-xl font-black leading-none tracking-tight text-white">{formatVnd(gatewayTotalAmount)}</span>
                 </div>
               </div>
 
@@ -1609,7 +1848,9 @@ export default function BookingView() {
           <ChevronRight className="h-3 w-3 text-neutral-700" />
           <button
             disabled={selectedSeats.length === 0}
-            onClick={() => setBookingStep('combos')}
+            onClick={() => {
+              if (bookingStep === 'seats') handleContinueToCombos();
+            }}
             className={`px-3 py-1.5 transition ${bookingStep === 'combos' ? 'text-white border-b border-white font-bold' : 'text-neutral-500 hover:text-white disabled:opacity-30'}`}
           >
             2. BẮP NƯỚC
@@ -1893,13 +2134,15 @@ export default function BookingView() {
                                         const seatBtn = (seat, isSelected) => (
                                           <button
                                             key={seat.id}
-                                            disabled={isPairBooked}
+                                            disabled={isPairBooked || Boolean(matchingHoldingBooking)}
                                             onClick={() => handleSelectSeat(seat)}
-                                            title={`Ghế đôi ${seat.col}`}
+                                            title={matchingHoldingBooking ? 'Hủy đơn đang giữ ghế trước khi chọn ghế khác' : `Ghế đôi ${seat.col}`}
                                             className={`relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 text-[11.5px] sm:text-[14.5px] font-black font-mono flex items-center justify-center transition-all duration-150 rounded-none border-0 ${isPairBooked
                                               ? isPairHeld
                                                 ? 'bg-amber-950/30 text-amber-300 cursor-not-allowed'
                                                 : 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through'
+                                              : matchingHoldingBooking
+                                                ? 'bg-rose-950/10 text-rose-900 cursor-not-allowed opacity-40'
                                               : isSelected
                                                 ? 'bg-rose-500 text-white font-black'
                                                 : 'bg-rose-950/20 text-rose-400 hover:bg-rose-950/50 hover:text-rose-200'
@@ -1957,13 +2200,17 @@ export default function BookingView() {
                                         return (
                                           <button
                                             key={seat.id}
-                                            disabled={seat.isBooked}
+                                            disabled={seat.isBooked || Boolean(matchingHoldingBooking)}
                                             onClick={() => handleSelectSeat(seat)}
-                                            title={isSelected ? `${ticketMeta?.label || 'Người lớn'} · ${formatVnd(displayPrice)}` : `${formatVnd(displayPrice)}`}
+                                            title={matchingHoldingBooking
+                                              ? 'Hủy đơn đang giữ ghế trước khi chọn ghế khác'
+                                              : isSelected ? `${ticketMeta?.label || 'Người lớn'} · ${formatVnd(displayPrice)}` : `${formatVnd(displayPrice)}`}
                                             className={`relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 text-[11.5px] sm:text-[14.5px] font-black font-mono transition-all duration-150 rounded-none border ${seat.isBooked
                                               ? isHeldOnActiveBooking
                                                 ? 'bg-amber-950/30 border-amber-500/40 text-amber-300 cursor-not-allowed'
                                                 : 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
+                                              : matchingHoldingBooking
+                                                ? 'border-white/5 bg-neutral-950 text-neutral-700 cursor-not-allowed opacity-40'
                                               : isSelected && isChild
                                                 ? 'bg-amber-400 text-black border-amber-400 font-black scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
                                                 : isSelected
@@ -2320,95 +2567,272 @@ export default function BookingView() {
             <div className="flex justify-between items-start">
               <span>Vị trí ghế:</span>
               <span className="text-white font-mono font-bold max-w-[140px] break-words text-right text-xs">
-                {selectedSeats.length > 0
-                  ? selectedSeats.map(s => s.id).join(', ')
+                {receiptTicketRows.length > 0
+                  ? receiptTicketRows.map(row => row.label.replace(/^Ghế\s+/i, '')).join(', ')
                   : 'Chưa chọn'
                 }
               </span>
             </div>
 
             {/* Show selected combos details */}
-            {Object.entries(selectedCombos).length > 0 && (
+            {receiptFoodRows.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-white/5 text-[9px] lowercase tracking-wide text-neutral-400">
                 <span className="text-[11px] uppercase tracking-[0.15em] text-neutral-600 block font-sans">Dịch vụ đi kèm</span>
-                {Object.entries(selectedCombos).map(([id, q]) => {
-                  const it = concessions.find(item => item.id === id);
-                  if (!it) return null;
+                {receiptFoodRows.map(row => (
+                    <div key={row.id} className="flex justify-between uppercase">
+                      <span className="truncate max-w-[140px] font-sans">{row.name} <span className="text-white font-bold font-mono">x{row.quantity}</span></span>
+                      <span className="text-neutral-300 font-mono">{formatVnd(row.lineTotal)}</span>
+                    </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+
+          {isViewingExistingHold ? (
+            <div className="border border-amber-400/30 bg-amber-400/[0.07] p-4">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center border border-amber-400/40 bg-amber-400/10 text-amber-300">
+                  <Ticket className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">Bạn có đơn đang chờ thanh toán</p>
+                  <p className="mt-1 text-[9px] leading-relaxed text-neutral-400">
+                    Ghế của suất chiếu này đang được giữ trong đơn {matchingHoldingBooking.bookingCode || `#${matchingHoldingBooking.id}`}.
+                  </p>
+                  <p className="mt-2 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-500">
+                    Tiếp tục tại nút cuối hóa đơn
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : renderLoyaltyRedeemPanel()}
+
+          {/* Checkout receipts final value indicator */}
+          <div className="pt-4 border-t border-white/5 font-sans">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400">Chi tiết đơn hàng</p>
+              <span className="text-[8px] font-mono text-neutral-400">#{receiptTicketRows.length} vé</span>
+            </div>
+
+            <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 border-b border-white/5 pb-1.5 text-[8px] font-black uppercase tracking-widest text-neutral-400">
+              <span>Hạng mục</span>
+              <span className="text-right">Đơn giá</span>
+              <span className="text-right">SL</span>
+              <span className="text-right">Thành tiền</span>
+            </div>
+
+            {receiptTicketRows.length > 0 && (
+              <div className="mb-1 space-y-0.5">
+                <div className="flex items-center gap-1.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">
+                  <Ticket className="h-3 w-3 text-amber-400" /> Vé xem phim
+                </div>
+                {receiptTicketRows.map(row => {
+                  const typeMeta = TICKET_TYPE_META[row.ticketType] || TICKET_TYPE_META.adult;
+                  const typeClass = row.ticketType === 'student'
+                    ? 'border-sky-500/30 bg-sky-500/10 text-sky-400'
+                    : row.ticketType === 'child'
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                      : 'border-neutral-700 bg-neutral-900 text-neutral-400';
                   return (
-                    <div key={id} className="flex justify-between uppercase">
-                      <span className="truncate max-w-[140px] font-sans">{it.name} <span className="text-white font-bold font-mono">x{q}</span></span>
-                      <span className="text-neutral-300 font-mono">{(it.price * q).toLocaleString()}đ</span>
+                    <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 border border-neutral-900 bg-neutral-950 px-2 py-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span className="font-mono text-[11px] font-black text-white">{row.label}</span>
+                        <span className={`border px-1 py-0.5 text-[8px] font-bold uppercase ${typeClass}`}>
+                          {typeMeta.label}
+                        </span>
+                      </div>
+                      <span className="text-right font-mono text-[9px] tabular-nums text-neutral-400">{formatVnd(row.unitPrice)}</span>
+                      <span className="text-right font-mono text-[9px] text-neutral-400">×1</span>
+                      <span className="text-right font-mono text-[10px] font-black tabular-nums text-white">{formatVnd(row.lineTotal)}</span>
                     </div>
                   );
                 })}
+                <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 px-2 py-1.5">
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">Tổng vé</span>
+                  <span className="text-right font-mono text-[10px] font-black tabular-nums text-neutral-300">{formatVnd(displayTicketPrice)}</span>
+                </div>
               </div>
             )}
 
-          </div>
-
-          {renderLoyaltyRedeemPanel()}
-
-          {/* Checkout receipts final value indicator */}
-          <div className="space-y-3 pt-4 border-t border-white/5 text-[10px] uppercase tracking-wider font-sans text-neutral-400">
-
-            {/* Adult / Child breakdown */}
-            {selectedSeats.filter(s => s.ticketType === 'adult').length > 0 && (
-              <div className="flex justify-between">
-                <span>Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}:</span>
-                <span className="font-mono text-zinc-300">{formatVnd(getSelectedSeatTotal('adult'))}</span>
+            {receiptFoodRows.length > 0 && (
+              <div className="mb-1 space-y-0.5">
+                <div className="flex items-center gap-1.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">
+                  <ShoppingBag className="h-3 w-3 text-rose-400" /> Bắp nước
+                </div>
+                {receiptFoodRows.map(row => (
+                  <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 border border-amber-900/20 bg-amber-950/5 px-2 py-2">
+                    <span className="min-w-0 truncate text-[10px] font-bold text-white" title={row.name}>{row.name}</span>
+                    <span className="text-right font-mono text-[9px] tabular-nums text-neutral-400">{formatVnd(row.unitPrice)}</span>
+                    <span className="text-right font-mono text-[9px] text-neutral-400">×{row.quantity}</span>
+                    <span className="text-right font-mono text-[10px] font-black tabular-nums text-amber-300">{formatVnd(row.lineTotal)}</span>
+                  </div>
+                ))}
+                <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 px-2 py-1.5">
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">Tổng bắp nước</span>
+                  <span className="text-right font-mono text-[10px] font-black tabular-nums text-amber-300">{formatVnd(priceCombos)}</span>
+                </div>
               </div>
             )}
-            {selectedSeats.filter(s => s.ticketType === 'child').length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-amber-400">Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}:</span>
-                <span className="font-mono text-amber-400">{formatVnd(getSelectedSeatTotal('child'))}</span>
-              </div>
-            )}
-            {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-sky-400">Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}:</span>
-                <span className="font-mono text-sky-400">{formatVnd(getSelectedSeatTotal('student'))}</span>
-              </div>
-            )}
-
-
-
 
             {gatewayDiscountAmount > 0 && (
-              <div className="flex justify-between text-emerald-400">
-                <span>Giảm bằng CinePoints:</span>
-                <span className="font-mono">-{gatewayDiscountAmount.toLocaleString()}đ</span>
+              <div className="flex justify-between border-t border-white/5 py-2 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
+                <span>Giảm bằng CinePoints</span>
+                <span className="font-mono">-{formatVnd(gatewayDiscountAmount)}</span>
               </div>
             )}
 
-            <div className="flex justify-between items-end border-t border-white/10 pt-3">
-              <span className="text-white font-sans tracking-widest text-[10px] font-bold">TỔNG CỘNG HOÁ ĐƠN</span>
-              <span className="text-lg font-black text-white font-mono tracking-tight leading-none bg-[#101010] p-2 border border-white/20">
-                {gatewayTotalAmount.toLocaleString()}đ
-              </span>
+            <div className="mt-2 flex items-end justify-between gap-4 border-y border-white/10 py-3">
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-widest text-white">Tổng cộng hóa đơn</span>
+                <span className="mt-0.5 block text-[8px] text-neutral-400">{receiptTicketRows.length} vé · {receiptFoodRows.reduce((sum, row) => sum + row.quantity, 0)} món</span>
+              </div>
+              <span className="shrink-0 font-mono text-xl font-black leading-none tracking-tight text-white">{formatVnd(gatewayTotalAmount)}</span>
             </div>
-
           </div>
 
           {/* CTA Proceed triggers */}
-          <button
-            onClick={handleReceiptAction}
-            disabled={selectedSeats.length === 0 || isHolding || !selectedShowtime}
-            className={`w-full flex items-center justify-center space-x-2 py-4 text-xs font-bold font-sans uppercase tracking-[0.2em] transition-all border ${selectedSeats.length === 0 || !selectedShowtime
-              ? 'bg-neutral-900 border-neutral-800 text-neutral-600 cursor-not-allowed opacity-30'
-              : 'bg-white hover:bg-black hover:text-white border-white text-black'
-              }`}
-            id="proceed-payment-submit"
-          >
-            {isHolding ? <Loader2 className="h-4 w-4 animate-spin" /> : bookingStep === 'seats' ? <ShoppingBag className="h-4 w-4" /> : <Ticket className="h-4 w-4" />}
-            <span>
-              {isHolding ? 'ĐANG GIỮ GHẾ...' : selectedSeats.length === 0 ? 'CHƯA CHỌN GHẾ' : bookingStep === 'seats' ? 'TIẾP TỤC CHỌN BẮP NƯỚC' : 'TIẾP TỤC THANH TOÁN'}
-            </span>
-          </button>
+          {isViewingExistingHold ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[0.9fr_1.1fr]">
+              <button
+                type="button"
+                onClick={cancelExistingHoldAndUnlockSeats}
+                disabled={isCancellingExistingHold}
+                className="flex items-center justify-center gap-2 border border-rose-500/50 bg-rose-950/10 py-4 font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-rose-300 transition hover:border-rose-400 hover:bg-rose-950/30 disabled:cursor-wait disabled:opacity-50"
+                id="cancel-existing-booking"
+              >
+                {isCancellingExistingHold ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                <span>{isCancellingExistingHold ? 'Đang hủy đơn...' : 'Hủy đơn & chọn ghế khác'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/tickets')}
+                disabled={isCancellingExistingHold}
+                className="flex items-center justify-center gap-2 border border-amber-400 bg-amber-400 py-4 font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-black transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                id="continue-existing-payment"
+              >
+                <Ticket className="h-4 w-4" />
+                <span>Tiếp tục thanh toán</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleReceiptAction}
+              disabled={selectedSeats.length === 0 || isHolding || !selectedShowtime}
+              className={`w-full flex items-center justify-center space-x-2 py-4 text-xs font-bold font-sans uppercase tracking-[0.2em] transition-all border ${selectedSeats.length === 0 || !selectedShowtime
+                ? 'bg-neutral-900 border-neutral-800 text-neutral-600 cursor-not-allowed opacity-30'
+                : 'bg-white hover:bg-black hover:text-white border-white text-black'
+                }`}
+              id="proceed-payment-submit"
+            >
+              {isHolding ? <Loader2 className="h-4 w-4 animate-spin" /> : bookingStep === 'seats' ? <ShoppingBag className="h-4 w-4" /> : <Ticket className="h-4 w-4" />}
+              <span>
+                {isHolding ? 'ĐANG GIỮ GHẾ...' : selectedSeats.length === 0 ? 'CHƯA CHỌN GHẾ' : bookingStep === 'seats' ? 'TIẾP TỤC CHỌN BẮP NƯỚC' : 'TIẾP TỤC THANH TOÁN'}
+              </span>
+            </button>
+          )}
 
         </div>
 
       </div>
+
+      {/* Hallmark · component: confirmation-dialog · genre: modern-minimal · theme: CinePremier OLED · critique: P4 H5 E5 S5 R5 V4 */}
+      <AnimatePresence>
+        {showAudienceConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0.1 : 0.18, ease: 'easeOut' }}
+            className="fixed inset-0 z-[140] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setShowAudienceConfirmation(false);
+            }}
+            role="presentation"
+          >
+            <motion.section
+              ref={audienceDialogRef}
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.985 }}
+              transition={{ duration: shouldReduceMotion ? 0.1 : 0.22, ease: 'easeOut' }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="audience-confirmation-title"
+              aria-describedby="audience-confirmation-description"
+              className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto border border-white/15 bg-neutral-950 shadow-2xl"
+            >
+              <div className="h-1 bg-amber-400" aria-hidden="true" />
+
+              <div className="border-b border-white/10 p-5 sm:px-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-amber-400/40 bg-amber-400/10 text-amber-300" aria-hidden="true">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Xác nhận điều kiện</p>
+                    <h2 id="audience-confirmation-title" className="mt-1 min-w-0 text-xl font-black text-white [overflow-wrap:anywhere]">Độ tuổi người xem</h2>
+                    <p className="mt-1 truncate text-xs text-neutral-400">
+                      {movie?.title} · {selectedSeats.length} ghế đã chọn
+                    </p>
+                  </div>
+                  <span className="shrink-0 border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">
+                    {movie?.ageRating || 'Phân loại phim'}
+                  </span>
+                </div>
+              </div>
+
+              <div id="audience-confirmation-description" className="space-y-4 p-5 text-sm leading-6 text-neutral-200 sm:px-6">
+                <p>
+                  Tôi xác nhận mua vé cho người xem{' '}
+                  <strong className="font-black text-white">
+                    {audienceMinimumAge > 0
+                      ? `từ đủ ${audienceMinimumAge} tuổi trở lên`
+                      : `phù hợp với phân loại ${movie?.ageRating || 'của phim'}`}
+                  </strong>{' '}
+                  và đồng ý cung cấp giấy tờ tùy thân để xác thực độ tuổi khi được yêu cầu.
+                </p>
+
+                {isLateNightShow && (
+                  <div className="flex gap-3 border-l-2 border-amber-400 bg-amber-400/5 px-4 py-3 text-amber-100">
+                    <CircleAlert className="mt-1 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-amber-300">Lưu ý suất chiếu muộn</p>
+                      <p className="mt-1 text-sm leading-6">Suất chiếu kết thúc sau 23:00. Rạp không phục vụ khách hàng dưới 16 tuổi cho suất chiếu này.</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 border-t border-white/10 pt-4">
+                  <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-neutral-300" aria-hidden="true" />
+                  <p className="text-sm leading-6 text-neutral-300">
+                    Vé không được hoàn nếu người xem không đáp ứng quy định về độ tuổi tại thời điểm kiểm tra.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-t border-white/10 bg-black/30 p-4 sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+                <button
+                  type="button"
+                  onClick={() => setShowAudienceConfirmation(false)}
+                  className="min-h-12 cursor-pointer border border-white/15 px-5 text-xs font-black uppercase tracking-[0.16em] text-neutral-300 outline-none transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-white active:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  ref={audienceConfirmButtonRef}
+                  type="button"
+                  onClick={handleConfirmAudience}
+                  className="flex min-h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap bg-amber-400 px-5 text-xs font-black uppercase tracking-[0.16em] text-black outline-none transition-colors hover:bg-amber-300 focus-visible:ring-2 focus-visible:ring-white active:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  Xác nhận & tiếp tục
+                </button>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

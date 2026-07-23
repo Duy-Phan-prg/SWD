@@ -151,6 +151,7 @@ export const adminService = {
   getAbandonedRate:  (token, params = {}) => request(`/api/v1/admin/reports/abandoned${buildQueryString(params)}`, { token }),
   getConcessionSales: (token, params = {}) => request(`/api/v1/admin/reports/concessions${buildQueryString(params)}`, { token }),
   getExpiredUsers:   (token, params = {}) => request(`/api/v1/admin/reports/expired-users${buildQueryString(params)}`, { token }),
+  getShowtimeIncidentsReport: (token, params = {}) => request(`/api/v1/admin/reports/showtime-incidents${buildQueryString(params)}`, { token }),
 
   // ── Audit logs ─────────────────────────────────────────────────────────────
   getAuditLogs:      (token, params = {}) => request(`/api/v1/admin/audit-logs${buildQueryString(params)}`, { token }).then(normalizePageResponse),

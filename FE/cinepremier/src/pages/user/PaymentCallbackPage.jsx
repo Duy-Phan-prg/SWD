@@ -6,10 +6,16 @@ import { bookingService } from '../../services/bookingService';
 
 export default function PaymentCallbackPage() {
   const navigate = useNavigate();
-  const onGoTickets = () => navigate('/tickets');
   const [status, setStatus] = useState('loading');
   const [info, setInfo] = useState({});
   const [failReason, setFailReason] = useState('');
+  const onContinue = () => {
+    if (info.linkedBookingId) {
+      navigate(`/tickets?highlightBookingId=${info.linkedBookingId}`);
+    } else {
+      navigate('/tickets');
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,16 +48,45 @@ export default function PaymentCallbackPage() {
       return;
     }
 
-    // Đơn bắp nước: BE đã confirmPayment (set FoodOrder = PAID) ngay trong /vnpay/return
-    // trước khi redirect về đây, nên responseCode=00 là đủ tin cậy — không cần verify booking.
+    const { accessToken } = getStoredAuth();
+
+    // VNPay có thể trả mã 00 sau đúng thời điểm đơn hết hạn. Luôn đối chiếu trạng thái
+    // food order ở backend trước khi thông báo thành công cho khách.
     if (isFoodOrder) {
-      setStatus('success');
+      if (!accessToken) {
+        setStatus('unknown');
+        setFailReason('Không thể xác minh trạng thái đơn bắp nước. Vui lòng đăng nhập lại và kiểm tra đơn của bạn.');
+        return;
+      }
+      bookingService.getMyFoodOrders(accessToken)
+        .then((orders) => {
+          const order = Array.isArray(orders)
+            ? orders.find((candidate) => candidate.orderCode === code)
+            : null;
+          if (order?.status === 'PAID') {
+            setStatus('success');
+            const linkedId = order.bookingId || order.booking?.id || order.bookingCode || null;
+            setInfo((prev) => ({
+              ...prev,
+              linkedBookingId: linkedId,
+            }));
+          } else if (order?.status === 'EXPIRED') {
+            setStatus('failed');
+            setFailReason('Đơn bắp nước đã hết thời hạn thanh toán 15 phút và không được ghi nhận thanh toán.');
+          } else {
+            setStatus('failed');
+            setFailReason('Giao dịch chưa được xác nhận. Đơn vẫn được giữ để bạn thanh toán lại trong thời gian còn lại.');
+          }
+        })
+        .catch(() => {
+          setStatus('unknown');
+          setFailReason('Chưa thể xác minh trạng thái đơn bắp nước. Vui lòng kiểm tra lại trong danh sách đơn.');
+        });
       return;
     }
 
     // VNPay báo thành công (responseCode=00) — nhưng BE có thể đã từ chối (hết hạn giữ ghế)
     // → Phải kiểm tra booking status thực tế từ BE trước khi hiện "Thành công"
-    const { accessToken } = getStoredAuth();
     if (!accessToken || !bookingCode) {
       // Không thể xác minh — tin theo VNPay
       setStatus('success');
@@ -152,15 +187,25 @@ export default function PaymentCallbackPage() {
             <div>
               <h2 className="text-lg font-bold text-red-400 uppercase tracking-wider">Thanh Toán Thất Bại</h2>
               <p className="text-[11px] text-zinc-400 mt-1">{failReason || 'Giao dịch bị huỷ hoặc không thành công.'}</p>
+              {!info.isFoodOrder && (
+                <p className="mt-2 text-[10px] leading-relaxed text-amber-300/80">
+                  Đơn vé vẫn nằm trong “Vé của tôi” và có thể thanh toán lại cho đến khi hết thời gian giữ ghế.
+                </p>
+              )}
+              {info.isFoodOrder && (
+                <p className="mt-2 text-[10px] leading-relaxed text-amber-300/80">
+                  Đơn bắp nước vẫn được giữ trong 15 phút. Bạn có thể thanh toán lại hoặc hủy đơn trong mục “Đơn bắp nước của tôi”.
+                </p>
+              )}
             </div>
           </>
         )}
 
         <button
-          onClick={onGoTickets}
-          className="w-full bg-white text-black hover:bg-neutral-200 py-3 text-xs font-bold uppercase tracking-widest transition"
+          onClick={onContinue}
+          className="w-full bg-white text-black hover:bg-neutral-200 py-3 text-xs font-bold uppercase tracking-widest transition cursor-pointer"
         >
-          Về vé của tôi
+          {info.isFoodOrder && info.linkedBookingId ? 'Về vé đã đặt' : 'Về vé của tôi'}
         </button>
 
       </div>

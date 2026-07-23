@@ -43,6 +43,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     boolean existsByShowtimeAndStatusIn(Showtime showtime, Collection<BookingStatus> statuses);
 
+    boolean existsByUserAndShowtimeAndStatusIn(
+            User user,
+            Showtime showtime,
+            Collection<BookingStatus> statuses
+    );
+
     List<Booking> findByStatus(BookingStatus status);
 
     @EntityGraph(attributePaths = {"user.profile", "showtime.movie", "showtime.room", "showtime.room.cinema"})
