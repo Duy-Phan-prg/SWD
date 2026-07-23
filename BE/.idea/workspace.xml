@@ -6,35 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="234e65fd-19fb-47a2-8f15-f004cd8a665d" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/api-contract.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/api-contract.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/domain-rules.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/domain-rules.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/feature_list.json" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/feature_list.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/progress.md" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/progress.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/StaffCheckInController.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/controller/StaffCheckInController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/booking/FoodOrderResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/dto/response/booking/FoodOrderResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/BookingFoodItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/BookingFoodItem.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/FoodOrder.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/FoodOrder.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Payment.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/entity/Payment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/enums/FoodOrderStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/enums/FoodOrderStatus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/BookingFoodItemRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/BookingFoodItemRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/BookingRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/BookingRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/FoodOrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/FoodOrderRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/PaymentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/repository/PaymentRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/FoodOrderService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/FoodOrderService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/LoyaltyPointService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/LoyaltyPointService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/QrTicketService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/QrTicketService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/VNPayService.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/VNPayService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/BookingServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/BookingServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/FoodOrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/FoodOrderServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/LoyaltyPointServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/LoyaltyPointServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/PaymentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/PaymentServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/QrTicketServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/QrTicketServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/VNPayServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/service/impl/VNPayServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/util/MessageTranslator.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/java/com/sba301/cinemaai/util/MessageTranslator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/booking/BookingIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/booking/BookingIntegrationTests.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/payment/PaymentIntegrationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/cinemaAI/src/test/java/com/sba301/cinemaai/payment/PaymentIntegrationTests.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,7 +109,8 @@
       <workItem from="1780902649487" duration="16771000" />
       <workItem from="1784708341267" duration="4461000" />
       <workItem from="1784718337272" duration="640000" />
-      <workItem from="1784730018040" duration="11755000" />
+      <workItem from="1784730018040" duration="12378000" />
+      <workItem from="1784758662400" duration="300000" />
     </task>
     <servers />
   </component>
