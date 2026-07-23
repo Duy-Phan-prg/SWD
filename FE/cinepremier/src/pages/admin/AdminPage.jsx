@@ -1636,10 +1636,12 @@ export default function AdminDashboard({
 
                 <NavSectionLabel>Bắp nước / F&amp;B</NavSectionLabel>
                 <NavItem indent icon={ShoppingBag} label="Quản lý bắp nước" active={activeTab === 'foods'} onClick={() => { playPulseSound(478, 'sine', 0.05); changeAdminSection('foods'); }} />
+                <NavItem indent icon={BarChart2} label="Báo cáo F&B" active={activeTab === 'fnb-report'} onClick={() => { playPulseSound(486, 'sine', 0.05); changeAdminSection('fnb-report'); }} />
 
                 <NavSectionLabel>Quản lý rạp</NavSectionLabel>
                 <NavItem indent icon={Layers} label="Phòng chiếu & ghế" active={activeTab === 'rooms'} onClick={() => { playPulseSound(470, 'sine', 0.05); changeAdminSection('rooms'); }} />
-                <NavItem indent icon={Calendar} label="Lịch chiếu" active={activeTab === 'showtimes'} onClick={() => { playPulseSound(480, 'sine', 0.05); changeAdminSection('showtimes'); }} />
+                <NavItem indent icon={Calendar} label="Điều phối lịch chiếu" active={activeTab === 'showtimes'} onClick={() => { playPulseSound(480, 'sine', 0.05); changeAdminSection('showtimes'); }} />
+                <NavItem indent icon={AlertCircle} label="Báo cáo sự cố & hoàn tiền" active={activeTab === 'showtime-incidents'} onClick={() => { playPulseSound(486, 'sine', 0.05); changeAdminSection('showtime-incidents'); }} />
                 <NavItem indent icon={FileText} label="Quản lý vé" active={activeTab === 'tickets'} onClick={() => { playPulseSound(492, 'sine', 0.05); changeAdminSection('tickets'); }} />
                 <NavItem indent icon={FileText} label="Giao dịch" active={activeTab === 'transactions'} onClick={() => { playPulseSound(500, 'sine', 0.05); changeAdminSection('transactions'); }} />
 
