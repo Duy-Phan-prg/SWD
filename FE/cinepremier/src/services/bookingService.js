@@ -11,9 +11,6 @@ export const bookingService = {
   getMyBookings: (token) => request('/api/v1/bookings', { token }).then(unwrapListPayload),
   getMyBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { token }),
   cancelBooking: (token, bookingId) => request(`/api/v1/bookings/${bookingId}`, { method: 'DELETE', token }),
-  createStandaloneFoodOrder: (token, body) => request('/api/v1/food-orders', { method: 'POST', token, body }),
-  getMyFoodOrders: (token) => request('/api/v1/food-orders/my', { token }).then(unwrapListPayload),
-  cancelFoodOrder: (token, foodOrderId) => request(`/api/v1/food-orders/${foodOrderId}`, { method: 'DELETE', token }),
   createFoodOrder: (token, bookingId, body) => request(`/api/v1/bookings/${bookingId}/food-orders`, { method: 'POST', token, body }),
   getFoodOrders: (token, bookingId) => request(`/api/v1/bookings/${bookingId}/food-orders`, { token })
 };

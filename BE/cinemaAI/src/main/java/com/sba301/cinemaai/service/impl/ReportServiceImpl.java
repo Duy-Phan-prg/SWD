@@ -10,27 +10,15 @@ import com.sba301.cinemaai.dto.response.report.RoomOccupancyResponse;
 import com.sba301.cinemaai.dto.response.report.ShowtimeFillResponse;
 import com.sba301.cinemaai.dto.response.report.TopMovieResponse;
 import com.sba301.cinemaai.dto.response.report.TopSeatResponse;
-import com.sba301.cinemaai.dto.response.report.IncidentRefundedUser;
-import com.sba301.cinemaai.dto.response.report.ShowtimeIncidentItem;
-import com.sba301.cinemaai.dto.response.report.ShowtimeIncidentReportResponse;
-import com.sba301.cinemaai.entity.Booking;
-import com.sba301.cinemaai.entity.Showtime;
-import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.BookingStatus;
-import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
-import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
-import com.sba301.cinemaai.repository.ShowtimeRepository;
 import com.sba301.cinemaai.service.ReportService;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.EnumMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -44,8 +32,6 @@ public class ReportServiceImpl implements ReportService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final BookingFoodItemRepository bookingFoodItemRepository;
-    private final ShowtimeRepository showtimeRepository;
-    private final BookingSeatRepository bookingSeatRepository;
 
     @Transactional(readOnly = true)
     @Override
@@ -259,17 +245,8 @@ public class ReportServiceImpl implements ReportService {
     public ConcessionSalesResponse getConcessionSales(LocalDate from, LocalDate to) {
         LocalDate safeFrom = from != null ? from : LocalDate.now().withDayOfMonth(1);
         LocalDate safeTo = to != null ? to : LocalDate.now();
-        if (safeFrom.isAfter(safeTo)) {
-            throw new IllegalArgumentException("Ngày bắt đầu không được sau ngày kết thúc");
-        }
-        if (ChronoUnit.DAYS.between(safeFrom, safeTo) > 366) {
-            throw new IllegalArgumentException("Khoảng báo cáo F&B không được vượt quá 366 ngày");
-        }
-
-        LocalDateTime rangeFrom = safeFrom.atStartOfDay();
-        LocalDateTime rangeTo = safeTo.plusDays(1).atStartOfDay();
         List<ConcessionSalesResponse.Line> lines = bookingFoodItemRepository
-                .concessionSales(rangeFrom, rangeTo)
+                .concessionSales(safeFrom.atStartOfDay(), safeTo.plusDays(1).atStartOfDay())
                 .stream()
                 .map(row -> new ConcessionSalesResponse.Line(
                         (String) row[0],
@@ -281,72 +258,7 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal totalRevenue = lines.stream()
                 .map(ConcessionSalesResponse.Line::revenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        Map<LocalDate, SalesAccumulator> daily = new LinkedHashMap<>();
-        for (LocalDate date = safeFrom; !date.isAfter(safeTo); date = date.plusDays(1)) {
-            daily.put(date, new SalesAccumulator());
-        }
-
-        Map<String, SalesAccumulator> sources = new LinkedHashMap<>();
-        sources.put("WITH_TICKET", new SalesAccumulator());
-        sources.put("ADD_ON", new SalesAccumulator());
-        sources.put("STANDALONE", new SalesAccumulator());
-
-        List<Object[]> transactions = bookingFoodItemRepository.concessionTransactions(rangeFrom, rangeTo);
-        transactions.forEach(row -> {
-            LocalDate date = ((LocalDateTime) row[0]).toLocalDate();
-            String source = String.valueOf(row[1]);
-            long quantity = ((Number) row[3]).longValue();
-            BigDecimal revenue = row[4] != null ? new BigDecimal(row[4].toString()) : BigDecimal.ZERO;
-            daily.computeIfAbsent(date, ignored -> new SalesAccumulator()).addOrder(quantity, revenue);
-            sources.computeIfAbsent(source, ignored -> new SalesAccumulator()).addOrder(quantity, revenue);
-        });
-
-        long totalOrders = transactions.size();
-        BigDecimal averageOrderValue = totalOrders > 0
-                ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
-
-        List<ConcessionSalesResponse.DailyLine> dailyLines = daily.entrySet().stream()
-                .map(entry -> new ConcessionSalesResponse.DailyLine(
-                        entry.getKey(),
-                        entry.getValue().orderCount,
-                        entry.getValue().quantity,
-                        entry.getValue().revenue
-                ))
-                .toList();
-        List<ConcessionSalesResponse.SourceLine> sourceLines = sources.entrySet().stream()
-                .map(entry -> new ConcessionSalesResponse.SourceLine(
-                        entry.getKey(),
-                        entry.getValue().orderCount,
-                        entry.getValue().quantity,
-                        entry.getValue().revenue
-                ))
-                .toList();
-
-        return new ConcessionSalesResponse(
-                safeFrom,
-                safeTo,
-                totalOrders,
-                totalItems,
-                totalRevenue,
-                averageOrderValue,
-                dailyLines,
-                lines,
-                sourceLines
-        );
-    }
-
-    private static final class SalesAccumulator {
-        private long orderCount;
-        private long quantity;
-        private BigDecimal revenue = BigDecimal.ZERO;
-
-        private void addOrder(long itemQuantity, BigDecimal orderRevenue) {
-            orderCount++;
-            quantity += itemQuantity;
-            revenue = revenue.add(orderRevenue);
-        }
+        return new ConcessionSalesResponse(safeFrom, safeTo, totalItems, totalRevenue, lines);
     }
 
     /** User đặt vé nhưng hết hạn không thanh toán — để admin cân nhắc tặng điểm/khuyến mãi. */
@@ -365,99 +277,5 @@ public class ReportServiceImpl implements ReportService {
                         row[3] != null ? new BigDecimal(row[3].toString()) : BigDecimal.ZERO
                 ))
                 .toList();
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public ShowtimeIncidentReportResponse getShowtimeIncidents(LocalDate from, LocalDate to, Long showtimeId) {
-        LocalDate safeFrom = from != null ? from : LocalDate.now().minusDays(90);
-        LocalDate safeTo = to != null ? to : LocalDate.now();
-        LocalDateTime dtFrom = safeFrom.atStartOfDay();
-        LocalDateTime dtTo = safeTo.plusDays(1).atStartOfDay();
-
-        List<Showtime> cancelledShowtimes;
-        if (showtimeId != null) {
-            cancelledShowtimes = showtimeRepository.findById(showtimeId).stream()
-                    .filter(s -> s.getStatus() == ShowtimeStatus.CANCELLED)
-                    .toList();
-        } else {
-            cancelledShowtimes = showtimeRepository.findByStatus(ShowtimeStatus.CANCELLED).stream()
-                    .filter(s -> (s.getCancelledAt() != null && !s.getCancelledAt().isBefore(dtFrom) && s.getCancelledAt().isBefore(dtTo))
-                            || (s.getStartTime() != null && !s.getStartTime().isBefore(dtFrom) && s.getStartTime().isBefore(dtTo)))
-                    .sorted((a, b) -> {
-                        LocalDateTime ta = a.getCancelledAt() != null ? a.getCancelledAt() : a.getStartTime();
-                        LocalDateTime tb = b.getCancelledAt() != null ? b.getCancelledAt() : b.getStartTime();
-                        return tb.compareTo(ta);
-                    })
-                    .toList();
-        }
-
-        List<ShowtimeIncidentItem> incidentItems = new java.util.ArrayList<>();
-        long totalRefundedBookings = 0;
-        BigDecimal totalRefundedAmount = BigDecimal.ZERO;
-        java.util.Set<Long> uniqueUserIds = new java.util.HashSet<>();
-
-        for (Showtime showtime : cancelledShowtimes) {
-            List<Booking> refundedBookings = bookingRepository.findByShowtime(showtime).stream()
-                    .filter(b -> b.getStatus() == BookingStatus.REFUNDED)
-                    .toList();
-
-            List<IncidentRefundedUser> refundedUsers = new java.util.ArrayList<>();
-            BigDecimal showtimeRefundTotal = BigDecimal.ZERO;
-
-            for (Booking booking : refundedBookings) {
-                User user = booking.getUser();
-                if (user != null) {
-                    uniqueUserIds.add(user.getId());
-                }
-
-                String seatLabels = bookingSeatRepository.findByBooking(booking).stream()
-                        .map(bs -> bs.getSeat() != null ? (bs.getSeat().getRowLabel() + bs.getSeat().getSeatNumber()) : "")
-                        .filter(s -> !s.isBlank())
-                        .collect(java.util.stream.Collectors.joining(", "));
-
-                BigDecimal amount = booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO;
-                showtimeRefundTotal = showtimeRefundTotal.add(amount);
-
-                refundedUsers.add(new IncidentRefundedUser(
-                        booking.getId(),
-                        booking.getBookingCode(),
-                        user != null ? user.getId() : null,
-                        user != null && user.getProfile() != null && user.getProfile().getFullName() != null
-                                ? user.getProfile().getFullName()
-                                : (user != null ? user.getEmail() : "Khách hàng"),
-                        user != null ? user.getEmail() : null,
-                        user != null && user.getProfile() != null ? user.getProfile().getPhone() : null,
-                        amount,
-                        booking.getRefundMethod() != null ? booking.getRefundMethod() : "CINEWALLET",
-                        booking.getRefundedAt() != null ? booking.getRefundedAt() : booking.getUpdatedAt(),
-                        seatLabels
-                ));
-            }
-
-            totalRefundedBookings += refundedBookings.size();
-            totalRefundedAmount = totalRefundedAmount.add(showtimeRefundTotal);
-
-            incidentItems.add(new ShowtimeIncidentItem(
-                    showtime.getId(),
-                    showtime.getMovie() != null ? showtime.getMovie().getTitle() : "Phim",
-                    showtime.getRoom() != null ? showtime.getRoom().getName() : "Phòng",
-                    showtime.getRoom() != null && showtime.getRoom().getCinema() != null ? showtime.getRoom().getCinema().getName() : "Rạp",
-                    showtime.getStartTime(),
-                    showtime.getCancellationReason() != null ? showtime.getCancellationReason() : "Suất chiếu bị hủy do sự cố rạp",
-                    showtime.getCancelledAt() != null ? showtime.getCancelledAt() : showtime.getUpdatedAt(),
-                    refundedBookings.size(),
-                    showtimeRefundTotal,
-                    refundedUsers
-            ));
-        }
-
-        return new ShowtimeIncidentReportResponse(
-                cancelledShowtimes.size(),
-                totalRefundedBookings,
-                totalRefundedAmount,
-                uniqueUserIds.size(),
-                incidentItems
-        );
     }
 }

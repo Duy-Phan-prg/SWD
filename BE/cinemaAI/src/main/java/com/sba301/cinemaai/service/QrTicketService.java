@@ -2,7 +2,6 @@ package com.sba301.cinemaai.service;
 
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.BookingSeat;
-import com.sba301.cinemaai.entity.FoodOrder;
 
 public interface QrTicketService {
 
@@ -12,13 +11,11 @@ public interface QrTicketService {
 
     String generateSeatQr(BookingSeat bookingSeat);
 
-    String generateFoodOrderQr(FoodOrder foodOrder);
-
     String extractBookingCode(String qrCode);
 
     QrPayload parse(String qrCode);
 
-    enum QrPayloadType { BOOKING, SEAT, FOOD }
+    enum QrPayloadType { BOOKING, SEAT }
 
     record QrPayload(QrPayloadType type, String code) {
     }

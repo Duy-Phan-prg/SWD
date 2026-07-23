@@ -156,13 +156,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public PaymentResponse createVnpayFoodOrderPayment(String email, Long foodOrderId, String clientIp) {
         FoodOrder foodOrder = findFoodOrder(foodOrderId);
-        validateFoodOrderOwner(foodOrder, email);
+        validateBookingOwner(foodOrder.getBooking(), email);
         requirePayableFoodOrder(foodOrder);
 
         // Retry: hủy payment PENDING cũ của đúng food order này rồi tạo phiên mới
-        paymentRepository.findByFoodOrder(foodOrder)
+        paymentRepository.findByBooking(foodOrder.getBooking())
                 .stream()
-                .filter(p -> p.getStatus() == PaymentStatus.PENDING)
+                .filter(p -> p.getStatus() == PaymentStatus.PENDING
+                        && p.getFoodOrder() != null
+                        && p.getFoodOrder().getId().equals(foodOrder.getId()))
                 .forEach(p -> markPaymentFailed(p, "SUPERSEDED_BY_RETRY"));
 
         Payment payment = new Payment(foodOrder.getBooking(), PaymentProvider.VNPAY, foodOrder.getTotalAmount());
@@ -171,15 +173,14 @@ public class PaymentServiceImpl implements PaymentService {
 
         String txnRef = payment.getId() + "-" + foodOrder.getOrderCode();
         String orderInfo = "Thanh toan bap nuoc " + foodOrder.getOrderCode();
-        String paymentUrl = vnpayService.buildPaymentUrl(
-                txnRef, foodOrder.getTotalAmount(), orderInfo, clientIp, foodOrder.getExpiresAt());
+        String paymentUrl = vnpayService.buildPaymentUrl(txnRef, foodOrder.getTotalAmount(), orderInfo, clientIp);
         return toResponse(payment, paymentUrl);
     }
 
     @Transactional
     public PaymentResponse mockFoodOrderPayment(String email, Long foodOrderId) {
         FoodOrder foodOrder = findFoodOrder(foodOrderId);
-        validateFoodOrderOwner(foodOrder, email);
+        validateBookingOwner(foodOrder.getBooking(), email);
         requirePayableFoodOrder(foodOrder);
 
         Payment payment = new Payment(foodOrder.getBooking(), PaymentProvider.MOCK, foodOrder.getTotalAmount());
@@ -193,9 +194,6 @@ public class PaymentServiceImpl implements PaymentService {
         if (foodOrder.getStatus() != FoodOrderStatus.PENDING_PAYMENT) {
             throw new BadRequestException("Only pending food orders can be paid");
         }
-        if (foodOrder.getExpiresAt() == null || !LocalDateTime.now().isBefore(foodOrder.getExpiresAt())) {
-            throw new BadRequestException("Food order payment window has expired");
-        }
     }
 
     private FoodOrder findFoodOrder(Long foodOrderId) {
@@ -207,7 +205,9 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse getByBooking(String email, Long bookingId) {
         Booking booking = findBooking(bookingId);
         validateBookingOwner(booking, email);
-        return paymentRepository.findFirstByBookingOrderByIdDesc(booking)
+        return paymentRepository.findByBooking(booking)
+                .stream()
+                .findFirst()
                 .map(p -> toResponse(p, null))
                 .orElseThrow(() -> new NotFoundException("No payment found for this booking"));
     }
@@ -215,18 +215,8 @@ public class PaymentServiceImpl implements PaymentService {
     private void confirmPayment(Payment payment, String transactionNo, Map<String, String> params) {
         if (payment.getStatus() == PaymentStatus.SUCCESS) return;
 
-        if (payment.getFoodOrder() != null) {
-            FoodOrder foodOrder = payment.getFoodOrder();
-            if (foodOrder.getStatus() != FoodOrderStatus.PENDING_PAYMENT
-                    || foodOrder.getExpiresAt() == null
-                    || !LocalDateTime.now().isBefore(foodOrder.getExpiresAt())) {
-                markPaymentFailed(payment, "FOOD_ORDER_EXPIRED: " + toJson(params));
-                if (foodOrder.getStatus() == FoodOrderStatus.PENDING_PAYMENT) {
-                    foodOrder.setStatus(FoodOrderStatus.EXPIRED);
-                }
-                return;
-            }
-        } else {
+        // Food order payments have no hold window — skip expiry check
+        if (payment.getFoodOrder() == null) {
             Booking booking = payment.getBooking();
             LocalDateTime holdExpiry = booking.getHoldExpiresAt();
             if (holdExpiry != null && LocalDateTime.now().isAfter(holdExpiry)) {
@@ -246,10 +236,6 @@ public class PaymentServiceImpl implements PaymentService {
             FoodOrder foodOrder = payment.getFoodOrder();
             foodOrder.setStatus(FoodOrderStatus.PAID);
             foodOrder.setPaidAt(LocalDateTime.now());
-            var customer = foodOrder.getCustomer() != null
-                    ? foodOrder.getCustomer()
-                    : foodOrder.getBooking().getUser();
-            loyaltyPointService.addPointsFromFoodOrder(customer, foodOrder);
             log.info("Payment {} confirmed for food order {}", payment.getId(), foodOrder.getOrderCode());
             return;
         }
@@ -345,19 +331,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-    private void validateFoodOrderOwner(FoodOrder foodOrder, String email) {
-        String ownerEmail = foodOrder.getCustomer() != null
-                ? foodOrder.getCustomer().getEmail()
-                : foodOrder.getBooking() != null ? foodOrder.getBooking().getUser().getEmail() : null;
-        if (!email.equals(ownerEmail)) {
-            throw new NotFoundException("Food order not found");
-        }
-    }
-
     private PaymentResponse toResponse(Payment payment, String paymentUrl) {
         return new PaymentResponse(
                 payment.getId(),
-                payment.getBooking() == null ? null : payment.getBooking().getId(),
+                payment.getBooking().getId(),
                 payment.getProvider(),
                 payment.getTransactionId(),
                 payment.getAmount(),

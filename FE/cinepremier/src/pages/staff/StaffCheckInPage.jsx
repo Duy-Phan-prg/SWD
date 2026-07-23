@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Camera,
@@ -99,8 +99,6 @@ const parseQrOrBookingCode = (value) => {
   return { qrCode: '', bookingCode: trimmed };
 };
 
-const isFoodPickupCode = (value) => /^(CINEAI:FOOD:|FO[A-Z0-9]{6,}$)/i.test(String(value || '').trim());
-
 const getBookingStatusMeta = (status = '') => {
   const normalized = String(status).toUpperCase();
   if (normalized === 'PAID') {
@@ -139,7 +137,7 @@ const TICKET_TYPE_BADGES = {
 
 const getTicketTypeBadge = (ticketType) => TICKET_TYPE_BADGES[String(ticketType || 'ADULT').toUpperCase()] || TICKET_TYPE_BADGES.ADULT;
 
-function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmSeats, onConfirmFood, isCheckingIn, onOpenCounterSale }) {
+function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmSeats, isCheckingIn, onOpenCounterSale }) {
   if (!result) {
     return (
       <div className="flex min-h-[260px] flex-col items-center justify-center border border-dashed border-neutral-800 bg-[#070707] p-6 text-center">
@@ -155,7 +153,6 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
   const Icon = result.type === 'success' ? CheckCircle2 : result.type === 'warning' ? AlertCircle : XCircle;
   const color = result.type === 'success' ? 'text-emerald-300' : result.type === 'warning' ? 'text-purple-300' : 'text-rose-300';
   const booking = result.booking;
-  const foodOrder = result.foodOrder;
   const seats = Array.isArray(booking?.seats) ? booking.seats : [];
   const hasSeatTickets = seats.some((seat) => seat.ticketCode);
   const showtimeOver = isShowtimeOver(booking);
@@ -178,44 +175,6 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
           <p className="mt-1 text-xs leading-6 text-neutral-400">{result.message}</p>
         </div>
       </div>
-
-      {foodOrder && (
-        <div className="mt-5 border border-purple-400/25 bg-black p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-3">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-300">Đơn bắp nước</p>
-              <p className="mt-1 font-mono text-sm font-black text-white">{foodOrder.orderCode}</p>
-            </div>
-            <span className={`border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider ${foodOrder.status === 'PICKED_UP' ? 'border-neutral-700 text-neutral-400' : 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'}`}>
-              {foodOrder.status === 'PICKED_UP' ? 'Đã nhận món' : 'Sẵn sàng giao'}
-            </span>
-          </div>
-          <div className="divide-y divide-white/5">
-            {(foodOrder.items || []).map((item, index) => (
-              <div key={`${item.name}-${index}`} className="grid grid-cols-[1fr_auto_auto] gap-3 py-3 text-xs">
-                <span className="font-bold text-white">{item.name}</span>
-                <span className="font-mono text-neutral-500">×{item.quantity}</span>
-                <span className="font-mono font-black text-purple-200">{formatCurrency(item.totalPrice)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center justify-between border-t border-white/10 pt-3">
-            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Tổng thanh toán</span>
-            <strong className="font-mono text-lg text-white">{formatCurrency(foodOrder.totalAmount)}</strong>
-          </div>
-          {foodOrder.pickedUpAt && <p className="mt-3 text-[10px] text-neutral-500">Đã giao lúc {formatDateTime(foodOrder.pickedUpAt)}</p>}
-          {foodOrder.status === 'PAID' && (
-            <button
-              type="button"
-              onClick={() => onConfirmFood?.(foodOrder.orderCode)}
-              disabled={isCheckingIn}
-              className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap bg-emerald-400 px-5 text-[10px] font-black uppercase tracking-[0.16em] text-black transition-colors hover:bg-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Xác nhận giao món
-            </button>
-          )}
-        </div>
-      )}
 
       {booking && (
         <div className="mt-5 space-y-3 border border-neutral-800 bg-black p-4">
@@ -531,29 +490,11 @@ export default function StaffCheckInPage() {
   const [counterSaleMessage, setCounterSaleMessage] = useState('');
   const [cashGiven, setCashGiven] = useState(''); // tiền khách đưa (trống = thu đúng số)
   const [counterSaleReceipt, setCounterSaleReceipt] = useState(null); // biên lai sau khi thu
-  const [pendingWalletCount, setPendingWalletCount] = useState(0);
   const qrVideoRef = useRef(null);
   const qrCanvasRef = useRef(null);
   const qrStreamRef = useRef(null);
   const qrScanTimerRef = useRef(null);
   const lastScannedQrRef = useRef('');
-
-  const checkPendingWallet = useCallback(async () => {
-    const { accessToken } = getStoredAuth();
-    if (!accessToken) return;
-    try {
-      const data = await staffService.getWalletDashboard(accessToken);
-      if (data && typeof data.pendingWithdrawalsCount === 'number') {
-        setPendingWalletCount(data.pendingWithdrawalsCount);
-      }
-    } catch (e) {
-      // ignore silently
-    }
-  }, []);
-
-  const pendingCheckinCount = useMemo(() => {
-    return (failedRefunds || []).filter((r) => r.status === 'PENDING' || !r.status).length;
-  }, [failedRefunds]);
 
   const visibleBookings = showtimeBookings.length > 0 ? showtimeBookings : recentBookings;
   const isShowingShowtimeBookings = showtimeBookings.length > 0;
@@ -684,7 +625,7 @@ export default function StaffCheckInPage() {
 
             lastScannedQrRef.current = rawValue;
             setQrCode(rawValue);
-            setScannerMessage('Đã quét QR. Đang kiểm tra mã...');
+            setScannerMessage('Đã quét QR. Đang tra cứu booking...');
             stopQrScanner();
             void lookupBooking({ preferQr: true, qrValue: rawValue });
           } catch (error) {
@@ -840,14 +781,7 @@ export default function StaffCheckInPage() {
     loadRecentBookings();
     loadStaffFoods();
     loadFailedRefunds();
-    checkPendingWallet();
-
-    const interval = setInterval(() => {
-      checkPendingWallet();
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [checkPendingWallet]);
+  }, []);
 
   useEffect(() => () => stopQrScanner(), []);
 
@@ -864,25 +798,8 @@ export default function StaffCheckInPage() {
       return null;
     }
 
-    const lookupValue = preferQr ? trimmedQr : trimmedCode;
-    const isFoodLookup = isFoodPickupCode(lookupValue);
-
     setIsLookingUp(true);
     try {
-      if (isFoodLookup) {
-        const foodOrder = await staffService.lookupFoodOrder(token, lookupValue);
-        const pickedUp = foodOrder.status === 'PICKED_UP';
-        setSelectedTicketCodes([]);
-        setResult({
-          type: pickedUp ? 'success' : 'warning',
-          title: pickedUp ? 'Đơn đã được giao trước đó.' : 'Đơn đã thanh toán, sẵn sàng giao.',
-          message: pickedUp
-            ? 'Không giao lại đơn này. Kiểm tra thời gian nhận món bên dưới.'
-            : 'Đối chiếu món với khách, sau đó chọn “Xác nhận giao món”.',
-          foodOrder,
-        });
-        return foodOrder;
-      }
       const parsedQrInput = parseQrOrBookingCode(trimmedQr);
       const booking = await staffService.lookupStaffCheckInBooking(token, {
         qrCode: preferQr ? parsedQrInput.qrCode : '',
@@ -921,11 +838,7 @@ export default function StaffCheckInPage() {
       void loadRecentBookings(booking);
       return booking;
     } catch (error) {
-      setResult({
-        type: 'error',
-        title: isFoodLookup ? 'Không tìm thấy đơn bắp nước.' : 'Không tìm thấy booking.',
-        message: error.message || (isFoodLookup ? 'Không thể tra cứu đơn bắp nước từ hệ thống.' : 'Không thể tra cứu booking từ hệ thống.'),
-      });
+      setResult({ type: 'error', title: 'Không tìm thấy booking.', message: error.message || 'Không thể tra cứu booking từ hệ thống.' });
       return null;
     } finally {
       setIsLookingUp(false);
@@ -1077,17 +990,6 @@ export default function StaffCheckInPage() {
 
     setIsCheckingIn(true);
     try {
-      if (isFoodPickupCode(trimmedQr)) {
-        const foodOrder = await staffService.pickUpFoodOrder(token, trimmedQr);
-        setSelectedTicketCodes([]);
-        setResult({
-          type: 'success',
-          title: 'Đã xác nhận giao món.',
-          message: `Đơn ${foodOrder.orderCode} đã hoàn tất và QR không còn hiệu lực nhận món.`,
-          foodOrder,
-        });
-        return;
-      }
       const parsedInput = parseQrOrBookingCode(trimmedQr);
       let qrForCheckIn = parsedInput.qrCode;
 
@@ -1112,14 +1014,7 @@ export default function StaffCheckInPage() {
       });
       void loadRecentBookings(booking);
     } catch (error) {
-      const isFoodPickup = isFoodPickupCode(trimmedQr);
-      setResult({
-        type: 'error',
-        title: isFoodPickup ? 'Không thể xác nhận giao món.' : 'Không thể check-in.',
-        message: isFoodPickup && /already been picked up/i.test(error.message || '')
-          ? 'Đơn này đã được giao trước đó. Không giao món lần hai.'
-          : error.message || (isFoodPickup ? 'Đơn không đủ điều kiện nhận món.' : 'Booking không đủ điều kiện check-in.'),
-      });
+      setResult({ type: 'error', title: 'Không thể check-in.', message: error.message || 'Booking không đủ điều kiện check-in.' });
     } finally {
       setIsCheckingIn(false);
     }
@@ -1162,37 +1057,21 @@ export default function StaffCheckInPage() {
         <div style={{ display: 'flex', gap: 6, padding: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, width: 'fit-content' }}>
           <button
             onClick={() => setActiveSection('checkin')}
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'checkin' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent', color: activeSection === 'checkin' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'checkin' ? '0 2px 12px rgba(16,185,129,0.35)' : 'none', transition: 'all 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'checkin' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent', color: activeSection === 'checkin' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'checkin' ? '0 2px 12px rgba(16,185,129,0.35)' : 'none', transition: 'all 0.2s' }}
           >
             <ScanLine size={14} /> Check-in & Vận hành
-            {pendingCheckinCount > 0 && (
-              <span style={{ position: 'absolute', top: -3, right: -3, display: 'flex', height: 10, width: 10 }}>
-                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#ef4444', opacity: 0.75, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
-                <span style={{ position: 'relative', borderRadius: '50%', height: 10, width: 10, background: '#f43f5e', border: '1.5px solid #000', boxShadow: '0 0 6px #f43f5e' }} />
-              </span>
-            )}
           </button>
           <button
             onClick={() => setActiveSection('wallet')}
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'wallet' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent', color: activeSection === 'wallet' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'wallet' ? '0 2px 12px rgba(245,158,11,0.35)' : 'none', transition: 'all 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'wallet' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent', color: activeSection === 'wallet' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'wallet' ? '0 2px 12px rgba(245,158,11,0.35)' : 'none', transition: 'all 0.2s' }}
           >
             <Wallet size={14} /> Quản lý ví
-            {pendingWalletCount > 0 && (
-              <span style={{ position: 'absolute', top: -3, right: -3, display: 'flex', height: 10, width: 10 }} title={`${pendingWalletCount} đơn/yêu cầu chờ xử lý`}>
-                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#ef4444', opacity: 0.75, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
-                <span style={{ position: 'relative', borderRadius: '50%', height: 10, width: 10, background: '#f43f5e', border: '1.5px solid #000', boxShadow: '0 0 6px #f43f5e' }} />
-              </span>
-            )}
           </button>
         </div>
 
         {/* Wallet Panel */}
         {activeSection === 'wallet' && (
-          <StaffWalletPanel
-            token={getToken()}
-            showToast={(msg) => console.log('[Wallet]', msg)}
-            onPendingCountChange={setPendingWalletCount}
-          />
+          <StaffWalletPanel token={getToken()} showToast={(msg) => console.log('[Wallet]', msg)} />
         )}
 
         {/* Check-in Content */}
@@ -1270,7 +1149,7 @@ export default function StaffCheckInPage() {
                     <textarea
                       value={qrCode}
                       onChange={(event) => setQrCode(event.target.value)}
-                      placeholder="Dán QR vé, QR nhận bắp nước hoặc mã booking..."
+                      placeholder="Dán mã QR CINEAI:... hoặc mã booking BK..."
                       rows={6}
                       className="w-full resize-none border border-neutral-800 bg-black p-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
                     />
@@ -1289,7 +1168,7 @@ export default function StaffCheckInPage() {
                         disabled={isCheckingIn || !qrCode.trim()}
                         className="flex items-center justify-center gap-2 bg-emerald-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-300 disabled:opacity-50"
                       >
-                        {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} {isFoodPickupCode(qrCode) ? 'Xác nhận giao món' : 'Xác nhận check-in'}
+                        {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} Xác nhận check-in
                       </button>
                     </div>
                   </div>
@@ -1297,15 +1176,15 @@ export default function StaffCheckInPage() {
                   <div className="space-y-4">
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400">Tra cứu thủ công</p>
-                      <h3 className="mt-2 text-xl font-black uppercase text-white">Tìm theo mã đơn</h3>
-                      <p className="mt-2 text-xs leading-6 text-neutral-500">Nhập mã booking BK... hoặc mã nhận bắp nước FO... khi khách chưa mở được QR.</p>
+                      <h3 className="mt-2 text-xl font-black uppercase text-white">Tìm theo mã booking</h3>
+                      <p className="mt-2 text-xs leading-6 text-neutral-500">Dùng khi khách đọc mã booking nhưng chưa mở được QR.</p>
                     </div>
                     <div className="relative">
                       <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600" />
                       <input
                         value={bookingCode}
                         onChange={(event) => setBookingCode(event.target.value)}
-                        placeholder="VD: BKABC123... hoặc FOABC123..."
+                        placeholder="VD: BKABC123..."
                         className="w-full border border-neutral-800 bg-black py-4 pl-11 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
                       />
                     </div>
@@ -1315,7 +1194,7 @@ export default function StaffCheckInPage() {
                       disabled={isLookingUp || !bookingCode.trim()}
                       className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-purple-400 hover:text-white disabled:opacity-50"
                     >
-                      {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} {isFoodPickupCode(bookingCode) ? 'Tra cứu đơn bắp nước' : 'Tra cứu booking'}
+                      {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Tra cứu booking
                     </button>
                     {result?.booking?.qrCode && result.booking.status === 'PAID' && isBookingCheckInOpen(result.booking) && (
                       <button
@@ -1336,7 +1215,6 @@ export default function StaffCheckInPage() {
                 selectedTicketCodes={selectedTicketCodes}
                 onToggleSeat={toggleSeatSelection}
                 onConfirmSeats={checkInSelectedSeats}
-                onConfirmFood={checkInByQr}
                 isCheckingIn={isCheckingIn}
                 onOpenCounterSale={openCounterSale}
               />

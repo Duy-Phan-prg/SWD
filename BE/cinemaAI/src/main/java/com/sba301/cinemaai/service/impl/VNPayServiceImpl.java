@@ -13,8 +13,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -24,11 +22,6 @@ public class VNPayServiceImpl implements VNPayService {
     private final VNPayConfig vnPayConfig;
 
     public String buildPaymentUrl(String txnRef, BigDecimal amount, String orderInfo, String clientIp) {
-        return buildPaymentUrl(txnRef, amount, orderInfo, clientIp, LocalDateTime.now().plusMinutes(15));
-    }
-
-    public String buildPaymentUrl(String txnRef, BigDecimal amount, String orderInfo, String clientIp,
-                                  LocalDateTime expiresAt) {
         Map<String, String> vnpParams = new TreeMap<>();
         vnpParams.put("vnp_Version", "2.1.0");
         vnpParams.put("vnp_Command", "pay");
@@ -48,8 +41,8 @@ public class VNPayServiceImpl implements VNPayService {
         formatter.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         vnpParams.put("vnp_CreateDate", formatter.format(calendar.getTime()));
-        Date expiry = Date.from(expiresAt.atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant());
-        vnpParams.put("vnp_ExpireDate", formatter.format(expiry));
+        calendar.add(Calendar.MINUTE, 15);
+        vnpParams.put("vnp_ExpireDate", formatter.format(calendar.getTime()));
 
         String secureHash = VNPayUtil.hashAllFields(vnpParams, vnPayConfig.getHashSecret());
         String queryString = buildEncodedQueryString(vnpParams);

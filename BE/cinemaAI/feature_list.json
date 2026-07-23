@@ -1,6 +1,6 @@
 {
   "project": "CinemaAI",
-  "updatedAt": "2026-07-23T02:16:00+07:00",
+  "updatedAt": "2026-06-27T15:31:00+07:00",
   "source": "phase_mapping_srs_vs_docx_refund_role_updated.md",
   "statusValues": ["done", "pending", "blocked"],
   "features": [
@@ -58,11 +58,11 @@
       "id": "PHASE-5",
       "name": "Booking, Seat Locking, F&B and Ticket QR",
       "status": "pending",
-      "scope": ["Hold", "booking", "ticket pricing", "booking-linked food", "standalone concessions", "QR", "check-in", "expired-hold cleanup"],
+      "scope": ["Hold", "booking", "ticket pricing", "food", "QR", "check-in", "expired-hold cleanup"],
       "outOfScope": ["Cinema incident refund"],
       "verification": ["BookingFoodQrEndpointInventoryTests", "BookingIntegrationTests", "AdminTicketPricingIntegrationTests"],
-      "evidence": ["All listed suites passed on 2026-06-25", "Showtime-level pessimistic locking now serializes hold creation", "Focused one-active-checkout integration test passed on 2026-07-23", "Standalone food order creation, payment, loyalty earning, listing and cancellation integration tests passed on 2026-07-23", "Standalone checkout uses a backend-owned 15-minute expiry synchronized with VNPay and supports retry after gateway cancellation", "Customer order history now has separate ticket and standalone-concession tabs", "PostgreSQL startup compatibility relaxes legacy booking constraints while Flyway is disabled", "Frontend concessions production build passed on 2026-07-23", "No database active-seat unique constraint found"],
-      "nextAction": "Add a database-level active-seat constraint where supported, signed QR and STAFF-only RBAC tests"
+      "evidence": ["All listed suites passed on 2026-06-25", "No pessimistic lock or active-seat unique constraint found"],
+      "nextAction": "Add concurrency-safe locking/constraint, signed QR and STAFF-only RBAC tests"
     },
     {
       "id": "PHASE-6-PAYMENT",
@@ -153,16 +153,6 @@
       "verification": [".\\mvnw.cmd test"],
       "evidence": ["Build passed", "17 of 18 reported test classes passed", "CinemaShowtimeEndpointInventoryTests has one stale assertion"],
       "nextAction": "Fix the remaining inventory test and add concurrency/refund/review/report/RBAC suites"
-    },
-    {
-      "id": "FOOD-PICKUP-QR-001",
-      "name": "One-time Standalone Concession Pickup QR",
-      "status": "done",
-      "scope": ["Paid standalone food-order QR", "Staff lookup", "One-time pickup confirmation", "Customer pickup history"],
-      "outOfScope": ["Kitchen preparation queue", "Booking-linked food QR replacement", "Loyalty redemption on food orders"],
-      "verification": [".\\mvnw.cmd -DskipTests compile", ".\\mvnw.cmd -Dtest=PaymentIntegrationTests test", "npm run build"],
-      "evidence": ["PAID orders expose CINEAI:FOOD QR", "Pickup records PICKED_UP/pickedUpAt", "Duplicate pickup returns HTTP 409", "Frontend production build passed on 2026-07-23"],
-      "nextAction": "Optional kitchen preparation and staff fulfillment queue"
     },
     {
       "id": "CONFIG-001",

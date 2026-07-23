@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, MapPin, Ticket, User, Heart, Compass, Home,
-  Building2, ChevronDown, Phone, Settings2, X, ExternalLink, LogOut, Popcorn, CalendarDays, Coins
+  Building2, ChevronDown, Phone, Settings2, X, ExternalLink, LogOut, Popcorn, CalendarDays
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
 import { movieService } from '../services/movieService';
-import { loyaltyService } from '../services/loyaltyService';
-import { getStoredAuth } from '../services/authService';
 
 export default function Header({
   activeTab,
@@ -21,13 +19,11 @@ export default function Header({
   isLoggedIn,
   currentUser,
   currentRole = 'user',
-  loyaltyRefreshKey = '',
   showToast = () => { },
   handleLogout = () => { },
   navigate = () => { }
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [loyaltyPoints, setLoyaltyPoints] = useState(null);
 
   // Ô tìm phim: state cục bộ + dropdown gợi ý (gõ không còn nhảy trang;
   // Enter/"Xem tất cả" mới sang Khám Phá, click gợi ý đi thẳng trang phim)
@@ -114,35 +110,6 @@ export default function Header({
   const isAdminRole = currentRole === 'admin' || currentUser?.role === 'admin';
   const isStaffRole = currentRole === 'staff' || currentUser?.role === 'staff';
   const canUseWishlist = !isAdminRole && !isStaffRole;
-  const canShowLoyalty = isLoggedIn && !isAdminRole && !isStaffRole;
-
-  useEffect(() => {
-    if (!canShowLoyalty) {
-      setLoyaltyPoints(null);
-      return undefined;
-    }
-
-    let cancelled = false;
-    const loadLoyalty = async () => {
-      const { accessToken } = getStoredAuth();
-      if (!accessToken) return;
-      try {
-        const loyalty = await loyaltyService.getMyLoyalty(accessToken);
-        if (!cancelled) setLoyaltyPoints(Number(loyalty?.points ?? 0));
-      } catch {
-        if (!cancelled) setLoyaltyPoints(null);
-      }
-    };
-
-    void loadLoyalty();
-    window.addEventListener('focus', loadLoyalty);
-    window.addEventListener('loyalty:updated', loadLoyalty);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', loadLoyalty);
-      window.removeEventListener('loyalty:updated', loadLoyalty);
-    };
-  }, [canShowLoyalty, currentUser?.id, loyaltyRefreshKey]);
 
   return (
     <header className="sticky top-0 z-[100] w-full max-w-full overflow-visible border-b border-white/10 bg-black/95 backdrop-blur-md">
@@ -199,7 +166,7 @@ export default function Header({
             <Ticket className="h-3.5 w-3.5" /> ĐẶT VÉ NGAY
           </button>
           <button
-            onClick={() => onTabChange('concessions')}
+            onClick={() => onTabChange('explore')}
             className="hidden lg:flex h-9 items-center gap-1.5 bg-purple-700 hover:bg-purple-800 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-white transition whitespace-nowrap rounded"
             id="btn-order-food"
           >
@@ -392,23 +359,15 @@ export default function Header({
                 onOpenOTP();
               }
             }}
-            className={`group flex h-10 items-center justify-center gap-2 border px-3.5 font-sans uppercase font-bold shadow-md transition-colors whitespace-nowrap rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 active:translate-y-px ${isLoggedIn
+            className={`flex h-9 items-center justify-center space-x-1.5 border px-3.5 text-[10px] font-sans uppercase tracking-[0.15em] font-bold shadow-md transition-all duration-300 whitespace-nowrap rounded ${isLoggedIn
               ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500 hover:text-black hover:border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.15)]'
               : 'border-white/20 bg-black/60 text-white hover:bg-white hover:text-black'
               }`}
             id="signin-button"
           >
-            <User className="h-3.5 w-3.5 shrink-0" />
-            <span className="flex min-w-0 flex-col items-start leading-none">
-              <span className="max-w-28 truncate text-[10px] tracking-[0.15em]">
-                {isLoggedIn ? (currentUser?.name) : 'ĐĂNG NHẬP'}
-              </span>
-              {canShowLoyalty && (
-                <span className="mt-1 flex items-center gap-1 text-[7px] font-black tracking-[0.12em] text-amber-200/80 group-hover:text-black/70">
-                  <Coins className="h-2.5 w-2.5" />
-                  {loyaltyPoints === null ? 'CINEPOINTS' : `${loyaltyPoints.toLocaleString('vi-VN')} CINEPOINTS`}
-                </span>
-              )}
+            <User className="h-3.5 w-3.5" />
+            <span>
+              {isLoggedIn ? (currentUser?.name) : 'ĐĂNG NHẬP'}
             </span>
           </button>
 
@@ -477,7 +436,7 @@ export default function Header({
                 id="nav-my-bookings"
               >
                 <Ticket className="h-3.5 w-3.5" />
-                <span>ĐƠN CỦA TÔI</span>
+                <span>VÉ CỦA TÔI</span>
               </button>
             )}
 

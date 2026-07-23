@@ -2,7 +2,6 @@ package com.sba301.cinemaai.repository;
 
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.Payment;
-import com.sba301.cinemaai.entity.FoodOrder;
 import com.sba301.cinemaai.enums.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,10 +15,6 @@ import org.springframework.data.repository.query.Param;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findByBooking(Booking booking);
-
-    Optional<Payment> findFirstByBookingOrderByIdDesc(Booking booking);
-
-    List<Payment> findByFoodOrder(FoodOrder foodOrder);
 
     Optional<Payment> findByTransactionId(String transactionId);
 

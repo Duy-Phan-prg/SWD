@@ -13,10 +13,6 @@ public record FoodOrderResponse(
         FoodOrderStatus status,
         BigDecimal totalAmount,
         LocalDateTime paidAt,
-        LocalDateTime expiresAt,
-        LocalDateTime pickedUpAt,
-        String qrCode,
-        LocalDateTime createdAt,
         boolean createdByStaff,
         List<BookingFoodResponse> items
 ) {

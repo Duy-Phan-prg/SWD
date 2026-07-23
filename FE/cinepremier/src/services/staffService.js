@@ -25,12 +25,6 @@ export const staffService = {
     token,
     body
   }),
-  lookupFoodOrder: (token, code) => request(`/api/v1/staff/check-in/food-orders/lookup?code=${encodeURIComponent(code)}`, { token }),
-  pickUpFoodOrder: (token, code) => request('/api/v1/staff/check-in/food-orders/pickup', {
-    method: 'POST',
-    token,
-    body: { code }
-  }),
   getStaffFoodItems: (token) => request('/api/v1/staff/foods/items?size=100', { token }).then(unwrapListPayload),
   getStaffFoodCombos: (token) => request('/api/v1/staff/foods/combos?size=100', { token }).then(unwrapListPayload),
   updateStaffFoodItemStatus: (token, itemId, status) => request(`/api/v1/staff/foods/items/${encodeURIComponent(itemId)}/status?status=${encodeURIComponent(status)}`, {

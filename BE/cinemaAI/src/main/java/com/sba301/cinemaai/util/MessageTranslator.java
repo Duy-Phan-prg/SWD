@@ -105,7 +105,6 @@ public final class MessageTranslator {
             entry("Refresh token is expired or revoked", "Refresh token đã hết hạn hoặc đã bị thu hồi"),
 
             entry("Showtime is not open for booking", "Suất chiếu chưa mở đặt vé"),
-            entry("You already have an active booking for this showtime. Continue payment or cancel it before selecting new seats", "Bạn đã có đơn đang giữ ghế cho suất chiếu này. Hãy tiếp tục thanh toán hoặc hủy đơn trước khi chọn ghế mới"),
             entry("Booking is not in holding status", "Đặt vé không ở trạng thái giữ chỗ"),
             entry("Seat hold has expired", "Thời gian giữ ghế đã hết hạn"),
             entry("Ticket quantity must match held seat quantity", "Số lượng vé phải khớp với số ghế đã giữ"),
@@ -168,9 +167,6 @@ public final class MessageTranslator {
             entry("Seat not found in its row", "Không tìm thấy ghế trong hàng của ghế đó"),
             entry("Only HOLDING bookings can be paid", "Chỉ đặt vé đang giữ chỗ mới có thể thanh toán"),
             entry("Only HOLDING or PENDING_PAYMENT bookings can be paid", "Chỉ đặt vé đang giữ ghế hoặc đang chờ thanh toán mới có thể thanh toán"),
-            entry("Only pending food orders can be paid", "Chỉ đơn bắp nước đang chờ mới có thể thanh toán"),
-            entry("Only pending food orders can be cancelled", "Chỉ đơn bắp nước đang chờ thanh toán mới có thể hủy"),
-            entry("Food order payment window has expired", "Đơn bắp nước đã hết thời hạn thanh toán 15 phút"),
             entry("A pending payment already exists for this booking", "Đặt vé này đã có thanh toán đang chờ xử lý"),
             entry("Ticket combo name already exists", "Tên combo vé đã tồn tại"),
             entry("Ticket combo already exists but is inactive. Do you want to create a new combo?", "Combo vé đã tồn tại nhưng đã ngừng hoạt động. Bạn có muốn tạo mới không?"),

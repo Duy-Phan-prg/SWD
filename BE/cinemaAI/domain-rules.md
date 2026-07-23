@@ -54,9 +54,7 @@ Nguồn sự thật ưu tiên: service implementation + enum + integration test.
 ## 5. Seat hold và booking
 
 - Chỉ showtime `OPEN` được booking.
-- Hold duration hiện tại: 3 phút.
-- Mỗi customer chỉ được có một booking `HOLDING` hoặc `PENDING_PAYMENT` cho cùng một showtime. Muốn chọn ghế khác phải hủy booking đang giữ trước.
-- Khi tạo hold, backend khóa pessimistic dòng showtime trước khi kiểm tra booking đang hoạt động để ngăn hai tab tạo hai đơn song song.
+- Hold duration hiện tại: 10 phút.
 - `HOLDING`, `BOOKED`, `CHECKED_IN` là seat runtime status chặn hold mới.
 - Seat phải thuộc room của showtime và có trạng thái physical available.
 - Nếu ghế đã được hold/book bởi booking khác, trả `409 Conflict`.
@@ -82,22 +80,6 @@ PAID/USED -> REFUND_REQUESTED -> REFUNDED | REFUND_FAILED
 - Booking `REFUND_FAILED`: hệ thống gửi email thông báo cho khách; không có luồng hoàn tiền mặt/chuyển khoản thủ công trong API.
 - Sau `REFUNDED`: `qrCode` và `paymentAccount` không còn hiển thị trong `BookingResponse`.
 
-- Customer can create a standalone food order without a booking; the order belongs directly to that customer and is collected at the counter with `orderCode`.
-- Food orders created from "My tickets" remain linked to an eligible `PAID`/`USED` booking; both standalone and linked orders use the same VNPay payment flow.
-- A standalone concession order is displayed under "My food orders", never as a movie ticket.
-- Online food orders remain `PENDING_PAYMENT` for 15 minutes from creation. The backend `expiresAt`
-  value and VNPay `vnp_ExpireDate` must be identical.
-- A failed or customer-cancelled VNPay attempt does not cancel the food order. The customer may
-  retry payment or explicitly cancel the order before it expires.
-- Expired unpaid food orders become `EXPIRED`; explicitly cancelled orders become `CANCELLED`;
-  only `PAID` orders receive pickup entitlement and loyalty points.
-- Paid food orders earn CinePoints using the active loyalty earning rate. Redemption is not enabled until food-order point reservation, cancellation and restoration are implemented safely.
-- A paid standalone food order receives a `CINEAI:FOOD:<orderCode>:<customerId>` pickup QR. Staff must
-  inspect the item list before confirming handoff. Confirmation is one-time: `PAID -> PICKED_UP`, records
-  `pickedUpAt`, removes the active QR from customer responses, and a duplicate confirmation returns `409`.
-- Ticket-linked concessions continue to use the movie-ticket workflow; the standalone pickup QR is only
-  generated when `bookingId` is null.
-
 ## 6. Ticket pricing
 
 - Ticket type/age:
@@ -115,7 +97,7 @@ Lưu ý: dải `STUDENT` và `ADULT` overlap 18–25; đây là rule hiện tạ
 ## 7. Payment
 
 - Chỉ booking `HOLDING` hoặc `PENDING_PAYMENT` được khởi tạo/thực hiện payment.
-- Khi retry thanh toán, payment `PENDING` cũ của cùng booking/food order được chuyển thành `FAILED` trước khi tạo phiên mới.
+- Nếu đang có payment `PENDING` cho booking thì không tạo payment mới.
 - Trước provider payment, `HOLDING` chuyển sang `PENDING_PAYMENT`.
 - Payment success chỉ hoàn tất booking đang `PENDING_PAYMENT`.
 - Success chuyển payment `SUCCESS`, booking `PAID`, seat `BOOKED`, ghi `paidAt`, sinh QR và kích hoạt side effects.

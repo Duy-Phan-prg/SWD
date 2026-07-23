@@ -33,11 +33,7 @@ import lombok.Setter;
 @Entity
 @Table(
         name = "food_orders",
-        indexes = {
-                @Index(name = "idx_food_orders_booking", columnList = "booking_id"),
-                @Index(name = "idx_food_orders_customer", columnList = "customer_id"),
-                @Index(name = "idx_food_orders_pending_expiry", columnList = "status,expires_at")
-        }
+        indexes = @Index(name = "idx_food_orders_booking", columnList = "booking_id")
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FoodOrder extends BaseEntity {
@@ -46,13 +42,9 @@ public class FoodOrder extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id")
-    private User customer;
 
     @Column(name = "order_code", nullable = false, unique = true, length = 40)
     private String orderCode;
@@ -70,24 +62,11 @@ public class FoodOrder extends BaseEntity {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
-    @Setter
-    @Column(name = "expires_at")
-    private LocalDateTime expiresAt;
-
-    @Setter
-    @Column(name = "cancelled_at")
-    private LocalDateTime cancelledAt;
-
-    @Setter
-    @Column(name = "picked_up_at")
-    private LocalDateTime pickedUpAt;
-
     @Column(name = "created_by_staff", nullable = false)
     private boolean createdByStaff;
 
-    public FoodOrder(Booking booking, User customer, String orderCode, boolean createdByStaff) {
+    public FoodOrder(Booking booking, String orderCode, boolean createdByStaff) {
         this.booking = booking;
-        this.customer = customer;
         this.orderCode = orderCode;
         this.createdByStaff = createdByStaff;
     }

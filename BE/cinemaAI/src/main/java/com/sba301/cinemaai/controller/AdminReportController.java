@@ -150,15 +150,4 @@ public class AdminReportController {
     ) {
         return ApiResponse.success(reportService.getExpiredUsers(from, to));
     }
-
-    @GetMapping("/showtime-incidents")
-    @Operation(summary = "Showtime cancellation incident & refund report",
-            description = "Detailed report of cancelled showtimes, affected bookings/users, refunded amounts and reasons.")
-    public ApiResponse<com.sba301.cinemaai.dto.response.report.ShowtimeIncidentReportResponse> showtimeIncidents(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @RequestParam(required = false) Long showtimeId
-    ) {
-        return ApiResponse.success(reportService.getShowtimeIncidents(from, to, showtimeId));
-    }
 }

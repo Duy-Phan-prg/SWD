@@ -10,7 +10,6 @@ import com.sba301.cinemaai.dto.response.report.RoomOccupancyResponse;
 import com.sba301.cinemaai.dto.response.report.ShowtimeFillResponse;
 import com.sba301.cinemaai.dto.response.report.TopMovieResponse;
 import com.sba301.cinemaai.dto.response.report.TopSeatResponse;
-import com.sba301.cinemaai.dto.response.report.ShowtimeIncidentReportResponse;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -37,6 +36,4 @@ public interface ReportService {
     ConcessionSalesResponse getConcessionSales(LocalDate from, LocalDate to);
 
     List<ExpiredUserResponse> getExpiredUsers(LocalDate from, LocalDate to);
-
-    ShowtimeIncidentReportResponse getShowtimeIncidents(LocalDate from, LocalDate to, Long showtimeId);
 }

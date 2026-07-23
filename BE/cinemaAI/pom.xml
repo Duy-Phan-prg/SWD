@@ -93,14 +93,6 @@
 			<groupId>com.cloudinary</groupId>
 			<artifactId>cloudinary-http45</artifactId>
 			<version>${cloudinary.version}</version>
-			<exclusions>
-				<!-- Spring provides the compatible spring-jcl bridge. Keeping the legacy
-				     commons-logging jar causes duplicate discovery warnings at startup. -->
-				<exclusion>
-					<groupId>commons-logging</groupId>
-					<artifactId>commons-logging</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.squareup.okhttp3</groupId>
