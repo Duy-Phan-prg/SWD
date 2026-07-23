@@ -6,7 +6,9 @@ import static org.mockito.Mockito.when;
 
 import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
+import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
+import com.sba301.cinemaai.repository.ShowtimeRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,10 +20,14 @@ class ReportServiceImplTest {
     private final PaymentRepository paymentRepository = mock(PaymentRepository.class);
     private final BookingRepository bookingRepository = mock(BookingRepository.class);
     private final BookingFoodItemRepository foodItemRepository = mock(BookingFoodItemRepository.class);
+    private final ShowtimeRepository showtimeRepository = mock(ShowtimeRepository.class);
+    private final BookingSeatRepository bookingSeatRepository = mock(BookingSeatRepository.class);
     private final ReportServiceImpl service = new ReportServiceImpl(
             paymentRepository,
             bookingRepository,
-            foodItemRepository
+            foodItemRepository,
+            showtimeRepository,
+            bookingSeatRepository
     );
 
     @Test

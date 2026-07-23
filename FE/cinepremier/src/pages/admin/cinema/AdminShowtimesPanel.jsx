@@ -1187,7 +1187,7 @@ export default function AdminShowtimesPanel({ ctx }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-white">Quản lý Suất Chiếu</h2>
+          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-200">Quản lý Suất Chiếu</h2>
           <p className="text-xs text-neutral-300 mt-0.5">Tạo, chỉnh sửa và giám sát lịch chiếu phim</p>
         </div>
         {mode === 'list' && (

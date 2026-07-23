@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   BarChart3,
@@ -63,7 +63,7 @@ function SalesTooltip({ active, payload, label }) {
   const row = payload[0]?.payload;
   return (
     <div className="min-w-44 border border-white/15 bg-[#090909] p-3 shadow-2xl">
-      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-neutral-500">{label}</p>
+      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-neutral-300">{label}</p>
       <div className="mt-2 space-y-1.5 text-xs">
         <p className="flex justify-between gap-5 text-neutral-300"><span>Số đơn</span><strong className="font-mono text-white">{row.orderCount}</strong></p>
         <p className="flex justify-between gap-5 text-neutral-300"><span>Món/combo</span><strong className="font-mono text-amber-300">{row.quantity}</strong></p>
@@ -77,11 +77,11 @@ function MetricCard({ icon: Icon, label, value, helper, tone = 'text-white', val
   return (
     <article className="min-w-0 border border-white/10 bg-[#080808] p-3.5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-500">{label}</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-neutral-300">{label}</p>
         <Icon className="h-4 w-4 text-amber-400" aria-hidden="true" />
       </div>
       <p className={`mt-2 truncate font-mono font-black leading-tight ${tone} ${valueClassName}`} title={String(value)}>{value}</p>
-      <p className="mt-1 text-[10px] leading-relaxed text-neutral-500">{helper}</p>
+      <p className="mt-1 text-[10px] leading-relaxed text-neutral-300">{helper}</p>
     </article>
   );
 }
@@ -217,9 +217,9 @@ export default function AdminFnbReportPanel({ ctx }) {
       <header className="border border-white/10 bg-gradient-to-r from-[#090909] to-[#050505] p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="font-mono text-[10px] font-black uppercase tracking-[0.24em] text-amber-400">F&amp;B Intelligence</p>
-            <h2 id="fnb-report-title" className="mt-1 text-xl font-black uppercase tracking-[0.12em] text-white sm:text-2xl">Báo cáo bán bắp nước</h2>
-            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-neutral-500">
+            <p className="font-mono text-[9px] font-black uppercase tracking-[0.24em] text-neutral-300">F&amp;B Intelligence</p>
+            <h2 id="fnb-report-title" className="mt-1 text-sm font-sans font-black uppercase tracking-wide text-neutral-200">Báo cáo bán bắp nước</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-neutral-300">
               Theo dõi số đơn, sản lượng và doanh thu theo ngày. Chỉ ghi nhận giao dịch đã thanh toán hoặc đã giao món.
             </p>
           </div>

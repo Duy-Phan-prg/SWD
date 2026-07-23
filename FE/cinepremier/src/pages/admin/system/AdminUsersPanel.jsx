@@ -261,7 +261,7 @@ export default function AdminUsersPanel({ ctx }) {
           <span className="text-[8px] font-mono font-black uppercase tracking-widest text-neutral-300">
             ADMIN USER CONTROL
           </span>
-          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-white">
+          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-200">
             Quản lý người dùng hệ thống
           </h2>
         </div>

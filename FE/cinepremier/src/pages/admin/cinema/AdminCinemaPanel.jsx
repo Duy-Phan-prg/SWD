@@ -119,7 +119,7 @@ export default function AdminCinemaPanel({ ctx }) {
               <Building2 className="h-4 w-4" />
               Quản lý rạp chiếu
             </div>
-            <h2 className="mt-3 text-xl font-black uppercase tracking-tight text-white sm:text-2xl">
+            <h2 className="mt-3 text-xl font-black uppercase tracking-tight text-neutral-200 sm:text-2xl">
               {cinema?.name || 'Thiết lập rạp chiếu'}
             </h2>
             <p className="mt-2 max-w-xl text-xs leading-relaxed text-neutral-200">

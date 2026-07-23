@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, RefreshCw, ShieldAlert } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 
@@ -72,7 +72,7 @@ export default function AdminAuditPanel({ ctx }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-neutral-300">Giám sát hệ thống</p>
-          <h2 className="mt-1 text-sm font-sans font-black uppercase tracking-wide text-white flex items-center gap-2">
+          <h2 className="mt-1 text-sm font-sans font-black uppercase tracking-wide text-neutral-200 flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-amber-500" /> Audit Log
           </h2>
           <p className="mt-1 text-xs text-neutral-300">Ai đã làm gì trên hệ thống — ghi thật từ backend cho mọi thao tác quản trị.</p>

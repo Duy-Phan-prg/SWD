@@ -54,7 +54,7 @@ export default function AdminGenresPanel({ ctx }) {
           <div className="border border-white/[0.05] bg-gradient-to-r from-[#090909] to-[#050505] p-5">
             <div>
               <span className="text-[9px] font-mono tracking-[0.24em] text-neutral-300 uppercase font-black block">ADMIN GENRE</span>
-              <h2 className="text-xs font-black uppercase tracking-[0.18em] text-white mt-1">Quản trị thể loại phim</h2>
+              <h2 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-200 mt-1">Quản trị thể loại phim</h2>
             </div>
           </div>
 

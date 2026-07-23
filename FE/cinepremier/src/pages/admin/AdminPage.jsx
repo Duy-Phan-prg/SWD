@@ -38,10 +38,10 @@ function NavItem({ icon: Icon, label, active, onClick, indent = false }) {
         indent ? 'pl-6 pr-3' : 'pl-3 pr-3'
       } ${active
         ? 'text-amber-400 bg-gradient-to-r from-amber-500/[0.09] to-transparent border-amber-500'
-        : 'text-neutral-300 hover:text-white hover:bg-white/[0.02] border-transparent'
+        : 'text-neutral-100 hover:text-white hover:bg-white/[0.02] border-transparent'
       }`}
     >
-      <Icon className={`h-[13px] w-[13px] shrink-0 ${active ? 'text-amber-400' : 'text-neutral-400'}`} />
+      <Icon className={`h-[13px] w-[13px] shrink-0 ${active ? 'text-amber-400' : 'text-neutral-300'}`} />
       <span className="truncate leading-snug">{label}</span>
       {active && <span className="ml-auto h-1 w-1 shrink-0 rounded-full bg-amber-500" />}
     </button>
@@ -51,7 +51,7 @@ function NavItem({ icon: Icon, label, active, onClick, indent = false }) {
 function NavSectionLabel({ children }) {
   return (
     <div className="px-3 pt-4 pb-1.5 first:pt-2">
-      <span className="text-[9px] font-mono tracking-[0.22em] uppercase text-neutral-300 font-bold">{children}</span>
+      <span className="text-[9px] font-mono tracking-[0.22em] uppercase text-neutral-200 font-bold">{children}</span>
     </div>
   );
 }
@@ -59,7 +59,8 @@ function NavSectionLabel({ children }) {
 const SECTION_TITLE = {
   overview: 'Tổng quan hệ thống', movies: 'Thư viện phim', genres: 'Thể loại phim',
   actors: 'Diễn viên', foods: 'Bắp nước / F&B', rooms: 'Phòng chiếu & ghế',
-  showtimes: 'Lịch chiếu', tickets: 'Quản lý vé', transactions: 'Giao dịch',
+  showtimes: 'Điều phối lịch chiếu', tickets: 'Quản lý vé', transactions: 'Giao dịch',
+  'showtime-incidents': 'Báo cáo sự cố & hoàn tiền', 'fnb-report': 'Báo cáo F&B',
   statistics: 'Thống kê mua bán', audit: 'Audit log', users: 'Quản lý người dùng',
   reviews: 'Đánh giá', loyalty: 'Quản lý điểm', cinewallet: 'CineWallet', cinema: 'Thông tin rạp',
 };
@@ -1539,7 +1540,7 @@ export default function AdminDashboard({
 
       {/* LEFT: SIDEBAR (full height) */}
       <div
-        className={`shrink-0 h-full flex flex-col border-r border-white/[0.10] bg-[#0e0e0e] transition-[width] duration-300 ${
+        className={`shrink-0 h-full flex flex-col border-r border-white/[0.15] bg-[#181818] transition-[width] duration-300 ${
           sidebarCollapsed ? 'w-[52px]' : 'w-[240px] overflow-hidden'
         }`}
         id="admin-sidebar-bar"
@@ -1577,9 +1578,11 @@ export default function AdminDashboard({
                 { icon: Film, tab: 'movies', sound: 460 },
                 null,
                 { icon: ShoppingBag, tab: 'foods', sound: 478 },
+                { icon: BarChart2, tab: 'fnb-report', sound: 486 },
                 null,
                 { icon: Layers, tab: 'rooms', sound: 470 },
                 { icon: Calendar, tab: 'showtimes', sound: 480 },
+                { icon: AlertCircle, tab: 'showtime-incidents', sound: 486 },
                 { icon: FileText, tab: 'tickets', sound: 492 },
                 { icon: FileText, tab: 'transactions', sound: 500 },
                 null,

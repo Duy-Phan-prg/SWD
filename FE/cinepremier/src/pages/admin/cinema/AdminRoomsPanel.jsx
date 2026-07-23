@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, Armchair, Check, ChevronRight, CircleOff, DoorOpen,
   Edit3, Loader2, Plus, RefreshCw, Save, ScreenShare, Trash2, X
@@ -517,7 +517,7 @@ export default function AdminRoomsPanel({ ctx }) {
       <div className="flex flex-col gap-4 border border-white/10 bg-gradient-to-r from-[#100d04] to-black p-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-500">Quản lý rạp</p>
-          <h2 className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-white">Phòng chiếu & ghế</h2>
+          <h2 className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-neutral-200">Phòng chiếu & ghế</h2>
           <p className="mt-1 text-xs text-neutral-500">Tạo phòng, thiết lập sơ đồ và quản lý tình trạng từng ghế.</p>
         </div>
         <div className="flex gap-2">

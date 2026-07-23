@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Armchair, BarChart2, DoorOpen, Gift, RefreshCw } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
@@ -185,7 +185,7 @@ export default function AdminStatsPanel({ ctx }) {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-neutral-300">Phân tích & Giám sát</p>
-          <h2 className="mt-1 flex items-center gap-2 text-sm font-sans font-black uppercase tracking-wide text-white">
+          <h2 className="mt-1 flex items-center gap-2 text-sm font-sans font-black uppercase tracking-wide text-neutral-200">
             <BarChart2 className="h-5 w-5 text-amber-500" /> Thống Kê Mua Bán
           </h2>
           <p className="mt-1 text-xs text-neutral-500">Ghế trống theo suất, khách không đến, giờ cao điểm và tỷ lệ bỏ đơn — dữ liệu để quyết định tăng/giảm giá.</p>
