@@ -48,11 +48,11 @@ const PREFETCH_DATES = Array.from({ length: 7 }, (_, i) => {
 });
 
 const AGE_RATING_OPTIONS = [
-  { value: null, label: 'Không lọc độ tuổi', description: 'Hiển thị tất cả phân loại' },
-  { value: 'P', label: 'Mọi độ tuổi', description: 'Phù hợp với mọi khán giả' },
-  { value: 'T13', label: 'Từ đủ 13 tuổi', description: 'Dành cho người xem từ đủ 13 tuổi' },
-  { value: 'T16', label: 'Từ đủ 16 tuổi', description: 'Dành cho người xem từ đủ 16 tuổi' },
-  { value: 'T18', label: 'Từ đủ 18 tuổi', description: 'Dành cho người xem từ đủ 18 tuổi' },
+  { value: null, label: 'Không lọc độ tuổi', description: 'Hiển thị mọi suất chiếu' },
+  { value: 'P', label: 'Mọi độ tuổi', description: 'Phù hợp mọi khán giả' },
+  { value: 'T13', label: 'Từ đủ 13 tuổi', description: 'Người xem từ đủ 13 tuổi' },
+  { value: 'T16', label: 'Từ đủ 16 tuổi', description: 'Người xem từ đủ 16 tuổi' },
+  { value: 'T18', label: 'Từ đủ 18 tuổi', description: 'Người xem từ đủ 18 tuổi' },
 ];
 
 const AGE_RATING_COLOR = {
@@ -178,7 +178,7 @@ function AgeRatingDropdown({ selectedAge, onChange }) {
         className={`flex h-[60px] min-h-0 w-full cursor-pointer items-center gap-3 border bg-neutral-950 px-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-300 active:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-50
           ${open ? 'border-purple-400 bg-purple-500/[0.04]' : 'border-white/10 hover:border-purple-400/40'}`}
       >
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center border ${open || selectedAge ? 'border-purple-400/40 bg-purple-500/10 text-purple-300' : 'border-white/10 text-neutral-500'}`}>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center border transition-colors ${open || selectedAge ? 'border-purple-400/50 bg-purple-500/15 text-purple-200' : 'border-purple-500/25 bg-purple-950/20 text-purple-400'}`}>
           <Users className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1">
@@ -194,8 +194,7 @@ function AgeRatingDropdown({ selectedAge, onChange }) {
         <div className="absolute inset-x-0 z-[130] mt-2 w-full overflow-hidden border border-white/15 border-t-2 border-t-purple-400 bg-neutral-950 shadow-2xl shadow-black/70">
           <div className="flex h-12 items-center gap-3 border-b border-white/10 bg-purple-500/[0.05] px-3.5">
             <ShieldCheck className="h-4 w-4 shrink-0 text-purple-300" aria-hidden="true" />
-            <p className="min-w-0 flex-1 truncate text-[11px] font-black uppercase tracking-[0.16em] text-white">Phân loại người xem</p>
-            <span className="shrink-0 border border-white/10 px-2 py-1 text-[9px] font-bold text-neutral-400">4 mức</span>
+            <p className="min-w-0 flex-1 text-[11px] font-black uppercase tracking-[0.16em] text-white">Chọn độ tuổi</p>
           </div>
           <div id="age-rating-options" role="listbox" aria-label="Phân loại độ tuổi" className="p-1.5">
             {AGE_RATING_OPTIONS.map((opt) => (
@@ -214,8 +213,8 @@ function AgeRatingDropdown({ selectedAge, onChange }) {
                   {opt.value || 'ALL'}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className={`block truncate text-[13px] font-extrabold leading-4 ${selectedAge === opt.value ? 'text-purple-100' : 'text-neutral-200 group-hover:text-white'}`}>{opt.label}</span>
-                  <span className="mt-0.5 block truncate text-[10px] leading-4 text-neutral-500">{opt.description}</span>
+                  <span className={`block break-words text-[13px] font-extrabold leading-4 ${selectedAge === opt.value ? 'text-purple-100' : 'text-neutral-200 group-hover:text-white'}`}>{opt.label}</span>
+                  <span className="mt-0.5 block whitespace-normal text-[10px] leading-4 text-neutral-500">{opt.description}</span>
                 </span>
                 <span className={`flex h-7 w-7 shrink-0 items-center justify-center ${selectedAge === opt.value ? 'bg-purple-500/15 text-purple-200' : 'text-transparent'}`}>
                   <Check className="h-3.5 w-3.5" />
@@ -619,15 +618,19 @@ export default function ShowtimesPage() {
                         className="group flex w-full min-w-0 cursor-pointer flex-col border border-white/15 bg-black px-3.5 py-3 text-left transition-colors hover:border-purple-400 hover:bg-purple-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-300 active:bg-purple-500/15"
                         title={`Phim chiếu từ ${startLabel} đến ${endLabel}`}
                       >
-                        <span className="flex w-full items-center gap-2 font-mono text-sm font-black text-white transition group-hover:text-purple-200">
-                          <Clock className="h-3 w-3 shrink-0 text-neutral-500 transition group-hover:text-purple-300" />
-                          <span>{startLabel}</span>
+                        <span className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                          <span className="grid min-w-0 grid-cols-[12px_minmax(0,1fr)] items-start gap-1.5">
+                            <Clock className="mt-0.5 h-3 w-3 shrink-0 text-neutral-500 transition group-hover:text-purple-300" />
+                            <span className="min-w-0">
+                              <span className="block font-mono text-sm font-black text-white transition group-hover:text-purple-200">{startLabel}</span>
+                              <span className="mt-1 block text-[8px] font-bold uppercase tracking-[0.14em] text-neutral-600 transition group-hover:text-purple-300/70">Bắt đầu</span>
+                            </span>
+                          </span>
                           <ArrowRight className="h-3 w-3 shrink-0 text-neutral-600 transition group-hover:translate-x-0.5 group-hover:text-purple-400" aria-hidden="true" />
-                          <span className="text-purple-300">{endLabel}</span>
-                        </span>
-                        <span className="mt-1.5 flex w-full items-center justify-between pl-5 text-[8px] font-bold uppercase tracking-[0.14em] text-neutral-600 transition group-hover:text-purple-300/70">
-                          <span>Bắt đầu</span>
-                          <span>Kết thúc</span>
+                          <span className="min-w-0 text-right">
+                            <span className="block font-mono text-sm font-black text-purple-300">{endLabel}</span>
+                            <span className="mt-1 block text-[8px] font-bold uppercase tracking-[0.14em] text-neutral-600 transition group-hover:text-purple-300/70">Kết thúc</span>
+                          </span>
                         </span>
                       </button>
                     );
