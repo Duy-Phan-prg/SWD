@@ -434,7 +434,7 @@ export default function AdminWalletPanel({ ctx }) {
             </h3>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {dashboard.recentTransactions.map((tx, i) => (
+            {dashboard.recentTransactions.filter((tx) => tx.type !== "WITHDRAWAL_PAID" && Math.abs(Number(tx.amount || 0)) > 0).map((tx, i) => (
               <div
                 key={tx.id || i}
                 style={{

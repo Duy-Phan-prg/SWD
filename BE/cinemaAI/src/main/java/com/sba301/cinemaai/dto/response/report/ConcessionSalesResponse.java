@@ -7,10 +7,30 @@ import java.util.List;
 public record ConcessionSalesResponse(
         LocalDate from,
         LocalDate to,
+        long totalOrders,
         long totalItemsSold,
         BigDecimal totalRevenue,
-        List<Line> lines
+        BigDecimal averageOrderValue,
+        List<DailyLine> daily,
+        List<Line> lines,
+        List<SourceLine> sources
 ) {
     public record Line(String name, long quantity, BigDecimal revenue) {
+    }
+
+    public record DailyLine(
+            LocalDate date,
+            long orderCount,
+            long quantity,
+            BigDecimal revenue
+    ) {
+    }
+
+    public record SourceLine(
+            String source,
+            long orderCount,
+            long quantity,
+            BigDecimal revenue
+    ) {
     }
 }

@@ -1192,12 +1192,16 @@ export default function AdminShowtimesPanel({ ctx }) {
         </div>
         {mode === 'list' && (
           <div className="flex gap-2">
+            <button onClick={() => ctx?.changeAdminSection?.('showtime-incidents')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500 hover:text-black transition cursor-pointer">
+              <AlertCircle className="w-3 h-3" /> Báo cáo sự cố &amp; hoàn tiền
+            </button>
             <button onClick={() => { setMode('create'); setForm(EMPTY_FORM); setEditingId(null); setEditingStatus(''); setErrors({}); }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition cursor-pointer">
               <Plus className="w-3 h-3" /> Tạo suất
             </button>
             <button onClick={() => { setMode('bulk'); setBulkForm(EMPTY_BULK); setEditingBulkSlotIndex(0); setEditingId(null); setEditingStatus(''); setErrors({}); }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition">
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition cursor-pointer">
               <Zap className="w-3 h-3" /> Tạo hàng loạt
             </button>
           </div>
@@ -1827,6 +1831,58 @@ export default function AdminShowtimesPanel({ ctx }) {
                 <button onClick={handleConfirmCancel} disabled={saving}
                   className="flex-1 py-2.5 bg-amber-500 text-black text-[10px] font-black uppercase hover:bg-amber-400 transition disabled:opacity-50">
                   Xác nhận hủy
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Refund Summary Result Modal */}
+      <AnimatePresence>
+        {refundSummary && (
+          <motion.div key="refund-summary-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+              className="bg-zinc-950 border border-emerald-500/40 p-6 max-w-md w-full space-y-4 shadow-2xl">
+              <div className="flex items-center gap-2 text-emerald-400">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Đã Hoàn Tất Hủy Suất Chiếu &amp; Hoàn Tiền</h3>
+              </div>
+              <div className="border border-white/10 bg-black/60 p-4 text-xs space-y-2 text-neutral-300 font-sans">
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Mã suất chiếu:</span>
+                  <strong className="text-amber-400 font-mono">#{refundSummary.showtimeId}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Tổng đơn vé bị ảnh hưởng:</span>
+                  <strong className="text-white font-mono">{refundSummary.totalBookings ?? 0} đơn</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400 font-bold">Hoàn tiền thành công:</span>
+                  <strong className="text-emerald-400 font-mono font-bold">{refundSummary.successCount ?? 0} đơn</strong>
+                </div>
+                {refundSummary.failedCount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-red-400 font-bold">Lỗi hoàn tiền:</span>
+                    <strong className="text-red-400 font-mono font-bold">{refundSummary.failedCount} đơn</strong>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setRefundSummary(null)}
+                  className="flex-1 py-2.5 border border-white/10 text-neutral-300 text-[10px] font-bold uppercase hover:bg-neutral-900 transition cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={() => {
+                    setRefundSummary(null);
+                    ctx?.changeAdminSection?.('showtime-incidents');
+                  }}
+                  className="flex-1 py-2.5 bg-amber-500 text-black text-[10px] font-black uppercase hover:bg-amber-400 transition cursor-pointer"
+                >
+                  Xem Báo Cáo Chi Tiết
                 </button>
               </div>
             </motion.div>

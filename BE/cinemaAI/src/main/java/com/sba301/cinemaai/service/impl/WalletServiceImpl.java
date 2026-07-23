@@ -60,7 +60,7 @@ public class WalletServiceImpl implements WalletService {
         CineWallet wallet = getOrCreateWallet(user);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(1, Math.min(size, 50)));
         Page<WalletTransactionResponse> result = walletTransactionRepository
-                .findByWalletOrderByCreatedAtDesc(wallet, pageable)
+                .findByWalletFiltered(wallet, pageable)
                 .map(WalletTransactionResponse::from);
         return PageResponse.from(result);
     }
@@ -157,17 +157,6 @@ public class WalletServiceImpl implements WalletService {
         wr.setProcessedAt(LocalDateTime.now());
         withdrawalRequestRepository.save(wr);
 
-        // Tạo wallet transaction WITHDRAWAL_PAID
-        CineWallet wallet = wr.getWallet();
-        walletTransactionRepository.save(new WalletTransaction(
-                wallet, wr.getUser(), null,
-                WalletTransactionType.WITHDRAWAL_PAID,
-                BigDecimal.ZERO,
-                wallet.getBalance(),
-                "WD-PAID-" + wr.getId(),
-                "Staff đã chuyển khoản: " + request.method() + (request.note() != null ? " - " + request.note() : "")
-        ));
-
         log.info("Withdrawal {} approved via {} for user {}", withdrawalId, request.method(), wr.getUser().getEmail());
         auditLogService.record(AuditActionType.APPROVE, "WALLET", wr.getId(),
                 wr.getUser().getEmail() + " - rút " + wr.getAmount() + " VND");
@@ -226,7 +215,7 @@ public class WalletServiceImpl implements WalletService {
         // Recent transactions (top 10)
         Pageable top10 = PageRequest.of(0, 10);
         List<WalletTransactionResponse> recentTx = walletTransactionRepository
-                .findAllByOrderByCreatedAtDesc(top10)
+                .findAllFiltered(top10)
                 .map(WalletTransactionResponse::from)
                 .getContent();
 

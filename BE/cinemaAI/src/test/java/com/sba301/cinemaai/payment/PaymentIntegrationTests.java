@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sba301.cinemaai.dto.request.auth.LoginRequest;
 import com.sba301.cinemaai.entity.Booking;
 import com.sba301.cinemaai.entity.Cinema;
+import com.sba301.cinemaai.entity.FoodItem;
+import com.sba301.cinemaai.entity.FoodOrder;
 import com.sba301.cinemaai.entity.Movie;
 import com.sba301.cinemaai.entity.Role;
 import com.sba301.cinemaai.entity.Room;
@@ -14,6 +16,7 @@ import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.entity.UserRole;
 import com.sba301.cinemaai.enums.AgeRating;
 import com.sba301.cinemaai.enums.BookingStatus;
+import com.sba301.cinemaai.enums.FoodOrderStatus;
 import com.sba301.cinemaai.enums.MovieStatus;
 import com.sba301.cinemaai.enums.PaymentStatus;
 import com.sba301.cinemaai.enums.RoleName;
@@ -24,6 +27,9 @@ import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.CinemaRepository;
+import com.sba301.cinemaai.repository.FoodItemRepository;
+import com.sba301.cinemaai.repository.FoodOrderRepository;
+import com.sba301.cinemaai.repository.LoyaltyPointRepository;
 import com.sba301.cinemaai.repository.MovieRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.repository.RoleRepository;
@@ -50,6 +56,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -94,6 +101,15 @@ class PaymentIntegrationTests {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private FoodItemRepository foodItemRepository;
+
+    @Autowired
+    private FoodOrderRepository foodOrderRepository;
+
+    @Autowired
+    private LoyaltyPointRepository loyaltyPointRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -116,7 +132,7 @@ class PaymentIntegrationTests {
     }
 
     @Test
-    void shouldCreateVnpayPaymentUrlAndRejectDuplicatePendingPayment() throws Exception {
+    void shouldCreateVnpayPaymentUrlAndSupersedePendingPaymentOnRetry() throws Exception {
         String customerToken = loginAs("phase6.payment.vnpay.", RoleName.CUSTOMER);
         User customer = userRepository.findAll().stream()
                 .filter(user -> user.getEmail().startsWith("phase6.payment.vnpay."))
@@ -141,7 +157,13 @@ class PaymentIntegrationTests {
         mockMvc.perform(post("/api/v1/payments/vnpay/create")
                         .header("Authorization", "Bearer " + customerToken)
                         .param("bookingId", booking.getId().toString()))
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.provider").value("VNPAY"))
+                .andExpect(jsonPath("$.data.status").value("PENDING"));
+
+        assertThat(paymentRepository.findByBooking(booking))
+                .extracting(payment -> payment.getStatus())
+                .containsExactlyInAnyOrder(PaymentStatus.FAILED, PaymentStatus.PENDING);
 
         mockMvc.perform(get("/api/v1/payments/booking/{bookingId}", booking.getId())
                         .header("Authorization", "Bearer " + customerToken))
@@ -193,6 +215,118 @@ class PaymentIntegrationTests {
                         .param("vnp_SecureHash", "bad-signature"))
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.startsWith("http://localhost:3000/payment-callback")));
+    }
+
+    @Test
+    void shouldCreateAndPayStandaloneFoodOrderWithoutBooking() throws Exception {
+        String customerToken = loginAs("phase6.food.standalone.", RoleName.CUSTOMER);
+        FoodItem foodItem = foodItemRepository.save(new FoodItem(
+                "Standalone popcorn " + System.nanoTime(),
+                "Counter pickup",
+                BigDecimal.valueOf(55000)
+        ));
+
+        String createResponse = mockMvc.perform(post("/api/v1/food-orders")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"foods":[{"foodItemId":%d,"foodComboId":null,"quantity":2}]}
+                                """.formatted(foodItem.getId())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.bookingId").isEmpty())
+                .andExpect(jsonPath("$.data.orderCode").isNotEmpty())
+                .andExpect(jsonPath("$.data.totalAmount").value(110000))
+                .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
+                .andExpect(jsonPath("$.data.expiresAt").isNotEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long foodOrderId = objectMapper.readTree(createResponse).at("/data/id").asLong();
+        mockMvc.perform(post("/api/v1/payments/food-orders/{foodOrderId}/vnpay/create", foodOrderId)
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.bookingId").isEmpty())
+                .andExpect(jsonPath("$.data.provider").value("VNPAY"))
+                .andExpect(jsonPath("$.data.paymentUrl").isNotEmpty());
+
+        mockMvc.perform(post("/api/v1/payments/food-orders/{foodOrderId}/mock", foodOrderId)
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.bookingId").isEmpty())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"));
+
+        FoodOrder paidOrder = foodOrderRepository.findById(foodOrderId).orElseThrow();
+        assertThat(paidOrder.getBooking()).isNull();
+        assertThat(paidOrder.getCustomer()).isNotNull();
+        assertThat(paidOrder.getStatus()).isEqualTo(FoodOrderStatus.PAID);
+        assertThat(loyaltyPointRepository.findByUser(paidOrder.getCustomer()).orElseThrow().getPoints())
+                .isPositive();
+
+        String ordersResponse = mockMvc.perform(get("/api/v1/food-orders/my")
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].status").value("PAID"))
+                .andExpect(jsonPath("$.data[0].qrCode").value(org.hamcrest.Matchers.startsWith("CINEAI:FOOD:")))
+                .andReturn().getResponse().getContentAsString();
+        String pickupQr = objectMapper.readTree(ordersResponse).at("/data/0/qrCode").asText();
+        String staffToken = loginAs("phase6.food.pickup.staff.", RoleName.STAFF);
+
+        mockMvc.perform(get("/api/v1/staff/check-in/food-orders/lookup")
+                        .param("code", pickupQr)
+                        .header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(foodOrderId))
+                .andExpect(jsonPath("$.data.status").value("PAID"));
+
+        mockMvc.perform(post("/api/v1/staff/check-in/food-orders/pickup")
+                        .header("Authorization", "Bearer " + staffToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("code", pickupQr))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PICKED_UP"))
+                .andExpect(jsonPath("$.data.pickedUpAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.qrCode").isEmpty());
+
+        mockMvc.perform(post("/api/v1/staff/check-in/food-orders/pickup")
+                        .header("Authorization", "Bearer " + staffToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("code", pickupQr))))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldListAndCancelPendingStandaloneFoodOrder() throws Exception {
+        String customerToken = loginAs("phase6.food.cancel.", RoleName.CUSTOMER);
+        FoodItem foodItem = foodItemRepository.save(new FoodItem(
+                "Standalone water " + System.nanoTime(),
+                "Counter pickup",
+                BigDecimal.valueOf(20000)
+        ));
+
+        String createResponse = mockMvc.perform(post("/api/v1/food-orders")
+                        .header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"foods":[{"foodItemId":%d,"foodComboId":null,"quantity":1}]}
+                                """.formatted(foodItem.getId())))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long foodOrderId = objectMapper.readTree(createResponse).at("/data/id").asLong();
+
+        mockMvc.perform(get("/api/v1/food-orders/my")
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(foodOrderId))
+                .andExpect(jsonPath("$.data[0].status").value("PENDING_PAYMENT"));
+
+        mockMvc.perform(delete("/api/v1/food-orders/{foodOrderId}", foodOrderId)
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+
+        assertThat(foodOrderRepository.findById(foodOrderId).orElseThrow().getStatus())
+                .isEqualTo(FoodOrderStatus.CANCELLED);
     }
 
     private Booking createPendingBooking(User customer) {
