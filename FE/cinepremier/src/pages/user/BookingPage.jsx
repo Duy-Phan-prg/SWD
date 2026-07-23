@@ -244,7 +244,7 @@ export default function BookingView() {
   const [paidBooking, setPaidBooking] = useState(null);
   const heldSeatIdsRef = useRef(null);
   // Lưu số điểm GỐC trước khi trừ tạm khi hold ghế.
-  // Khi quay lại: SET tuyệt đối về giá trị này, tránh cộng tích luỹ nhiều lần.
+  // Khi quay lại: SET tuyệt đối về giá trị này — không cộng tích luỹ.
   const loyaltyPointsBeforeHoldRef = useRef(null);
 
   // Sau khi thanh toán thành công: tải booking để lấy QR thật + mã vé từng ghế
@@ -663,19 +663,6 @@ export default function BookingView() {
   const getSelectedSeatTotal = (ticketType) => selectedSeats
     .filter(seat => seat.ticketType === ticketType)
     .reduce((total, seat) => total + getSeatLineTotal(seat), 0);
-  const getTicketTypeUnitPriceLabel = (ticketType) => {
-    const seatsOfType = selectedSeats.filter(s => s.ticketType === ticketType);
-    if (seatsOfType.length === 0) return '';
-    const prices = seatsOfType.map(s => getSeatUnitPrice(s)).filter(p => p > 0);
-    if (prices.length === 0) return '';
-    const uniquePrices = [...new Set(prices)];
-    if (uniquePrices.length === 1) {
-      return `${formatVnd(uniquePrices[0])}/vé`;
-    }
-    const min = Math.min(...uniquePrices);
-    const max = Math.max(...uniquePrices);
-    return `${formatVnd(min)} - ${formatVnd(max)}/vé`;
-  };
   const getTicketStartingPrice = (ticketType) => {
     const prices = [...new Set(seats.map(seat => seat.type))]
       .map(seatType => getShowtimeTicketPrice(selectedShowtime, ticketType, seatType))
@@ -706,26 +693,6 @@ export default function BookingView() {
     const item = concessions.find(i => i.id === id);
     return total + (item ? item.price * qty : 0);
   }, 0);
-  const receiptTicketRows = selectedSeats.map(seat => ({
-    id: seat.id,
-    label: `Ghế ${seat.id}`,
-    ticketType: seat.ticketType || 'adult',
-    unitPrice: getSeatUnitPrice(seat),
-    lineTotal: getSeatLineTotal(seat)
-  }));
-  const receiptFoodRows = Object.entries(selectedCombos)
-    .map(([id, quantity]) => {
-      const item = concessions.find(candidate => candidate.id === id);
-      if (!item) return null;
-      return {
-        id,
-        name: item.name,
-        unitPrice: Number(item.price || 0),
-        quantity: Number(quantity || 0),
-        lineTotal: Number(item.price || 0) * Number(quantity || 0)
-      };
-    })
-    .filter(Boolean);
   const subTotal = priceTickets + priceCombos;
   const requestedLoyaltyPoints = Math.max(0, Number(String(loyaltyPointsInput || '').replace(/\D/g, '')) || 0);
   const earningRatePercent = Math.max(0, Number(loyaltyConfig.earningRatePercent ?? DEFAULT_LOYALTY_CONFIG.earningRatePercent) || 0);
@@ -984,13 +951,13 @@ export default function BookingView() {
   const handleBackToBooking = () => {
     setPaymentState('booking');
     setBookingStep('combos');
-    // Restore điểm TUYỆT ĐỐI từ ref (không cộng tích luỹ),
-    // tránh việc đi đi quay lại nhiều lần khiến điểm ngày càng tăng.
+    // Nếu có điểm gốc được lưu trong ref (tức là đã hold lần đầu với deduct),
+    // restore TUYỆT ĐỐI về giá trị đó — tránh cộng tích luỹ mỗi lần quay lại.
+    // Update path (holdStillActive) không deduct nên ref = null → không đổi gì.
     if (loyaltyPointsBeforeHoldRef.current !== null) {
       setLoyaltyPoints(loyaltyPointsBeforeHoldRef.current);
       loyaltyPointsBeforeHoldRef.current = null;
     }
-    // Giữ nguyên loyaltyPointsInput để user thấy lại số điểm đã nhập.
     // Xóa heldPaymentSummary cũ để tổng hóa đơn tính lại thực thời theo bắp nước mới thêm
     setHeldPaymentSummary(null);
     if (concessions.length === 0) fetchPublicFoodCatalog({ force: true });
@@ -1117,9 +1084,8 @@ export default function BookingView() {
       setHoldSecondsLeft(holdResult.holdExpiresAt
         ? Math.max(0, Math.ceil((new Date(holdResult.holdExpiresAt).getTime() - Date.now()) / 1000))
         : HOLD_DURATION_SECONDS);
-      // Server trừ điểm ngay khi hold ghế (không phải khi thanh toán xong).
-      // Lưu giá trị gốc vào ref trước khi trừ, để khi quay lại có thể SET tuyệt đối (không cộng tích luỹ).
       if (loyaltyPointsToRedeem > 0) {
+        // Lưu điểm gốc trước khi trừ để có thể restore tuyệt đối khi quay lại.
         loyaltyPointsBeforeHoldRef.current = loyaltyPoints;
         setLoyaltyPoints(points => Math.max(0, points - loyaltyPointsToRedeem));
       }
@@ -1337,40 +1303,19 @@ export default function BookingView() {
               <div className="px-6 py-4 space-y-2 border-b border-white/5">
                 {selectedSeats.filter(s => s.ticketType === 'adult').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-zinc-400">
-                    <span>
-                      Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}
-                      {getTicketTypeUnitPriceLabel('adult') && (
-                        <span className="text-[10px] text-zinc-500 font-normal ml-1">
-                          ({getTicketTypeUnitPriceLabel('adult')})
-                        </span>
-                      )}
-                    </span>
+                    <span>Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}</span>
                     <span className="text-white">{formatVnd(getSelectedSeatTotal('adult'))}</span>
                   </div>
                 )}
                 {selectedSeats.filter(s => s.ticketType === 'child').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-amber-400">
-                    <span>
-                      Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}
-                      {getTicketTypeUnitPriceLabel('child') && (
-                        <span className="text-[10px] text-amber-500/80 font-normal ml-1">
-                          ({getTicketTypeUnitPriceLabel('child')})
-                        </span>
-                      )}
-                    </span>
+                    <span>Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}</span>
                     <span>{formatVnd(getSelectedSeatTotal('child'))}</span>
                   </div>
                 )}
                 {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
                   <div className="flex justify-between text-[11px] font-mono text-sky-400">
-                    <span>
-                      Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}
-                      {getTicketTypeUnitPriceLabel('student') && (
-                        <span className="text-[10px] text-sky-500/80 font-normal ml-1">
-                          ({getTicketTypeUnitPriceLabel('student')})
-                        </span>
-                      )}
-                    </span>
+                    <span>Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}</span>
                     <span>{formatVnd(getSelectedSeatTotal('student'))}</span>
                   </div>
                 )}
@@ -2403,88 +2348,46 @@ export default function BookingView() {
 
           {renderLoyaltyRedeemPanel()}
 
-          {/* Hallmark · pre-emit critique: P4 H5 E4 S5 R5 V4 */}
-          {/* Detailed order receipt */}
-          <div className="pt-4 border-t border-white/5 font-sans">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-400">Chi tiết đơn hàng</p>
-              <span className="text-[8px] font-mono text-neutral-400">{selectedSeats.length} vé</span>
-            </div>
+          {/* Checkout receipts final value indicator */}
+          <div className="space-y-3 pt-4 border-t border-white/5 text-[10px] uppercase tracking-wider font-sans text-neutral-400">
 
-            <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 border-b border-white/5 pb-1.5 text-[8px] font-black uppercase tracking-widest text-neutral-400">
-              <span>Hạng mục</span>
-              <span className="text-right">Đơn giá</span>
-              <span className="text-right">SL</span>
-              <span className="text-right">Thành tiền</span>
-            </div>
-
-            {receiptTicketRows.length > 0 && (
-              <div className="mb-1 space-y-0.5">
-                <div className="flex items-center gap-1.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">
-                  <Ticket className="h-3 w-3 text-amber-400" /> Vé xem phim
-                </div>
-                {receiptTicketRows.map(row => {
-                  const typeMeta = TICKET_TYPE_META[row.ticketType] || TICKET_TYPE_META.adult;
-                  const typeClass = row.ticketType === 'student'
-                    ? 'border-sky-500/30 bg-sky-500/10 text-sky-400'
-                    : row.ticketType === 'child'
-                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-                      : 'border-neutral-700 bg-neutral-900 text-neutral-400';
-                  return (
-                    <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 border border-neutral-900 bg-neutral-950 px-2 py-2">
-                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                        <span className="font-mono text-[11px] font-black text-white">{row.label}</span>
-                        <span className={`border px-1 py-0.5 text-[8px] font-bold uppercase ${typeClass}`}>
-                          {typeMeta.label}
-                        </span>
-                      </div>
-                      <span className="text-right font-mono text-[9px] tabular-nums text-neutral-400">{formatVnd(row.unitPrice)}</span>
-                      <span className="text-right font-mono text-[9px] text-neutral-400">×1</span>
-                      <span className="text-right font-mono text-[10px] font-black tabular-nums text-white">{formatVnd(row.lineTotal)}</span>
-                    </div>
-                  );
-                })}
-                <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 px-2 py-1.5">
-                  <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">Tổng vé</span>
-                  <span className="text-right font-mono text-[10px] font-black tabular-nums text-neutral-300">{formatVnd(priceTickets)}</span>
-                </div>
+            {/* Adult / Child breakdown */}
+            {selectedSeats.filter(s => s.ticketType === 'adult').length > 0 && (
+              <div className="flex justify-between">
+                <span>Người lớn ×{selectedSeats.filter(s => s.ticketType === 'adult').length}:</span>
+                <span className="font-mono text-zinc-300">{formatVnd(getSelectedSeatTotal('adult'))}</span>
+              </div>
+            )}
+            {selectedSeats.filter(s => s.ticketType === 'child').length > 0 && (
+              <div className="flex justify-between">
+                <span className="text-amber-400">Trẻ em ×{selectedSeats.filter(s => s.ticketType === 'child').length}:</span>
+                <span className="font-mono text-amber-400">{formatVnd(getSelectedSeatTotal('child'))}</span>
+              </div>
+            )}
+            {selectedSeats.filter(s => s.ticketType === 'student').length > 0 && (
+              <div className="flex justify-between">
+                <span className="text-sky-400">Sinh viên ×{selectedSeats.filter(s => s.ticketType === 'student').length}:</span>
+                <span className="font-mono text-sky-400">{formatVnd(getSelectedSeatTotal('student'))}</span>
               </div>
             )}
 
-            {receiptFoodRows.length > 0 && (
-              <div className="mb-1 space-y-0.5">
-                <div className="flex items-center gap-1.5 py-1 text-[8px] font-bold uppercase tracking-widest text-neutral-400">
-                  <ShoppingBag className="h-3 w-3 text-rose-400" /> Bắp nước
-                </div>
-                {receiptFoodRows.map(row => (
-                  <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 border border-amber-900/20 bg-amber-950/5 px-2 py-2">
-                    <span className="min-w-0 truncate text-[10px] font-bold text-white" title={row.name}>{row.name}</span>
-                    <span className="text-right font-mono text-[9px] tabular-nums text-neutral-400">{formatVnd(row.unitPrice)}</span>
-                    <span className="text-right font-mono text-[9px] text-neutral-400">×{row.quantity}</span>
-                    <span className="text-right font-mono text-[10px] font-black tabular-nums text-amber-300">{formatVnd(row.lineTotal)}</span>
-                  </div>
-                ))}
-                <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 px-2 py-1.5">
-                  <span className="text-[8px] font-bold uppercase tracking-widest text-neutral-400">Tổng bắp nước</span>
-                  <span className="text-right font-mono text-[10px] font-black tabular-nums text-amber-300">{formatVnd(priceCombos)}</span>
-                </div>
-              </div>
-            )}
+
+
 
             {gatewayDiscountAmount > 0 && (
-              <div className="flex justify-between border-t border-white/5 py-2 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
-                <span>Giảm bằng CinePoints</span>
-                <span className="font-mono">-{formatVnd(gatewayDiscountAmount)}</span>
+              <div className="flex justify-between text-emerald-400">
+                <span>Giảm bằng CinePoints:</span>
+                <span className="font-mono">-{gatewayDiscountAmount.toLocaleString()}đ</span>
               </div>
             )}
 
-            <div className="mt-2 flex items-end justify-between gap-4 border-y border-white/10 py-3">
-              <div>
-                <span className="block text-[10px] font-bold uppercase tracking-widest text-white">Tổng cộng hóa đơn</span>
-                <span className="mt-0.5 block text-[8px] text-neutral-400">{selectedSeats.length} vé · {receiptFoodRows.reduce((sum, row) => sum + row.quantity, 0)} món</span>
-              </div>
-              <span className="shrink-0 font-mono text-xl font-black leading-none tracking-tight text-white">{formatVnd(gatewayTotalAmount)}</span>
+            <div className="flex justify-between items-end border-t border-white/10 pt-3">
+              <span className="text-white font-sans tracking-widest text-[10px] font-bold">TỔNG CỘNG HOÁ ĐƠN</span>
+              <span className="text-lg font-black text-white font-mono tracking-tight leading-none bg-[#101010] p-2 border border-white/20">
+                {gatewayTotalAmount.toLocaleString()}đ
+              </span>
             </div>
+
           </div>
 
           {/* CTA Proceed triggers */}

@@ -265,12 +265,12 @@ export default function MyTicketsView() {
       // để hiển thị gọn trên vé của khách. BE chỉ trả các món đã thanh toán (food order PAID).
       const foods = Array.isArray(b.foods)
         ? Object.values(b.foods.reduce((acc, f) => {
-            const key = f.name || f.foodItemId || f.foodComboId;
-            if (!acc[key]) acc[key] = { name: f.name || 'Bắp nước', quantity: 0, totalPrice: 0 };
-            acc[key].quantity += Number(f.quantity || 0);
-            acc[key].totalPrice += Number(f.totalPrice || 0);
-            return acc;
-          }, {}))
+          const key = f.name || f.foodItemId || f.foodComboId;
+          if (!acc[key]) acc[key] = { name: f.name || 'Bắp nước', quantity: 0, totalPrice: 0 };
+          acc[key].quantity += Number(f.quantity || 0);
+          acc[key].totalPrice += Number(f.totalPrice || 0);
+          return acc;
+        }, {}))
         : [];
 
       return {
