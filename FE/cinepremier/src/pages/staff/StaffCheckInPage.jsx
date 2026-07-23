@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Camera,
@@ -531,11 +531,29 @@ export default function StaffCheckInPage() {
   const [counterSaleMessage, setCounterSaleMessage] = useState('');
   const [cashGiven, setCashGiven] = useState(''); // tiền khách đưa (trống = thu đúng số)
   const [counterSaleReceipt, setCounterSaleReceipt] = useState(null); // biên lai sau khi thu
+  const [pendingWalletCount, setPendingWalletCount] = useState(0);
   const qrVideoRef = useRef(null);
   const qrCanvasRef = useRef(null);
   const qrStreamRef = useRef(null);
   const qrScanTimerRef = useRef(null);
   const lastScannedQrRef = useRef('');
+
+  const checkPendingWallet = useCallback(async () => {
+    const { accessToken } = getStoredAuth();
+    if (!accessToken) return;
+    try {
+      const data = await staffService.getWalletDashboard(accessToken);
+      if (data && typeof data.pendingWithdrawalsCount === 'number') {
+        setPendingWalletCount(data.pendingWithdrawalsCount);
+      }
+    } catch (e) {
+      // ignore silently
+    }
+  }, []);
+
+  const pendingCheckinCount = useMemo(() => {
+    return (failedRefunds || []).filter((r) => r.status === 'PENDING' || !r.status).length;
+  }, [failedRefunds]);
 
   const visibleBookings = showtimeBookings.length > 0 ? showtimeBookings : recentBookings;
   const isShowingShowtimeBookings = showtimeBookings.length > 0;
@@ -822,7 +840,14 @@ export default function StaffCheckInPage() {
     loadRecentBookings();
     loadStaffFoods();
     loadFailedRefunds();
-  }, []);
+    checkPendingWallet();
+
+    const interval = setInterval(() => {
+      checkPendingWallet();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [checkPendingWallet]);
 
   useEffect(() => () => stopQrScanner(), []);
 
@@ -1137,21 +1162,37 @@ export default function StaffCheckInPage() {
         <div style={{ display: 'flex', gap: 6, padding: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, width: 'fit-content' }}>
           <button
             onClick={() => setActiveSection('checkin')}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'checkin' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent', color: activeSection === 'checkin' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'checkin' ? '0 2px 12px rgba(16,185,129,0.35)' : 'none', transition: 'all 0.2s' }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'checkin' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent', color: activeSection === 'checkin' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'checkin' ? '0 2px 12px rgba(16,185,129,0.35)' : 'none', transition: 'all 0.2s' }}
           >
             <ScanLine size={14} /> Check-in & Vận hành
+            {pendingCheckinCount > 0 && (
+              <span style={{ position: 'absolute', top: -3, right: -3, display: 'flex', height: 10, width: 10 }}>
+                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#ef4444', opacity: 0.75, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                <span style={{ position: 'relative', borderRadius: '50%', height: 10, width: 10, background: '#f43f5e', border: '1.5px solid #000', boxShadow: '0 0 6px #f43f5e' }} />
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveSection('wallet')}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'wallet' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent', color: activeSection === 'wallet' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'wallet' ? '0 2px 12px rgba(245,158,11,0.35)' : 'none', transition: 'all 0.2s' }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'Inter, sans-serif', background: activeSection === 'wallet' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent', color: activeSection === 'wallet' ? '#fff' : 'rgba(255,255,255,0.4)', boxShadow: activeSection === 'wallet' ? '0 2px 12px rgba(245,158,11,0.35)' : 'none', transition: 'all 0.2s' }}
           >
             <Wallet size={14} /> Quản lý ví
+            {pendingWalletCount > 0 && (
+              <span style={{ position: 'absolute', top: -3, right: -3, display: 'flex', height: 10, width: 10 }} title={`${pendingWalletCount} đơn/yêu cầu chờ xử lý`}>
+                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#ef4444', opacity: 0.75, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                <span style={{ position: 'relative', borderRadius: '50%', height: 10, width: 10, background: '#f43f5e', border: '1.5px solid #000', boxShadow: '0 0 6px #f43f5e' }} />
+              </span>
+            )}
           </button>
         </div>
 
         {/* Wallet Panel */}
         {activeSection === 'wallet' && (
-          <StaffWalletPanel token={getToken()} showToast={(msg) => console.log('[Wallet]', msg)} />
+          <StaffWalletPanel
+            token={getToken()}
+            showToast={(msg) => console.log('[Wallet]', msg)}
+            onPendingCountChange={setPendingWalletCount}
+          />
         )}
 
         {/* Check-in Content */}

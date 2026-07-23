@@ -791,16 +791,15 @@ export default function ProfileView() {
                   </button>
                 </div>
 
-                {walletTxs.length > 0 && (
+                {walletTxs.filter((tx) => tx.type !== 'WITHDRAWAL_PAID' && Math.abs(Number(tx.amount || 0)) > 0).length > 0 && (
                   <div className="space-y-1.5">
                     <p className="text-[8px] font-black uppercase tracking-[0.14em] text-neutral-500">Giao dịch gần đây</p>
-                    {walletTxs.map((tx, i) => (
+                    {walletTxs.filter((tx) => tx.type !== 'WITHDRAWAL_PAID' && Math.abs(Number(tx.amount || 0)) > 0).map((tx, i) => (
                       <div key={tx.id || i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                         <div>
                           <p className="text-[10px] font-bold text-white">
                             {tx.type === 'REFUND_CREDIT' ? '+ Hoàn tiền'
                               : tx.type === 'WITHDRAWAL_HOLD' ? '- Yêu cầu rút'
-                                : tx.type === 'WITHDRAWAL_PAID' ? '✓ Đã chuyển khoản'
                                   : tx.type === 'WITHDRAWAL_REJECTED' ? '↩ Hoàn lại'
                                     : tx.type}
                           </p>

@@ -26,11 +26,12 @@ import AdminTicketsPanel from './cinema/AdminTicketsPanel';
 import AdminAuditPanel from './system/AdminAuditPanel';
 import AdminStatsPanel from './overview/AdminStatsPanel';
 import AdminFnbReportPanel from './overview/AdminFnbReportPanel';
+import AdminShowtimeIncidentsPanel from './cinema/AdminShowtimeIncidentsPanel';
 
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies'].includes(section)) return 'movies';
   if (['foods', 'fnb-report'].includes(section)) return 'fnb';
-  if (['rooms', 'showtimes', 'tickets', 'transactions'].includes(section)) return 'cinema';
+  if (['rooms', 'showtimes', 'tickets', 'transactions', 'showtime-incidents'].includes(section)) return 'cinema';
   if (['statistics', 'audit'].includes(section)) return 'insights';
   if (['users', 'loyalty', 'reviews', 'cinewallet'].includes(section)) return 'system';
   return null;
@@ -45,6 +46,7 @@ const ADMIN_SECTIONS = new Set([
   'fnb-report',
   'rooms',
   'showtimes',
+  'showtime-incidents',
   'tickets',
   'transactions',
   'statistics',
@@ -1474,6 +1476,7 @@ export default function AdminDashboard({
     foods: AdminFoodsPanel,
     'fnb-report': AdminFnbReportPanel,
     showtimes: AdminShowtimesPanel,
+    'showtime-incidents': AdminShowtimeIncidentsPanel,
     tickets: AdminTicketsPanel,
     transactions: AdminTransactionsPanel,
     statistics: AdminStatsPanel,
@@ -1691,6 +1694,20 @@ export default function AdminDashboard({
                       <span className="whitespace-nowrap">ĐIỀU PHỐI LỊCH CHIẾU</span>
                     </span>
                     {activeTab === 'showtimes' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+
+                  <button
+                    onClick={() => { playPulseSound(486, 'sine', 0.05); changeAdminSection('showtime-incidents'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'showtime-incidents'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span className="whitespace-nowrap">BÁO CÁO SỰ CỐ &amp; HOÀN TIỀN</span>
+                    </span>
+                    {activeTab === 'showtime-incidents' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
                   <button
                     onClick={() => { playPulseSound(492, 'sine', 0.05); changeAdminSection('tickets'); }}

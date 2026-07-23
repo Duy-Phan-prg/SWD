@@ -39,9 +39,8 @@ const formatDateTime = (value) => {
 };
 
 const canAttachToBooking = (booking) => (
-  ['PAID', 'USED'].includes(booking?.status)
-  && booking?.showtimeEnd
-  && new Date(booking.showtimeEnd).getTime() > Date.now()
+  booking?.status === 'PAID'
+  && (!booking?.showtimeEnd || new Date(booking.showtimeEnd).getTime() > Date.now())
 );
 
 const isFoodAvailable = (item) => (

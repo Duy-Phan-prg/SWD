@@ -10,10 +10,19 @@ import com.sba301.cinemaai.dto.response.report.RoomOccupancyResponse;
 import com.sba301.cinemaai.dto.response.report.ShowtimeFillResponse;
 import com.sba301.cinemaai.dto.response.report.TopMovieResponse;
 import com.sba301.cinemaai.dto.response.report.TopSeatResponse;
+import com.sba301.cinemaai.dto.response.report.IncidentRefundedUser;
+import com.sba301.cinemaai.dto.response.report.ShowtimeIncidentItem;
+import com.sba301.cinemaai.dto.response.report.ShowtimeIncidentReportResponse;
+import com.sba301.cinemaai.entity.Booking;
+import com.sba301.cinemaai.entity.Showtime;
+import com.sba301.cinemaai.entity.User;
 import com.sba301.cinemaai.enums.BookingStatus;
+import com.sba301.cinemaai.enums.ShowtimeStatus;
 import com.sba301.cinemaai.repository.BookingFoodItemRepository;
 import com.sba301.cinemaai.repository.BookingRepository;
+import com.sba301.cinemaai.repository.BookingSeatRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
+import com.sba301.cinemaai.repository.ShowtimeRepository;
 import com.sba301.cinemaai.service.ReportService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -35,6 +44,8 @@ public class ReportServiceImpl implements ReportService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final BookingFoodItemRepository bookingFoodItemRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final BookingSeatRepository bookingSeatRepository;
 
     @Transactional(readOnly = true)
     @Override
@@ -354,5 +365,99 @@ public class ReportServiceImpl implements ReportService {
                         row[3] != null ? new BigDecimal(row[3].toString()) : BigDecimal.ZERO
                 ))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public ShowtimeIncidentReportResponse getShowtimeIncidents(LocalDate from, LocalDate to, Long showtimeId) {
+        LocalDate safeFrom = from != null ? from : LocalDate.now().minusDays(90);
+        LocalDate safeTo = to != null ? to : LocalDate.now();
+        LocalDateTime dtFrom = safeFrom.atStartOfDay();
+        LocalDateTime dtTo = safeTo.plusDays(1).atStartOfDay();
+
+        List<Showtime> cancelledShowtimes;
+        if (showtimeId != null) {
+            cancelledShowtimes = showtimeRepository.findById(showtimeId).stream()
+                    .filter(s -> s.getStatus() == ShowtimeStatus.CANCELLED)
+                    .toList();
+        } else {
+            cancelledShowtimes = showtimeRepository.findByStatus(ShowtimeStatus.CANCELLED).stream()
+                    .filter(s -> (s.getCancelledAt() != null && !s.getCancelledAt().isBefore(dtFrom) && s.getCancelledAt().isBefore(dtTo))
+                            || (s.getStartTime() != null && !s.getStartTime().isBefore(dtFrom) && s.getStartTime().isBefore(dtTo)))
+                    .sorted((a, b) -> {
+                        LocalDateTime ta = a.getCancelledAt() != null ? a.getCancelledAt() : a.getStartTime();
+                        LocalDateTime tb = b.getCancelledAt() != null ? b.getCancelledAt() : b.getStartTime();
+                        return tb.compareTo(ta);
+                    })
+                    .toList();
+        }
+
+        List<ShowtimeIncidentItem> incidentItems = new java.util.ArrayList<>();
+        long totalRefundedBookings = 0;
+        BigDecimal totalRefundedAmount = BigDecimal.ZERO;
+        java.util.Set<Long> uniqueUserIds = new java.util.HashSet<>();
+
+        for (Showtime showtime : cancelledShowtimes) {
+            List<Booking> refundedBookings = bookingRepository.findByShowtime(showtime).stream()
+                    .filter(b -> b.getStatus() == BookingStatus.REFUNDED)
+                    .toList();
+
+            List<IncidentRefundedUser> refundedUsers = new java.util.ArrayList<>();
+            BigDecimal showtimeRefundTotal = BigDecimal.ZERO;
+
+            for (Booking booking : refundedBookings) {
+                User user = booking.getUser();
+                if (user != null) {
+                    uniqueUserIds.add(user.getId());
+                }
+
+                String seatLabels = bookingSeatRepository.findByBooking(booking).stream()
+                        .map(bs -> bs.getSeat() != null ? (bs.getSeat().getRowLabel() + bs.getSeat().getSeatNumber()) : "")
+                        .filter(s -> !s.isBlank())
+                        .collect(java.util.stream.Collectors.joining(", "));
+
+                BigDecimal amount = booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO;
+                showtimeRefundTotal = showtimeRefundTotal.add(amount);
+
+                refundedUsers.add(new IncidentRefundedUser(
+                        booking.getId(),
+                        booking.getBookingCode(),
+                        user != null ? user.getId() : null,
+                        user != null && user.getProfile() != null && user.getProfile().getFullName() != null
+                                ? user.getProfile().getFullName()
+                                : (user != null ? user.getEmail() : "Khách hàng"),
+                        user != null ? user.getEmail() : null,
+                        user != null && user.getProfile() != null ? user.getProfile().getPhone() : null,
+                        amount,
+                        booking.getRefundMethod() != null ? booking.getRefundMethod() : "CINEWALLET",
+                        booking.getRefundedAt() != null ? booking.getRefundedAt() : booking.getUpdatedAt(),
+                        seatLabels
+                ));
+            }
+
+            totalRefundedBookings += refundedBookings.size();
+            totalRefundedAmount = totalRefundedAmount.add(showtimeRefundTotal);
+
+            incidentItems.add(new ShowtimeIncidentItem(
+                    showtime.getId(),
+                    showtime.getMovie() != null ? showtime.getMovie().getTitle() : "Phim",
+                    showtime.getRoom() != null ? showtime.getRoom().getName() : "Phòng",
+                    showtime.getRoom() != null && showtime.getRoom().getCinema() != null ? showtime.getRoom().getCinema().getName() : "Rạp",
+                    showtime.getStartTime(),
+                    showtime.getCancellationReason() != null ? showtime.getCancellationReason() : "Suất chiếu bị hủy do sự cố rạp",
+                    showtime.getCancelledAt() != null ? showtime.getCancelledAt() : showtime.getUpdatedAt(),
+                    refundedBookings.size(),
+                    showtimeRefundTotal,
+                    refundedUsers
+            ));
+        }
+
+        return new ShowtimeIncidentReportResponse(
+                cancelledShowtimes.size(),
+                totalRefundedBookings,
+                totalRefundedAmount,
+                uniqueUserIds.size(),
+                incidentItems
+        );
     }
 }

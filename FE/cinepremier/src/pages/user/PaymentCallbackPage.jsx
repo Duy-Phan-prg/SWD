@@ -9,7 +9,13 @@ export default function PaymentCallbackPage() {
   const [status, setStatus] = useState('loading');
   const [info, setInfo] = useState({});
   const [failReason, setFailReason] = useState('');
-  const onContinue = () => navigate(info.isFoodOrder ? '/tickets?tab=food' : '/tickets');
+  const onContinue = () => {
+    if (info.linkedBookingId) {
+      navigate(`/tickets?highlightBookingId=${info.linkedBookingId}`);
+    } else {
+      navigate('/tickets');
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -59,6 +65,11 @@ export default function PaymentCallbackPage() {
             : null;
           if (order?.status === 'PAID') {
             setStatus('success');
+            const linkedId = order.bookingId || order.booking?.id || order.bookingCode || null;
+            setInfo((prev) => ({
+              ...prev,
+              linkedBookingId: linkedId,
+            }));
           } else if (order?.status === 'EXPIRED') {
             setStatus('failed');
             setFailReason('Đơn bắp nước đã hết thời hạn thanh toán 15 phút và không được ghi nhận thanh toán.');
@@ -192,9 +203,9 @@ export default function PaymentCallbackPage() {
 
         <button
           onClick={onContinue}
-          className="w-full bg-white text-black hover:bg-neutral-200 py-3 text-xs font-bold uppercase tracking-widest transition"
+          className="w-full bg-white text-black hover:bg-neutral-200 py-3 text-xs font-bold uppercase tracking-widest transition cursor-pointer"
         >
-          {info.isFoodOrder ? 'Xem đơn bắp nước của tôi' : 'Về vé của tôi'}
+          {info.isFoodOrder && info.linkedBookingId ? 'Về vé đã đặt' : 'Về vé của tôi'}
         </button>
 
       </div>

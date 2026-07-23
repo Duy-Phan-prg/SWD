@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import {
   BarChart3,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   DollarSign,
   PackageCheck,
   ReceiptText,
@@ -104,6 +106,9 @@ export default function AdminFnbReportPanel({ ctx }) {
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [dailyPage, setDailyPage] = useState(1);
+
+  const DAILY_PAGE_SIZE = 10;
 
   const loadReport = useCallback(async (nextFrom, nextTo) => {
     const requestFrom = nextFrom || fromDate;
@@ -127,6 +132,7 @@ export default function AdminFnbReportPanel({ ctx }) {
 
     setIsLoading(true);
     setError('');
+    setDailyPage(1);
     try {
       const data = await adminService.getConcessionSales(token, { from: requestFrom, to: requestTo });
       setReport(data || null);
@@ -177,10 +183,20 @@ export default function AdminFnbReportPanel({ ctx }) {
     loadReport(nextFrom, nextTo);
   };
 
-  const chartData = useMemo(() => (report?.daily || []).map((line) => ({
+  const dailyList = useMemo(() => report?.daily || [], [report]);
+  const totalDailyItems = dailyList.length;
+  const totalDailyPages = Math.ceil(totalDailyItems / DAILY_PAGE_SIZE) || 1;
+  const safeDailyPage = Math.min(Math.max(1, dailyPage), totalDailyPages);
+
+  const paginatedDaily = useMemo(() => {
+    const start = (safeDailyPage - 1) * DAILY_PAGE_SIZE;
+    return dailyList.slice(start, start + DAILY_PAGE_SIZE);
+  }, [dailyList, safeDailyPage]);
+
+  const chartData = useMemo(() => dailyList.map((line) => ({
     ...line,
     label: formatDate(line.date).slice(0, 5),
-  })), [report]);
+  })), [dailyList]);
 
   const totalRevenue = Number(report?.totalRevenue || 0);
   const products = report?.lines || [];
@@ -354,7 +370,7 @@ export default function AdminFnbReportPanel({ ctx }) {
                         <tr><th className="px-4 py-3">Ngày</th><th className="px-4 py-3 text-right">Số đơn</th><th className="px-4 py-3 text-right">Món/combo</th><th className="px-4 py-3 text-right">Doanh thu</th><th className="px-4 py-3 text-right">TB/đơn</th></tr>
                       </thead>
                       <tbody className="divide-y divide-white/[0.06]">
-                        {(report.daily || []).map((line) => (
+                        {paginatedDaily.map((line) => (
                           <tr key={line.date} className="text-xs transition hover:bg-white/[0.025]">
                             <td className="px-4 py-3 font-bold text-white">{formatDate(line.date)}</td>
                             <td className="px-4 py-3 text-right font-mono text-neutral-300">{line.orderCount}</td>
@@ -363,9 +379,65 @@ export default function AdminFnbReportPanel({ ctx }) {
                             <td className="px-4 py-3 text-right font-mono text-neutral-400">{formatVnd(line.orderCount ? Number(line.revenue) / line.orderCount : 0)}</td>
                           </tr>
                         ))}
+                        {paginatedDaily.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-6 text-center text-xs text-neutral-500">
+                              Không có dữ liệu trong khoảng thời gian đã chọn.
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
+
+                  {totalDailyItems > 0 && (
+                    <div className="flex flex-col gap-3 border-t border-white/10 bg-black/60 p-3.5 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+                      <span>
+                        Hiển thị {Math.min((safeDailyPage - 1) * DAILY_PAGE_SIZE + 1, totalDailyItems)}-{Math.min(safeDailyPage * DAILY_PAGE_SIZE, totalDailyItems)} / {totalDailyItems} ngày · Trang {safeDailyPage}/{totalDailyPages}
+                      </span>
+                      {totalDailyPages > 1 && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={safeDailyPage <= 1}
+                            onClick={() => setDailyPage((p) => Math.max(1, p - 1))}
+                            className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-white transition hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" /> Trước
+                          </button>
+                          {Array.from({ length: totalDailyPages }, (_, i) => i + 1).map((p) => {
+                            const isNear = Math.abs(p - safeDailyPage) <= 1 || p === 1 || p === totalDailyPages;
+                            if (!isNear && Math.abs(p - safeDailyPage) === 2) {
+                              return <span key={`ellipsis-${p}`} className="px-1 text-neutral-600 select-none">…</span>;
+                            }
+                            if (!isNear) return null;
+                            return (
+                              <button
+                                key={p}
+                                type="button"
+                                onClick={() => setDailyPage(p)}
+                                className={`h-7 min-w-7 border px-2 py-1 text-[10px] font-black transition ${
+                                  p === safeDailyPage
+                                    ? 'border-amber-400 bg-amber-400 font-mono text-black'
+                                    : 'border-neutral-800 bg-black text-neutral-300 hover:border-amber-400/50 hover:text-white'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            disabled={safeDailyPage >= totalDailyPages}
+                            onClick={() => setDailyPage((p) => Math.min(totalDailyPages, p + 1))}
+                            className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-white transition hover:border-amber-400/50 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            Sau <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
 
                 <section className="border border-white/10 bg-[#070707]" aria-labelledby="sales-source-title">
