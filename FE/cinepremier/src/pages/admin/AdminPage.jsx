@@ -1922,7 +1922,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(486, 'sine', 0.05); changeAdminSection('fnb-report'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'fnb-report'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1984,7 +1984,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(486, 'sine', 0.05); changeAdminSection('showtime-incidents'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'showtime-incidents'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
