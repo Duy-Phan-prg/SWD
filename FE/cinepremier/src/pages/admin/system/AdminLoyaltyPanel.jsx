@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import {
@@ -82,12 +82,12 @@ const transactionMeta = {
 
 const Field = ({ label, children }) => (
   <label className="space-y-1.5">
-    <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-neutral-500">{label}</span>
+    <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-neutral-300">{label}</span>
     {children}
   </label>
 );
 
-const inputClass = 'w-full border border-neutral-800 bg-black px-3 py-2.5 text-xs text-white outline-none transition focus:border-amber-500/70';
+const inputClass = 'w-full border border-white/[0.06] bg-black px-3 py-2.5 text-xs text-white outline-none transition focus:border-amber-500/70';
 
 export default function AdminLoyaltyPanel({ ctx }) {
   const { activeTab, getAdminToken, showToast } = ctx;
@@ -213,13 +213,13 @@ export default function AdminLoyaltyPanel({ ctx }) {
 
   const showResetConfirmToast = () => {
     toast.custom((toastId) => (
-      <div className="loyalty-reset-toast w-full rounded-2xl border border-amber-500/25 bg-[#080808]/95 p-4 text-white shadow-[0_24px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl sm:p-5">
+      <div className="loyalty-reset-toast w-full  border border-amber-500/25 bg-[#080808]/95 p-4 text-white shadow-[0_24px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl sm:p-5">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-amber-400/30 bg-amber-500/10 text-amber-300 shadow-[0_0_28px_rgba(245,158,11,0.2)]">
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Xác nhận reset điểm</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">Xác nhận reset điểm</h3>
             <p className="mt-2 text-xs leading-relaxed text-neutral-300">
               Thao tác này sẽ đặt toàn bộ điểm hiện tại về 0. Hành động này không thể hoàn tác.
             </p>
@@ -229,14 +229,14 @@ export default function AdminLoyaltyPanel({ ctx }) {
           <button
             type="button"
             onClick={() => toast.dismiss(toastId)}
-            className="inline-flex items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-800 hover:text-white"
+            className="inline-flex items-center justify-center  border border-white/[0.08] bg-neutral-900 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-neutral-300 transition hover:border-white/[0.15] hover:bg-white/[0.04] hover:text-white"
           >
             Hủy
           </button>
           <button
             type="button"
             onClick={() => resetPoints(toastId)}
-            className="inline-flex items-center justify-center rounded-lg border border-red-500/50 bg-red-600 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-white shadow-[0_10px_26px_rgba(220,38,38,0.28)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-red-500 hover:shadow-[0_16px_34px_rgba(220,38,38,0.4)] active:translate-y-0 active:scale-100"
+            className="inline-flex items-center justify-center  border border-red-500/50 bg-red-600 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-white shadow-[0_10px_26px_rgba(220,38,38,0.28)] transition duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-red-500 hover:shadow-[0_16px_34px_rgba(220,38,38,0.4)] active:translate-y-0 active:scale-100"
           >
             Reset ngay
           </button>
@@ -269,10 +269,10 @@ export default function AdminLoyaltyPanel({ ctx }) {
       transition={{ duration: 0.2 }}
       className="space-y-5"
     >
-      <div className="flex flex-col gap-3 border border-neutral-850 bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border border-white/[0.05] bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">QUẢN LÝ ĐIỂM THÀNH VIÊN</h3>
-          <p className="mt-1 break-words text-[10px] leading-snug text-neutral-500">Cấu hình tích/tiêu điểm, audit trail và báo cáo điểm</p>
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">QUẢN LÝ ĐIỂM THÀNH VIÊN</h3>
+          <p className="mt-1 break-words text-[10px] leading-snug text-neutral-300">Cấu hình tích/tiêu điểm, audit trail và báo cáo điểm</p>
         </div>
         <button
           type="button"
@@ -286,8 +286,8 @@ export default function AdminLoyaltyPanel({ ctx }) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <form onSubmit={saveConfig} noValidate className="border border-neutral-850 bg-neutral-950 p-4">
-          <div className="mb-4 flex items-center justify-between border-b border-neutral-850 pb-3">
+        <form onSubmit={saveConfig} noValidate className="border border-white/[0.05] bg-neutral-950 p-4">
+          <div className="mb-4 flex items-center justify-between border-b border-white/[0.05] pb-3">
             <div>
               <h4 className="text-[11px] font-black uppercase tracking-[0.16em] text-white">Cấu hình vận hành</h4>
 
@@ -342,20 +342,20 @@ export default function AdminLoyaltyPanel({ ctx }) {
             </button>
           </div>
           {config.lastExpiredAt && (
-            <p className="mt-3 text-[12px] text-neutral-500">Lần reset gần nhất: {config.lastExpiredAt}</p>
+            <p className="mt-3 text-[10px] text-neutral-400">Lần reset gần nhất: {config.lastExpiredAt}</p>
           )}
         </form>
 
         <div className="space-y-4">
-          <div className="border border-neutral-850 bg-neutral-950">
-            <div className="flex flex-col gap-3 border-b border-neutral-850 bg-black p-4 md:flex-row md:items-center md:justify-between">
+          <div className="border border-white/[0.05] bg-neutral-950">
+            <div className="flex flex-col gap-3 border-b border-white/[0.05] bg-black p-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h4 className="text-[11px] font-black uppercase tracking-[0.16em] text-white">Audit trail điểm</h4>
-                <p className="mt-1 break-words text-[10px] leading-snug text-neutral-500">Tìm theo mã khách hàng, số điện thoại, email hoăc mã đơn hàng.</p>
+                <p className="mt-1 break-words text-[10px] leading-snug text-neutral-300">Tìm theo mã khách hàng, số điện thoại, email hoăc mã đơn hàng.</p>
               </div>
               <form onSubmit={(event) => { event.preventDefault(); loadAll(0); }} className="flex min-w-0 flex-1 gap-2 md:max-w-sm">
                 <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-300" />
                   <input className={`${inputClass} pl-9`} value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Customer ID, phone, email, booking..." />
                 </div>
                 <button type="submit" className="inline-flex items-center justify-center border border-amber-500/35 bg-amber-500/10 px-3 text-[10px] font-black uppercase tracking-wider text-amber-300 hover:bg-amber-500 hover:text-black">
@@ -374,7 +374,7 @@ export default function AdminLoyaltyPanel({ ctx }) {
                   <col className="w-[124px]" />
                 </colgroup>
                 <thead>
-                  <tr className="border-b border-neutral-850 bg-neutral-950 text-[9.5px] font-black uppercase tracking-wider text-neutral-500">
+                  <tr className="border-b border-white/[0.05] bg-neutral-950 text-[9.5px] font-black uppercase tracking-wider text-neutral-300">
                     <th className="px-3 py-3">Tx ID</th>
                     <th className="px-3 py-3">Booking</th>
                     <th className="px-3 py-3">Tài khoản</th>
@@ -383,11 +383,11 @@ export default function AdminLoyaltyPanel({ ctx }) {
                     <th className="px-3 py-3">Thời gian</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-900 text-xs">
+                <tbody className="divide-y divide-white/[0.03] text-xs">
                   {transactions.items.map((tx) => {
                     const meta = transactionMeta[tx.type] || transactionMeta.ADJUST;
                     return (
-                      <tr key={tx.pointTransactionId} className="hover:bg-neutral-900/35">
+                      <tr key={tx.pointTransactionId} className="hover:bg-white/[0.02]">
                         <td className="px-3 py-3 font-mono text-neutral-300">#{tx.pointTransactionId}</td>
                         <td className="px-3 py-3">
                           {tx.bookingId ? (
@@ -396,39 +396,39 @@ export default function AdminLoyaltyPanel({ ctx }) {
                               <span className="whitespace-nowrap">{tx.bookingCode || `#${tx.bookingId}`}</span>
                             </button>
                           ) : (
-                            <span className="text-neutral-600">Hệ thống</span>
+                            <span className="text-neutral-200">Hệ thống</span>
                           )}
-                          {tx.movieTitle && <div className="mt-1 break-words text-[10px] leading-snug text-neutral-500">{tx.movieTitle}</div>}
+                          {tx.movieTitle && <div className="mt-1 break-words text-[10px] leading-snug text-neutral-300">{tx.movieTitle}</div>}
                         </td>
                         <td className="px-3 py-3">
                           <div className="break-words font-bold leading-snug text-white">{tx.customerName || tx.customerEmail}</div>
-                          <div className="break-all text-[10px] leading-snug text-neutral-500">{tx.customerPhone || 'Khong co SĐT'} | {tx.customerEmail}</div>
+                          <div className="break-all text-[10px] leading-snug text-neutral-300">{tx.customerPhone || 'Khong co SĐT'} | {tx.customerEmail}</div>
                         </td>
                         <td className="px-3 py-3">
                           <span className={`inline-flex border px-1.5 py-1 text-[8.5px] font-black uppercase tracking-wide ${meta.className}`}>{meta.label}</span>
                         </td>
                         <td className={`px-3 py-3 text-right font-mono font-black ${tx.pointsDelta >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                           {tx.pointsDelta >= 0 ? '+' : ''}{formatNumber(tx.pointsDelta)}
-                          <div className="text-[10px] font-normal text-neutral-500">So du: {formatNumber(tx.balanceAfter)}</div>
+                          <div className="text-[10px] font-normal text-neutral-300">So du: {formatNumber(tx.balanceAfter)}</div>
                         </td>
-                        <td className="px-3 py-3 font-mono text-[10.5px] leading-snug text-neutral-400">{formatDateTime(tx.occurredAt)}</td>
+                        <td className="px-3 py-3 font-mono text-[10.5px] leading-snug text-neutral-200">{formatDateTime(tx.occurredAt)}</td>
                       </tr>
                     );
                   })}
                   {!transactions.items.length && (
                     <tr>
-                      <td colSpan="6" className="px-4 py-10 text-center text-xs text-neutral-500">Chưa có giao dịch phù hợp</td>
+                      <td colSpan="6" className="px-4 py-10 text-center text-xs text-neutral-300">Chưa có giao dịch phù hợp</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center justify-between border-t border-neutral-850 px-4 py-3 text-[10px] text-neutral-500">
+            <div className="flex items-center justify-between border-t border-white/[0.05] px-4 py-3 text-[10px] text-neutral-300">
               <span>{formatNumber(transactions.totalItems)} giao dịch</span>
               <div className="flex items-center gap-2">
-                <button type="button" disabled={transactions.page <= 0 || loading} onClick={() => loadAll(transactions.page - 1)} className="border border-neutral-800 px-3 py-1.5 font-bold uppercase text-neutral-300 disabled:opacity-40">Truoc</button>
+                <button type="button" disabled={transactions.page <= 0 || loading} onClick={() => loadAll(transactions.page - 1)} className="border border-white/[0.06] px-3 py-1.5 font-bold uppercase text-neutral-300 disabled:opacity-40">Truoc</button>
                 <span className="font-mono">{transactions.page + 1}/{transactions.totalPages}</span>
-                <button type="button" disabled={transactions.page + 1 >= transactions.totalPages || loading} onClick={() => loadAll(transactions.page + 1)} className="border border-neutral-800 px-3 py-1.5 font-bold uppercase text-neutral-300 disabled:opacity-40">Sau</button>
+                <button type="button" disabled={transactions.page + 1 >= transactions.totalPages || loading} onClick={() => loadAll(transactions.page + 1)} className="border border-white/[0.06] px-3 py-1.5 font-bold uppercase text-neutral-300 disabled:opacity-40">Sau</button>
               </div>
             </div>
           </div>
@@ -438,13 +438,13 @@ export default function AdminLoyaltyPanel({ ctx }) {
       <AnimatePresence>
         {(selectedBooking || loadingBooking) && (
           <motion.div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="w-full max-w-2xl border border-neutral-800 bg-neutral-950 shadow-2xl" initial={{ scale: 0.98, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.98, y: 12 }}>
-              <div className="flex items-center justify-between border-b border-neutral-850 bg-black p-4">
+            <motion.div className="w-full max-w-2xl border border-white/[0.06] bg-neutral-950 shadow-2xl" initial={{ scale: 0.98, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.98, y: 12 }}>
+              <div className="flex items-center justify-between border-b border-white/[0.05] bg-black p-4">
                 <div>
                   <h4 className="text-[11px] font-black uppercase tracking-[0.16em] text-white">Chi tiết đơn hàng</h4>
                   <p className="mt-1 font-mono text-[10px] text-amber-300">{selectedBooking?.bookingCode || 'Đang tải...'}</p>
                 </div>
-                <button type="button" onClick={() => setSelectedBooking(null)} className="border border-neutral-800 p-2 text-neutral-400 hover:border-rose-500/50 hover:text-rose-300">
+                <button type="button" onClick={() => setSelectedBooking(null)} className="border border-white/[0.06] p-2 text-neutral-200 hover:border-rose-500/50 hover:text-rose-300">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -458,8 +458,8 @@ export default function AdminLoyaltyPanel({ ctx }) {
                   <Detail label="Diem da tieu" value={formatNumber(selectedBooking.loyaltyPointsRedeemed)} />
                   <Detail label="Giam gia" value={`${formatNumber(selectedBooking.discountAmount)} VND`} />
                   <Detail label="Thanh toan" value={`${formatNumber(selectedBooking.totalAmount)} VND`} />
-                  <div className="sm:col-span-2 border border-neutral-850 bg-black/40 p-3">
-                    <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">
+                  <div className="sm:col-span-2 border border-white/[0.05] bg-black/40 p-3">
+                    <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-neutral-300">
                       <FileText className="h-3.5 w-3.5" />
                       Ghe / bap nuoc
                     </div>
@@ -467,7 +467,7 @@ export default function AdminLoyaltyPanel({ ctx }) {
                       {(selectedBooking.seats || []).map((seat) => `${seat.rowLabel}${seat.seatNumber}`).join(', ') || 'Khong co ghe'}
                     </p>
                     {!!selectedBooking.foods?.length && (
-                      <p className="mt-2 text-neutral-500">{selectedBooking.foods.map((food) => `${food.name} x${food.quantity}`).join(', ')}</p>
+                      <p className="mt-2 text-neutral-300">{selectedBooking.foods.map((food) => `${food.name} x${food.quantity}`).join(', ')}</p>
                     )}
                   </div>
                 </div>
@@ -482,9 +482,12 @@ export default function AdminLoyaltyPanel({ ctx }) {
 
 function Detail({ label, value }) {
   return (
-    <div className="border border-neutral-850 bg-black/40 p-3">
-      <div className="text-[9px] font-black uppercase tracking-wider text-neutral-500">{label}</div>
+    <div className="border border-white/[0.05] bg-black/40 p-3">
+      <div className="text-[9px] font-black uppercase tracking-wider text-neutral-300">{label}</div>
       <div className="mt-1 font-medium text-white">{value || 'Chưa có dữ liệu'}</div>
     </div>
   );
 }
+
+
+

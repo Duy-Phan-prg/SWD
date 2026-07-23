@@ -71,11 +71,11 @@ export default function AdminAuditPanel({ ctx }) {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-amber-500">Giám sát hệ thống</p>
-          <h2 className="mt-1 text-xl font-sans font-black uppercase tracking-wide text-white flex items-center gap-2">
+          <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-neutral-300">Giám sát hệ thống</p>
+          <h2 className="mt-1 text-sm font-sans font-black uppercase tracking-wide text-white flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-amber-500" /> Audit Log
           </h2>
-          <p className="mt-1 text-xs text-neutral-500">Ai đã làm gì trên hệ thống — ghi thật từ backend cho mọi thao tác quản trị.</p>
+          <p className="mt-1 text-xs text-neutral-300">Ai đã làm gì trên hệ thống — ghi thật từ backend cho mọi thao tác quản trị.</p>
         </div>
         <button
           onClick={() => loadLogs(page)}
@@ -95,7 +95,7 @@ export default function AdminAuditPanel({ ctx }) {
             className={`border px-3 py-1.5 text-[9px] font-sans font-black uppercase tracking-widest transition ${
               targetFilter === tab.value
                 ? 'border-amber-500/60 bg-amber-500/15 text-amber-300'
-                : 'border-white/10 bg-black text-neutral-400 hover:border-white/30 hover:text-white'
+                : 'border-white/10 bg-black text-neutral-200 hover:border-white/30 hover:text-white'
             }`}
           >
             {tab.label}
@@ -105,7 +105,7 @@ export default function AdminAuditPanel({ ctx }) {
 
       <div className="overflow-x-auto border border-white/10 bg-[#050505]">
         <table className="min-w-full divide-y divide-white/10 text-left text-xs font-sans">
-          <thead className="bg-[#0B0B0B] text-[9px] uppercase tracking-[0.15em] text-neutral-500 font-bold">
+          <thead className="bg-[#0B0B0B] text-[9px] uppercase tracking-[0.15em] text-neutral-300 font-bold">
             <tr>
               <th className="px-5 py-3.5">Thời gian</th>
               <th className="px-5 py-3.5">Người thực hiện</th>
@@ -116,19 +116,19 @@ export default function AdminAuditPanel({ ctx }) {
           </thead>
           <tbody className="divide-y divide-white/5 text-neutral-300">
             {isLoading ? (
-              <tr><td colSpan={5} className="px-5 py-12 text-center text-neutral-500">Đang tải audit log…</td></tr>
+              <tr><td colSpan={5} className="px-5 py-12 text-center text-neutral-300">Đang tải audit log…</td></tr>
             ) : logs.length === 0 ? (
-              <tr><td colSpan={5} className="px-5 py-12 text-center text-neutral-500">Chưa có hoạt động nào được ghi nhận.</td></tr>
+              <tr><td colSpan={5} className="px-5 py-12 text-center text-neutral-300">Chưa có hoạt động nào được ghi nhận.</td></tr>
             ) : logs.map((log) => {
               const meta = getActionMeta(log.action);
               return (
                 <tr key={log.id} className="transition hover:bg-white/5">
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-neutral-400">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-neutral-200">
                     {log.createdAt ? new Date(log.createdAt).toLocaleString('vi-VN') : '—'}
                   </td>
                   <td className="px-5 py-3.5">
                     <p className="font-bold text-white">{log.actorName || '—'}</p>
-                    <p className="text-[10px] text-neutral-500">{log.actorEmail || 'hệ thống'}</p>
+                    <p className="text-[10px] text-neutral-300">{log.actorEmail || 'hệ thống'}</p>
                   </td>
                   <td className="px-5 py-3.5">
                     <span className={`inline-block border px-2 py-1 text-[9px] font-black uppercase tracking-wider ${meta.className}`}>
@@ -138,7 +138,7 @@ export default function AdminAuditPanel({ ctx }) {
                   <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[11px]">
                     {log.targetType}{log.targetId ? ` #${log.targetId}` : ''}
                   </td>
-                  <td className="max-w-md truncate px-5 py-3.5 text-neutral-400" title={log.detail}>{log.detail || '—'}</td>
+                  <td className="max-w-md truncate px-5 py-3.5 text-neutral-200" title={log.detail}>{log.detail || '—'}</td>
                 </tr>
               );
             })}
@@ -146,7 +146,7 @@ export default function AdminAuditPanel({ ctx }) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] font-sans font-black uppercase tracking-widest text-neutral-500">
+      <div className="flex items-center justify-between text-[10px] font-sans font-black uppercase tracking-widest text-neutral-300">
         <span>{totalItems} bản ghi · Trang {page + 1}/{totalPages}</span>
         <div className="flex gap-2">
           <button

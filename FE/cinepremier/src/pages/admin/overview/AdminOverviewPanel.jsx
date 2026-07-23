@@ -43,7 +43,7 @@ const ChartTooltip = ({ active, payload, label, formatter }) => {
     <div style={{
       background: "rgba(9,9,11,0.96)",
       border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: 8,
+      borderRadius: 0,
       padding: "10px 14px",
       fontFamily: "Inter, sans-serif",
       boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
@@ -65,7 +65,7 @@ const EmptyChart = ({ message = "Chưa có dữ liệu trong khoảng này" }) =
   <div style={{
     height: 180, display: "flex", flexDirection: "column",
     alignItems: "center", justifyContent: "center", gap: 10,
-    border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 8,
+    border: "1px dashed rgba(255,255,255,0.06)",
   }}>
     <Activity size={22} color="rgba(255,255,255,0.12)" />
     <span style={{ color: "rgba(255,255,255,0.18)", fontSize: 10, fontFamily: "Inter, sans-serif", letterSpacing: "0.12em", textTransform: "uppercase" }}>
@@ -76,45 +76,33 @@ const EmptyChart = ({ message = "Chưa có dữ liệu trong khoảng này" }) =
 
 const KpiCard = ({ label, value, icon: Icon, accent, sub, delay = 0 }) => (
   <motion.div
-    initial={{ opacity: 0, y: 16 }}
+    initial={{ opacity: 0, y: 8 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4, delay }}
-    whileHover={{ y: -2 }}
+    transition={{ duration: 0.3, delay }}
     style={{
-      background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
-      border: "1px solid rgba(255,255,255,0.07)",
-      borderRadius: 12,
-      padding: "20px 22px",
+      border: "1px solid rgba(255,255,255,0.06)",
+      padding: "16px 18px",
       display: "flex",
       flexDirection: "column",
-      gap: 12,
+      gap: 10,
       position: "relative",
       overflow: "hidden",
-      backdropFilter: "blur(20px)",
-      cursor: "default",
-      transition: "box-shadow 0.25s, border-color 0.25s",
     }}
   >
-    <div style={{
-      position: "absolute", top: -30, right: -30,
-      width: 90, height: 90, borderRadius: "50%",
-      background: `radial-gradient(circle, ${accent}25 0%, transparent 70%)`,
-      pointerEvents: "none",
-    }} />
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: "Inter, sans-serif" }}>
+      <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
         {label}
       </span>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}18`, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${accent}30` }}>
-        <Icon size={14} color={accent} />
+      <div style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${accent}35`, background: `${accent}0f` }}>
+        <Icon size={12} color={accent} />
       </div>
     </div>
     <div>
-      <span style={{ display: "block", fontSize: 24, fontWeight: 800, color: "#fff", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em", lineHeight: 1 }}>
+      <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#fff", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em", lineHeight: 1 }}>
         {value}
       </span>
       {sub && (
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: "Inter, sans-serif", marginTop: 6, display: "block" }}>
+        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", fontFamily: "Inter, sans-serif", marginTop: 5, display: "block" }}>
           {sub}
         </span>
       )}
@@ -122,12 +110,12 @@ const KpiCard = ({ label, value, icon: Icon, accent, sub, delay = 0 }) => (
   </motion.div>
 );
 
-const SectionHeader = ({ eyebrow, title, color = "#f59e0b" }) => (
-  <div style={{ marginBottom: 20 }}>
-    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color, fontFamily: "Inter, sans-serif" }}>
+const SectionHeader = ({ eyebrow, title }) => (
+  <div style={{ marginBottom: 16 }}>
+    <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>
       {eyebrow}
     </span>
-    <h3 style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)", fontFamily: "Inter, sans-serif", letterSpacing: "-0.01em" }}>
+    <h3 style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "Inter, sans-serif" }}>
       {title}
     </h3>
   </div>
@@ -135,11 +123,8 @@ const SectionHeader = ({ eyebrow, title, color = "#f59e0b" }) => (
 
 const ChartCard = ({ children, style = {} }) => (
   <div style={{
-    background: "linear-gradient(160deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.008) 100%)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 14,
-    padding: "22px 22px 18px",
-    backdropFilter: "blur(20px)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    padding: "18px 20px 16px",
     ...style,
   }}>
     {children}
@@ -294,21 +279,19 @@ export default function AdminOverviewPanel({ ctx }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #f59e0b, #d97706)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px #f59e0b44" }}>
-              <BarChart2 size={18} color="#fff" />
+            <div style={{ width: 32, height: 32, border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <BarChart2 size={15} />
             </div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.14em", textTransform: "uppercase", fontFamily: "Inter, sans-serif" }}>
-                  Analytics Dashboard
-                </p>
-              </div>
-              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+              <p style={{ margin: 0, fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.3)", letterSpacing: "0.2em", textTransform: "uppercase", fontFamily: "monospace" }}>
+                Analytics Dashboard
+              </p>
+              <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff", fontFamily: "Inter, sans-serif", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
                 Tổng quan hệ thống
               </h1>
             </div>
           </div>
-          <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+          <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
             Cập nhật lần cuối: {lastRefresh.toLocaleTimeString("vi-VN")}
             {isLoadingReports && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#f59e0b", marginLeft: 6 }}>
@@ -321,8 +304,8 @@ export default function AdminOverviewPanel({ ctx }) {
           </p>
         </div>
 
-        {/* Range presets pill */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 4, border: "1px solid rgba(255,255,255,0.06)" }}>
+        {/* Range presets */}
+        <div style={{ display: "flex", alignItems: "center", border: "1px solid rgba(255,255,255,0.06)" }}>
           {RANGE_PRESETS.map((preset) => {
             const isActive = rangeDays === preset.days;
             return (
@@ -331,12 +314,12 @@ export default function AdminOverviewPanel({ ctx }) {
                 type="button"
                 onClick={() => { playPulseSound?.(500, "sine", 0.03); setRangeDays(preset.days); }}
                 style={{
-                  padding: "8px 20px", fontSize: 11, fontWeight: 700,
-                  fontFamily: "Inter, sans-serif", borderRadius: 8, border: "none",
-                  cursor: "pointer", transition: "all 0.2s",
-                  background: isActive ? "linear-gradient(135deg, #f59e0b, #d97706)" : "transparent",
-                  color: isActive ? "#000" : "rgba(255,255,255,0.35)",
-                  boxShadow: isActive ? "0 4px 14px #f59e0b44" : "none",
+                  padding: "7px 18px", fontSize: 10, fontWeight: 700,
+                  fontFamily: "Inter, sans-serif", border: "none",
+                  borderRight: "1px solid rgba(255,255,255,0.06)",
+                  cursor: "pointer", transition: "all 0.15s",
+                  background: isActive ? "rgba(245,158,11,0.1)" : "transparent",
+                  color: isActive ? "#f59e0b" : "rgba(255,255,255,0.3)",
                 }}
               >
                 {preset.label}
@@ -370,10 +353,10 @@ export default function AdminOverviewPanel({ ctx }) {
       {/* ── Loyalty Health ── */}
       <ChartCard>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
-          <SectionHeader eyebrow="Loyalty Health" title="Tổng quan điểm thành viên" color="#10b981" />
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 20, padding: "4px 12px" }}>
-            <Shield size={10} color="#10b981" />
-            <span style={{ fontSize: 9, fontWeight: 700, color: "#10b981", fontFamily: "Inter, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" }}>Active</span>
+          <SectionHeader eyebrow="Loyalty Health" title="Tổng quan điểm thành viên" />
+          <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid rgba(16,185,129,0.25)", background: "rgba(16,185,129,0.07)", padding: "3px 10px" }}>
+            <Shield size={9} />
+            <span style={{ fontSize: 8, fontWeight: 800, color: "#10b981", fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase" }}>Active</span>
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
@@ -385,7 +368,7 @@ export default function AdminOverviewPanel({ ctx }) {
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
         {/* Top movies bar */}
         <ChartCard>
-          <SectionHeader eyebrow="Xếp hạng phát hành" title="Top phim theo doanh thu" color="#f59e0b" />
+          <SectionHeader eyebrow="Xếp hạng phát hành" title="Top phim theo doanh thu" />
           {revenueByMovie.length === 0 ? <EmptyChart /> : (
             <ResponsiveContainer width="100%" height={Math.max(200, revenueByMovie.length * 44)}>
               <BarChart data={revenueByMovie} layout="vertical" margin={{ top: 4, right: 70, bottom: 4, left: 4 }}>
@@ -399,7 +382,7 @@ export default function AdminOverviewPanel({ ctx }) {
                 <XAxis type="number" tickFormatter={fmtCompact} tick={TICK_STYLE} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" width={140} tick={{ ...TICK_STYLE, fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTooltip formatter={(e) => `${fmtVND(e.payload.revenue)} · ${e.payload.tickets} vé`} />} />
-                <Bar dataKey="revenue" name="Doanh thu" fill="url(#barGradRev)" barSize={16} radius={[0, 6, 6, 0]}>
+                <Bar dataKey="revenue" name="Doanh thu" fill="url(#barGradRev)" barSize={16} radius={[0, 2, 2, 0]}>
                   <LabelList dataKey="revenue" position="right" formatter={fmtCompact} style={{ fill: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "Inter, sans-serif" }} />
                 </Bar>
               </BarChart>
@@ -409,7 +392,7 @@ export default function AdminOverviewPanel({ ctx }) {
 
         {/* Donut */}
         <ChartCard>
-          <SectionHeader eyebrow="Phân bổ sản lượng" title="Cơ cấu vé theo phim" color="#a855f7" />
+          <SectionHeader eyebrow="Phân bổ sản lượng" title="Cơ cấu vé theo phim" />
           {ticketShare.length === 0 ? <EmptyChart /> : (
             <div style={{ position: "relative" }}>
               <ResponsiveContainer width="100%" height={250}>
@@ -443,8 +426,8 @@ export default function AdminOverviewPanel({ ctx }) {
       {/* ── Occupancy trend (Ngày / Tuần / Tháng) ── */}
       <ChartCard>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <SectionHeader eyebrow="Hiệu suất hạ tầng" title={`Tỷ lệ lấp đầy theo ${GROUP_LABELS[occupancyGroupBy]} (${rangeDays} ngày gần nhất)`} color="#10b981" />
-          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3, border: "1px solid rgba(255,255,255,0.06)" }}>
+          <SectionHeader eyebrow="Hiệu suất hạ tầng" title={`Tỷ lệ lấp đầy theo ${GROUP_LABELS[occupancyGroupBy]} (${rangeDays} ngày gần nhất)`} />
+          <div style={{ display: "flex", alignItems: "center", border: "1px solid rgba(255,255,255,0.06)" }}>
             {[
               { key: "day", label: "Ngày" },
               { key: "week", label: "Tuần" },
@@ -457,12 +440,12 @@ export default function AdminOverviewPanel({ ctx }) {
                   type="button"
                   onClick={() => { playPulseSound?.(510, "sine", 0.03); setOccupancyGroupBy(option.key); }}
                   style={{
-                    padding: "6px 14px", fontSize: 10, fontWeight: 700,
-                    fontFamily: "Inter, sans-serif", borderRadius: 7, border: "none",
-                    cursor: "pointer", transition: "all 0.2s",
-                    background: isActive ? "linear-gradient(135deg, #10b981, #059669)" : "transparent",
-                    color: isActive ? "#000" : "rgba(255,255,255,0.35)",
-                    boxShadow: isActive ? "0 4px 12px #10b98144" : "none",
+                    padding: "6px 14px", fontSize: 9, fontWeight: 700,
+                    fontFamily: "Inter, sans-serif", border: "none",
+                    borderRight: "1px solid rgba(255,255,255,0.06)",
+                    cursor: "pointer", transition: "all 0.15s",
+                    background: isActive ? "rgba(16,185,129,0.1)" : "transparent",
+                    color: isActive ? "#10b981" : "rgba(255,255,255,0.3)",
                   }}
                 >
                   {option.label}
@@ -493,40 +476,32 @@ export default function AdminOverviewPanel({ ctx }) {
         )}
       </ChartCard>
 
-      {/* ── Audit Log Terminal ── */}
-      <div style={{ background: "linear-gradient(160deg, rgba(0,0,0,0.8) 0%, rgba(9,9,11,0.97) 100%)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden", backdropFilter: "blur(20px)" }}>
-        {/* macOS-style top bar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", gap: 6 }}>
-              {["#f43f5e", "#f59e0b", "#10b981"].map((c) => (
-                <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c, opacity: 0.8 }} />
-              ))}
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", fontFamily: "Inter, sans-serif", letterSpacing: "0.08em" }}>SYSTEM AUDIT LOG</span>
+      {/* ── Audit Log ── */}
+      <div style={{ border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Cpu size={10} color="rgba(255,255,255,0.3)" />
+            <span style={{ fontSize: 8, fontWeight: 800, color: "rgba(255,255,255,0.3)", fontFamily: "monospace", letterSpacing: "0.2em", textTransform: "uppercase" }}>System Audit Log</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Cpu size={10} color="#10b981" />
-            <span style={{ fontSize: 9, color: "#10b981", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.12em" }}>LIVE</span>
-            <motion.div animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.2, repeat: Infinity }} style={{ width: 5, height: 5, borderRadius: "50%", background: "#10b981" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.4, repeat: Infinity }} style={{ width: 5, height: 5, background: "#10b981" }} />
+            <span style={{ fontSize: 8, color: "#10b981", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.15em" }}>LIVE</span>
           </div>
         </div>
-
-        {/* Log body */}
-        <div style={{ padding: "14px 20px", maxHeight: 220, overflowY: "auto" }} id="terminal-audit-box">
+        <div style={{ padding: "10px 16px", maxHeight: 220, overflowY: "auto" }} id="terminal-audit-box">
           {effectiveAuditLogs.length === 0 && (
-            <p style={{ margin: 0, padding: "12px 0", fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "Fira Code, Courier New, monospace" }}>
-              Chưa có hoạt động quản trị nào được ghi nhận. Thao tác tạo/sửa/xóa phim, suất chiếu, bắp nước sẽ hiện tại đây.
+            <p style={{ margin: 0, padding: "10px 0", fontSize: 10, color: "rgba(255,255,255,0.2)", fontFamily: "monospace" }}>
+              Chưa có hoạt động quản trị nào được ghi nhận.
             </p>
           )}
           {effectiveAuditLogs.map((log) => (
-            <div key={log.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.03)", fontFamily: "Fira Code, Courier New, monospace" }}>
-              <div style={{ display: "flex", gap: 8, fontSize: 11, flexWrap: "wrap" }}>
-                <span style={{ color: "#52525b", flexShrink: 0 }}>[{log.time}]</span>
+            <div key={log.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.03)", fontFamily: "monospace" }}>
+              <div style={{ display: "flex", gap: 8, fontSize: 10, flexWrap: "wrap" }}>
+                <span style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0 }}>[{log.time}]</span>
                 <span style={{ color: logColor(log.action), fontWeight: 700, flexShrink: 0 }}>{log.action}:</span>
-                <span style={{ color: "rgba(255,255,255,0.7)" }}>{log.target}</span>
+                <span style={{ color: "rgba(255,255,255,0.6)" }}>{log.target}</span>
               </div>
-              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", flexShrink: 0, background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 8px", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              <span style={{ fontSize: 8, color: "rgba(255,255,255,0.2)", flexShrink: 0, border: "1px solid rgba(255,255,255,0.06)", padding: "2px 7px", fontFamily: "monospace", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                 {log.user}
               </span>
             </div>

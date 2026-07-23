@@ -449,7 +449,7 @@ export default function AdminMoviesPanel({ ctx }) {
   };
 
   const renderImagePreview = (src, label, className = 'h-14 w-14') => (
-    <div className={`shrink-0 overflow-hidden border border-neutral-800 bg-neutral-950 ${className}`}>
+    <div className={`shrink-0 overflow-hidden border border-white/[0.06] bg-neutral-950 ${className}`}>
       {src ? (
         <img
           src={src}
@@ -458,7 +458,7 @@ export default function AdminMoviesPanel({ ctx }) {
           referrerPolicy="no-referrer"
         />
       ) : (
-        <div className="grid h-full w-full place-items-center text-neutral-700">
+        <div className="grid h-full w-full place-items-center text-neutral-300">
           <ImageUp className="h-4 w-4" />
         </div>
       )}
@@ -466,7 +466,7 @@ export default function AdminMoviesPanel({ ctx }) {
   );
 
   const renderVideoPreview = (src) => (
-    <div className="h-11 w-20 shrink-0 overflow-hidden border border-neutral-800 bg-neutral-950">
+    <div className="h-11 w-20 shrink-0 overflow-hidden border border-white/[0.06] bg-neutral-950">
       {src ? (
         <video
           src={src}
@@ -476,7 +476,7 @@ export default function AdminMoviesPanel({ ctx }) {
           preload="metadata"
         />
       ) : (
-        <div className="grid h-full w-full place-items-center text-neutral-700">
+        <div className="grid h-full w-full place-items-center text-neutral-300">
           <Video className="h-4 w-4" />
         </div>
       )}
@@ -497,11 +497,11 @@ export default function AdminMoviesPanel({ ctx }) {
         >
 
           {/* Filter tools */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-[#070707] border border-neutral-850 p-4">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-[#070707] border border-white/[0.05] p-4">
 
             {/* Custom input search */}
             <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-neutral-600" />
+              <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-neutral-200" />
               <input
                 type="text"
                 placeholder="Tìm kiếm phim theo tiêu đề hoặc đạo diễn..."
@@ -510,7 +510,7 @@ export default function AdminMoviesPanel({ ctx }) {
                   setSearchQuery(e.target.value);
                   setAdminMoviePagination((prev) => ({ ...prev, page: 0 }));
                 }}
-                className="w-full bg-black border border-neutral-800 focus:border-amber-400 p-2.5 pl-10 text-xs text-white focus:outline-none focus:ring-0 placeholder-neutral-600 font-sans"
+                className="w-full bg-black border border-white/[0.06] focus:border-amber-400 p-2.5 pl-10 text-xs text-white focus:outline-none focus:ring-0 placeholder:text-neutral-400 font-sans"
                 id="search-all-movies-input"
               />
             </div>
@@ -523,7 +523,7 @@ export default function AdminMoviesPanel({ ctx }) {
                   setAdminGenreFilter(event.target.value);
                   setAdminMoviePagination((prev) => ({ ...prev, page: 0 }));
                 }}
-                className="border border-neutral-800 bg-black px-3 py-2 text-[9.5px] font-bold uppercase text-neutral-300 focus:border-amber-400 focus:outline-none"
+                className="border border-white/[0.06] bg-black px-3 py-2 text-[9.5px] font-bold uppercase text-neutral-300 focus:border-amber-400 focus:outline-none"
                 aria-label="Lọc phim theo thể loại"
               >
                 <option value="">TẤT CẢ THỂ LOẠI</option>
@@ -545,7 +545,7 @@ export default function AdminMoviesPanel({ ctx }) {
                   }}
                   className={`px-3 py-2 text-[9.5px] uppercase font-bold transition-all ${filmFilter === filter.id
                     ? 'bg-amber-500 text-black font-extrabold'
-                    : 'bg-black text-neutral-400 border border-neutral-800 hover:border-neutral-700'
+                    : 'bg-black text-neutral-200 border border-white/[0.06] hover:border-white/[0.08]'
                     }`}
                 >
                   {filter.name}
@@ -589,7 +589,7 @@ export default function AdminMoviesPanel({ ctx }) {
                       resetMovieForm();
                       setShowMovieForm(false);
                     }}
-                    className="text-xs text-neutral-500 hover:text-white uppercase font-bold"
+                    className="text-xs text-neutral-300 hover:text-white uppercase font-bold"
                   >
                     HỦY THAO TÁC
                   </button>
@@ -598,38 +598,38 @@ export default function AdminMoviesPanel({ ctx }) {
                 <form onSubmit={handleCreateMovieSubmit} className="space-y-4 text-xs font-sans">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">Tên tác phẩm (Tiếng Việt viết Hoa)</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black block">Tên tác phẩm (Tiếng Việt viết Hoa)</label>
                       <input
                         type="text"
                         placeholder="VD: CHIẾN BINH ÁNH SÁNG (tối đa 50 ký tự)"
                         maxLength={50}
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: uppercaseMovieTitle(e.target.value) })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">Tên tiếng Anh hoặc tiêu đề gốc</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black block">Tên tiếng Anh hoặc tiêu đề gốc</label>
                       <input
                         type="text"
                         placeholder="VD: Dawn of Light (tối đa 30 ký tự)"
                         maxLength={30}
                         value={formData.englishTitle}
                         onChange={(e) => setFormData({ ...formData, englishTitle: e.target.value })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-1.5 md:col-span-2">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Đạo diễn</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Đạo diễn</label>
                       <div className="relative">
                         <button
                           type="button"
                           onClick={() => setIsDirectorDropdownOpen((open) => !open)}
-                          className="flex min-h-11 w-full items-center justify-between gap-3 border border-neutral-800 bg-black px-3 py-2 text-left text-xs text-white transition hover:border-amber-500/60 focus:outline-none focus:border-amber-400"
+                          className="flex min-h-11 w-full items-center justify-between gap-3 border border-white/[0.06] bg-black px-3 py-2 text-left text-xs text-white transition hover:border-amber-500/60 focus:outline-none focus:border-amber-400"
                         >
                           <span className="min-w-0 flex-1">
                             {selectedDirectorNames.length ? (
@@ -640,13 +640,13 @@ export default function AdminMoviesPanel({ ctx }) {
                                   </span>
                                 ))}
                                 {selectedDirectorNames.length > 4 && (
-                                  <span className="border border-neutral-700 bg-black px-2 py-1 text-[10px] font-bold text-zinc-400">
+                                  <span className="border border-white/[0.08] bg-black px-2 py-1 text-[10px] font-bold text-neutral-200">
                                     +{selectedDirectorNames.length - 4}
                                   </span>
                                 )}
                               </span>
                             ) : (
-                              <span className="text-zinc-500">Chọn hoặc nhập đạo diễn</span>
+                              <span className="text-neutral-300">Chọn hoặc nhập đạo diễn</span>
                             )}
                           </span>
                           <ChevronDown className={`h-4 w-4 shrink-0 text-amber-400 transition ${isDirectorDropdownOpen ? 'rotate-180' : ''}`} />
@@ -654,9 +654,9 @@ export default function AdminMoviesPanel({ ctx }) {
 
                         {isDirectorDropdownOpen && (
                           <div className="absolute left-0 right-0 z-40 mt-2 border border-amber-500/40 bg-[#050505] shadow-2xl shadow-black/60">
-                            <div className="border-b border-neutral-850 p-2">
-                              <div className="flex items-center gap-2 border border-neutral-800 bg-black px-2">
-                                <Search className="h-3.5 w-3.5 text-neutral-500" />
+                            <div className="border-b border-white/[0.05] p-2">
+                              <div className="flex items-center gap-2 border border-white/[0.06] bg-black px-2">
+                                <Search className="h-3.5 w-3.5 text-neutral-300" />
                                 <input
                                   type="text"
                                   value={directorPickerSearch}
@@ -667,7 +667,7 @@ export default function AdminMoviesPanel({ ctx }) {
                                     addDirectorName(directorPickerSearch);
                                   }}
                                   placeholder="Tìm gần đúng hoặc nhập tên đạo diễn rồi Enter..."
-                                  className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-neutral-600 focus:outline-none"
+                                  className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-neutral-200 focus:outline-none"
                                   autoFocus
                                 />
                               </div>
@@ -688,11 +688,11 @@ export default function AdminMoviesPanel({ ctx }) {
                                 return (
                                   <div
                                     key={directorName}
-                                    className={`mb-1 grid grid-cols-[1fr_auto] items-center gap-2 border px-2 py-2 last:mb-0 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-neutral-850 bg-neutral-950'}`}
+                                    className={`mb-1 grid grid-cols-[1fr_auto] items-center gap-2 border px-2 py-2 last:mb-0 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/[0.05] bg-neutral-950'}`}
                                   >
                                     <button type="button" onClick={() => isSelected ? removeDirectorName(directorName) : addDirectorName(directorName)} className="min-w-0 text-left">
                                       <span className="flex items-center gap-2">
-                                        <span className={`grid h-4 w-4 shrink-0 place-items-center border ${isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-transparent'}`}>
+                                        <span className={`grid h-4 w-4 shrink-0 place-items-center border ${isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/[0.08] text-transparent'}`}>
                                           <Check className="h-3 w-3" />
                                         </span>
                                         <span className="block truncate text-xs font-bold text-white">{directorName}</span>
@@ -710,7 +710,7 @@ export default function AdminMoviesPanel({ ctx }) {
                                   </div>
                                 );
                               }) : (
-                                <p className="px-2 py-6 text-center text-[10px] text-neutral-500">Không tìm thấy đạo diễn phù hợp.</p>
+                                <p className="px-2 py-6 text-center text-[10px] text-neutral-300">Không tìm thấy đạo diễn phù hợp.</p>
                               )}
                             </div>
                           </div>
@@ -719,9 +719,9 @@ export default function AdminMoviesPanel({ ctx }) {
                       {selectedDirectorNames.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
                           {selectedDirectorNames.map((directorName) => (
-                            <span key={directorName} className="inline-flex items-center gap-1.5 border border-neutral-700 bg-neutral-950 px-2 py-1 text-[10px] font-bold text-zinc-300">
+                            <span key={directorName} className="inline-flex items-center gap-1.5 border border-white/[0.08] bg-neutral-950 px-2 py-1 text-[10px] font-bold text-neutral-200">
                               {directorName}
-                              <button type="button" onClick={() => removeDirectorName(directorName)} className="text-zinc-500 hover:text-rose-300">×</button>
+                              <button type="button" onClick={() => removeDirectorName(directorName)} className="text-neutral-300 hover:text-rose-300">×</button>
                             </span>
                           ))}
                         </div>
@@ -729,17 +729,17 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Thể loại (Ngăn nhau bởi dấu phẩy)</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Thể loại (Ngăn nhau bởi dấu phẩy)</label>
                       <input
                         type="text"
                         placeholder="Chọn ít nhất 1 thể loại bên dưới"
                         value={formData.genre}
                         readOnly
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
                       />
-                      <div className="mt-2 min-h-[42px] max-h-28 overflow-y-auto bg-black border border-neutral-800 p-2">
+                      <div className="mt-2 min-h-[42px] max-h-28 overflow-y-auto bg-black border border-white/[0.06] p-2">
                         {isGenreLoading ? (
-                          <span className="text-[10px] text-neutral-500 font-mono">Đang tải thể loại...</span>
+                          <span className="text-[10px] text-neutral-300 font-mono">Đang tải thể loại...</span>
                         ) : genres.length > 0 ? (
                           <div className="flex flex-wrap gap-1.5">
                             {genres.map((genre) => {
@@ -751,7 +751,7 @@ export default function AdminMoviesPanel({ ctx }) {
                                   onClick={() => toggleMovieGenre(genre.id)}
                                   className={`px-2 py-1 text-[9px] uppercase font-bold border transition ${checked
                                     ? 'border-amber-400 bg-amber-500 text-black'
-                                    : 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white'
+                                    : 'border-white/[0.06] bg-neutral-950 text-neutral-200 hover:border-white/[0.12] hover:text-white'
                                     }`}
                                 >
                                   {genre.name}
@@ -766,7 +766,7 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Thời lượng (Số phút)</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Thời lượng (Số phút)</label>
                       <input
                         type="number"
                         placeholder="60 - 180 phút"
@@ -774,16 +774,16 @@ export default function AdminMoviesPanel({ ctx }) {
                         max={180}
                         value={formData.duration}
                         onChange={(e) => setFormData({ ...formData, duration: Number(e.target.value) })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Độ tuổi phân loại</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Độ tuổi phân loại</label>
                       <select
                         value={formData.ageRating}
                         onChange={(e) => setFormData({ ...formData, ageRating: e.target.value })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-bold"
                       >
                         <option value="P">P (Mọi lứa tuổi)</option>
                         <option value="T13">T13 (Dưới 13 hạn chế)</option>
@@ -795,7 +795,7 @@ export default function AdminMoviesPanel({ ctx }) {
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-sans font-bold uppercase tracking-[0.18em] text-neutral-400 block">Ngày bắt đầu chiếu</label>
+                      <label className="text-[10px] font-sans font-bold uppercase tracking-[0.18em] text-neutral-200 block">Ngày bắt đầu chiếu</label>
                       <input
                         type={focusedDateField === 'release' ? 'date' : 'text'}
                         lang="en-GB"
@@ -815,13 +815,13 @@ export default function AdminMoviesPanel({ ctx }) {
                           });
                         }}
                         placeholder="dd/mm/yyyy"
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
                       />
-                      <p className="text-[10px] font-sans font-bold text-neutral-500">Ngày phim bắt đầu được xếp suất chiếu. Định dạng dd/mm/yyyy, không chọn ngày quá khứ.</p>
+                      <p className="text-[10px] font-sans font-bold text-neutral-300">Ngày phim bắt đầu được xếp suất chiếu. Định dạng dd/mm/yyyy, không chọn ngày quá khứ.</p>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-sans font-bold uppercase tracking-[0.18em] text-neutral-400 block">Ngày kết thúc chiếu</label>
+                      <label className="text-[10px] font-sans font-bold uppercase tracking-[0.18em] text-neutral-200 block">Ngày kết thúc chiếu</label>
                       <input
                         type={focusedDateField === 'end' ? 'date' : 'text'}
                         lang="en-GB"
@@ -837,7 +837,7 @@ export default function AdminMoviesPanel({ ctx }) {
                           setFormData({ ...formData, endDate: nextEndDate });
                         }}
                         placeholder="dd/mm/yyyy"
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono [color-scheme:dark]"
                       />
                       {formData.releaseDate && formData.endDate && new Date(formData.endDate) < new Date(formData.releaseDate) ? (
                         <p className="text-[9px] font-sans font-bold text-rose-300">Ngày kết thúc chiếu phải bằng hoặc sau ngày bắt đầu chiếu.</p>
@@ -849,35 +849,35 @@ export default function AdminMoviesPanel({ ctx }) {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Ngôn ngữ</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Ngôn ngữ</label>
                       <input
                         type="text"
                         placeholder="VD: Tiếng Việt (tối đa 30 ký tự)"
                         maxLength={30}
                         value={formData.language}
                         onChange={(e) => setFormData({ ...formData, language: e.target.value })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Phụ đề</label>
+                      <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Phụ đề</label>
                       <input
                         type="text"
                         placeholder="VD: EN Sub (tối đa 30 ký tự)"
                         maxLength={30}
                         value={formData.subtitleLanguage}
                         onChange={(e) => setFormData({ ...formData, subtitleLanguage: e.target.value })}
-                        className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                        className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 space-y-2 border border-neutral-800 bg-black p-3">
+                    <div className="md:col-span-2 space-y-2 border border-white/[0.06] bg-black p-3">
                       <div className="flex items-center justify-between gap-3">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Chọn diễn viên và vai chính</label>
-                        <span className="text-[9px] text-neutral-500">
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Chọn diễn viên và vai chính</label>
+                        <span className="text-[9px] text-neutral-300">
                           {selectedActorIds.length} diễn viên, {selectedMainActorIds.length} vai chính
                         </span>
                       </div>
@@ -886,7 +886,7 @@ export default function AdminMoviesPanel({ ctx }) {
                         <button
                           type="button"
                           onClick={() => setIsActorDropdownOpen((open) => !open)}
-                          className="flex min-h-11 w-full items-center justify-between gap-3 border border-neutral-800 bg-neutral-950 px-3 py-2 text-left text-xs text-white transition hover:border-amber-500/60 focus:outline-none focus:border-amber-400"
+                          className="flex min-h-11 w-full items-center justify-between gap-3 border border-white/[0.06] bg-neutral-950 px-3 py-2 text-left text-xs text-white transition hover:border-amber-500/60 focus:outline-none focus:border-amber-400"
                         >
                           <span className="min-w-0 flex-1">
                             {selectedActors.length ? (
@@ -895,20 +895,20 @@ export default function AdminMoviesPanel({ ctx }) {
                                   const actorId = Number(actor.id);
                                   const isMain = selectedMainActorIds.includes(actorId);
                                   return (
-                                    <span key={actor.id} className={`inline-flex max-w-full items-center gap-1 border px-2 py-1 text-[10px] font-bold ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 bg-black text-zinc-200'}`}>
+                                    <span key={actor.id} className={`inline-flex max-w-full items-center gap-1 border px-2 py-1 text-[10px] font-bold ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/[0.08] bg-black text-neutral-300'}`}>
                                       <span className="truncate">{actor.name}</span>
                                       {isMain && <span className="text-[8px] uppercase">Main</span>}
                                     </span>
                                   );
                                 })}
                                 {selectedActors.length > 5 && (
-                                  <span className="border border-neutral-700 bg-black px-2 py-1 text-[10px] font-bold text-zinc-400">
+                                  <span className="border border-white/[0.08] bg-black px-2 py-1 text-[10px] font-bold text-neutral-200">
                                     +{selectedActors.length - 5}
                                   </span>
                                 )}
                               </span>
                             ) : (
-                              <span className="text-zinc-500">Chọn diễn viên cho phim</span>
+                              <span className="text-neutral-300">Chọn diễn viên cho phim</span>
                             )}
                           </span>
                           <ChevronDown className={`h-4 w-4 shrink-0 text-amber-400 transition ${isActorDropdownOpen ? 'rotate-180' : ''}`} />
@@ -916,15 +916,15 @@ export default function AdminMoviesPanel({ ctx }) {
 
                         {isActorDropdownOpen && (
                           <div className="absolute left-0 right-0 z-30 mt-2 border border-amber-500/40 bg-[#050505] shadow-2xl shadow-black/60">
-                            <div className="border-b border-neutral-850 p-2">
-                              <div className="flex items-center gap-2 border border-neutral-800 bg-black px-2">
-                                <Search className="h-3.5 w-3.5 text-neutral-500" />
+                            <div className="border-b border-white/[0.05] p-2">
+                              <div className="flex items-center gap-2 border border-white/[0.06] bg-black px-2">
+                                <Search className="h-3.5 w-3.5 text-neutral-300" />
                                 <input
                                   type="text"
                                   value={actorPickerSearch}
                                   onChange={(event) => setActorPickerSearch(event.target.value)}
                                   placeholder="Tìm gần đúng tên diễn viên, tiểu sử hoặc ID..."
-                                  className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-neutral-600 focus:outline-none"
+                                  className="h-9 min-w-0 flex-1 bg-transparent text-xs text-white placeholder:text-neutral-200 focus:outline-none"
                                   autoFocus
                                 />
                               </div>
@@ -938,23 +938,23 @@ export default function AdminMoviesPanel({ ctx }) {
                                 return (
                                   <div
                                     key={actor.id}
-                                    className={`mb-1 grid grid-cols-[1fr_auto_auto] items-center gap-2 border px-2 py-2 last:mb-0 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-neutral-850 bg-neutral-950'}`}
+                                    className={`mb-1 grid grid-cols-[1fr_auto_auto] items-center gap-2 border px-2 py-2 last:mb-0 ${isSelected ? 'border-amber-500/50 bg-amber-500/10' : 'border-white/[0.05] bg-neutral-950'}`}
                                   >
                                     <button type="button" onClick={() => toggleMovieActor(actorId)} className="min-w-0 text-left">
                                       <span className="flex items-center gap-2">
-                                        <span className={`grid h-4 w-4 shrink-0 place-items-center border ${isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-transparent'}`}>
+                                        <span className={`grid h-4 w-4 shrink-0 place-items-center border ${isSelected ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/[0.08] text-transparent'}`}>
                                           <Check className="h-3 w-3" />
                                         </span>
                                         <span className="min-w-0">
                                           <span className="block truncate text-xs font-bold text-white">{actor.name}</span>
-                                          <span className="block truncate text-[9px] text-neutral-500">#{actor.id} · {actor.movieCount || 0} phim</span>
+                                          <span className="block truncate text-[9px] text-neutral-300">#{actor.id} · {actor.movieCount || 0} phim</span>
                                         </span>
                                       </span>
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => toggleMovieMainActor(actorId)}
-                                      className={`h-7 px-2 text-[9px] font-black uppercase border ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 text-neutral-400 hover:border-amber-400 hover:text-amber-300'}`}
+                                      className={`h-7 px-2 text-[9px] font-black uppercase border ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/[0.08] text-neutral-200 hover:border-amber-400 hover:text-amber-300'}`}
                                     >
                                       Vai chính
                                     </button>
@@ -971,7 +971,7 @@ export default function AdminMoviesPanel({ ctx }) {
                                   </div>
                                 );
                               }) : (
-                                <p className="px-2 py-6 text-center text-[10px] text-neutral-500">Không tìm thấy diễn viên phù hợp.</p>
+                                <p className="px-2 py-6 text-center text-[10px] text-neutral-300">Không tìm thấy diễn viên phù hợp.</p>
                               )}
                             </div>
                           </div>
@@ -984,9 +984,9 @@ export default function AdminMoviesPanel({ ctx }) {
                             const actorId = Number(actor.id);
                             const isMain = selectedMainActorIds.includes(actorId);
                             return (
-                              <span key={actor.id} className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-bold ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-neutral-700 bg-neutral-950 text-zinc-300'}`}>
+                              <span key={actor.id} className={`inline-flex items-center gap-1.5 border px-2 py-1 text-[10px] font-bold ${isMain ? 'border-amber-400 bg-amber-400 text-black' : 'border-white/[0.08] bg-neutral-950 text-neutral-200'}`}>
                                 {actor.name}
-                                <button type="button" onClick={() => toggleMovieActor(actorId)} className={isMain ? 'text-black/70 hover:text-black' : 'text-zinc-500 hover:text-rose-300'}>×</button>
+                                <button type="button" onClick={() => toggleMovieActor(actorId)} className={isMain ? 'text-black/70 hover:text-black' : 'text-neutral-300 hover:text-rose-300'}>×</button>
                               </span>
                             );
                           })}
@@ -994,21 +994,21 @@ export default function AdminMoviesPanel({ ctx }) {
                       )}
                     </div>
 
-                    {/* <div className="space-y-2 border border-neutral-800 bg-black p-3">
+                    {/* <div className="space-y-2 border border-white/[0.06] bg-black p-3">
                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2">
                         <input
                           type="text"
                           placeholder="Tên actor"
                           value={actorForm.name}
                           onChange={(e) => setActorForm({ ...actorForm, name: e.target.value })}
-                          className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                          className="bg-neutral-950 border border-white/[0.06] p-2 text-xs text-white focus:outline-none focus:border-amber-400"
                         />
                         <input
                           type="text"
                           placeholder="Tiểu sử"
                           value={actorForm.biography}
                           onChange={(e) => setActorForm({ ...actorForm, biography: e.target.value })}
-                          className="bg-neutral-950 border border-neutral-800 p-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                          className="bg-neutral-950 border border-white/[0.06] p-2 text-xs text-white focus:outline-none focus:border-amber-400"
                         />
                         <label className={`flex cursor-pointer items-center justify-center gap-2 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black ${isActorImageUploading ? 'pointer-events-none opacity-60' : ''}`}>
                           {isActorImageUploading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
@@ -1026,15 +1026,15 @@ export default function AdminMoviesPanel({ ctx }) {
                         {isActorImageUploading ? 'Đang tải ảnh actor...' : isActorSaving ? 'Đang tạo actor...' : 'Tạo actor và gán ID vào phim'}
                       </button>
                       {createdActors.length > 0 && (
-                        <div className="text-[9px] text-neutral-400 font-mono">
+                        <div className="text-[9px] text-neutral-200 font-mono">
                           Actor vừa tạo: {createdActors.slice(0, 3).map((actor) => `${actor.name}#${actor.id}`).join(', ')}
                         </div>
                       )}
                     </div> */}
 
-                    <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-3 gap-3 border border-neutral-850 bg-neutral-950/40 p-3">
+                    <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-3 gap-3 border border-white/[0.05] bg-neutral-950/40 p-3">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Trailer *</label>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Trailer *</label>
                         <div className="flex items-center gap-2">
                           <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isTrailerUploading ? 'pointer-events-none opacity-60' : ''}`}>
                             {isTrailerUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <Video className="h-3 w-3 shrink-0" />}
@@ -1048,11 +1048,11 @@ export default function AdminMoviesPanel({ ctx }) {
                           </label>
                           {renderVideoPreview(formData.trailerUrl)}
                         </div>
-                        <p className="text-[8.5px] text-neutral-500">MP4, WEBM, MOV.</p>
+                        <p className="text-[8.5px] text-neutral-300">MP4, WEBM, MOV.</p>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Poster đứng *</label>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Poster đứng *</label>
                         <div className="flex items-center gap-2">
                           <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isPosterUploading ? 'pointer-events-none opacity-60' : ''}`}>
                             {isPosterUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <ImageUp className="h-3 w-3 shrink-0" />}
@@ -1069,7 +1069,7 @@ export default function AdminMoviesPanel({ ctx }) {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 block">Banner ngang *</label>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 block">Banner ngang *</label>
                         <div className="flex items-center gap-2">
                           <label className={`flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border border-amber-500/40 bg-black px-2 text-[9px] font-black uppercase tracking-wider text-amber-300 transition hover:bg-amber-500 hover:text-black ${isBannerUploading ? 'pointer-events-none opacity-60' : ''}`}>
                             {isBannerUploading ? <RefreshCw className="h-3 w-3 animate-spin shrink-0" /> : <ImageUp className="h-3 w-3 shrink-0" />}
@@ -1088,14 +1088,14 @@ export default function AdminMoviesPanel({ ctx }) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-wider text-[#ffff] block">Tóm tắt cốt truyện cốt lõi</label>
+                    <label className="text-[10px] uppercase tracking-wider text-neutral-200 block">Tóm tắt cốt truyện cốt lõi</label>
                     <textarea
                       rows={3}
                       maxLength={1000}
                       value={formData.synopsis}
                       onChange={(e) => setFormData({ ...formData, synopsis: e.target.value })}
                       placeholder="Tóm tắt nội dung phim, tối đa 1000 ký tự"
-                      className="w-full bg-black border border-neutral-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 leading-relaxed"
+                      className="w-full bg-black border border-white/[0.06] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400 leading-relaxed"
                     />
                   </div>
 
@@ -1116,10 +1116,10 @@ export default function AdminMoviesPanel({ ctx }) {
           </AnimatePresence>
 
           {/* LIST OF MOVIES IN DATABASE - Pristine table layout */}
-          <div className="border border-neutral-850 bg-neutral-950 overflow-x-auto shadow-md">
+          <div className="border border-white/[0.05] bg-neutral-950 overflow-x-auto shadow-md">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
-                <tr className="border-b border-neutral-850 bg-black text-[#7E8B93] text-[9.5px] uppercase font-bold tracking-wider">
+                <tr className="border-b border-white/[0.05] bg-black text-neutral-300 text-[9.5px] uppercase font-bold tracking-wider">
                   <th className="py-3 px-4">Hình ảnh</th>
                   <th className="py-3 px-4">Tên phim & Thời lượng</th>
                   <th className="py-3 px-4">Thể loại</th>
@@ -1128,30 +1128,30 @@ export default function AdminMoviesPanel({ ctx }) {
                   <th className="py-3 px-4 text-right">Thao tác dữ liệu</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-900 text-xs">
+              <tbody className="divide-y divide-white/[0.03] text-xs">
                 {filteredMovies.map(mv => (
-                  <tr key={mv.id} className="hover:bg-neutral-900/35 transition-all">
+                  <tr key={mv.id} className="hover:bg-white/[0.02] transition-all">
                     <td className="py-3.5 px-4 shrink-0">
                       <img
                         src={mv.posterUrl}
                         alt={mv.title}
-                        className="w-10 h-14 object-cover border border-zinc-800"
+                        className="w-10 h-14 object-cover border border-white/[0.08]"
                         referrerPolicy="no-referrer"
                       />
                     </td>
                     <td className="py-3.5 px-4 font-sans">
                       <div className="font-sans text-sm text-white font-bold truncate max-w-xs">{mv.title}</div>
-                      <div className="text-[10px] text-zinc-500 truncate max-w-xs">{mv.englishTitle}</div>
+                      <div className="text-[10px] text-neutral-300 truncate max-w-xs">{mv.englishTitle}</div>
                       <div className="flex gap-2 items-center mt-1">
-                        <span className="text-[9.5px] border border-neutral-850 bg-[#060606] px-1.5 py-0.5 text-zinc-400 font-mono">{mv.duration} phút</span>
-                        <span className={`text-[9.5px] px-1.5 py-0.5 font-bold ${mv.ageRating === 'T18' ? 'bg-red-950/20 text-red-400 border border-red-500/20' : 'bg-neutral-900 text-zinc-400'
+                        <span className="text-[9.5px] border border-white/[0.05] bg-[#060606] px-1.5 py-0.5 text-neutral-200 font-mono">{mv.duration} phút</span>
+                        <span className={`text-[9.5px] px-1.5 py-0.5 font-bold ${mv.ageRating === 'T18' ? 'bg-red-950/20 text-red-400 border border-red-500/20' : 'bg-neutral-900 text-neutral-200'
                           }`}>{mv.ageRating}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="text-[10.5px] text-zinc-300 font-medium">{mv.genre.join(' • ')}</span>
+                      <span className="text-[10.5px] text-neutral-200 font-medium">{mv.genre.join(' • ')}</span>
                     </td>
-                    <td className="py-3.5 px-4 text-zinc-400 font-semibold">
+                    <td className="py-3.5 px-4 text-neutral-200 font-semibold">
                       {mv.director}
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
@@ -1185,7 +1185,7 @@ export default function AdminMoviesPanel({ ctx }) {
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => onSelectMovie(mv.id)}
-                          className="p-1 px-2 text-[9px] border border-neutral-800 hover:border-white transition uppercase font-sans text-neutral-400 hover:text-white"
+                          className="p-1 px-2 text-[9px] border border-white/[0.06] hover:border-white transition uppercase font-sans text-neutral-200 hover:text-white"
                           title="Xem trang chi tiết bên ngoài"
                         >
                           Xem trang
@@ -1211,7 +1211,7 @@ export default function AdminMoviesPanel({ ctx }) {
                 ))}
                 {filteredMovies.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-zinc-500 font-mono uppercase tracking-wider">
+                    <td colSpan={6} className="py-8 text-center text-neutral-300 font-mono uppercase tracking-wider">
                       Không tìm thấy bản ghi phim phù hợp tiêu chí truy vấn
                     </td>
                   </tr>
@@ -1220,7 +1220,7 @@ export default function AdminMoviesPanel({ ctx }) {
             </table>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-neutral-850 bg-black p-3 text-[10px] uppercase tracking-[0.16em] text-neutral-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-white/[0.05] bg-black p-3 text-[10px] uppercase tracking-[0.16em] text-neutral-200">
             <span>
               Tổng {adminMoviePagination.totalElements} phim - Trang {adminMoviePagination.page + 1}/{adminMoviePagination.totalPages}
             </span>
@@ -1229,7 +1229,7 @@ export default function AdminMoviesPanel({ ctx }) {
                 type="button"
                 disabled={adminMoviePagination.page <= 0}
                 onClick={() => setAdminMoviePagination((prev) => ({ ...prev, page: Math.max(0, prev.page - 1) }))}
-                className="border border-neutral-800 px-3 py-2 text-white disabled:opacity-30 hover:border-white transition"
+                className="border border-white/[0.06] px-3 py-2 text-white disabled:opacity-30 hover:border-white transition"
               >
                 Trước
               </button>
@@ -1237,7 +1237,7 @@ export default function AdminMoviesPanel({ ctx }) {
                 type="button"
                 disabled={adminMoviePagination.page + 1 >= adminMoviePagination.totalPages}
                 onClick={() => setAdminMoviePagination((prev) => ({ ...prev, page: Math.min(prev.totalPages - 1, prev.page + 1) }))}
-                className="border border-neutral-800 px-3 py-2 text-white disabled:opacity-30 hover:border-white transition"
+                className="border border-white/[0.06] px-3 py-2 text-white disabled:opacity-30 hover:border-white transition"
               >
                 Sau
               </button>
@@ -1248,3 +1248,5 @@ export default function AdminMoviesPanel({ ctx }) {
     </>
   );
 }
+
+

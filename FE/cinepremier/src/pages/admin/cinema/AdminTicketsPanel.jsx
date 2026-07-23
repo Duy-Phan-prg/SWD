@@ -12,7 +12,7 @@ const STATUS_META = {
   USED: { label: 'Đã check-in', className: 'border-sky-500/30 bg-sky-950/30 text-sky-300' },
   HOLDING: { label: 'Đang giữ', className: 'border-amber-500/30 bg-amber-950/30 text-amber-300' },
   PENDING_PAYMENT: { label: 'Chờ thanh toán', className: 'border-amber-500/30 bg-amber-950/30 text-amber-300' },
-  EXPIRED: { label: 'Hết hạn', className: 'border-neutral-600 bg-neutral-900 text-neutral-400' },
+  EXPIRED: { label: 'Hết hạn', className: 'border-neutral-600 bg-neutral-900 text-neutral-200' },
   CANCELLED: { label: 'Đã hủy', className: 'border-rose-500/30 bg-rose-950/30 text-rose-300' },
   REFUNDED: { label: 'Đã hoàn tiền', className: 'border-purple-500/30 bg-purple-950/30 text-purple-300' },
 };
@@ -114,11 +114,11 @@ export default function AdminTicketsPanel({ ctx }) {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-amber-500">Quản lý rạp</p>
-          <h2 className="mt-1 flex items-center gap-2 text-xl font-sans font-black uppercase tracking-wide text-white">
+          <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-neutral-300">Quản lý rạp</p>
+          <h2 className="mt-1 flex items-center gap-2 text-sm font-sans font-black uppercase tracking-wide text-white">
             <Ticket className="h-5 w-5 text-amber-500" /> Quản Lý Vé
           </h2>
-          <p className="mt-1 text-xs text-neutral-500">Vé đã bán gồm những gì, thiếu dữ liệu gì, kèm số lượng bắp nước đi theo từng đơn.</p>
+          <p className="mt-1 text-xs text-neutral-300">Vé đã bán gồm những gì, thiếu dữ liệu gì, kèm số lượng bắp nước đi theo từng đơn.</p>
         </div>
         <button
           onClick={() => loadBookings(page)}
@@ -131,17 +131,17 @@ export default function AdminTicketsPanel({ ctx }) {
 
       {/* Stat tiles của trang hiện tại */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="border border-white/10 bg-[#0a0a0a] p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Vé (ghế) trang này</p>
-          <p className="mt-1 text-2xl font-black font-mono text-white">{pageStats.seats}</p>
+        <div className="border border-white/[0.12] bg-white/[0.04] p-4">
+          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-300">Vé (ghế) trang này</p>
+          <p className="mt-1 text-xl font-black font-mono text-white">{pageStats.seats}</p>
         </div>
-        <div className="border border-white/10 bg-[#0a0a0a] p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Bắp nước bán kèm</p>
-          <p className="mt-1 text-2xl font-black font-mono text-amber-400">{pageStats.foods}</p>
+        <div className="border border-white/[0.12] bg-white/[0.04] p-4">
+          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-300">Bắp nước bán kèm</p>
+          <p className="mt-1 text-xl font-black font-mono text-amber-400">{pageStats.foods}</p>
         </div>
-        <div className="border border-white/10 bg-[#0a0a0a] p-4">
-          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Doanh thu (đã trả)</p>
-          <p className="mt-1 text-2xl font-black font-mono text-emerald-400">{formatVnd(pageStats.revenue)}</p>
+        <div className="border border-white/[0.12] bg-white/[0.04] p-4">
+          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-300">Doanh thu (đã trả)</p>
+          <p className="mt-1 text-xl font-black font-mono text-emerald-400">{formatVnd(pageStats.revenue)}</p>
         </div>
       </div>
 
@@ -154,7 +154,7 @@ export default function AdminTicketsPanel({ ctx }) {
             className={`border px-3 py-1.5 text-[9px] font-sans font-black uppercase tracking-widest transition ${
               statusFilter === status
                 ? 'border-amber-500/60 bg-amber-500/15 text-amber-300'
-                : 'border-white/10 bg-black text-neutral-400 hover:border-white/30 hover:text-white'
+                : 'border-white/10 bg-black text-neutral-200 hover:border-white/30 hover:text-white'
             }`}
           >
             {status === 'ALL' ? 'Tất cả' : (STATUS_META[status]?.label || status)}
@@ -164,7 +164,7 @@ export default function AdminTicketsPanel({ ctx }) {
 
       <div className="overflow-x-auto border border-white/10 bg-[#050505]">
         <table className="min-w-full divide-y divide-white/10 text-left text-xs font-sans">
-          <thead className="bg-[#0B0B0B] text-[9px] uppercase tracking-[0.15em] text-neutral-500 font-bold">
+          <thead className="bg-[#0B0B0B] text-[9px] uppercase tracking-[0.15em] text-neutral-300 font-bold">
             <tr>
               <th className="px-4 py-3.5">Mã đơn</th>
               <th className="px-4 py-3.5">Phim / Suất</th>
@@ -178,16 +178,16 @@ export default function AdminTicketsPanel({ ctx }) {
           </thead>
           <tbody className="divide-y divide-white/5 text-neutral-300">
             {isLoading ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-neutral-500">Đang tải danh sách vé…</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-neutral-300">Đang tải danh sách vé…</td></tr>
             ) : bookings.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-neutral-500">Không có vé nào khớp bộ lọc.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-neutral-300">Không có vé nào khớp bộ lọc.</td></tr>
             ) : bookings.map((b) => {
               // USED + suất chưa kết thúc = vừa check-in (đang xem); kết thúc rồi = đã sử dụng
               const isWatching = b.status === 'USED' && b.showtimeEnd && Date.now() < new Date(b.showtimeEnd).getTime();
               const statusMeta = b.status === 'USED'
                 ? (isWatching
                   ? { label: 'Đã check-in', className: 'border-sky-500/30 bg-sky-950/30 text-sky-300' }
-                  : { label: 'Đã sử dụng', className: 'border-neutral-600 bg-neutral-900 text-neutral-400' })
+                  : { label: 'Đã sử dụng', className: 'border-neutral-600 bg-neutral-900 text-neutral-200' })
                 : (STATUS_META[b.status] || { label: b.status, className: 'border-white/10 bg-neutral-900 text-neutral-300' });
               const foodQty = (b.foods || []).reduce((s, f) => s + (f.quantity || 0), 0);
               const isExpanded = expandedId === b.id;
@@ -198,62 +198,62 @@ export default function AdminTicketsPanel({ ctx }) {
                     <td className="whitespace-nowrap px-4 py-3.5 font-mono text-[11px] font-bold text-white">{b.bookingCode}</td>
                     <td className="px-4 py-3.5">
                       <p className="max-w-[180px] truncate font-bold text-white">{b.movieTitle}</p>
-                      <p className="text-[10px] text-neutral-500">
+                      <p className="text-[10px] text-neutral-300">
                         {b.roomName} · {b.showtimeStart ? new Date(b.showtimeStart).toLocaleString('vi-VN') : '—'}
                       </p>
                     </td>
                     <td className="px-4 py-3.5">
                       <p className="font-mono text-[11px] text-amber-400">{(b.seats || []).map((s) => `${s.rowLabel}${s.seatNumber}`).join(', ') || '—'}</p>
-                      <p className="text-[10px] text-neutral-500">
+                      <p className="text-[10px] text-neutral-300">
                         {(b.tickets || []).map((t) => `${TICKET_TYPE_LABELS[t.ticketType] || t.ticketType} ×${t.quantity}`).join(', ') || 'Chưa ghi loại vé'}
                       </p>
                     </td>
                     <td className="px-4 py-3.5">
                       <p className="max-w-[150px] truncate font-bold text-white">{b.customerName || '—'}</p>
-                      <p className="max-w-[150px] truncate text-[10px] text-neutral-500">{b.userEmail || b.customerPhone || '—'}</p>
+                      <p className="max-w-[150px] truncate text-[10px] text-neutral-300">{b.userEmail || b.customerPhone || '—'}</p>
                     </td>
                     <td className="px-4 py-3.5 font-mono font-bold text-amber-400">{foodQty || '—'}</td>
                     <td className="whitespace-nowrap px-4 py-3.5 font-mono font-bold text-white">{formatVnd(b.totalAmount)}</td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-block border px-2 py-1 text-[9px] font-black uppercase tracking-wider ${statusMeta.className}`}>{statusMeta.label}</span>
                     </td>
-                    <td className="px-4 py-3.5"><ChevronDown className={`h-4 w-4 text-neutral-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></td>
+                    <td className="px-4 py-3.5"><ChevronDown className={`h-4 w-4 text-neutral-300 transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></td>
                   </tr>
                   {isExpanded && (
                     <tr className="bg-black/40">
                       <td colSpan={8} className="px-6 py-4">
                         <div className="grid gap-4 lg:grid-cols-3">
                           <div>
-                            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-neutral-500">Vé từng ghế</p>
+                            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-neutral-300">Vé từng ghế</p>
                             <div className="space-y-1">
                               {(b.seats || []).map((s) => (
                                 <div key={s.seatId} className="flex items-center justify-between gap-2 text-[11px]">
                                   <span className="font-mono text-white">{s.rowLabel}{s.seatNumber}</span>
-                                  <span className="text-neutral-500">{TICKET_TYPE_LABELS[s.ticketType] || '—'}</span>
-                                  <span className="font-mono text-neutral-400">{s.ticketCode || 'chưa có mã'}</span>
+                                  <span className="text-neutral-300">{TICKET_TYPE_LABELS[s.ticketType] || '—'}</span>
+                                  <span className="font-mono text-neutral-200">{s.ticketCode || 'chưa có mã'}</span>
                                   <span className="font-mono text-white">{formatVnd(s.unitPrice)}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
                           <div>
-                            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-neutral-500">Bắp nước</p>
+                            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-neutral-300">Bắp nước</p>
                             {(b.foods || []).length === 0 ? (
-                              <p className="text-[11px] text-neutral-600">Không mua bắp nước</p>
+                              <p className="text-[11px] text-neutral-200">Không mua bắp nước</p>
                             ) : (b.foods || []).map((f, i) => (
                               <div key={i} className="flex items-center justify-between text-[11px]">
                                 <span className="truncate text-neutral-300">{f.name} ×{f.quantity}</span>
-                                <span className="font-mono text-neutral-400">{formatVnd(f.totalPrice)}</span>
+                                <span className="font-mono text-neutral-200">{formatVnd(f.totalPrice)}</span>
                               </div>
                             ))}
-                            <p className="mt-3 text-[10px] text-neutral-500">
+                            <p className="mt-3 text-[10px] text-neutral-300">
                               Thanh toán: {b.paidAt ? new Date(b.paidAt).toLocaleString('vi-VN') : '—'}
                               {b.paymentAccount ? ` · ${b.paymentAccount}` : ''}
                               {b.checkedInAt ? ` · Check-in: ${new Date(b.checkedInAt).toLocaleString('vi-VN')}` : ''}
                             </p>
                           </div>
                           <div>
-                            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-neutral-500">Dữ liệu vé</p>
+                            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-neutral-300">Dữ liệu vé</p>
                             {flags.length === 0 ? (
                               <span className="inline-block border border-emerald-500/30 bg-emerald-950/30 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-300">✓ Đầy đủ dữ liệu</span>
                             ) : (
@@ -291,7 +291,7 @@ export default function AdminTicketsPanel({ ctx }) {
         </table>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] font-sans font-black uppercase tracking-widest text-neutral-500">
+      <div className="flex items-center justify-between text-[10px] font-sans font-black uppercase tracking-widest text-neutral-300">
         <span>{totalItems} đơn · Trang {page + 1}/{totalPages}</span>
         <div className="flex gap-2">
           <button
@@ -313,20 +313,20 @@ export default function AdminTicketsPanel({ ctx }) {
 
       {cancelTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={closeCancel}>
-          <div className="w-full max-w-md border border-white/10 bg-[#0a0a0a] p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md border border-white/[0.12] bg-[#0d0d0d] p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-500">Quản lý vé</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-neutral-300">Quản lý vé</p>
                 <h3 className="mt-1 text-lg font-sans font-black uppercase tracking-wide text-white">
                   {cancelTarget.status === 'PAID' ? 'Hủy & hoàn tiền' : 'Hủy vé'}
                 </h3>
               </div>
-              <button onClick={closeCancel} disabled={isCancelling} className="text-neutral-500 transition hover:text-white disabled:opacity-40">
+              <button onClick={closeCancel} disabled={isCancelling} className="text-neutral-300 transition hover:text-white disabled:opacity-40">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="mt-3 text-xs text-neutral-400">
+            <p className="mt-3 text-xs text-neutral-200">
               Vé <span className="font-mono font-bold text-white">{cancelTarget.bookingCode}</span> · {formatVnd(cancelTarget.totalAmount)}
             </p>
 
@@ -336,10 +336,10 @@ export default function AdminTicketsPanel({ ctx }) {
                 <span>Số tiền {formatVnd(cancelTarget.totalAmount)} sẽ được hoàn vào ví CineWallet của khách. Khách có thể rút về ngân hàng từ ví.</span>
               </div>
             ) : (
-              <p className="mt-3 text-[11px] text-neutral-500">Vé chưa thanh toán — hủy sẽ giải phóng ghế, không phát sinh hoàn tiền.</p>
+              <p className="mt-3 text-[11px] text-neutral-300">Vé chưa thanh toán — hủy sẽ giải phóng ghế, không phát sinh hoàn tiền.</p>
             )}
 
-            <label className="mt-4 block text-[9px] font-black uppercase tracking-widest text-neutral-500">Lý do (tùy chọn)</label>
+            <label className="mt-4 block text-[9px] font-black uppercase tracking-widest text-neutral-300">Lý do (tùy chọn)</label>
             <textarea
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}

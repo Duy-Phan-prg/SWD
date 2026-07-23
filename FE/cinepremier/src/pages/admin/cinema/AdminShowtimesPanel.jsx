@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Trash2, Edit3, Calendar, Clock, MapPin, Film,
@@ -12,7 +12,7 @@ import { adminService } from '../../../services/adminService';
 const STATUS_META = {
   SCHEDULED: { label: 'Đã lên lịch', color: 'text-blue-400', bg: 'bg-blue-950/30 border-blue-500/30', dot: 'bg-blue-400' },
   OPEN: { label: 'Đang mở bán', color: 'text-emerald-400', bg: 'bg-emerald-950/30 border-emerald-500/30', dot: 'bg-emerald-400' },
-  COMPLETED: { label: 'Đã kết thúc', color: 'text-zinc-400', bg: 'bg-zinc-900/50 border-zinc-700/30', dot: 'bg-zinc-500' },
+  COMPLETED: { label: 'Đã kết thúc', color: 'text-neutral-200', bg: 'bg-white/[0.02] border-white/[0.06]', dot: 'bg-neutral-500' },
   CANCELLED: { label: 'Đã hủy', color: 'text-rose-400', bg: 'bg-rose-950/30 border-rose-500/30', dot: 'bg-rose-400' },
 };
 
@@ -280,20 +280,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
   const effectiveMinDate = maxDateInput(today, minDate);
   const hasValidDateRange = !maxDate || !effectiveMinDate || effectiveMinDate <= maxDate;
 
-  // Local state cho phép user gõ tự do, không bị lock bởi controlled value
-  const [hourStr, setHourStr] = React.useState(() => timePart ? timePart.split(':')[0] : '');
-  const [minStr, setMinStr] = React.useState(() => timePart ? timePart.split(':')[1] : '');
-
-  // Sync local state khi external value thay đổi (vd: click suggested slot)
   const prevValueRef = React.useRef(value);
-  React.useEffect(() => {
-    if (value !== prevValueRef.current) {
-      prevValueRef.current = value;
-      const tp = value && value.includes('T') ? value.split('T')[1].slice(0, 5) : '';
-      setHourStr(tp ? tp.split(':')[0] : '');
-      setMinStr(tp ? tp.split(':')[1] : '');
-    }
-  });
 
   const clampDateToRange = (dateValue) => {
     if (!dateValue) return '';
@@ -326,7 +313,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
   return (
     <div className="space-y-2">
       {label && (
-        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black block">{label}</label>
+        <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black block">{label}</label>
       )}
       {/* Date row */}
       <div className="relative">
@@ -338,7 +325,7 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
           value={datePart}
           disabled={!hasValidDateRange}
           onChange={handleDate}
-          className="h-11 w-full bg-black border border-zinc-800 py-2.5 pl-3 pr-11 text-xs text-white font-mono [color-scheme:dark] focus:outline-none focus:border-amber-400 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-11 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+          className="h-11 w-full bg-black border border-white/[0.08] py-2.5 pl-3 pr-11 text-xs text-white font-mono [color-scheme:dark] focus:outline-none focus:border-amber-400 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-11 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
         />
         <button
           type="button"
@@ -353,57 +340,36 @@ function DateTimePicker({ value, onChange, error, label, minDate, maxDate, helpT
       {!hasValidDateRange ? (
         <p className="text-[9px] font-bold text-rose-300">Không có ngày hợp lệ trong thời gian phát hành.</p>
       ) : (
-        helpText && <p className="text-[9px] text-zinc-500 font-bold">{helpText}</p>
+        helpText && <p className="text-[9px] text-neutral-300 font-bold">{helpText}</p>
       )}
       {/* Time inputs */}
-      <div className="border border-zinc-800 bg-black p-3 mt-1">
-        <p className="text-[9px] uppercase tracking-widest text-zinc-300 mb-2 font-bold">Nhập giờ chiếu</p>
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <input
-              type="number"
-              min="0"
-              max="23"
-              disabled={!hasValidDateRange}
-              value={timePart ? parseInt(timePart.split(':')[0], 10) : ''}
-              onChange={(e) => {
-                let hStr = e.target.value;
-                if (hStr === '') return handleTime(`00:${timePart ? timePart.split(':')[1] : '00'}`);
-                let h = parseInt(hStr, 10);
-                if (h < 0) h = 0;
-                if (h > 23) h = 23;
-                const m = timePart ? timePart.split(':')[1] : '00';
-                handleTime(`${String(h).padStart(2, '0')}:${m}`);
-              }}
-              placeholder="Giờ (0-23)"
-              className="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-center text-white focus:border-amber-400 focus:outline-none font-mono disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-          <span className="text-zinc-600 font-bold">:</span>
-          <div className="flex-1">
-            <input
-              type="number"
-              min="0"
-              max="59"
-              disabled={!hasValidDateRange}
-              value={timePart ? parseInt(timePart.split(':')[1], 10) : ''}
-              onChange={(e) => {
-                let mStr = e.target.value;
-                if (mStr === '') return handleTime(`${timePart ? timePart.split(':')[0] : '00'}:00`);
-                let m = parseInt(mStr, 10);
-                if (m < 0) m = 0;
-                if (m > 59) m = 59;
-                const h = timePart ? timePart.split(':')[0] : '00';
-                handleTime(`${h}:${String(m).padStart(2, '0')}`);
-              }}
-              placeholder="Phút (0-59)"
-              className="w-full bg-zinc-950 border border-zinc-800 p-2 text-xs text-center text-white focus:border-amber-400 focus:outline-none font-mono disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
+      <div className="border border-white/[0.08] bg-black p-3 mt-1">
+        <p className="text-[9px] uppercase tracking-widest text-neutral-200 mb-2.5 font-bold">Giờ chiếu</p>
+        <div className="flex items-center gap-1.5">
+          <select
+            disabled={!hasValidDateRange}
+            value={timePart ? timePart.split(':')[0] : '00'}
+            onChange={(e) => handleTime(`${e.target.value}:${timePart ? timePart.split(':')[1] : '00'}`)}
+            className="flex-1 bg-black border border-white/[0.08] text-white text-sm font-mono font-bold text-center py-2.5 focus:border-amber-400 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed [color-scheme:dark] appearance-none cursor-pointer hover:border-white/[0.15] transition-colors"
+          >
+            {Array.from({ length: 24 }, (_, i) => (
+              <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')} giờ</option>
+            ))}
+          </select>
+          <span className="text-neutral-400 font-black text-lg shrink-0">:</span>
+          <select
+            disabled={!hasValidDateRange}
+            value={timePart ? timePart.split(':')[1] : '00'}
+            onChange={(e) => handleTime(`${timePart ? timePart.split(':')[0] : '00'}:${e.target.value}`)}
+            className="flex-1 bg-black border border-white/[0.08] text-white text-sm font-mono font-bold text-center py-2.5 focus:border-amber-400 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed [color-scheme:dark] appearance-none cursor-pointer hover:border-white/[0.15] transition-colors"
+          >
+            {Array.from({ length: 60 }, (_, i) => (
+              <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')} phút</option>
+            ))}
+          </select>
         </div>
-
         {timePart && (
-          <p className="text-[9px] text-amber-400 font-mono font-bold mt-3 text-center bg-amber-900/20 py-1.5 rounded border border-amber-900/30">
+          <p className="text-[9px] text-amber-400 font-mono font-bold mt-2.5 text-center bg-amber-900/20 py-1.5 rounded border border-amber-900/30">
             ✓ Đã chọn: {datePart ? `${datePart.split('-').reverse().join('/')} lúc ${timePart}` : timePart}
           </p>
         )}
@@ -422,13 +388,13 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
   const visibleRows = PRICE_ROWS.filter(row => allowChildTickets || row.key !== 'child');
 
   return (
-    <div className="md:col-span-2 border border-zinc-900 bg-black/30 p-4 space-y-3">
+    <div className="md:col-span-2 border border-white/[0.06] bg-black/30 p-4 space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <p className="text-[11px] uppercase tracking-widest text-amber-500 font-black">Bảng giá theo lứa tuổi</p>
-          <p className="text-[10px] text-zinc-510">Nhập giá ghế thường, hệ thống tự cộng VIP +20k và ghế đôi +30k. Bạn có thể sửa từng mục.</p>
+          <p className="text-[10px] text-neutral-300">Nhập giá ghế thường, hệ thống tự cộng VIP +20k và ghế đôi +30k. Bạn có thể sửa từng mục.</p>
         </div>
-        <div className="flex gap-3 text-[9px] uppercase tracking-wider text-zinc-400">
+        <div className="flex gap-3 text-[9px] uppercase tracking-wider text-neutral-200">
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" checked={Boolean(value.weekendSurcharge)}
               onChange={e => onChange({ ...value, weekendSurcharge: e.target.checked })}
@@ -447,15 +413,15 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] text-[10px]">
           <thead>
-            <tr className="text-left text-zinc-500 uppercase tracking-wider">
+            <tr className="text-left text-neutral-300 uppercase tracking-wider">
               <th className="py-2 pr-2">Loại vé</th>
               {PRICE_COLS.map(col => <th key={col.key} className="py-2 px-2">{col.label}</th>)}
             </tr>
           </thead>
           <tbody>
             {visibleRows.map(row => (
-              <tr key={row.key} className="border-t border-zinc-900">
-                <td className="py-2 pr-2 text-zinc-300 font-bold uppercase whitespace-nowrap">{row.label}</td>
+              <tr key={row.key} className="border-t border-white/[0.06]">
+                <td className="py-2 pr-2 text-neutral-200 font-bold uppercase whitespace-nowrap">{row.label}</td>
                 {PRICE_COLS.map(col => {
                   const field = priceField(row.key, col.key);
                   return (
@@ -463,7 +429,7 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
                       <input type="text" inputMode="numeric" value={displaySeatPrice(value, row.key, col.key)}
                         onChange={e => setPrice(field, e.target.value)}
                         placeholder={col.addon ? `+${formatPriceInput(col.addon)}` : '90.000'}
-                        className="w-full bg-black border border-zinc-800 p-2 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
+                        className="w-full bg-black border border-white/[0.08] p-2 text-xs text-white font-mono focus:outline-none focus:border-amber-400" />
                     </td>
                   );
                 })}
@@ -477,10 +443,10 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
           Phim {ageRatingLabel || '16+'} Không cho phép bán vé trẻ em, bảng giá mục này vô hiệu hóa!
         </p>
       )}
-      <div className="grid gap-2 border border-zinc-900 bg-black/40 p-3 sm:grid-cols-[1fr_180px] sm:items-end">
+      <div className="grid gap-2 border border-white/[0.06] bg-black/40 p-3 sm:grid-cols-[1fr_180px] sm:items-end">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-orange-300">Phụ thu đêm</p>
-          <p className="mt-1 text-[10px] text-zinc-500">
+          <p className="mt-1 text-[10px] text-neutral-300">
             Áp dụng cho suất bắt đầu từ 23:00 đến trước 05:00. Nhập trong khoảng 10.000 - 100.000.
           </p>
         </div>
@@ -491,7 +457,7 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
             value={formatPriceInput(value.lateNightSurchargeAmount)}
             onChange={e => onChange({ ...value, lateNightSurchargeAmount: formatPriceInput(e.target.value) })}
             placeholder="20.000"
-            className="w-full bg-black border border-zinc-800 p-2 text-xs text-white font-mono focus:outline-none focus:border-orange-400"
+            className="w-full bg-black border border-white/[0.08] p-2 text-xs text-white font-mono focus:outline-none focus:border-orange-400"
           />
         </div>
       </div>
@@ -501,7 +467,7 @@ function PriceMatrix({ value, onChange, errors = {}, prefix = '', allowChildTick
       {errors[`${prefix}lateNightSurchargeAmount`] && (
         <p className="text-rose-400 text-[9px]">{errors[`${prefix}lateNightSurchargeAmount`]}</p>
       )}
-      <p className="text-[11px] text-zinc-400">
+      <p className="text-[11px] text-neutral-200">
         Phụ thu đêm 23:00-04:59 được cộng theo mức admin nhập: {formatPriceInput(value.lateNightSurchargeAmount || 20000)}đ/vé.
       </p>
     </div>
@@ -1221,13 +1187,13 @@ export default function AdminShowtimesPanel({ ctx }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white">Quản lý Suất Chiếu</h2>
-          <p className="text-[13px] text-zinc-520 mt-0.5">Tạo, chỉnh sửa và giám sát lịch chiếu phim</p>
+          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-white">Quản lý Suất Chiếu</h2>
+          <p className="text-xs text-neutral-300 mt-0.5">Tạo, chỉnh sửa và giám sát lịch chiếu phim</p>
         </div>
         {mode === 'list' && (
           <div className="flex gap-2">
             <button onClick={() => { setMode('create'); setForm(EMPTY_FORM); setEditingId(null); setEditingStatus(''); setErrors({}); }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white text-black text-[10px] font-black uppercase tracking-wider hover:bg-zinc-200 transition">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition">
               <Plus className="w-3 h-3" /> Tạo suất
             </button>
             <button onClick={() => { setMode('bulk'); setBulkForm(EMPTY_BULK); setEditingBulkSlotIndex(0); setEditingId(null); setEditingStatus(''); setErrors({}); }}
@@ -1238,7 +1204,7 @@ export default function AdminShowtimesPanel({ ctx }) {
         )}
         {mode !== 'list' && (
           <button onClick={() => { setMode('list'); setEditingId(null); setEditingStatus(''); setErrors({}); }}
-            className="flex items-center gap-1.5 px-3 py-2 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase tracking-wider hover:border-zinc-500 transition">
+            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.10] text-neutral-200 text-[10px] font-bold uppercase tracking-wider hover:border-white/[0.20] transition">
             <X className="w-3 h-3" /> Hủy
           </button>
         )}
@@ -1252,15 +1218,15 @@ export default function AdminShowtimesPanel({ ctx }) {
       <AnimatePresence mode="wait">
         {(mode === 'create' || mode === 'edit') && (
           <motion.div key="form-single" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="border border-zinc-800 bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-6">
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mb-4 pb-2 border-b border-zinc-900">
+            className="border border-white/[0.08] bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-6">
+            <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white mb-4 pb-2 border-b border-white/[0.06]">
               {mode === 'edit' ? '✏️ Chỉnh sửa suất chiếu' : '➕ Tạo suất chiếu mới'}
             </h3>
             <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
 
               {/* Movie */}
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Phim *</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Phim *</label>
                 <select value={form.movieId} onChange={e => {
                   const nextMovieId = e.target.value;
                   const nextMovie = findUiMovie(nextMovieId);
@@ -1270,7 +1236,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                   }
                   setForm(allowsChildTicketsForMovie(nextMovie) ? nextState : clearChildPrices(nextState));
                 }}
-                  className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                  className="w-full bg-black border border-white/[0.08] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                   <option value="">-- Chọn phim --</option>
                   {activeMovies.map(m => (
                     <option key={m.id} value={m.backendId ?? m.id}>{m.title}</option>
@@ -1281,9 +1247,9 @@ export default function AdminShowtimesPanel({ ctx }) {
 
               {/* Room */}
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Phòng chiếu *</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Phòng chiếu *</label>
                 <select value={form.roomId} onChange={e => setForm({ ...form, roomId: e.target.value })}
-                  className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                  className="w-full bg-black border border-white/[0.08] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                   <option value="">-- Chọn phòng --</option>
                   {rooms.filter(r => r.status === 'ACTIVE').map(r => (
                     <option key={r.id} value={r.id}>{r.name} ({r.roomType})</option>
@@ -1310,9 +1276,9 @@ export default function AdminShowtimesPanel({ ctx }) {
                     Khung giờ còn trống ngày {formatDateInput(slotSuggestionDate)} — bấm để điền
                   </p>
                   {isLoadingSlots ? (
-                    <p className="text-[10px] text-neutral-500">Đang tính khung giờ trống…</p>
+                    <p className="text-[10px] text-neutral-300">Đang tính khung giờ trống…</p>
                   ) : suggestedSlots.length === 0 ? (
-                    <p className="text-[10px] text-neutral-500">Không còn khung giờ trống phù hợp trong ngày này.</p>
+                    <p className="text-[10px] text-neutral-300">Không còn khung giờ trống phù hợp trong ngày này.</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {suggestedSlots.map((slot) => {
@@ -1341,9 +1307,9 @@ export default function AdminShowtimesPanel({ ctx }) {
 
               {/* Status */}
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Trạng thái ban đầu</label>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Trạng thái ban đầu</label>
                 <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
-                  className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                  className="w-full bg-black border border-white/[0.08] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                   <option value="SCHEDULED">SCHEDULED — lên lịch, chưa bán</option>
                   <option value="OPEN">OPEN — mở bán ngay</option>
                 </select>
@@ -1359,7 +1325,7 @@ export default function AdminShowtimesPanel({ ctx }) {
 
               <div className="md:col-span-2">
                 <button type="submit" disabled={saving}
-                  className="w-full py-3.5 bg-white text-black font-black uppercase text-[10.5px] tracking-widest hover:bg-zinc-200 transition disabled:opacity-50">
+                  className="w-full py-3.5 bg-white text-black font-black uppercase text-[10.5px] tracking-widest hover:bg-amber-400 transition disabled:opacity-50">
                   {saving ? 'Đang lưu...' : mode === 'edit' ? 'Cập nhật suất chiếu' : 'Tạo suất chiếu'}
                 </button>
               </div>
@@ -1371,9 +1337,9 @@ export default function AdminShowtimesPanel({ ctx }) {
         {mode === 'bulk' && (
           <motion.div key="form-bulk" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="border border-amber-500/30 bg-gradient-to-b from-[#0d0900] to-[#040404] p-6">
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-zinc-900">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/[0.06]">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <h3 className="text-sm font-black uppercase tracking-[0.18em] text-amber-300">Tạo hàng loạt suất chiếu</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.18em] text-amber-300">Tạo hàng loạt suất chiếu</h3>
 
             </div>
             <form onSubmit={handleBulkSubmit} className="space-y-5 text-xs font-sans">
@@ -1381,7 +1347,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               {/* Shared fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Phim *</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Phim *</label>
                   <select value={bulkForm.movieId} onChange={e => {
                     const nextMovieId = e.target.value;
                     const nextMovie = findUiMovie(nextMovieId);
@@ -1396,7 +1362,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                     };
                     setBulkForm(allowsChildTicketsForMovie(nextMovie) ? nextState : clearChildPrices(nextState));
                   }}
-                    className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                    className="w-full bg-black border border-white/[0.08] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                     <option value="">-- Chọn phim --</option>
                     {activeMovies.map(m => (
                       <option key={m.id} value={m.backendId ?? m.id}>{m.title}</option>
@@ -1405,9 +1371,9 @@ export default function AdminShowtimesPanel({ ctx }) {
                   {errors.movieId && <p className="text-rose-400 text-[9px]">{errors.movieId}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Trạng thái mặc định</label>
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Trạng thái mặc định</label>
                   <select value={bulkForm.defaultStatus} onChange={e => setBulkForm({ ...bulkForm, defaultStatus: e.target.value })}
-                    className="w-full bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                    className="w-full bg-black border border-white/[0.08] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400">
                     <option value="SCHEDULED">SCHEDULED — lên lịch, chưa bán</option>
                     <option value="OPEN">OPEN — mở bán ngay</option>
                   </select>
@@ -1421,13 +1387,13 @@ export default function AdminShowtimesPanel({ ctx }) {
                 />
               </div>
 
-              <div className="space-y-4 border border-zinc-900 bg-zinc-950/40 p-4">
+              <div className="space-y-4 border border-white/[0.06] bg-white/[0.01] p-4">
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                   <div>
-                    <label className="text-[10px] uppercase tracking-[0.18em] text-amber-500 font-black">
+                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 font-black">
                       Khung giờ có thể chiếu ({selectedBulkSlotsCount}/{bulkForm.slots.length} đã chọn)
                     </label>
-                    <p className="text-[10px] text-zinc-400 mt-1">
+                    <p className="text-[10px] text-neutral-200 mt-1">
                       Chọn phim, phòng và giờ bắt đầu. Hệ thống cộng thời lượng phim + 15 phút dọn phòng để sinh các ca còn lại trong ngày.
                     </p>
                   </div>
@@ -1451,7 +1417,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                       <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 font-black">Phòng chiếu *</label>
                       <select value={activeBulkSlot?.roomId || ''}
                         onChange={e => updateBulkSlot(activeBulkSlotIndex, { roomId: e.target.value, selected: true })}
-                        className="w-full bg-black border border-zinc-800 p-2.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400 appearance-none">
+                        className="w-full bg-black border border-white/[0.08] p-2.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400 appearance-none">
                         <option value="">-- Chọn phòng --</option>
                         {rooms.filter(r => r.status === 'ACTIVE').map(r => (
                           <option key={r.id} value={r.id}>{r.name}</option>
@@ -1501,41 +1467,41 @@ export default function AdminShowtimesPanel({ ctx }) {
                           e.preventDefault();
                           setEditingBulkSlotIndex(i);
                         }}
-                        className={`relative min-h-[168px] overflow-hidden rounded-lg border-2 bg-white text-left shadow-sm transition ${slotError ? 'border-rose-500 ring-2 ring-rose-500/50' : activeBulkSlotIndex === i ? 'border-sky-400 ring-2 ring-sky-400/40' : selected ? 'border-amber-400 ring-2 ring-amber-400/30' : 'border-zinc-300 opacity-45 hover:opacity-80'}`}>
+                        className={`relative min-h-[168px] overflow-hidden border text-left transition ${slotError ? 'border-rose-500 bg-rose-500/[0.04] ring-1 ring-rose-500/30' : activeBulkSlotIndex === i ? 'border-amber-400 bg-amber-500/[0.06] ring-1 ring-amber-400/30' : selected ? 'border-amber-500/60 bg-amber-500/[0.04]' : 'border-white/[0.08] bg-white/[0.03] opacity-55 hover:opacity-90'}`}>
                         <div className="px-5 py-4 pt-10">
                           {slot.startTime ? (
                             <>
                               <div className="flex items-end gap-1.5">
                                 <div className="flex flex-col items-start">
-                                  <span className="text-[9px] font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Giờ bắt đầu</span>
-                                  <span className="text-3xl font-black tracking-normal text-zinc-900 font-mono">{formatTimeOnly(slot.startTime)}</span>
+                                  <span className="text-[9px] font-semibold text-neutral-200 uppercase tracking-wider mb-0.5">Giờ bắt đầu</span>
+                                  <span className="text-2xl font-black tracking-normal text-white font-mono">{formatTimeOnly(slot.startTime)}</span>
                                 </div>
-                                <span className="text-3xl font-black text-zinc-400 mb-0.5">→</span>
+                                <span className="text-2xl font-black text-neutral-200 mb-0.5">→</span>
                                 <div className="flex flex-col items-start">
-                                  <span className="text-[9px] font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Giờ kết thúc</span>
-                                  <span className="text-3xl font-black tracking-normal text-zinc-900 font-mono">{formatTimeOnly(endTime)}</span>
+                                  <span className="text-[9px] font-semibold text-neutral-200 uppercase tracking-wider mb-0.5">Giờ kết thúc</span>
+                                  <span className="text-2xl font-black tracking-normal text-white font-mono">{formatTimeOnly(endTime)}</span>
                                 </div>
                               </div>
                               {bulkStepMinutes > 0 && (
-                                <p className="mt-0.5 text-[9px] font-semibold text-zinc-600">
+                                <p className="mt-0.5 text-[9px] font-semibold text-neutral-200">
                                   Phòng trống {formatTimeOnly(addMinutes(slot.startTime, bulkStepMinutes))} (+15p dọn)
                                 </p>
                               )}
                             </>
                           ) : (
-                            <p className="text-xl font-black uppercase tracking-wider text-zinc-400 py-2">Chưa khởi tạo</p>
+                            <p className="text-xs font-black uppercase tracking-wider text-neutral-300 py-2">Chưa khởi tạo</p>
                           )}
-                          <p className="mt-2 truncate text-[10px] font-bold uppercase tracking-wider text-zinc-600">
+                          <p className="mt-2 truncate text-[10px] font-bold uppercase tracking-wider text-neutral-200">
                             {rooms.find(r => String(r.id) === String(slot.roomId))?.name || 'Chưa chọn phòng'}
                           </p>
                         </div>
-                        <div className={`border px-5 pt-0 pb-5 text-center text-sm font-bold ${night ? 'border-orange-100 bg-orange-50 text-orange-600' : 'border-zinc-100 bg-zinc-50 text-zinc-600'}`}>
+                        <div className={`border px-5 pt-0 pb-5 text-center text-sm font-bold ${night ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-300' : 'border-white/[0.10] bg-white/[0.04] text-neutral-300'}`}>
                           {capacity ? `Sức chứa: ${capacity} ghế` : slot.roomId ? 'Chưa có dữ liệu ghế' : 'Chưa chọn phòng'}
                         </div>
                         <div className="absolute right-2 top-2 flex gap-1">
                           {slotError && <span className="rounded bg-rose-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white">Lỗi</span>}
-                          {activeBulkSlotIndex === i && <span className="rounded bg-sky-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Sửa</span>}
-                          {night && <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-orange-600">Đêm +{formatPriceInput(bulkForm.lateNightSurchargeAmount || 20000)}đ</span>}
+                          {activeBulkSlotIndex === i && <span className="bg-amber-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Sửa</span>}
+                          {night && <span className="bg-amber-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-amber-300">Đêm +{formatPriceInput(bulkForm.lateNightSurchargeAmount || 20000)}đ</span>}
                           {selected && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-black">Chọn</span>}
                         </div>
                         <span
@@ -1551,7 +1517,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                             e.stopPropagation();
                             toggleBulkSlot(i);
                           }}
-                          className={`absolute bottom-2 left-2 rounded px-2 py-1 text-[8px] font-black uppercase tracking-wider ${selected ? 'bg-zinc-900 text-white hover:bg-rose-600' : 'bg-amber-400 text-black hover:bg-amber-300'}`}>
+                          className={`absolute bottom-2 left-2 rounded px-2 py-1 text-[8px] font-black uppercase tracking-wider ${selected ? 'bg-white/[0.03] text-white hover:bg-rose-600' : 'bg-amber-400 text-black hover:bg-amber-300'}`}>
                           {selected ? 'Bỏ chọn' : 'Chọn'}
                         </span>
                         <span
@@ -1569,7 +1535,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                             if (bulkForm.slots.length === 1) return;
                             removeBulkSlot(i);
                           }}
-                          className={`absolute bottom-2 right-2 p-1 text-zinc-400 hover:text-rose-500 ${bulkForm.slots.length === 1 ? 'pointer-events-none opacity-20' : ''}`}>
+                          className={`absolute bottom-2 right-2 p-1 text-neutral-200 hover:text-rose-500 ${bulkForm.slots.length === 1 ? 'pointer-events-none opacity-20' : ''}`}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </span>
                       </div>
@@ -1581,7 +1547,7 @@ export default function AdminShowtimesPanel({ ctx }) {
               {/* Slots */}
               <div className="hidden">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] uppercase tracking-[0.18em] text-amber-500 font-black">
+                  <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 font-black">
                     Danh sách khung giờ ({bulkForm.slots.length} slot)
                   </label>
                   <div className="flex gap-2">
@@ -1599,7 +1565,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                 </div>
 
                 {bulkForm.slots.map((slot, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-start border border-zinc-900 p-4 bg-black/30">
+                  <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-start border border-white/[0.06] p-4 bg-black/30">
                     <div className="space-y-2 mt-4">
                       <label className="text-xs uppercase tracking-widest text-amber-500 font-black block text-center">Phòng chiếu {i + 1}</label>
                       <select value={slot.roomId}
@@ -1607,7 +1573,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                           const s = [...bulkForm.slots]; s[i] = { ...s[i], roomId: e.target.value };
                           setBulkForm({ ...bulkForm, slots: s });
                         }}
-                        className="w-full bg-black border border-zinc-800 p-2.5 text-sm text-center font-bold text-white focus:outline-none focus:border-amber-400 appearance-none">
+                        className="w-full bg-black border border-white/[0.08] p-2.5 text-sm text-center font-bold text-white focus:outline-none focus:border-amber-400 appearance-none">
                         <option value="">-- Chọn phòng --</option>
                         {rooms.filter(r => r.status === 'ACTIVE').map(r => (
                           <option key={r.id} value={r.id}>{r.name}</option>
@@ -1633,7 +1599,7 @@ export default function AdminShowtimesPanel({ ctx }) {
                         const s = bulkForm.slots.filter((_, j) => j !== i);
                         setBulkForm({ ...bulkForm, slots: s });
                       }}
-                      className="p-2 text-zinc-600 hover:text-rose-400 transition disabled:opacity-30">
+                      className="p-2 text-neutral-200 hover:text-rose-400 transition disabled:opacity-30">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1653,17 +1619,17 @@ export default function AdminShowtimesPanel({ ctx }) {
       {mode === 'list' && (
         <div className="flex flex-wrap gap-2 items-end">
           <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-500 block">Phim</label>
+            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 block">Phim</label>
             <select value={filters.movieId} onChange={e => setFilters({ ...filters, movieId: e.target.value })}
-              className="bg-black border border-zinc-800 text-xs text-zinc-300 px-2.5 py-2 focus:outline-none focus:border-zinc-600">
+              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400">
               <option value="">Tất cả phim</option>
               {(moviesList || []).map(m => <option key={m.id} value={m.backendId ?? m.id}>{m.title}</option>)}
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-500 block">Trạng thái</label>
+            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 block">Trạng thái</label>
             <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
-              className="bg-black border border-zinc-800 text-xs text-zinc-300 px-2.5 py-2 focus:outline-none focus:border-zinc-600">
+              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400">
               <option value="">Tất cả</option>
               <option value="SCHEDULED">Đã lên lịch</option>
               <option value="OPEN">Đang mở bán</option>
@@ -1672,16 +1638,16 @@ export default function AdminShowtimesPanel({ ctx }) {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-500 block">Ngày</label>
+            <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 block">Ngày</label>
             <input type="date" value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })}
-              className="bg-black border border-zinc-800 text-xs text-zinc-300 px-2.5 py-2 focus:outline-none focus:border-zinc-600 font-mono" />
+              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400 font-mono" />
           </div>
           <button onClick={() => fetchShowtimes(0)}
-            className="flex items-center gap-1.5 px-3 py-2 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase hover:border-zinc-500 transition">
+            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.10] text-neutral-200 text-[10px] font-bold uppercase hover:border-white/[0.20] transition">
             <Search className="w-3 h-3" /> Lọc
           </button>
           <button onClick={() => { setFilters({ movieId: '', roomId: '', status: '', date: '' }); fetchShowtimes(0); }}
-            className="flex items-center gap-1.5 px-3 py-2 border border-zinc-800 text-zinc-500 text-[10px] font-bold uppercase hover:border-zinc-700 hover:text-zinc-300 transition">
+            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.08] text-neutral-300 text-[10px] font-bold uppercase hover:border-white/[0.10] hover:text-neutral-200 transition">
             <RefreshCw className="w-3 h-3" /> Reset
           </button>
         </div>
@@ -1689,13 +1655,13 @@ export default function AdminShowtimesPanel({ ctx }) {
 
       {/* ── TABLE ── */}
       {mode === 'list' && (
-        <div className="border border-zinc-900 overflow-hidden">
+        <div className="border border-white/[0.06] overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-zinc-600">
+            <div className="flex items-center justify-center py-16 text-neutral-200">
               <RefreshCw className="w-4 h-4 animate-spin mr-2" /> Đang tải...
             </div>
           ) : showtimes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-zinc-600">
+            <div className="flex flex-col items-center justify-center py-16 text-neutral-200">
               <Film className="w-8 h-8 mb-2 opacity-30" />
               <p className="text-xs">Không có suất chiếu nào</p>
             </div>
@@ -1703,9 +1669,9 @@ export default function AdminShowtimesPanel({ ctx }) {
             <div className="overflow-x-auto">
               <table className="w-full text-xs font-sans">
                 <thead>
-                  <tr className="border-b border-zinc-900 bg-zinc-950/80">
+                  <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                     {['Phim', 'Phòng', 'Bắt đầu', 'Kết thúc', 'Giá vé', 'Trạng thái', 'Thao tác'].map(h => (
-                      <th key={h} className="text-left px-3 py-3 text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black whitespace-nowrap">{h}</th>
+                      <th key={h} className="text-left px-3 py-3 text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1716,14 +1682,14 @@ export default function AdminShowtimesPanel({ ctx }) {
                     const roomName = st.roomName ?? st.room?.name ?? '—';
                     return (
                       <tr key={st.id ?? idx}
-                        className="border-b border-zinc-900/50 hover:bg-zinc-900/30 transition-colors">
+                        className="border-b border-white/[0.04] hover:bg-white/[0.01] transition-colors">
                         <td className="px-3 py-3 max-w-[160px]">
                           <span className="font-bold text-white truncate block" title={movieTitle}>{movieTitle}</span>
                         </td>
-                        <td className="px-3 py-3 text-zinc-400 whitespace-nowrap">{roomName}</td>
-                        <td className="px-3 py-3 font-mono text-zinc-300 whitespace-nowrap">{fmt(st.startTime)}</td>
-                        <td className="px-3 py-3 font-mono text-zinc-500 whitespace-nowrap">{fmt(st.endTime)}</td>
-                        <td className="px-3 py-3 text-zinc-300 whitespace-nowrap">
+                        <td className="px-3 py-3 text-neutral-200 whitespace-nowrap">{roomName}</td>
+                        <td className="px-3 py-3 font-mono text-neutral-200 whitespace-nowrap">{fmt(st.startTime)}</td>
+                        <td className="px-3 py-3 font-mono text-neutral-300 whitespace-nowrap">{fmt(st.endTime)}</td>
+                        <td className="px-3 py-3 text-neutral-200 whitespace-nowrap">
                           <div className="font-mono">{fmtPrice(st.adultStandardPrice ?? st.basePrice)}</div>
                           {Number(st.surchargeAmount || 0) > 0 && (
                             <div className="text-[9px] text-amber-400">+{fmtPrice(st.surchargeAmount)} phụ thu</div>
@@ -1758,12 +1724,12 @@ export default function AdminShowtimesPanel({ ctx }) {
                             )}
                             {/* Detail */}
                             <button onClick={() => setDetailModal(st)} title="Chi tiết"
-                              className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 rounded transition">
+                              className="p-1 text-neutral-200 hover:text-neutral-300 hover:bg-white/[0.03] rounded transition">
                               <Eye className="w-3 h-3" />
                             </button>
                             {/* Delete */}
                             <button onClick={() => setConfirmDelete(st.id)} title="Xóa"
-                              className="p-1 text-zinc-600 hover:text-rose-400 hover:bg-rose-950/30 rounded transition">
+                              className="p-1 text-neutral-200 hover:text-rose-400 hover:bg-rose-950/30 rounded transition">
                               <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
@@ -1778,15 +1744,15 @@ export default function AdminShowtimesPanel({ ctx }) {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-900 bg-zinc-950/50">
-              <span className="text-[9px] text-zinc-600 font-mono">Trang {page + 1} / {totalPages}</span>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
+              <span className="text-[9px] text-neutral-200 font-mono">Trang {page + 1} / {totalPages}</span>
               <div className="flex gap-1">
                 <button disabled={page === 0} onClick={() => fetchShowtimes(page - 1)}
-                  className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 transition">
+                  className="p-1 text-neutral-200 hover:text-white disabled:opacity-30 transition">
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
                 <button disabled={page >= totalPages - 1} onClick={() => fetchShowtimes(page + 1)}
-                  className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 transition">
+                  className="p-1 text-neutral-200 hover:text-white disabled:opacity-30 transition">
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -1801,18 +1767,18 @@ export default function AdminShowtimesPanel({ ctx }) {
           <motion.div key="delete-confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="bg-zinc-950 border border-rose-500/30 p-6 max-w-sm w-full space-y-4">
+              className="bg-black border border-rose-500/30 p-6 max-w-sm w-full space-y-4">
               <div className="flex items-center gap-2 text-rose-400">
                 <AlertCircle className="w-4 h-4" />
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Xác nhận xóa suất chiếu</h3>
+                <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">Xác nhận xóa suất chiếu</h3>
               </div>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-neutral-200">
                 Suất chiếu sẽ bị xóa vĩnh viễn. Nếu còn booking đang hoạt động, thao tác sẽ bị từ chối (409).
                 Hãy hủy suất chiếu trước để tự động xử lý booking.
               </p>
               <div className="flex gap-2">
                 <button onClick={() => setConfirmDelete(null)}
-                  className="flex-1 py-2.5 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase hover:border-zinc-500 transition">
+                  className="flex-1 py-2.5 border border-white/[0.10] text-neutral-200 text-[10px] font-bold uppercase hover:border-white/[0.20] transition">
                   Hủy bỏ
                 </button>
                 <button onClick={() => handleDelete(confirmDelete)}
@@ -1831,31 +1797,31 @@ export default function AdminShowtimesPanel({ ctx }) {
           <motion.div key="cancel-confirm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              className="bg-zinc-950 border border-amber-500/30 p-6 max-w-sm w-full space-y-4">
+              className="bg-black border border-amber-500/30 p-6 max-w-sm w-full space-y-4">
               <div className="flex items-center gap-2 text-amber-400">
                 <AlertCircle className="w-4 h-4" />
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Xác nhận hủy suất chiếu</h3>
+                <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">Xác nhận hủy suất chiếu</h3>
               </div>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-neutral-200">
                 Bạn có chắc muốn hủy suất chiếu
-                <span className="mx-1 font-bold text-zinc-200">#{confirmCancel.id}</span>
+                <span className="mx-1 font-bold text-neutral-300">#{confirmCancel.id}</span>
                 của phim <span className="font-bold text-white">{confirmCancel.movieTitle ?? confirmCancel.movie?.title ?? 'này'}</span>?
                 Thao tác này sẽ chặn khách đặt vé cho suất chiếu đó.
               </p>
               <label className="block space-y-1.5">
-                <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Ly do huy</span>
+                <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Ly do huy</span>
                 <textarea
                   value={cancelReason}
                   onChange={e => setCancelReason(e.target.value)}
                   maxLength={500}
                   rows={3}
                   placeholder="VD: Cup dien, su co ky thuat phong chieu..."
-                  className="w-full resize-none bg-black border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                  className="w-full resize-none bg-black border border-white/[0.08] p-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
                 />
               </label>
               <div className="flex gap-2">
                 <button onClick={() => { setConfirmCancel(null); setCancelReason(''); }}
-                  className="flex-1 py-2.5 border border-zinc-700 text-zinc-300 text-[10px] font-bold uppercase hover:border-zinc-500 transition">
+                  className="flex-1 py-2.5 border border-white/[0.10] text-neutral-200 text-[10px] font-bold uppercase hover:border-white/[0.20] transition">
                   Quay lại
                 </button>
                 <button onClick={handleConfirmCancel} disabled={saving}
@@ -1878,10 +1844,10 @@ export default function AdminShowtimesPanel({ ctx }) {
             className="fixed inset-0 z-[250] flex items-start justify-center overflow-y-auto bg-black/80 p-4 pt-20 pb-24 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }}
               onClick={e => e.stopPropagation()}
-              className="max-h-[calc(100vh-8rem)] w-full max-w-md space-y-4 overflow-y-auto border border-zinc-800 bg-zinc-950 p-6 shadow-2xl">
+              className="max-h-[calc(100vh-8rem)] w-full max-w-md space-y-4 overflow-y-auto border border-white/[0.08] bg-black p-6 shadow-2xl">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Chi tiết suất chiếu #{detailModal.id}</h3>
-                <button onClick={() => setDetailModal(null)} className="text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
+                <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">Chi tiết suất chiếu #{detailModal.id}</h3>
+                <button onClick={() => setDetailModal(null)} className="text-neutral-300 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               <div className="space-y-2 text-[11px]">
                 {(() => {
@@ -1920,9 +1886,9 @@ export default function AdminShowtimesPanel({ ctx }) {
                   addPriceRow('Phụ thu áp dụng', detailModal.surchargeAmount);
                   rows.push(['Trạng thái', STATUS_META[detailModal.status]?.label ?? detailModal.status]);
                   return rows.map(([label, val]) => (
-                    <div key={label} className="flex justify-between border-b border-zinc-900 pb-1.5">
-                      <span className="text-zinc-500 font-bold">{label}</span>
-                      <span className="text-zinc-200 font-mono">{val ?? '—'}</span>
+                    <div key={label} className="flex justify-between border-b border-white/[0.06] pb-1.5">
+                      <span className="text-neutral-300 font-bold">{label}</span>
+                      <span className="text-neutral-300 font-mono">{val ?? '—'}</span>
                     </div>
                   ));
                 })()}
@@ -1949,3 +1915,5 @@ export default function AdminShowtimesPanel({ ctx }) {
     </div>
   );
 }
+
+

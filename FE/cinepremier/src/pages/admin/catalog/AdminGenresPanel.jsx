@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion } from 'motion/react';
 import {
   Plus, Trash2, Edit3, Search, Check, ChevronLeft, ChevronRight
@@ -51,22 +51,22 @@ export default function AdminGenresPanel({ ctx }) {
           transition={{ duration: 0.2 }}
           className="space-y-6"
         >
-          <div className="border border-neutral-850 bg-gradient-to-r from-[#090909] to-[#050505] p-5">
+          <div className="border border-white/[0.05] bg-gradient-to-r from-[#090909] to-[#050505] p-5">
             <div>
-              <span className="text-[12px] font-mono tracking-[0.24em] text-amber-500 uppercase font-black block">ADMIN GENRE</span>
-              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">Quản trị thể loại phim</h2>
+              <span className="text-[9px] font-mono tracking-[0.24em] text-neutral-300 uppercase font-black block">ADMIN GENRE</span>
+              <h2 className="text-xs font-black uppercase tracking-[0.18em] text-white mt-1">Quản trị thể loại phim</h2>
             </div>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
             {/* ── Form tạo / sửa ── */}
-            <div className="border border-neutral-850 bg-[#070707] p-4 space-y-4">
-              <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+            <div className="border border-white/[0.05] bg-[#070707] p-4 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/[0.03] pb-3">
                 <div>
-                  <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-neutral-500 font-black">
+                  <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-neutral-300 font-black">
                     {editingGenreId ? 'Chỉnh sửa bản ghi' : 'Tạo bản ghi mới'}
                   </span>
-                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">
+                  <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white mt-1">
                     {editingGenreId ? 'Cập nhật thể loại' : 'Thêm thể loại'}
                   </h3>
                 </div>
@@ -84,8 +84,8 @@ export default function AdminGenresPanel({ ctx }) {
               <form onSubmit={handleGenreSubmit} className="space-y-4 text-xs font-sans">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Tên thể loại</label>
-                    <span className={`text-[9px] font-mono ${genreForm.name.length > 100 ? 'text-rose-400' : 'text-neutral-600'}`}>
+                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Tên thể loại</label>
+                    <span className={`text-[9px] font-mono ${genreForm.name.length > 100 ? 'text-rose-400' : 'text-neutral-200'}`}>
                       {genreForm.name.length}/100
                     </span>
                   </div>
@@ -100,7 +100,7 @@ export default function AdminGenresPanel({ ctx }) {
                       if (genreErrors.name) setGenreErrors((prev) => ({ ...prev, name: undefined }));
                     }}
                     placeholder="Ví dụ: Hành động, Tâm lý, Sci-Fi..."
-                    className={`w-full min-h-[64px] resize-none break-words bg-black border p-2.5 text-sm text-white focus:outline-none rounded-none font-bold leading-relaxed caret-amber-300 ${genreErrors.name ? 'border-rose-500 focus:border-rose-400' : 'border-neutral-800 focus:border-amber-400'}`}
+                    className={`w-full min-h-[64px] resize-none break-words bg-black border p-2.5 text-sm text-white focus:outline-none rounded-none font-bold leading-relaxed caret-amber-300 ${genreErrors.name ? 'border-rose-500 focus:border-rose-400' : 'border-white/[0.06] focus:border-amber-400'}`}
                   />
                   {genreErrors.name && (
                     <p className="text-[10px] text-rose-400 font-bold">{genreErrors.name}</p>
@@ -109,8 +109,8 @@ export default function AdminGenresPanel({ ctx }) {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-400 font-black">Mô tả</label>
-                    <span className={`text-[9px] font-mono ${genreForm.description.length < 50 || genreForm.description.length > 1000 ? 'text-rose-400' : 'text-neutral-600'}`}>
+                    <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-200 font-black">Mô tả</label>
+                    <span className={`text-[9px] font-mono ${genreForm.description.length < 50 || genreForm.description.length > 1000 ? 'text-rose-400' : 'text-neutral-200'}`}>
                       {genreForm.description.length}/1000
                     </span>
                   </div>
@@ -123,7 +123,7 @@ export default function AdminGenresPanel({ ctx }) {
                       if (genreErrors.description) setGenreErrors((prev) => ({ ...prev, description: undefined }));
                     }}
                     placeholder="Mô tả ngắn về gu phim, nhịp kể, nhóm khán giả phù hợp..."
-                    className={`w-full resize-none bg-black border p-2.5 text-sm text-white focus:outline-none rounded-none leading-relaxed ${genreErrors.description ? 'border-rose-500 focus:border-rose-400' : 'border-neutral-800 focus:border-amber-400'}`}
+                    className={`w-full resize-none bg-black border p-2.5 text-sm text-white focus:outline-none rounded-none leading-relaxed ${genreErrors.description ? 'border-rose-500 focus:border-rose-400' : 'border-white/[0.06] focus:border-amber-400'}`}
                   />
                   {genreErrors.description && (
                     <p className="text-[10px] text-rose-400 font-bold">{genreErrors.description}</p>
@@ -147,22 +147,22 @@ export default function AdminGenresPanel({ ctx }) {
             </div>
 
             {/* ── Danh sách ── */}
-            <div className="min-w-0 border border-neutral-850 bg-neutral-950 overflow-hidden">
-              <div className="p-3 border-b border-neutral-850 flex flex-col md:flex-row md:items-center gap-3 justify-between">
+            <div className="min-w-0 border border-white/[0.05] bg-neutral-950 overflow-hidden">
+              <div className="p-3 border-b border-white/[0.05] flex flex-col md:flex-row md:items-center gap-3 justify-between">
                 <div>
                   <span className="text-[8px] font-mono text-white uppercase tracking-[0.2em] font-black">Danh sách loại phim</span>
-                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white mt-1">
+                  <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white mt-1">
                     {totalItems} thể loại đã đồng bộ
                   </h3>
                 </div>
                 <div className="relative w-full md:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-600" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-200" />
                   <input
                     type="text"
                     value={genreSearch}
                     onChange={(e) => setGenreSearch(e.target.value)}
                     placeholder="Tìm thể loại..."
-                    className="w-full bg-black border border-neutral-800 py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-black border border-white/[0.06] py-2.5 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
@@ -170,32 +170,32 @@ export default function AdminGenresPanel({ ctx }) {
               <div className="overflow-x-auto">
                 <table className="w-full table-fixed text-left border-collapse">
                   <thead className="bg-black">
-                    <tr className="border-b border-neutral-850 text-[9px] uppercase tracking-widest text-neutral-500 font-sans">
+                    <tr className="border-b border-white/[0.05] text-[9px] uppercase tracking-widest text-neutral-300 font-sans">
                       <th className="py-2.5 px-3 w-[54px]">ID</th>
                       <th className="py-2.5 px-3 w-[170px]">Tên thể loại</th>
                       <th className="py-2.5 px-3">Mô tả</th>
                       <th className="py-2.5 px-3 text-right w-[86px]">Thao tác</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-900">
+                  <tbody className="divide-y divide-white/[0.03]">
                     {isGenreLoading ? (
                       <tr>
-                        <td colSpan={4} className="py-10 text-center text-neutral-500 font-mono uppercase tracking-wider">
+                        <td colSpan={4} className="py-10 text-center text-neutral-300 font-mono uppercase tracking-wider">
                           Đang tải danh sách thể loại...
                         </td>
                       </tr>
                     ) : filteredGenres.length > 0 ? (
                       filteredGenres.map((genre) => (
-                        <tr key={genre.id} className="hover:bg-neutral-900/50 transition">
-                          <td className="py-2.5 px-3 text-[10px] font-mono text-neutral-500">#{genre.id}</td>
+                        <tr key={genre.id} className="hover:bg-white/[0.03] transition">
+                          <td className="py-2.5 px-3 text-[10px] font-mono text-neutral-300">#{genre.id}</td>
                           <td className="py-2.5 px-3">
                             <div className="font-black text-white text-xs uppercase tracking-wide truncate">{genre.name}</div>
-                            <div className="text-[9px] text-neutral-600 font-mono mt-0.5">
+                            <div className="text-[9px] text-neutral-200 font-mono mt-0.5">
                               {genre.updatedAt ? `Cập nhật: ${new Date(genre.updatedAt).toLocaleDateString('vi-VN')}` : 'Chưa có mốc cập nhật'}
                             </div>
                           </td>
                           <td className="py-2.5 px-3 text-xs text-neutral-300 leading-relaxed">
-                            <div className="line-clamp-2 break-words">{genre.description || <span className="text-neutral-600 italic">Chưa có mô tả</span>}</div>
+                            <div className="line-clamp-2 break-words">{genre.description || <span className="text-neutral-200 italic">Chưa có mô tả</span>}</div>
                           </td>
                           <td className="py-2.5 px-3">
                             <div className="flex justify-end gap-2">
@@ -221,7 +221,7 @@ export default function AdminGenresPanel({ ctx }) {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="py-10 text-center text-neutral-500 font-mono uppercase tracking-wider">
+                        <td colSpan={4} className="py-10 text-center text-neutral-300 font-mono uppercase tracking-wider">
                           Không có thể loại phù hợp truy vấn
                         </td>
                       </tr>
@@ -232,10 +232,10 @@ export default function AdminGenresPanel({ ctx }) {
 
               {/* ── Pagination Bar ── */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-neutral-850 bg-[#060606] px-4 py-3">
-                  <span className="text-[10px] font-mono text-neutral-500">
+                <div className="flex items-center justify-between border-t border-white/[0.05] bg-[#060606] px-4 py-3">
+                  <span className="text-[10px] font-mono text-neutral-300">
                     Trang <span className="text-amber-400 font-black">{page + 1}</span> / {totalPages}
-                    <span className="ml-2 text-neutral-600">({totalItems} thể loại)</span>
+                    <span className="ml-2 text-neutral-200">({totalItems} thể loại)</span>
                   </span>
 
                   <div className="flex items-center gap-1">
@@ -244,7 +244,7 @@ export default function AdminGenresPanel({ ctx }) {
                       type="button"
                       disabled={page === 0}
                       onClick={() => goToPage(page - 1)}
-                      className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-[10px] font-black uppercase text-neutral-400 hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      className="flex items-center gap-1 border border-white/[0.06] bg-black px-2.5 py-1.5 text-[10px] font-black uppercase text-neutral-200 hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
                     >
                       <ChevronLeft className="h-3 w-3" /> Trước
                     </button>
@@ -253,7 +253,7 @@ export default function AdminGenresPanel({ ctx }) {
                     {Array.from({ length: totalPages }, (_, i) => i).map((i) => {
                       const isNear = Math.abs(i - page) <= 1 || i === 0 || i === totalPages - 1;
                       if (!isNear && Math.abs(i - page) === 2) {
-                        return <span key={`ellipsis-${i}`} className="px-1 text-neutral-700 text-xs select-none">…</span>;
+                        return <span key={`ellipsis-${i}`} className="px-1 text-neutral-300 text-xs select-none">…</span>;
                       }
                       if (!isNear) return null;
                       return (
@@ -263,7 +263,7 @@ export default function AdminGenresPanel({ ctx }) {
                           onClick={() => goToPage(i)}
                           className={`min-w-[30px] h-[30px] border text-[10px] font-black transition ${i === page
                             ? 'border-amber-500 bg-amber-500 text-black'
-                            : 'border-neutral-800 bg-black text-neutral-400 hover:border-amber-500/50 hover:text-amber-300'
+                            : 'border-white/[0.06] bg-black text-neutral-200 hover:border-amber-500/50 hover:text-amber-300'
                             }`}
                         >
                           {i + 1}
@@ -276,7 +276,7 @@ export default function AdminGenresPanel({ ctx }) {
                       type="button"
                       disabled={page >= totalPages - 1}
                       onClick={() => goToPage(page + 1)}
-                      className="flex items-center gap-1 border border-neutral-800 bg-black px-2.5 py-1.5 text-[10px] font-black uppercase text-neutral-400 hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      className="flex items-center gap-1 border border-white/[0.06] bg-black px-2.5 py-1.5 text-[10px] font-black uppercase text-neutral-200 hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
                     >
                       Tiếp <ChevronRight className="h-3 w-3" />
                     </button>
@@ -290,3 +290,5 @@ export default function AdminGenresPanel({ ctx }) {
     </>
   );
 }
+
+

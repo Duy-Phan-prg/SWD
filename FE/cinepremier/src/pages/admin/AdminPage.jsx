@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Trash2, Edit3, ShieldAlert, FileText, Database,
   Calendar, Users, DollarSign, Activity, AlertCircle, CheckCircle2,
   Search, Sliders, ChevronDown, Check, RefreshCw, Layers, ShoppingBag,
-  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags, LogOut, MessageSquare, Wallet
+  BarChart2, Clock, Film, Play, Eye, EyeOff, TrendingUp, Info, Tags, LogOut, MessageSquare, Wallet,
+  Menu, MapPin, User
 } from 'lucide-react';
 import { expireAuthSession, getStoredAuth, hasBackendAdminAccess } from '../../services/authService';
 import { adminService } from '../../services/adminService';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useUiStore } from '../../stores/useUiStore';
 import AdminOverviewPanel from './overview/AdminOverviewPanel';
 import AdminMoviesPanel from './catalog/AdminMoviesPanel';
 import AdminGenresPanel from './catalog/AdminGenresPanel';
@@ -25,6 +28,39 @@ import AdminRoomsPanel from './cinema/AdminRoomsPanel';
 import AdminTicketsPanel from './cinema/AdminTicketsPanel';
 import AdminAuditPanel from './system/AdminAuditPanel';
 import AdminStatsPanel from './overview/AdminStatsPanel';
+
+function NavItem({ icon: Icon, label, active, onClick, indent = false }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`w-full flex items-center gap-2 py-[7px] text-[11.5px] font-medium transition-all duration-100 border-l-2 ${
+        indent ? 'pl-6 pr-3' : 'pl-3 pr-3'
+      } ${active
+        ? 'text-amber-400 bg-gradient-to-r from-amber-500/[0.09] to-transparent border-amber-500'
+        : 'text-neutral-300 hover:text-white hover:bg-white/[0.02] border-transparent'
+      }`}
+    >
+      <Icon className={`h-[13px] w-[13px] shrink-0 ${active ? 'text-amber-400' : 'text-neutral-400'}`} />
+      <span className="truncate leading-snug">{label}</span>
+      {active && <span className="ml-auto h-1 w-1 shrink-0 rounded-full bg-amber-500" />}
+    </button>
+  );
+}
+
+function NavSectionLabel({ children }) {
+  return (
+    <div className="px-3 pt-4 pb-1.5 first:pt-2">
+      <span className="text-[9px] font-mono tracking-[0.22em] uppercase text-neutral-300 font-bold">{children}</span>
+    </div>
+  );
+}
+
+const SECTION_TITLE = {
+  overview: 'Tổng quan hệ thống', movies: 'Thư viện phim', genres: 'Thể loại phim',
+  actors: 'Diễn viên', foods: 'Bắp nước / F&B', rooms: 'Phòng chiếu & ghế',
+  showtimes: 'Lịch chiếu', tickets: 'Quản lý vé', transactions: 'Giao dịch',
+  statistics: 'Thống kê mua bán', audit: 'Audit log', users: 'Quản lý người dùng',
+  reviews: 'Đánh giá', loyalty: 'Quản lý điểm', cinewallet: 'CineWallet', cinema: 'Thông tin rạp',
+};
 
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies'].includes(section)) return 'movies';
@@ -71,9 +107,16 @@ export default function AdminDashboard({
   isAdmin = false,
   currentUser = null
 }) {
+  const navigate = useNavigate();
+  const toggleAdminSidebar = useUiStore((state) => state.toggleAdminSidebar);
+  const sidebarCollapsed = useUiStore((state) => state.adminSidebarCollapsed);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const handleLogout = useAuthStore((state) => state.handleLogout);
+
   const [activeTab, setActiveTab] = useState(normalizeAdminSection(initialSection)); // 'overview' | 'movies' | 'genres' | 'foods' | 'showtimes' | 'transactions' | 'users'
   const [openNavGroup, setOpenNavGroup] = useState(getNavGroup(normalizeAdminSection(initialSection)));
   const [activeChartPoint, setActiveChartPoint] = useState(6);
+  const [collapsedTooltip, setCollapsedTooltip] = useState(null); // { key: 'logo'|tab, y: number }
 
   // Create state for movies so the dashboard can add/update them
   const [searchQuery, setSearchQuery] = useState('');
@@ -1486,28 +1529,269 @@ export default function AdminDashboard({
   const ActiveAdminPanel = adminPanels[activeTab] || AdminOverviewPanel;
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-5 xl:px-8 2xl:px-10 py-8 text-white select-none">
+    <div className="flex h-full text-white select-none overflow-hidden">
 
-      {/* CORE GRID: RESPONSIVE SIDEBAR + ACTIVE VIEW */}
-      <div className="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-5 items-start">
+      {/* LEFT: SIDEBAR (full height) */}
+      <div
+        className={`shrink-0 h-full flex flex-col border-r border-white/[0.10] bg-[#0e0e0e] transition-[width] duration-300 ${
+          sidebarCollapsed ? 'w-[52px]' : 'w-[240px] overflow-hidden'
+        }`}
+        id="admin-sidebar-bar"
+      >
+        {/* Logo */}
+        <div
+          className={`h-[52px] shrink-0 flex items-center border-b border-white/[0.10] ${sidebarCollapsed ? 'justify-center' : 'px-4 gap-3'}`}
+          onMouseEnter={sidebarCollapsed ? (e) => setCollapsedTooltip({ key: 'logo', y: e.currentTarget.getBoundingClientRect().top + 26 }) : undefined}
+          onMouseLeave={sidebarCollapsed ? () => setCollapsedTooltip(null) : undefined}
+        >
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center bg-amber-500/[0.07] border border-amber-500/25">
+            <span className="font-serif text-[13px] font-black italic text-amber-400">C</span>
+          </div>
+          {!sidebarCollapsed && (
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11.5px] font-black leading-tight tracking-[0.12em] text-white">
+                CINE<span className="text-amber-400">PREMIER</span>
+              </span>
+              <span className="text-[8px] font-mono uppercase leading-tight tracking-[0.3em] text-neutral-300">
+                Admin Console
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable nav */}
+        <div className={`flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${sidebarCollapsed ? '' : 'overflow-x-hidden'}`}>
+          {sidebarCollapsed ? (
+            <div className="py-3 flex flex-col items-center">
+              {[
+                { icon: Activity, tab: 'overview', sound: 440 },
+                null,
+                { icon: Tags, tab: 'genres', sound: 470 },
+                { icon: Users, tab: 'actors', sound: 465 },
+                { icon: Film, tab: 'movies', sound: 460 },
+                null,
+                { icon: ShoppingBag, tab: 'foods', sound: 478 },
+                null,
+                { icon: Layers, tab: 'rooms', sound: 470 },
+                { icon: Calendar, tab: 'showtimes', sound: 480 },
+                { icon: FileText, tab: 'tickets', sound: 492 },
+                { icon: FileText, tab: 'transactions', sound: 500 },
+                null,
+                { icon: BarChart2, tab: 'statistics', sound: 505 },
+                { icon: ShieldAlert, tab: 'audit', sound: 508 },
+                null,
+                { icon: Users, tab: 'users', sound: 510 },
+                { icon: MessageSquare, tab: 'reviews', sound: 515 },
+                { icon: DollarSign, tab: 'loyalty', sound: 520 },
+                { icon: Wallet, tab: 'cinewallet', sound: 525 },
+              ].map((item, index) => item === null ? (
+                <div key={`div-${index}`} className="w-6 h-px bg-white/[0.06] my-1.5" />
+              ) : (
+                <div key={item.tab} className="w-full flex justify-center mb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => { playPulseSound(item.sound, 'sine', 0.05); changeAdminSection(item.tab); }}
+                    onMouseEnter={(e) => setCollapsedTooltip({ key: item.tab, y: e.currentTarget.getBoundingClientRect().top + 18 })}
+                    onMouseLeave={() => setCollapsedTooltip(null)}
+                    className={`h-9 w-9 flex items-center justify-center border-l-2 transition-all duration-100 ${
+                      activeTab === item.tab ? 'bg-amber-500/[0.09] text-amber-400 border-amber-500' : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/[0.02] border-transparent'
+                    }`}
+                  >
+                    <item.icon className="h-[13px] w-[13px]" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {/* Profile card */}
+              <div className="mx-3 mt-3 mb-1 bg-gradient-to-b from-[#111111] to-[#090909] border border-white/[0.03] p-2.5 flex items-center gap-2">
+                <div className="h-7 w-7 shrink-0 border border-amber-500/30 bg-amber-500/[0.07] flex items-center justify-center">
+                  <span className="text-[12px] font-black italic font-serif text-amber-400">{isAdmin ? 'A' : 'S'}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-white truncate leading-tight">
+                    {isAdmin ? 'Quản trị viên' : (currentUser?.name || 'Nhân viên')}
+                  </p>
+                  <p className="text-[8px] text-neutral-300 font-mono leading-tight tracking-wider">CP-99210-{isAdmin ? 'ADMIN' : 'STAFF'}</p>
+                </div>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+              </div>
+
+              {/* Flat nav with section labels */}
+              <nav className="pb-4">
+                <NavSectionLabel>Tổng quan</NavSectionLabel>
+                <NavItem icon={Activity} label="Tổng quan hệ thống" active={activeTab === 'overview'} onClick={() => { playPulseSound(440, 'sine', 0.05); changeAdminSection('overview'); }} />
+
+                <NavSectionLabel>Quản lý phim</NavSectionLabel>
+                <NavItem indent icon={Tags} label="Thể loại phim" active={activeTab === 'genres'} onClick={() => { playPulseSound(470, 'sine', 0.05); changeAdminSection('genres'); }} />
+                <NavItem indent icon={Users} label="Diễn viên" active={activeTab === 'actors'} onClick={() => { playPulseSound(465, 'sine', 0.05); changeAdminSection('actors'); }} />
+                <NavItem indent icon={Film} label="Thư viện phim" active={activeTab === 'movies'} onClick={() => { playPulseSound(460, 'sine', 0.05); changeAdminSection('movies'); }} />
+
+                <NavSectionLabel>Bắp nước / F&amp;B</NavSectionLabel>
+                <NavItem indent icon={ShoppingBag} label="Quản lý bắp nước" active={activeTab === 'foods'} onClick={() => { playPulseSound(478, 'sine', 0.05); changeAdminSection('foods'); }} />
+
+                <NavSectionLabel>Quản lý rạp</NavSectionLabel>
+                <NavItem indent icon={Layers} label="Phòng chiếu & ghế" active={activeTab === 'rooms'} onClick={() => { playPulseSound(470, 'sine', 0.05); changeAdminSection('rooms'); }} />
+                <NavItem indent icon={Calendar} label="Lịch chiếu" active={activeTab === 'showtimes'} onClick={() => { playPulseSound(480, 'sine', 0.05); changeAdminSection('showtimes'); }} />
+                <NavItem indent icon={FileText} label="Quản lý vé" active={activeTab === 'tickets'} onClick={() => { playPulseSound(492, 'sine', 0.05); changeAdminSection('tickets'); }} />
+                <NavItem indent icon={FileText} label="Giao dịch" active={activeTab === 'transactions'} onClick={() => { playPulseSound(500, 'sine', 0.05); changeAdminSection('transactions'); }} />
+
+                <NavSectionLabel>Thống kê / Giám sát</NavSectionLabel>
+                <NavItem indent icon={BarChart2} label="Thống kê mua bán" active={activeTab === 'statistics'} onClick={() => { playPulseSound(505, 'sine', 0.05); changeAdminSection('statistics'); }} />
+                <NavItem indent icon={ShieldAlert} label="Audit log" active={activeTab === 'audit'} onClick={() => { playPulseSound(508, 'sine', 0.05); changeAdminSection('audit'); }} />
+
+                <NavSectionLabel>Khách hàng</NavSectionLabel>
+                <NavItem indent icon={Users} label="Người dùng" active={activeTab === 'users'} onClick={() => { playPulseSound(510, 'sine', 0.05); changeAdminSection('users'); }} />
+                <NavItem indent icon={MessageSquare} label="Đánh giá" active={activeTab === 'reviews'} onClick={() => { playPulseSound(515, 'sine', 0.05); changeAdminSection('reviews'); }} />
+                <NavItem indent icon={DollarSign} label="Điểm tích lũy" active={activeTab === 'loyalty'} onClick={() => { playPulseSound(520, 'sine', 0.05); changeAdminSection('loyalty'); }} />
+                <NavItem indent icon={Wallet} label="CineWallet" active={activeTab === 'cinewallet'} onClick={() => { playPulseSound(525, 'sine', 0.05); changeAdminSection('cinewallet'); }} />
+              </nav>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar bottom */}
+        <div className={`shrink-0 border-t border-white/[0.10] ${sidebarCollapsed ? 'p-2 flex flex-col items-center gap-1' : 'p-3 space-y-1'}`}>
+          {!sidebarCollapsed && (
+            <button
+              type="button"
+              onClick={() => navigate('/admin/cinema')}
+              className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/[0.02] border border-transparent hover:border-white/[0.04] transition-colors group"
+            >
+              <MapPin className="h-3 w-3 text-neutral-200 shrink-0 group-hover:text-amber-500/60 transition-colors" />
+              <div className="min-w-0 text-left">
+                <span className="block text-[10px] font-medium text-neutral-200 group-hover:text-neutral-200 truncate transition-colors leading-tight">{publicCinema?.name || 'CineAI Central'}</span>
+                <span className="block text-[7.5px] font-mono text-neutral-200 truncate">{publicCinema?.city || 'Hồ Chí Minh'}</span>
+              </div>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => handleLogout({ navigate, showToast })}
+            className={`flex items-center gap-2 text-[10.5px] font-medium text-neutral-300 hover:text-neutral-200 hover:bg-white/[0.02] transition-colors ${sidebarCollapsed ? 'h-8 w-8 justify-center' : 'w-full px-2 py-1.5'}`}
+          >
+            <LogOut className="h-3 w-3 shrink-0" />
+            {!sidebarCollapsed && <span>Đăng xuất</span>}
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsed sidebar tooltip — fixed so it escapes overflow-y-auto clipping */}
+      {collapsedTooltip && sidebarCollapsed && (
+        <div className="fixed z-[9999] left-[56px] pointer-events-none" style={{ top: collapsedTooltip.y }}>
+          <div className="-translate-y-1/2 bg-[#1c1c1c] rounded-md whitespace-nowrap shadow-xl">
+            {collapsedTooltip.key === 'logo' ? (
+              <div className="px-3 py-2">
+                <span className="block text-[11.5px] font-black tracking-[0.12em] text-white leading-tight">CINE<span className="text-amber-400">PREMIER</span></span>
+                <span className="block text-[7px] font-mono uppercase tracking-[0.3em] text-neutral-200 leading-tight mt-0.5">Admin Console</span>
+              </div>
+            ) : (
+              <div className="px-3 py-1.5">
+                <span className="text-[12px] font-semibold text-white">{SECTION_TITLE[collapsedTooltip.key]}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* RIGHT: header + scrollable content */}
+      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <div className="h-[52px] shrink-0 flex items-center gap-2 border-b border-white/[0.10] bg-[#0e0e0e] px-4">
+          <button
+            type="button"
+            onClick={toggleAdminSidebar}
+            className="flex h-7 w-7 shrink-0 items-center justify-center text-neutral-300 hover:text-neutral-200 hover:bg-white/[0.03] transition-colors"
+          >
+            <Menu className="h-3.5 w-3.5" />
+          </button>
+          <div className="w-px h-3.5 bg-white/[0.04] mx-1 shrink-0" />
+          <div className="flex items-center gap-1.5 min-w-0">
+            {getNavGroup(activeTab) && (
+              <>
+                <span className="text-[9px] font-mono tracking-[0.15em] text-neutral-200 uppercase hidden sm:block">
+                  {getNavGroup(activeTab) === 'movies' ? 'Quản lý phim' : getNavGroup(activeTab) === 'fnb' ? 'F&B' : getNavGroup(activeTab) === 'cinema' ? 'Quản lý rạp' : getNavGroup(activeTab) === 'insights' ? 'Thống kê' : 'Khách hàng'}
+                </span>
+                <span className="text-neutral-300 text-[9px] hidden sm:block">/</span>
+              </>
+            )}
+            <span className="text-[11px] font-medium text-neutral-300 truncate hidden sm:block">
+              {SECTION_TITLE[activeTab] || 'Dashboard'}
+            </span>
+          </div>
+          <div className="flex-1" />
+          <button
+            type="button"
+            className="hidden h-7 items-center gap-1.5 px-2.5 hover:text-amber-400/70 hover:bg-white/[0.03] md:flex group transition-colors"
+          >
+            <User className="h-3 w-3 text-neutral-300 shrink-0 group-hover:text-amber-400/60 transition-colors" />
+            <span className="text-[10px] font-medium text-neutral-200 group-hover:text-amber-400/70 transition-colors">
+              {isAdmin ? 'Admin' : (currentUser?.name || 'Staff')}
+            </span>
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 min-w-0 overflow-y-auto bg-[#020202]">
+          <div className="px-5 xl:px-7 py-6 space-y-5">
+
+            {/* METRIC CARDS */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" id="corporate-bento-metrics">
+              {[
+                { label: 'Tổng doanh thu', sub: '30 ngày gần nhất', value: `${calculatedRevenue.toLocaleString()}đ`, icon: DollarSign, iconColor: 'text-amber-500', barColor: 'from-amber-500 to-amber-400', barW: '72%' },
+                { label: 'Vé bán ra', sub: '30 ngày gần nhất', value: `${totalBookingsCount}`, unit: 'vé', icon: FileText, iconColor: 'text-emerald-400', barColor: 'from-emerald-500 to-emerald-400', barW: '58%' },
+                { label: 'Lấp đầy rạp', sub: 'Tỉ lệ trung bình', value: `${averageFillRate}`, unit: '%', icon: Activity, iconColor: 'text-blue-400', barColor: 'from-blue-500 to-blue-400', barW: `${Math.min(100, averageFillRate)}%` },
+                { label: 'Thư viện phim', sub: 'Đang hoạt động', value: `${moviesList.length}`, unit: 'phim', icon: Film, iconColor: 'text-violet-400', barColor: 'from-violet-500 to-violet-400', barW: '85%' },
+              ].map(({ label, sub, value, unit, icon: Icon, iconColor, barColor, barW }) => (
+                <div key={label} className="bg-gradient-to-b from-[#0d0d0d] to-[#050505] border border-white/[0.04] p-4 space-y-3 relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <span className="text-[8.5px] tracking-[0.15em] font-extrabold text-neutral-200 uppercase font-mono">{label}</span>
+                    <Icon className={`h-4 w-4 shrink-0 ${iconColor}`} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-mono font-black text-white leading-none">
+                      {value}{unit && <span className="text-[11px] font-bold text-neutral-300 ml-1">{unit}</span>}
+                    </h2>
+                    <p className="text-[8px] text-neutral-300 font-mono mt-1 uppercase tracking-wider">{sub}</p>
+                  </div>
+                  <div className="h-px bg-neutral-900 overflow-hidden">
+                    <div className={`h-full bg-gradient-to-r ${barColor}`} style={{ width: barW }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ACTIVE PANEL */}
+            <AnimatePresence mode="wait">
+              <ActiveAdminPanel key={activeTab} ctx={adminCtx} />
+            </AnimatePresence>
+
+          </div>
+        </div>
+      </div>
+
+      {/* STUB: keep grid/sticky for reference — replaced by flex above */}
+      <div className="hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-5 items-start">
 
         {/* LEFT COMPONENT: THE DASHBOARD SELECTOR BAR (Cols 3) */}
         <div className="space-y-4 lg:sticky lg:top-20" id="admin-sidebar-bar">
 
           {/* Active Admin Profile */}
-          <div className="bg-gradient-to-b from-[#0a0a0a] to-[#040404] border border-neutral-850 p-3 space-y-2.5">
+          <div className="bg-gradient-to-b from-[#0a0a0a] to-[#040404] border border-white/[0.05] p-3 space-y-2.5">
             <div className="flex items-center space-x-2.5">
               <div className="h-8 w-8 overflow-hidden rounded-sm border border-amber-500 bg-neutral-900 flex items-center justify-center text-amber-400 font-serif italic text-base font-black">
                 A
               </div>
               <div className="min-w-0">
                 <h4 className="truncate text-[11px] font-black uppercase text-white tracking-wide">QUẢN TRỊ VIÊN</h4>
-                <p className="text-[9px] text-[#88959C] font-mono">ID: CP-99210-ADMIN</p>
+                <p className="text-[9px] text-neutral-300 font-mono">ID: CP-99210-ADMIN</p>
               </div>
             </div>
-            <div className="h-[1px] bg-neutral-850"></div>
+            <div className="h-[1px] bg-white/[0.04]"></div>
             <div className="flex items-center justify-between text-[10px] font-sans">
-              <span className="text-neutral-500">Môi trường</span>
+              <span className="text-neutral-300">Môi trường</span>
               <span className="text-emerald-400 font-mono font-bold flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> PRODUCTION
               </span>
@@ -1515,8 +1799,8 @@ export default function AdminDashboard({
           </div>
 
           {/* Navigation Sidebar List (like image layout) */}
-          <div className="bg-[#070707] border border-neutral-850 p-3 space-y-1.5 [&_button]:px-2.5 [&_button]:py-2.5 [&_button]:text-[9.5px] [&_svg]:h-3.5 [&_svg]:w-3.5" id="nav-sidebar-items">
-            <span className="text-[7.5px] font-mono uppercase tracking-[0.18em] text-neutral-500 block px-2 pb-1.5 font-black">
+          <div className="bg-[#070707] border border-white/[0.05] p-3 space-y-1.5 [&_button]:px-2.5 [&_button]:py-2.5 [&_button]:text-[9.5px] [&_svg]:h-3.5 [&_svg]:w-3.5" id="nav-sidebar-items">
+            <span className="text-[7.5px] font-mono uppercase tracking-[0.18em] text-neutral-300 block px-2 pb-1.5 font-black">
               TỔNG QUAN
             </span>
 
@@ -1524,7 +1808,7 @@ export default function AdminDashboard({
               onClick={() => { playPulseSound(440, 'sine', 0.05); changeAdminSection('overview'); }}
               className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-widest transition-all duration-300 border ${activeTab === 'overview'
                 ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                 }`}
             >
               <span className="flex items-center space-x-2.5">
@@ -1555,7 +1839,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(470, 'sine', 0.05); changeAdminSection('genres'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'genres'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1569,7 +1853,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(465, 'sine', 0.05); changeAdminSection('actors'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'actors'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1583,7 +1867,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(460, 'sine', 0.05); changeAdminSection('movies'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'movies'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1619,7 +1903,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(478, 'sine', 0.05); changeAdminSection('foods'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'foods'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1653,7 +1937,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(470, 'sine', 0.05); changeAdminSection('rooms'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'rooms'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1667,7 +1951,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(480, 'sine', 0.05); changeAdminSection('showtimes'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'showtimes'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1680,7 +1964,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(492, 'sine', 0.05); changeAdminSection('tickets'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'tickets'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1693,7 +1977,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(500, 'sine', 0.05); changeAdminSection('transactions'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'transactions'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1728,7 +2012,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(505, 'sine', 0.05); changeAdminSection('statistics'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'statistics'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1741,7 +2025,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(508, 'sine', 0.05); changeAdminSection('audit'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'audit'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1775,7 +2059,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(510, 'sine', 0.05); changeAdminSection('users'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'users'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1789,7 +2073,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(515, 'sine', 0.05); changeAdminSection('reviews'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'reviews'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1803,7 +2087,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(520, 'sine', 0.05); changeAdminSection('loyalty'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'loyalty'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1817,7 +2101,7 @@ export default function AdminDashboard({
                     onClick={() => { playPulseSound(525, 'sine', 0.05); changeAdminSection('cinewallet'); }}
                     className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'cinewallet'
                       ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
-                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      : 'border-white/5 bg-black/40 text-neutral-200 hover:text-white hover:border-white/[0.05]'
                       }`}
                   >
                     <span className="flex items-center space-x-2.5">
@@ -1857,46 +2141,46 @@ export default function AdminDashboard({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="corporate-bento-metrics">
 
             {/* Metric Card 1 */}
-            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-neutral-850 p-5 space-y-2.5 relative overflow-hidden shadow-md">
+            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-white/[0.05] p-5 space-y-2.5 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-start">
-                <span className="text-[9px] tracking-wider font-extrabold text-[#7E8B93] uppercase font-sans">Tổng doanh thu liên kết</span>
+                <span className="text-[9px] tracking-wider font-extrabold text-neutral-300 uppercase font-sans">Tổng doanh thu liên kết</span>
                 <div className="p-1 bg-amber-500/10 text-amber-500"><DollarSign className="h-4 w-4" /></div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{calculatedRevenue.toLocaleString()}đ</h2>
+                <h2 className="text-lg sm:text-xl font-mono font-black text-white">{calculatedRevenue.toLocaleString()}đ</h2>
               </div>
             </div>
 
             {/* Metric Card 2 */}
-            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-neutral-850 p-5 space-y-2.5 relative overflow-hidden shadow-md">
+            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-white/[0.05] p-5 space-y-2.5 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-start">
-                <span className="text-[9px] tracking-wider font-extrabold text-[#7E8B93] uppercase font-sans">Sản lượng vé xuất xưởng</span>
+                <span className="text-[9px] tracking-wider font-extrabold text-neutral-300 uppercase font-sans">Sản lượng vé xuất xưởng</span>
                 <div className="p-1 bg-emerald-500/10 text-emerald-400"><FileText className="h-4 w-4" /></div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{totalBookingsCount} vé</h2>
+                <h2 className="text-lg sm:text-xl font-mono font-black text-white">{totalBookingsCount} vé</h2>
               </div>
             </div>
 
             {/* Metric Card 3 */}
-            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-neutral-850 p-5 space-y-2.5 relative overflow-hidden shadow-md">
+            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-white/[0.05] p-5 space-y-2.5 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-start">
-                <span className="text-[9px] tracking-wider font-extrabold text-[#7E8B93] uppercase font-sans">Hệ số lấp đầy rạp</span>
+                <span className="text-[9px] tracking-wider font-extrabold text-neutral-300 uppercase font-sans">Hệ số lấp đầy rạp</span>
                 <div className="p-1 bg-blue-500/10 text-blue-400"><Activity className="h-4 w-4" /></div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{averageFillRate}%</h2>
+                <h2 className="text-lg sm:text-xl font-mono font-black text-white">{averageFillRate}%</h2>
               </div>
             </div>
 
             {/* Metric Card 4 */}
-            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-neutral-850 p-5 space-y-2.5 relative overflow-hidden shadow-md">
+            <div className="bg-gradient-to-b from-[#0c0c0c] to-[#040404] border border-white/[0.05] p-5 space-y-2.5 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-start">
-                <span className="text-[9px] tracking-wider font-extrabold text-[#7E8B93] uppercase font-sans">Thư viện phát hành</span>
+                <span className="text-[9px] tracking-wider font-extrabold text-neutral-300 uppercase font-sans">Thư viện phát hành</span>
                 <div className="p-1 bg-purple-500/10 text-purple-400"><Film className="h-4 w-4" /></div>
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-mono font-black text-white">{moviesList.length} phim</h2>
+                <h2 className="text-lg sm:text-xl font-mono font-black text-white">{moviesList.length} phim</h2>
               </div>
             </div>
 
@@ -1911,6 +2195,7 @@ export default function AdminDashboard({
             </AnimatePresence>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -256,12 +256,12 @@ export default function AdminUsersPanel({ ctx }) {
       transition={{ duration: 0.2 }}
       className="space-y-6"
     >
-      <div className="flex flex-col gap-4 border border-neutral-850 bg-[#070707] p-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 border border-white/[0.05] bg-[#070707] p-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <span className="text-[8px] font-mono font-black uppercase tracking-widest text-amber-400">
+          <span className="text-[8px] font-mono font-black uppercase tracking-widest text-neutral-300">
             ADMIN USER CONTROL
           </span>
-          <h2 className="text-sm font-black uppercase tracking-[0.18em] text-white">
+          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-white">
             Quản lý người dùng hệ thống
           </h2>
         </div>
@@ -279,7 +279,7 @@ export default function AdminUsersPanel({ ctx }) {
           type="button"
           onClick={fetchAdminUsers}
           disabled={isUsersLoading}
-          className="flex items-center justify-center gap-2 border border-neutral-800 bg-black px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition hover:border-amber-400 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center justify-center gap-2 border border-white/[0.06] bg-black px-4 py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-300 transition hover:border-amber-400 hover:text-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isUsersLoading ? 'animate-spin' : ''}`} />
           Làm mới dữ liệu
@@ -299,7 +299,7 @@ export default function AdminUsersPanel({ ctx }) {
                 <Plus className="h-4 w-4" />
                 Cấp tài khoản STAFF
               </div>
-              <p className="mt-1 text-[10px] text-neutral-500">
+              <p className="mt-1 text-[10px] text-neutral-300">
                 Tài khoản được kích hoạt ngay và có quyền truy cập màn hình nghiệp vụ nhân viên.
               </p>
             </div>
@@ -316,7 +316,7 @@ export default function AdminUsersPanel({ ctx }) {
               { field: 'birthYear', label: 'Năm sinh', placeholder: '2000', type: 'number' }
             ].map(({ field, label, placeholder, type }) => (
               <label key={field} className="space-y-1.5">
-                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{label}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-200">{label}</span>
                 <input
                   type={type}
                   value={staffForm[field]}
@@ -324,26 +324,26 @@ export default function AdminUsersPanel({ ctx }) {
                   placeholder={placeholder}
                   min={field === 'birthYear' ? 1900 : undefined}
                   max={field === 'birthYear' ? 2100 : undefined}
-                  className={`w-full border bg-black px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400 ${staffFormErrors[field] ? 'border-rose-500' : 'border-neutral-800'}`}
+                  className={`w-full border bg-black px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-200 focus:border-amber-400 ${staffFormErrors[field] ? 'border-rose-500' : 'border-white/[0.06]'}`}
                 />
                 {staffFormErrors[field] && <span className="block text-[9px] text-rose-300">{staffFormErrors[field]}</span>}
               </label>
             ))}
 
             <label className="space-y-1.5">
-              <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Mật khẩu cấp ban đầu *</span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-neutral-200">Mật khẩu cấp ban đầu *</span>
               <div className="relative">
                 <input
                   type={showStaffPassword ? 'text' : 'password'}
                   value={staffForm.password}
                   onChange={(event) => updateStaffForm('password', event.target.value)}
                   placeholder="Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt"
-                  className={`w-full border bg-black px-3 py-2.5 pr-10 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400 ${staffFormErrors.password ? 'border-rose-500' : 'border-neutral-800'}`}
+                  className={`w-full border bg-black px-3 py-2.5 pr-10 text-xs text-white outline-none transition placeholder:text-neutral-200 focus:border-amber-400 ${staffFormErrors.password ? 'border-rose-500' : 'border-white/[0.06]'}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowStaffPassword((prev) => !prev)}
-                  className="absolute right-2.5 top-2.5 text-neutral-500 transition hover:text-white"
+                  className="absolute right-2.5 top-2.5 text-neutral-300 transition hover:text-white"
                   aria-label={showStaffPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
                   {showStaffPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -367,25 +367,25 @@ export default function AdminUsersPanel({ ctx }) {
       )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <div className="xl:col-span-7 border border-neutral-850 bg-neutral-950 overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-neutral-850 bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="xl:col-span-7 border border-white/[0.05] bg-neutral-950 overflow-hidden">
+          <div className="flex flex-col gap-3 border-b border-white/[0.05] bg-black p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-white">
               <Users className="h-4 w-4 text-amber-400" />
               Danh sách tài khoản
             </div>
             <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-600" />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-200" />
               <input
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 placeholder="Tìm email, tên, SĐT..."
-                className="w-full border border-neutral-800 bg-[#050505] py-2 pl-9 pr-3 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400"
+                className="w-full border border-white/[0.06] bg-[#050505] py-2 pl-9 pr-3 text-xs text-white outline-none transition placeholder:text-neutral-200 focus:border-amber-400"
               />
             </div>
           </div>
 
-          <div className="divide-y divide-neutral-900">
-            <div className="hidden grid-cols-[42px_minmax(0,1.6fr)_minmax(86px,0.75fr)_minmax(74px,0.65fr)_minmax(118px,0.85fr)_48px] gap-2 bg-[#050505] px-3 py-3 text-[8px] uppercase tracking-widest text-neutral-500 lg:grid">
+          <div className="divide-y divide-white/[0.03]">
+            <div className="hidden grid-cols-[42px_minmax(0,1.6fr)_minmax(86px,0.75fr)_minmax(74px,0.65fr)_minmax(118px,0.85fr)_48px] gap-2 bg-[#050505] px-3 py-3 text-[8px] uppercase tracking-widest text-neutral-300 lg:grid">
               <span>ID</span>
               <span>Người dùng</span>
               <span>Liên hệ</span>
@@ -395,7 +395,7 @@ export default function AdminUsersPanel({ ctx }) {
             </div>
 
             {isUsersLoading ? (
-              <div className="px-4 py-10 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+              <div className="px-4 py-10 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-300">
                 Đang tải danh sách người dùng...
               </div>
             ) : filteredUsers.length > 0 ? (
@@ -407,19 +407,19 @@ export default function AdminUsersPanel({ ctx }) {
                 return (
                   <div
                     key={user.id}
-                    className={`grid grid-cols-1 gap-3 px-3 py-3 text-xs transition lg:grid-cols-[42px_minmax(0,1.6fr)_minmax(86px,0.75fr)_minmax(74px,0.65fr)_minmax(118px,0.85fr)_48px] lg:items-center ${isSelected ? 'bg-amber-500/5' : 'hover:bg-neutral-900/45'}`}
+                    className={`grid grid-cols-1 gap-3 px-3 py-3 text-xs transition lg:grid-cols-[42px_minmax(0,1.6fr)_minmax(86px,0.75fr)_minmax(74px,0.65fr)_minmax(118px,0.85fr)_48px] lg:items-center ${isSelected ? 'bg-amber-500/5' : 'hover:bg-white/[0.02]'}`}
                   >
-                    <div className="font-mono text-neutral-500">#{user.id}</div>
+                    <div className="font-mono text-neutral-300">#{user.id}</div>
 
                     <div className="min-w-0">
                       <div className="truncate font-black text-white">
                         {user.fullName || 'Chưa cập nhật tên'}
                       </div>
-                      <div className="truncate text-[10px] text-neutral-500">{user.email}</div>
+                      <div className="truncate text-[10px] text-neutral-300">{user.email}</div>
                     </div>
 
-                    <div className="min-w-0 text-neutral-400">
-                      <span className="lg:hidden text-[8px] uppercase tracking-widest text-neutral-600">
+                    <div className="min-w-0 text-neutral-200">
+                      <span className="lg:hidden text-[8px] uppercase tracking-widest text-neutral-200">
                         Liên hệ:{' '}
                       </span>
                       <span className="break-words">{user.phone || 'Chưa có SĐT'}</span>
@@ -430,7 +430,7 @@ export default function AdminUsersPanel({ ctx }) {
                         {(user.roles || []).map((role) => (
                           <span
                             key={role}
-                            className="border border-neutral-800 bg-black px-1.5 py-0.5 text-[8px] font-bold uppercase text-neutral-300"
+                            className="border border-white/[0.06] bg-black px-1.5 py-0.5 text-[8px] font-bold uppercase text-neutral-300"
                           >
                             {role}
                           </span>
@@ -449,7 +449,7 @@ export default function AdminUsersPanel({ ctx }) {
                       <button
                         type="button"
                         onClick={() => handleSelectAdminUser(user.id)}
-                        className="border border-neutral-800 px-2.5 py-1.5 text-[9px] font-bold uppercase text-neutral-300 transition hover:border-white hover:text-white"
+                        className="border border-white/[0.06] px-2.5 py-1.5 text-[9px] font-bold uppercase text-neutral-300 transition hover:border-white hover:text-white"
                       >
                         Xem
                       </button>
@@ -458,25 +458,25 @@ export default function AdminUsersPanel({ ctx }) {
                 );
               })
             ) : (
-              <div className="px-4 py-10 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+              <div className="px-4 py-10 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-300">
                 Không tìm thấy người dùng phù hợp
               </div>
             )}
           </div>
         </div>
 
-        <div className="xl:col-span-5 border border-neutral-850 bg-[#070707] p-5">
+        <div className="xl:col-span-5 border border-white/[0.05] bg-[#070707] p-5">
           {selectedAdminUser ? (
             <div className="space-y-5">
-              <div className="flex items-start justify-between gap-3 border-b border-neutral-850 pb-4">
+              <div className="flex items-start justify-between gap-3 border-b border-white/[0.05] pb-4">
                 <div className="min-w-0">
-                  <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-500">
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-300">
                     Hồ sơ người dùng
                   </span>
-                  <h3 className="mt-1 break-words text-lg font-serif italic text-white">
+                  <h3 className="mt-1 break-words text-sm font-black text-white">
                     {selectedAdminUser.fullName || selectedAdminUser.email}
                   </h3>
-                  <p className="text-[10px] font-mono text-neutral-500">ID #{selectedAdminUser.id}</p>
+                  <p className="text-[10px] font-mono text-neutral-300">ID #{selectedAdminUser.id}</p>
                 </div>
                 <span className={`inline-flex shrink-0 items-center gap-1.5 border px-2.5 py-1.5 text-[9px] font-black uppercase ${selectedStatus.className}`}>
                   <SelectedStatusIcon className="h-3.5 w-3.5" />
@@ -485,28 +485,28 @@ export default function AdminUsersPanel({ ctx }) {
               </div>
 
               {isUserDetailLoading ? (
-                <div className="py-12 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+                <div className="py-12 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-300">
                   Đang tải chi tiết...
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="border border-neutral-850 bg-black p-3">
-                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-500">
+                    <div className="border border-white/[0.05] bg-black p-3">
+                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-300">
                         <Mail className="h-3.5 w-3.5" /> Email
                       </div>
                       <div className="mt-1 break-all text-xs font-bold text-white">{selectedAdminUser.email}</div>
                     </div>
-                    <div className="border border-neutral-850 bg-black p-3">
-                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-500">
+                    <div className="border border-white/[0.05] bg-black p-3">
+                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-300">
                         <Phone className="h-3.5 w-3.5" /> Số điện thoại
                       </div>
                       <div className="mt-1 break-words text-xs font-bold text-white">
                         {selectedAdminUser.phone || 'Chưa cập nhật'}
                       </div>
                     </div>
-                    <div className="border border-neutral-850 bg-black p-3">
-                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-500">
+                    <div className="border border-white/[0.05] bg-black p-3">
+                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-300">
                         <BadgeCheck className="h-3.5 w-3.5" /> Xác minh
                       </div>
                       <div className="mt-1 text-xs font-bold leading-relaxed text-white">
@@ -514,8 +514,8 @@ export default function AdminUsersPanel({ ctx }) {
                         {selectedAdminUser.phoneVerified ? 'Đã xác minh' : 'Chưa xác minh'}
                       </div>
                     </div>
-                    <div className="border border-neutral-850 bg-black p-3">
-                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-500">
+                    <div className="border border-white/[0.05] bg-black p-3">
+                      <div className="flex items-center gap-2 text-[9px] uppercase text-neutral-300">
                         <Clock className="h-3.5 w-3.5" /> Cập nhật
                       </div>
                       <div className="mt-1 text-xs font-bold text-white">
@@ -531,7 +531,7 @@ export default function AdminUsersPanel({ ctx }) {
                           <div className="text-[10px] font-black uppercase tracking-widest text-amber-300">
                             Staff profile
                           </div>
-                          <p className="mt-1 text-[10px] text-neutral-500">
+                          <p className="mt-1 text-[10px] text-neutral-300">
                             Ma nhan vien, vi tri, trang thai va rap duy nhat cua STAFF.
                           </p>
                         </div>
@@ -540,21 +540,21 @@ export default function AdminUsersPanel({ ctx }) {
 
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <label className="space-y-1.5">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Ma nhan vien *</span>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-200">Ma nhan vien *</span>
                           <input
                             value={profileForm.employeeCode}
                             onChange={(event) => updateProfileForm('employeeCode', event.target.value)}
                             placeholder="EMP001"
-                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400"
+                            className="w-full border border-white/[0.06] bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-200 focus:border-amber-400"
                           />
                         </label>
                         <label className="space-y-1.5">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Vi tri *</span>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-200">Vi tri *</span>
                           <input
                             value={profileForm.position}
                             onChange={(event) => updateProfileForm('position', event.target.value)}
                             placeholder="Gate Staff"
-                            className="w-full border border-neutral-800 bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-400"
+                            className="w-full border border-white/[0.06] bg-neutral-950 px-3 py-2.5 text-xs text-white outline-none transition placeholder:text-neutral-200 focus:border-amber-400"
                           />
                         </label>
                       </div>
@@ -568,7 +568,7 @@ export default function AdminUsersPanel({ ctx }) {
                             className={`border px-2 py-2 text-[8px] font-black uppercase tracking-wider transition ${
                               profileForm.status === status
                                 ? 'border-amber-400 bg-amber-500 text-black'
-                                : 'border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-amber-400 hover:text-amber-300'
+                                : 'border-white/[0.06] bg-neutral-950 text-neutral-300 hover:border-amber-400 hover:text-amber-300'
                             }`}
                           >
                             {status}
@@ -577,7 +577,7 @@ export default function AdminUsersPanel({ ctx }) {
                       </div>
 
                       {selectedStaffProfile?.cinemaName && (
-                        <div className="border border-neutral-850 bg-neutral-950 px-3 py-2 text-[10px] text-neutral-400">
+                        <div className="border border-white/[0.05] bg-neutral-950 px-3 py-2 text-[10px] text-neutral-200">
                           Rap: <span className="font-bold text-neutral-200">{selectedStaffProfile.cinemaName}</span>
                         </div>
                       )}
@@ -593,8 +593,8 @@ export default function AdminUsersPanel({ ctx }) {
                     </form>
                   )}
 
-                  <div className="border border-neutral-850 bg-black p-4 space-y-3">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                  <div className="border border-white/[0.05] bg-black p-4 space-y-3">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-neutral-200">
                       Đổi trạng thái tài khoản
                     </div>
                     {isViewingCurrentAdmin && (
@@ -612,7 +612,7 @@ export default function AdminUsersPanel({ ctx }) {
                           className={`min-w-0 border px-2 py-2 text-[8px] font-black uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-45 ${
                             selectedAdminUser.status === status
                               ? 'border-amber-400 bg-amber-500 text-black'
-                              : 'border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-amber-400 hover:text-amber-300'
+                              : 'border-white/[0.06] bg-neutral-950 text-neutral-300 hover:border-amber-400 hover:text-amber-300'
                           }`}
                         >
                           <span className="block truncate">{status}</span>
@@ -621,7 +621,7 @@ export default function AdminUsersPanel({ ctx }) {
                     </div>
                   </div>
 
-                  <div className="text-[10px] leading-relaxed text-neutral-500">
+                  <div className="text-[10px] leading-relaxed text-neutral-300">
                     Tạo lúc:{' '}
                     <span className="font-mono text-neutral-300">
                       {formatDateTime(selectedAdminUser.createdAt)}
@@ -631,8 +631,8 @@ export default function AdminUsersPanel({ ctx }) {
               )}
             </div>
           ) : (
-            <div className="py-20 text-center text-neutral-500">
-              <Users className="mx-auto h-8 w-8 text-neutral-700" />
+            <div className="py-20 text-center text-neutral-300">
+              <Users className="mx-auto h-8 w-8 text-neutral-300" />
               <p className="mt-3 text-xs font-mono uppercase tracking-widest">Chưa chọn người dùng</p>
             </div>
           )}
@@ -641,3 +641,5 @@ export default function AdminUsersPanel({ ctx }) {
     </motion.div>
   );
 }
+
+

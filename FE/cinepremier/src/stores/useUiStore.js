@@ -35,6 +35,8 @@ export const useUiStore = create((set, get) => ({
   authMode: 'login',
   showWatchlist: false,
   toast: null,
+  adminSidebarCollapsed: false,
+  toggleAdminSidebar: () => set((state) => ({ adminSidebarCollapsed: !state.adminSidebarCollapsed })),
 
   setShowOTP: (showOTP) => set((state) => ({
     showOTP: resolveNextValue(showOTP, state.showOTP)

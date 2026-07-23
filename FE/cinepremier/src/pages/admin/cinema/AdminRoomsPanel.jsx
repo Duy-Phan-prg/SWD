@@ -517,7 +517,7 @@ export default function AdminRoomsPanel({ ctx }) {
       <div className="flex flex-col gap-4 border border-white/10 bg-gradient-to-r from-[#100d04] to-black p-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-500">Quản lý rạp</p>
-          <h2 className="mt-1 text-sm font-black uppercase tracking-[0.18em] text-white">Phòng chiếu & ghế</h2>
+          <h2 className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-white">Phòng chiếu & ghế</h2>
           <p className="mt-1 text-xs text-neutral-500">Tạo phòng, thiết lập sơ đồ và quản lý tình trạng từng ghế.</p>
         </div>
         <div className="flex gap-2">
@@ -563,7 +563,7 @@ export default function AdminRoomsPanel({ ctx }) {
               <div className="flex items-center gap-3">
                 <DoorOpen className="h-5 w-5 text-amber-500" />
                 <div>
-                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">{selectedRoom ? 'Thông tin phòng chiếu' : 'Tạo phòng chiếu mới'}</h3>
+                  <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">{selectedRoom ? 'Thông tin phòng chiếu' : 'Tạo phòng chiếu mới'}</h3>
                   <p className="text-xs font-semibold text-neutral-400">Tên phòng được tự động bỏ khoảng trắng thừa và không phân biệt hoa thường khi kiểm tra trùng.</p>
                 </div>
               </div>
@@ -604,9 +604,9 @@ export default function AdminRoomsPanel({ ctx }) {
             <section className="border border-white/10 bg-black/60 p-5">
               <div className="flex flex-col gap-4 border-b border-white/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-3">
-                  <Armchair className="h-5 w-5 text-cyan-400" />
+                  <Armchair className="h-5 w-5 text-amber-400" />
                   <div>
-                    <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">Sơ đồ ghế · {selectedRoom.name}</h3>
+                    <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">Sơ đồ ghế · {selectedRoom.name}</h3>
                     <p className="text-xs font-semibold text-neutral-400">{layoutSeatCount} ghế đang được sắp xếp</p>
                   </div>
                 </div>
@@ -617,16 +617,16 @@ export default function AdminRoomsPanel({ ctx }) {
                       {SEAT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
-                  <button onClick={saveSeatLayout} disabled={isSaving} className="flex items-center gap-2 border border-cyan-500/40 bg-cyan-500/10 px-5 py-3 text-[11px] font-black uppercase text-cyan-300 hover:bg-cyan-500/20">
+                  <button onClick={saveSeatLayout} disabled={isSaving} className="flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 px-5 py-3 text-[11px] font-black uppercase text-amber-300 hover:bg-amber-500/20">
                     <ScreenShare className="h-4 w-4" /> {seats.length ? 'Lưu cách sắp xếp mới' : 'Tạo sơ đồ ghế'}
                   </button>
                 </div>
               </div>
 
-              <div className="mt-5 border border-cyan-500/15 bg-cyan-500/[0.03] p-4">
+              <div className="mt-5 border border-white/[0.10] bg-white/[0.03] p-4">
                 <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h4 className="text-xs font-black uppercase tracking-widest text-cyan-300">Sắp xếp từng hàng ghế</h4>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-amber-400">Sắp xếp từng hàng ghế</h4>
                     <p className="mt-1 text-xs font-semibold text-neutral-400">Kiểm tra từng hàng trước khi lưu. Các số ghế được ngăn cách bằng dấu phẩy, ví dụ: 1, 2, 3, 5.</p>
                   </div>
                   <span className="font-mono text-xs font-bold text-neutral-400">{layoutRows.length}/{selectedRoom.rowCount} hàng</span>
@@ -639,7 +639,7 @@ export default function AdminRoomsPanel({ ctx }) {
                 ) : (
                   <div className="space-y-2">
                     {layoutRows.map((row, index) => (
-                      <div key={index} className="grid items-end gap-3 border border-white/10 bg-black/50 p-4 lg:grid-cols-[100px_110px_120px_160px_minmax(220px,1fr)_44px]">
+                      <div key={index} className="grid items-end gap-3 border border-white/[0.12] bg-white/[0.04] p-4 lg:grid-cols-[100px_110px_120px_160px_minmax(220px,1fr)_44px]">
                         <label className="space-y-1">
                           <span className="text-[11px] font-black uppercase text-neutral-400">Tên hàng</span>
                           <input value={row.rowLabel} onChange={(event) => updateLayoutRow(index, 'rowLabel', event.target.value)} className={fieldClass} />
@@ -684,17 +684,17 @@ export default function AdminRoomsPanel({ ctx }) {
                 </div>
               ) : (
                 <div className="grid gap-5 pt-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-                  <div className="relative min-h-[430px] min-w-0 overflow-hidden border border-cyan-500/15 bg-[radial-gradient(circle_at_top,#07151a_0%,#030708_38%,#020202_72%)] p-7 pb-20">
+                  <div className="relative min-h-[430px] min-w-0 overflow-hidden border border-white/[0.08] bg-[#050505] p-7 pb-20">
                     {isSeatLayoutDraft && (
                       <div className="absolute right-0 top-0 z-20 flex items-center gap-2 border border-r-0 border-t-0 border-amber-400/35 bg-black/75 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-300 shadow-[0_0_18px_rgba(251,191,36,0.12)] backdrop-blur">
                         <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.75)]" />
                         Chưa lưu sơ đồ mới
                       </div>
                     )}
-                    <div className="pointer-events-none absolute left-1/2 top-12 h-72 w-[78%] -translate-x-1/2 bg-gradient-to-b from-cyan-300/[0.13] via-cyan-300/[0.035] to-transparent [clip-path:polygon(18%_0,82%_0,100%_100%,0_100%)]" />
+                    <div className="pointer-events-none absolute left-1/2 top-12 h-72 w-[78%] -translate-x-1/2 bg-gradient-to-b from-amber-300/[0.08] via-amber-300/[0.02] to-transparent [clip-path:polygon(18%_0,82%_0,100%_100%,0_100%)]" />
                     <div className="relative mx-auto mb-14 max-w-2xl">
-                      <div className="h-2 rounded-[50%] bg-cyan-100 shadow-[0_0_12px_3px_rgba(103,232,249,0.8),0_0_55px_18px_rgba(34,211,238,0.22)]" />
-                      <div className="pt-3 text-center text-[11px] font-black uppercase tracking-[0.42em] text-cyan-200">Màn hình chiếu</div>
+                      <div className="h-2 rounded-[50%] bg-white/80 shadow-[0_0_12px_3px_rgba(255,255,255,0.5),0_0_55px_18px_rgba(255,255,255,0.1)]" />
+                      <div className="pt-3 text-center text-[11px] font-black uppercase tracking-[0.42em] text-neutral-300">Màn hình chiếu</div>
                     </div>
                     <div className="relative z-10 w-full overflow-x-auto overflow-y-hidden pb-4">
                       <div className="mx-auto min-w-max w-fit space-y-3 px-2">
@@ -719,7 +719,7 @@ export default function AdminRoomsPanel({ ctx }) {
                                               ? 'border-purple-500/40 bg-purple-500/10 text-purple-300'
                                               : seat.seatType === 'COUPLE'
                                                 ? 'text-white'
-                                                : 'border-cyan-500/25 bg-cyan-500/[0.06] text-cyan-300 hover:border-cyan-400'
+                                                : 'border-white/[0.18] bg-white/[0.05] text-neutral-200 hover:border-white/[0.35] hover:bg-white/[0.08]'
                                         }`}
                                     >
                                       {seat.seatNumber}
@@ -737,12 +737,12 @@ export default function AdminRoomsPanel({ ctx }) {
                     </div>
                   </div>
 
-                  <div className="border border-white/10 bg-white/[0.02] p-5">
+                  <div className="border border-white/[0.12] bg-white/[0.04] p-5">
                     {selectedSeat ? (
                       <div className="space-y-4">
                         <div>
                           <p className="text-[11px] font-black uppercase tracking-widest text-neutral-400">Ghế đang chọn</p>
-                          <p className="mt-1 text-2xl font-black text-white">{selectedSeatLabel}</p>
+                          <p className="mt-1 text-xl font-black text-white">{selectedSeatLabel}</p>
                         </div>
                         <label className="block space-y-1.5">
                           <span className="text-[11px] font-black uppercase text-neutral-400">Loại ghế</span>
@@ -756,7 +756,7 @@ export default function AdminRoomsPanel({ ctx }) {
                             {SEAT_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                           </select>
                         </label>
-                        <button onClick={saveSeat} className="flex w-full items-center justify-center gap-2 bg-white px-3 py-2.5 text-[11px] font-black uppercase text-black hover:bg-cyan-300">
+                        <button onClick={saveSeat} className="flex w-full items-center justify-center gap-2 bg-white px-3 py-2.5 text-[11px] font-black uppercase text-black hover:bg-amber-400">
                           <Check className="h-3.5 w-3.5" /> Lưu thay đổi ghế
                         </button>
                         <button onClick={deactivateSeat} className="flex w-full items-center justify-center gap-2 border border-rose-500/30 px-3 py-2.5 text-[11px] font-black uppercase text-rose-400 hover:bg-rose-500/10">
@@ -784,7 +784,7 @@ export default function AdminRoomsPanel({ ctx }) {
               <div className="flex gap-3">
                 <div className="border border-amber-500/30 bg-amber-500/10 p-2 text-amber-400"><AlertTriangle className="h-5 w-5" /></div>
                 <div>
-                  <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">{confirmAction.title}</h3>
+                  <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white">{confirmAction.title}</h3>
                   <p className="mt-2 text-xs leading-5 text-neutral-400">{confirmAction.description}</p>
                 </div>
               </div>

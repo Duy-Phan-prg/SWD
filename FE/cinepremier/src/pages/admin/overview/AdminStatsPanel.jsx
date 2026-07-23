@@ -184,8 +184,8 @@ export default function AdminStatsPanel({ ctx }) {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-amber-500">Phân tích & Giám sát</p>
-          <h2 className="mt-1 flex items-center gap-2 text-xl font-sans font-black uppercase tracking-wide text-white">
+          <p className="text-[9px] font-sans font-black uppercase tracking-[0.25em] text-neutral-300">Phân tích & Giám sát</p>
+          <h2 className="mt-1 flex items-center gap-2 text-sm font-sans font-black uppercase tracking-wide text-white">
             <BarChart2 className="h-5 w-5 text-amber-500" /> Thống Kê Mua Bán
           </h2>
           <p className="mt-1 text-xs text-neutral-500">Ghế trống theo suất, khách không đến, giờ cao điểm và tỷ lệ bỏ đơn — dữ liệu để quyết định tăng/giảm giá.</p>
@@ -213,28 +213,28 @@ export default function AdminStatsPanel({ ctx }) {
 
       {/* Stat tiles */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <div className="border border-white/10 bg-[#0a0a0a] p-4">
+        <div className="border border-white/[0.12] bg-white/[0.04] p-4">
           <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Khách mua mà không đến</p>
-          <p className="mt-1 text-2xl font-black font-mono text-rose-400">{noShow ? `${noShow.noShowBookings}` : '—'}</p>
+          <p className="mt-1 text-xl font-black font-mono text-rose-400">{noShow ? `${noShow.noShowBookings}` : '—'}</p>
           <p className="text-[10px] text-neutral-500">
             {noShow ? `${noShow.noShowRatePercent.toFixed(1)}% trên ${noShow.finishedPaidBookings} đơn đã chiếu xong` : 'Chưa có dữ liệu'}
           </p>
         </div>
-        <div className="border border-white/10 bg-[#0a0a0a] p-4">
+        <div className="border border-white/[0.12] bg-white/[0.04] p-4">
           <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Đặt mà không thanh toán</p>
-          <p className="mt-1 text-2xl font-black font-mono text-amber-400">{abandoned ? abandoned.expiredBookings : '—'}</p>
+          <p className="mt-1 text-xl font-black font-mono text-amber-400">{abandoned ? abandoned.expiredBookings : '—'}</p>
           <p className="text-[10px] text-neutral-500">
             {abandoned ? `${abandoned.abandonedRatePercent.toFixed(1)}% so với ${abandoned.paidBookings} đơn đã trả tiền` : 'Chưa có dữ liệu'}
           </p>
         </div>
-        <div className="border border-white/10 bg-[#0a0a0a] p-4">
+        <div className="border border-white/[0.12] bg-white/[0.04] p-4">
           <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Bắp nước bán ra</p>
-          <p className="mt-1 text-2xl font-black font-mono text-emerald-400">{concessions ? concessions.totalItemsSold : '—'}</p>
+          <p className="mt-1 text-xl font-black font-mono text-emerald-400">{concessions ? concessions.totalItemsSold : '—'}</p>
           <p className="text-[10px] text-neutral-500">{concessions ? `Doanh thu ${formatVnd(concessions.totalRevenue)}` : 'Chưa có dữ liệu'}</p>
         </div>
-        <div className="border border-white/10 bg-[#0a0a0a] p-4">
+        <div className="border border-white/[0.12] bg-white/[0.04] p-4">
           <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Giờ cao điểm</p>
-          <p className="mt-1 text-2xl font-black font-mono text-sky-400">
+          <p className="mt-1 text-xl font-black font-mono text-sky-400">
             {peakHours.length > 0 ? `${peakHours.reduce((best, p) => (p.ticketsSold > best.ticketsSold ? p : best), peakHours[0]).hour}h` : '—'}
           </p>
           <p className="text-[10px] text-neutral-500">Khung giờ bán nhiều vé nhất — cân nhắc tăng giá</p>
@@ -242,7 +242,7 @@ export default function AdminStatsPanel({ ctx }) {
       </div>
 
       {/* Histogram vé theo giờ */}
-      <div className="border border-white/10 bg-[#0a0a0a] p-5">
+      <div className="border border-white/[0.12] bg-white/[0.04] p-5">
         <p className="mb-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Vé bán theo giờ chiếu trong ngày (giờ cao điểm)</p>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -258,7 +258,7 @@ export default function AdminStatsPanel({ ctx }) {
       </div>
 
       {/* Heatmap ghế được mua nhiều nhất */}
-      <div className="border border-white/10 bg-[#0a0a0a] p-5">
+      <div className="border border-white/[0.12] bg-white/[0.04] p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">
             <Armchair className="h-3.5 w-3.5 text-amber-500" /> Ghế được mua nhiều nhất
@@ -384,7 +384,7 @@ export default function AdminStatsPanel({ ctx }) {
       </div>
 
       {/* Độ lấp đầy từng suất chiếu sắp tới — progress row theo ngày */}
-      <div className="border border-white/10 bg-[#0a0a0a] p-5">
+      <div className="border border-white/[0.12] bg-white/[0.04] p-5">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Độ lấp đầy suất chiếu (7 ngày tới)</p>
           <p className="text-[10px] text-neutral-600">
@@ -417,7 +417,7 @@ export default function AdminStatsPanel({ ctx }) {
           <div className="max-h-[560px] space-y-4 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(245,158,11,0.25)_transparent]">
             {[activeFillDay].map((group) => (
               <div key={group.dayKey}>
-                <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/90">{group.dayLabel}</p>
+                <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">{group.dayLabel}</p>
                 <div className="space-y-1.5">
                   {group.items.map((st) => {
                     const capacity = Number(st.capacity) || 0;
@@ -458,7 +458,7 @@ export default function AdminStatsPanel({ ctx }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Top bắp nước */}
-        <div className="border border-white/10 bg-[#0a0a0a] p-5">
+        <div className="border border-white/[0.12] bg-white/[0.04] p-5">
           <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-neutral-400">Bắp nước bán chạy</p>
           {!concessions || concessions.lines.length === 0 ? (
             <p className="py-6 text-center text-xs text-neutral-600">Chưa bán được món nào trong khoảng thời gian này.</p>
@@ -476,7 +476,7 @@ export default function AdminStatsPanel({ ctx }) {
         </div>
 
         {/* User đặt mà không thanh toán → tặng điểm */}
-        <div className="border border-white/10 bg-[#0a0a0a] p-5">
+        <div className="border border-white/[0.12] bg-white/[0.04] p-5">
           <p className="mb-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">
             <Gift className="h-3.5 w-3.5 text-amber-500" /> Khách đặt vé nhưng hết tiền / không thanh toán
           </p>
