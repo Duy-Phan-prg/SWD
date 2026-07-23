@@ -142,10 +142,12 @@ const getTicketTypeBadge = (ticketType) => TICKET_TYPE_BADGES[String(ticketType 
 function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmSeats, onConfirmFood, isCheckingIn, onOpenCounterSale }) {
   if (!result) {
     return (
-      <div className="flex min-h-[260px] flex-col items-center justify-center border border-dashed border-neutral-800 bg-[#070707] p-6 text-center">
-        <ShieldCheck className="h-10 w-10 text-emerald-400/60" />
-        <p className="mt-4 text-xs font-black uppercase tracking-widest text-neutral-400">Chưa có kết quả</p>
-        <p className="mt-2 max-w-sm text-xs leading-6 text-neutral-500">
+      <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-gradient-to-b from-[#0c0e12] to-[#050608] p-6 text-center shadow-xl">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+          <ShieldCheck className="h-7 w-7 text-emerald-400" />
+        </div>
+        <p className="mt-4 text-xs font-black uppercase tracking-widest text-neutral-300">Chưa có kết quả</p>
+        <p className="mt-2 max-w-sm text-xs leading-6 text-neutral-400">
           Nhập mã QR hoặc mã booking để hệ thống kiểm tra dữ liệu thật từ backend.
         </p>
       </div>
@@ -167,10 +169,10 @@ function ResultCard({ result, selectedTicketCodes = [], onToggleSeat, onConfirmS
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border border-neutral-800 bg-[#070707] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)]"
+      className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0c0e12] to-[#050608] p-5 shadow-2xl"
     >
       <div className="flex items-start gap-3">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-800 bg-black ${color}`}>
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/60 ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
@@ -1151,7 +1153,7 @@ export default function StaffCheckInPage() {
   };
 
   return (
-    <div className="staff-page relative overflow-hidden bg-black text-white">
+    <div className="staff-page relative bg-black text-white">
       <div className="staff-orb staff-orb-one" />
       <div className="staff-orb staff-orb-two" />
       <div className="staff-grid-bg" />
@@ -1199,12 +1201,11 @@ export default function StaffCheckInPage() {
         {activeSection === 'checkin' && (
           <>
             <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
-              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden border border-neutral-800 bg-gradient-to-r from-[#090909] to-[#050505] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-6">
+              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0d0f14] via-[#090b0e] to-[#050608] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-6">
                 <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_62%)]" />
                 <div className="relative">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-
-                    <span className="border border-purple-400/20 bg-purple-500/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-purple-300">
+                    <span className="rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-purple-300">
                       STAFF OPERATIONS
                     </span>
                   </div>
@@ -1218,37 +1219,37 @@ export default function StaffCheckInPage() {
                 </div>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="border border-neutral-800 bg-[#070707] p-5">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-500">Phiên hiện tại</p>
+              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0d0f14] to-[#050608] p-5 shadow-2xl">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400">Phiên hiện tại</p>
                 <p className="mt-1 text-2xl font-black text-white">{stats.checked}/{stats.total}</p>
                 <div className="mt-4 grid grid-cols-3 gap-2">
-                  <div className="border border-emerald-400/20 bg-emerald-400/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-emerald-200/70">Đã vào</p></div>
-                  <div className="border border-purple-400/20 bg-purple-500/10 p-2.5"><p className="text-lg font-black text-purple-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-purple-200/70">Chờ vào</p></div>
-                  <div className="border border-neutral-800 bg-black p-2.5"><p className="text-lg font-black text-white">{stats.total}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Đã tra</p></div>
+                  <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-2.5"><p className="text-lg font-black text-emerald-300">{stats.checked}</p><p className="text-[8px] font-black uppercase tracking-widest text-emerald-200/70">Đã vào</p></div>
+                  <div className="rounded-xl border border-purple-400/30 bg-purple-500/10 p-2.5"><p className="text-lg font-black text-purple-300">{stats.paid}</p><p className="text-[8px] font-black uppercase tracking-widest text-purple-200/70">Chờ vào</p></div>
+                  <div className="rounded-xl border border-white/10 bg-black/60 p-2.5"><p className="text-lg font-black text-white">{stats.total}</p><p className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Đã tra</p></div>
                 </div>
               </motion.div>
             </section>
 
             <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.75fr)]">
-              <div className="border border-neutral-800 bg-[#070707] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.35)] sm:p-7">
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0c0e12] to-[#050608] p-5 shadow-2xl sm:p-7">
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="space-y-4">
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-400">Quét/Xác nhận QR</p>
                       <h3 className="mt-2 text-xl font-black uppercase text-white">Check-in bằng mã QR</h3>
-                      <p className="mt-2 text-xs leading-6 text-neutral-500">Quét QR trên vé, hoặc dán chuỗi `CINEAI:...` / mã booking `BK...` để tra cứu và check-in.</p>
+                      <p className="mt-2 text-xs leading-6 text-neutral-400">Quét QR trên vé, hoặc dán chuỗi `CINEAI:...` / mã booking `BK...` để tra cứu và check-in.</p>
                     </div>
-                    <div className="space-y-3 border border-neutral-800 bg-black p-3">
+                    <div className="space-y-3 rounded-xl border border-white/10 bg-black/50 p-4">
                       <button
                         type="button"
                         onClick={isCameraOpen ? stopQrScanner : startQrScanner}
-                        className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-[#070707] px-4 py-3 text-[9px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-[9px] font-black uppercase tracking-[0.18em] text-neutral-200 transition hover:border-emerald-400 hover:bg-white/10 hover:text-white"
                       >
                         {isCameraOpen ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
                         {isCameraOpen ? 'Tắt camera' : 'Mở camera quét QR'}
                       </button>
                       {isCameraOpen && (
-                        <div className="relative overflow-hidden border border-emerald-400/30 bg-neutral-950">
+                        <div className="relative overflow-hidden rounded-xl border border-emerald-400/30 bg-neutral-950">
                           <video
                             ref={qrVideoRef}
                             className="aspect-video w-full object-cover"
@@ -1257,7 +1258,7 @@ export default function StaffCheckInPage() {
                           />
                           <canvas ref={qrCanvasRef} className="hidden" />
                           <div className="pointer-events-none absolute inset-0 grid place-items-center">
-                            <div className="h-40 w-40 border-2 border-emerald-300/80 shadow-[0_0_0_999px_rgba(0,0,0,0.35)]" />
+                            <div className="h-40 w-40 rounded-lg border-2 border-emerald-300/80 shadow-[0_0_0_999px_rgba(0,0,0,0.35)]" />
                           </div>
                         </div>
                       )}
@@ -1272,14 +1273,14 @@ export default function StaffCheckInPage() {
                       onChange={(event) => setQrCode(event.target.value)}
                       placeholder="Dán QR vé, QR nhận bắp nước hoặc mã booking..."
                       rows={6}
-                      className="w-full resize-none border border-neutral-800 bg-black p-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+                      className="w-full resize-none rounded-xl border border-white/10 bg-black/60 p-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-600 focus:border-emerald-400/70 focus:ring-1 focus:ring-emerald-400/20"
                     />
                     <div className="grid gap-3 sm:grid-cols-2">
                       <button
                         type="button"
                         onClick={() => lookupBooking({ preferQr: true })}
                         disabled={isLookingUp || !qrCode.trim()}
-                        className="flex items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+                        className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-200 transition hover:border-emerald-400 hover:bg-white/10 hover:text-white disabled:opacity-50"
                       >
                         {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />} Kiểm tra mã
                       </button>
@@ -1287,7 +1288,7 @@ export default function StaffCheckInPage() {
                         type="button"
                         onClick={() => checkInByQr()}
                         disabled={isCheckingIn || !qrCode.trim()}
-                        className="flex items-center justify-center gap-2 bg-emerald-400 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-black transition hover:bg-emerald-300 disabled:opacity-50"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-black font-extrabold shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
                       >
                         {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />} {isFoodPickupCode(qrCode) ? 'Xác nhận giao món' : 'Xác nhận check-in'}
                       </button>
@@ -1298,22 +1299,22 @@ export default function StaffCheckInPage() {
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400">Tra cứu thủ công</p>
                       <h3 className="mt-2 text-xl font-black uppercase text-white">Tìm theo mã đơn</h3>
-                      <p className="mt-2 text-xs leading-6 text-neutral-500">Nhập mã booking BK... hoặc mã nhận bắp nước FO... khi khách chưa mở được QR.</p>
+                      <p className="mt-2 text-xs leading-6 text-neutral-400">Nhập mã booking BK... hoặc mã nhận bắp nước FO... khi khách chưa mở được QR.</p>
                     </div>
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600" />
+                      <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
                       <input
                         value={bookingCode}
                         onChange={(event) => setBookingCode(event.target.value)}
                         placeholder="VD: BKABC123... hoặc FOABC123..."
-                        className="w-full border border-neutral-800 bg-black py-4 pl-11 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-700 focus:border-emerald-400/70"
+                        className="w-full rounded-xl border border-white/10 bg-black/60 py-3.5 pl-11 pr-4 text-sm font-bold text-white outline-none transition placeholder:text-neutral-600 focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/20"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => lookupBooking()}
                       disabled={isLookingUp || !bookingCode.trim()}
-                      className="flex w-full items-center justify-center gap-2 border border-neutral-700 bg-black px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-300 transition hover:border-purple-400 hover:text-white disabled:opacity-50"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-200 transition hover:border-purple-400 hover:bg-white/10 hover:text-white disabled:opacity-50"
                     >
                       {isLookingUp ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} {isFoodPickupCode(bookingCode) ? 'Tra cứu đơn bắp nước' : 'Tra cứu booking'}
                     </button>
@@ -1322,7 +1323,7 @@ export default function StaffCheckInPage() {
                         type="button"
                         onClick={() => checkInByQr(result.booking.qrCode)}
                         disabled={isCheckingIn}
-                        className="flex w-full items-center justify-center gap-2 border border-emerald-400/40 bg-emerald-400/10 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300 transition hover:bg-emerald-400 hover:text-black disabled:opacity-50"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300 transition hover:bg-emerald-400 hover:text-black disabled:opacity-50"
                       >
                         {isCheckingIn ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Check-in booking vừa tra
                       </button>
@@ -1482,30 +1483,30 @@ export default function StaffCheckInPage() {
               </div>
             </section> */}
 
-            <section className="border border-neutral-800 bg-[#070707] p-5">
+            <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0c0e12] to-[#050608] p-5 shadow-2xl">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400">Quầy bắp nước</p>
                   <h3 className="mt-1 text-lg font-black uppercase text-white">Trạng thái món/combo</h3>
-                  <p className="mt-2 text-xs leading-6 text-neutral-500">
+                  <p className="mt-2 text-xs leading-6 text-neutral-400">
                     STAFF có thể đổi nhanh trạng thái bắp nước theo quầy: mở bán, sắp hết hoặc hết.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <span className="border border-neutral-700 bg-black px-3 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300">
+                  <span className="rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300">
                     {foodStats.active}/{foodStats.total} đang bán
                   </span>
-                  <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
+                  <span className="rounded-xl border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
                     {foodStats.lowStock} sắp hết
                   </span>
-                  <span className="border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
+                  <span className="rounded-xl border border-purple-400/30 bg-purple-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-purple-300">
                     {foodStats.outOfStock} hết
                   </span>
                   <button
                     type="button"
                     onClick={loadStaffFoods}
                     disabled={isLoadingStaffFoods}
-                    className="flex items-center gap-2 border border-neutral-700 bg-black px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-200 transition hover:border-emerald-400 hover:bg-white/10 hover:text-white disabled:opacity-50"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 ${isLoadingStaffFoods ? 'animate-spin' : ''}`} /> Làm mới
                   </button>
@@ -1514,8 +1515,8 @@ export default function StaffCheckInPage() {
 
               {staffFoodError && <p className="mt-3 text-xs font-bold text-rose-400">{staffFoodError}</p>}
 
-              <div className="mt-4 flex flex-col gap-2 border border-neutral-800 bg-black p-3 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 flex-1 items-center gap-3 border border-neutral-800 bg-[#070707] px-3 py-2.5 focus-within:border-purple-400">
+              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-black/50 p-3 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-white/10 bg-[#070707] px-3 py-2.5 focus-within:border-purple-400">
                   <Search className="h-4 w-4 shrink-0 text-neutral-500" />
                   <input
                     type="search"
@@ -1532,18 +1533,18 @@ export default function StaffCheckInPage() {
 
               <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {isLoadingStaffFoods ? (
-                  <div className="border border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">Đang tải danh sách bắp nước...</div>
+                  <div className="rounded-xl border border-white/10 bg-black/60 p-4 text-xs font-bold text-neutral-500">Đang tải danh sách bắp nước...</div>
                 ) : filteredStaffFoods.length > 0 ? paginatedStaffFoods.map((food) => {
                   const foodKey = `${food.kind}-${food.id}`;
                   const statusMeta = getFoodStatusMeta(food.status);
                   return (
-                    <div key={foodKey} className="border border-neutral-800 bg-black p-4">
+                    <div key={foodKey} className="rounded-xl border border-white/10 bg-black/60 p-4 transition hover:border-purple-400/30">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-black uppercase text-white">{food.name}</p>
                           <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-neutral-500">{food.kind === 'combo' ? 'Combo' : 'Món lẻ'}</p>
                         </div>
-                        <span className={`px-2 py-1 text-[9px] font-black uppercase ${statusMeta.className}`}>
+                        <span className={`rounded px-2 py-1 text-[9px] font-black uppercase ${statusMeta.className}`}>
                           {statusMeta.label}
                         </span>
                       </div>
@@ -1551,7 +1552,7 @@ export default function StaffCheckInPage() {
                         value={food.status || 'ACTIVE'}
                         onChange={(event) => updateStaffFoodStatus(food, event.target.value)}
                         disabled={savingStaffFoodKey === foodKey}
-                        className="mt-4 w-full border border-neutral-800 bg-[#070707] px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-purple-400 disabled:opacity-50"
+                        className="mt-4 w-full rounded-lg border border-white/10 bg-black/80 px-3 py-2.5 text-xs font-black text-white outline-none transition focus:border-purple-400 disabled:opacity-50"
                       >
                         <option value="ACTIVE">Mở bán</option>
                         <option value="LOW_STOCK">Sắp hết</option>
@@ -1560,12 +1561,12 @@ export default function StaffCheckInPage() {
                     </div>
                   );
                 }) : (
-                  <div className="border border-dashed border-neutral-800 bg-black p-4 text-xs font-bold text-neutral-500">
+                  <div className="rounded-xl border border-dashed border-white/10 bg-black/60 p-4 text-xs font-bold text-neutral-500">
                     {staffFoodSearch.trim() ? 'Không tìm thấy món/combo phù hợp.' : 'Chưa có món bắp nước nào.'}
                   </div>
                 )}
               </div>
-              <div className="mt-4 flex flex-col gap-3 border border-neutral-800 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-black/80 p-3 text-[10px] font-black uppercase tracking-[0.18em] text-neutral-400 sm:flex-row sm:items-center sm:justify-between">
                 <span>
                   Hiển thị {staffFoodDisplayStart}-{staffFoodDisplayEnd}/{filteredStaffFoods.length} món - Trang {safeStaffFoodPage}/{staffFoodTotalPages}
                 </span>
@@ -1574,7 +1575,7 @@ export default function StaffCheckInPage() {
                     type="button"
                     disabled={safeStaffFoodPage <= 1}
                     onClick={() => setStaffFoodPage((page) => Math.max(1, page - 1))}
-                    className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
                   >
                     <ChevronLeft className="h-3.5 w-3.5" /> Trước
                   </button>
@@ -1582,7 +1583,7 @@ export default function StaffCheckInPage() {
                     type="button"
                     disabled={safeStaffFoodPage >= staffFoodTotalPages}
                     onClick={() => setStaffFoodPage((page) => Math.min(staffFoodTotalPages, page + 1))}
-                    className="inline-flex items-center gap-1 border border-neutral-700 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-2 text-white transition hover:border-purple-400 disabled:opacity-30"
                   >
                     Sau <ChevronRight className="h-3.5 w-3.5" />
                   </button>
@@ -1590,7 +1591,7 @@ export default function StaffCheckInPage() {
               </div>
             </section>
 
-            <section className="overflow-hidden border border-neutral-800 bg-[#070707]">
+            <section className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0c0e12] to-[#050608] shadow-2xl">
               <div className="border-b border-neutral-800 p-5">
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
                   {isShowingShowtimeBookings ? 'Dữ liệu showtime từ API' : 'Dữ liệu recent từ API'}

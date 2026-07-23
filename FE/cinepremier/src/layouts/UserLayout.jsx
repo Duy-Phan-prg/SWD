@@ -47,7 +47,7 @@ export default function UserLayout({ children }) {
     return 'home';
   })();
 
-  const isBackoffice = activeTab === 'admin' || activeTab === 'staff';
+  const isBackoffice = activeTab === 'admin';
 
   const handleTabChange = (tab) => {
     if (tab === 'my-tickets' && !isLoggedIn) { setAuthMode('login'); setShowOTP(true); return; }
@@ -104,7 +104,7 @@ export default function UserLayout({ children }) {
           />
           <main className="relative z-0 min-w-0 max-w-full overflow-x-clip">{children}</main>
         </div>
-        <Footer onTabChange={handleTabChange} cinema={publicCinema} />
+        {!isStaff && <Footer onTabChange={handleTabChange} cinema={publicCinema} />}
       </div>
 
       {/* Watchlist Drawer */}

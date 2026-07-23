@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, MapPin, Ticket, User, Heart, Compass, Home,
-  Building2, ChevronDown, Phone, Settings2, X, ExternalLink, LogOut, Popcorn, CalendarDays, Coins
+  Building2, ChevronDown, Phone, Settings2, X, ExternalLink, LogOut, Popcorn, CalendarDays, Coins, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -146,12 +146,10 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-[100] w-full max-w-full overflow-visible border-b border-white/10 bg-black/95 backdrop-blur-md">
-      {/* Row 1: Logo + Actions + Search + Cinema + Account */}
       <div className="mx-auto flex h-16 w-full max-w-5xl min-w-0 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
-
         {/* Logo CINEPREMIER */}
         <motion.div
-          onClick={() => onTabChange('home')}
+          onClick={() => onTabChange(isStaffRole ? 'staff' : 'home')}
           className="flex cursor-pointer items-center space-x-3.5 group select-none mr-4"
           id="header-logo"
           whileHover={{ scale: 1.015 }}
@@ -187,90 +185,102 @@ export default function Header({
           </div>
         </motion.div>
 
+        {isStaffRole && (
+          <div className="flex items-center gap-2 border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 rounded-full text-emerald-300 text-[10px] font-sans font-extrabold tracking-widest uppercase shadow-[0_0_15px_rgba(16,185,129,0.2)] select-none">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+            <span>VẬN HÀNH STAFF</span>
+          </div>
+        )}
+
         {/* Right Header Section */}
         <div className="flex min-w-0 shrink-0 items-center space-x-2.5">
 
-          {/* Quick action buttons */}
-          <button
-            onClick={() => onTabChange('explore')}
-            className="hidden lg:flex h-9 items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-black transition whitespace-nowrap rounded"
-            id="btn-book-now"
-          >
-            <Ticket className="h-3.5 w-3.5" /> ĐẶT VÉ NGAY
-          </button>
-          <button
-            onClick={() => onTabChange('concessions')}
-            className="hidden lg:flex h-9 items-center gap-1.5 bg-purple-700 hover:bg-purple-800 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-white transition whitespace-nowrap rounded"
-            id="btn-order-food"
-          >
-            <Popcorn className="h-3.5 w-3.5" /> ĐẶT BẮP NƯỚC
-          </button>
-
-          {/* Search Box + dropdown gợi ý */}
-          <div ref={searchBoxRef} className="relative hidden xl:block w-40 xl:w-48 h-9">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-200 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="TÌM PHIM..."
-              value={headerQuery}
-              onChange={(e) => { setHeaderQuery(e.target.value); setIsSearchOpen(true); setActiveSuggestion(-1); }}
-              onFocus={() => { if (headerQuery.trim()) setIsSearchOpen(true); }}
-              onKeyDown={handleSearchKeyDown}
-              className="w-full h-full border border-white/10 bg-black/60 pl-9 pr-4 text-[9.5px] font-semibold text-white tracking-widest placeholder:font-semibold placeholder-neutral-500 uppercase focus:border-white/30 focus:bg-black/80 focus:outline-none transition-all duration-300 rounded"
-              id="search-input"
-              autoComplete="off"
-              role="combobox"
-              aria-expanded={isSearchOpen && headerQuery.trim().length > 0}
-              aria-controls="search-suggestions"
-            />
-
-            {isSearchOpen && headerQuery.trim().length > 0 && (
-              <div
-                id="search-suggestions"
-                role="listbox"
-                className="absolute left-0 right-0 top-full z-[200] mt-1.5 w-64 overflow-hidden rounded border border-white/15 bg-[#0d0d0d] shadow-[0_16px_50px_rgba(0,0,0,0.7)]"
+          {/* Quick action buttons & search (hidden for staff) */}
+          {!isStaffRole && (
+            <>
+              <button
+                onClick={() => onTabChange('explore')}
+                className="hidden lg:flex h-9 items-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-black transition whitespace-nowrap rounded"
+                id="btn-book-now"
               >
-                {searchSuggestions.length === 0 ? (
-                  <p className="px-3.5 py-3 text-[10px] font-sans uppercase tracking-widest text-neutral-500">
-                    Không có phim khớp "{headerQuery.trim()}"
-                  </p>
-                ) : (
-                  <>
-                    {searchSuggestions.map((movie, index) => (
-                      <button
-                        key={movie.id}
-                        role="option"
-                        aria-selected={index === activeSuggestion}
-                        onMouseEnter={() => setActiveSuggestion(index)}
-                        onClick={() => openMovieSuggestion(movie)}
-                        className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition ${index === activeSuggestion ? 'bg-white/10' : 'hover:bg-white/5'
-                          }`}
-                      >
-                        {movie.posterUrl ? (
-                          <img src={movie.posterUrl} alt="" className="h-11 w-8 shrink-0 rounded-sm border border-white/10 object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                          <span className="h-11 w-8 shrink-0 rounded-sm border border-white/10 bg-neutral-900" />
-                        )}
-                        <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-sans font-bold text-white">{movie.title}</span>
-                          <span className="block truncate text-[9px] font-mono uppercase tracking-widest text-neutral-500">
-                            {[movie.durationMinutes || movie.duration ? `${movie.durationMinutes || movie.duration} phút` : '', (movie.genre || [])[0]].filter(Boolean).join(' · ') || movie.englishTitle || ''}
-                          </span>
-                        </span>
-                      </button>
-                    ))}
-                    <button
-                      onClick={commitSearch}
-                      className="flex w-full items-center justify-between border-t border-white/10 px-3.5 py-2.5 text-[9.5px] font-sans font-black uppercase tracking-widest text-amber-400 transition hover:bg-amber-500/10"
-                    >
-                      <span>Xem tất cả kết quả</span>
-                      <span className="font-mono normal-case text-neutral-500">Enter ↵</span>
-                    </button>
-                  </>
+                <Ticket className="h-3.5 w-3.5" /> ĐẶT VÉ NGAY
+              </button>
+              <button
+                onClick={() => onTabChange('concessions')}
+                className="hidden lg:flex h-9 items-center gap-1.5 bg-purple-700 hover:bg-purple-800 px-3.5 text-[10px] font-sans font-extrabold uppercase tracking-[0.12em] text-white transition whitespace-nowrap rounded"
+                id="btn-order-food"
+              >
+                <Popcorn className="h-3.5 w-3.5" /> ĐẶT BẮP NƯỚC
+              </button>
+
+              {/* Search Box + dropdown gợi ý */}
+              <div ref={searchBoxRef} className="relative hidden xl:block w-40 xl:w-48 h-9">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-200 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="TÌM PHIM..."
+                  value={headerQuery}
+                  onChange={(e) => { setHeaderQuery(e.target.value); setIsSearchOpen(true); setActiveSuggestion(-1); }}
+                  onFocus={() => { if (headerQuery.trim()) setIsSearchOpen(true); }}
+                  onKeyDown={handleSearchKeyDown}
+                  className="w-full h-full border border-white/10 bg-black/60 pl-9 pr-4 text-[9.5px] font-semibold text-white tracking-widest placeholder:font-semibold placeholder-neutral-500 uppercase focus:border-white/30 focus:bg-black/80 focus:outline-none transition-all duration-300 rounded"
+                  id="search-input"
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded={isSearchOpen && headerQuery.trim().length > 0}
+                  aria-controls="search-suggestions"
+                />
+
+                {isSearchOpen && headerQuery.trim().length > 0 && (
+                  <div
+                    id="search-suggestions"
+                    role="listbox"
+                    className="absolute left-0 right-0 top-full z-[200] mt-1.5 w-64 overflow-hidden rounded border border-white/15 bg-[#0d0d0d] shadow-[0_16px_50px_rgba(0,0,0,0.7)]"
+                  >
+                    {searchSuggestions.length === 0 ? (
+                      <p className="px-3.5 py-3 text-[10px] font-sans uppercase tracking-widest text-neutral-500">
+                        Không có phim khớp "{headerQuery.trim()}"
+                      </p>
+                    ) : (
+                      <>
+                        {searchSuggestions.map((movie, index) => (
+                          <button
+                            key={movie.id}
+                            role="option"
+                            aria-selected={index === activeSuggestion}
+                            onMouseEnter={() => setActiveSuggestion(index)}
+                            onClick={() => openMovieSuggestion(movie)}
+                            className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition ${index === activeSuggestion ? 'bg-white/10' : 'hover:bg-white/5'
+                              }`}
+                          >
+                            {movie.posterUrl ? (
+                              <img src={movie.posterUrl} alt="" className="h-11 w-8 shrink-0 rounded-sm border border-white/10 object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="h-11 w-8 shrink-0 rounded-sm border border-white/10 bg-neutral-900" />
+                            )}
+                            <span className="min-w-0">
+                              <span className="block truncate text-[11px] font-sans font-bold text-white">{movie.title}</span>
+                              <span className="block truncate text-[9px] font-mono uppercase tracking-widest text-neutral-500">
+                                {[movie.durationMinutes || movie.duration ? `${movie.durationMinutes || movie.duration} phút` : '', (movie.genre || [])[0]].filter(Boolean).join(' · ') || movie.englishTitle || ''}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                        <button
+                          onClick={commitSearch}
+                          className="flex w-full items-center justify-between border-t border-white/10 px-3.5 py-2.5 text-[9.5px] font-sans font-black uppercase tracking-widest text-amber-400 transition hover:bg-amber-500/10"
+                        >
+                          <span>Xem tất cả kết quả</span>
+                          <span className="font-mono normal-case text-neutral-500">Enter ↵</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </>
+          )}
 
           {/* Location Selector */}
           <div className="relative">
@@ -383,34 +393,36 @@ export default function Header({
             </AnimatePresence>, document.body)}
           </div>
 
-          {/* User Signin Profile Indicator */}
-          <button
-            onClick={() => {
-              if (isLoggedIn) {
-                onTabChange('profile');
-              } else {
-                onOpenOTP();
-              }
-            }}
-            className={`group flex h-10 items-center justify-center gap-2 border px-3.5 font-sans uppercase font-bold shadow-md transition-colors whitespace-nowrap rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 active:translate-y-px ${isLoggedIn
-              ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500 hover:text-black hover:border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.15)]'
-              : 'border-white/20 bg-black/60 text-white hover:bg-white hover:text-black'
-              }`}
-            id="signin-button"
-          >
-            <User className="h-3.5 w-3.5 shrink-0" />
-            <span className="flex min-w-0 flex-col items-start leading-none">
-              <span className="max-w-28 truncate text-[10px] tracking-[0.15em]">
-                {isLoggedIn ? (currentUser?.name) : 'ĐĂNG NHẬP'}
-              </span>
-              {canShowLoyalty && (
-                <span className="mt-1 flex items-center gap-1 text-[7px] font-black tracking-[0.12em] text-amber-200/80 group-hover:text-black/70">
-                  <Coins className="h-2.5 w-2.5" />
-                  {loyaltyPoints === null ? 'CINEPOINTS' : `${loyaltyPoints.toLocaleString('vi-VN')} CINEPOINTS`}
+          {/* User Signin Profile Indicator (hidden for staff) */}
+          {!isStaffRole && (
+            <button
+              onClick={() => {
+                if (isLoggedIn) {
+                  onTabChange('profile');
+                } else {
+                  onOpenOTP();
+                }
+              }}
+              className={`group flex h-10 items-center justify-center gap-2 border px-3.5 font-sans uppercase font-bold shadow-md transition-colors whitespace-nowrap rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 active:translate-y-px ${isLoggedIn
+                ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500 hover:text-black hover:border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.15)]'
+                : 'border-white/20 bg-black/60 text-white hover:bg-white hover:text-black'
+                }`}
+              id="signin-button"
+            >
+              <User className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex min-w-0 flex-col items-start leading-none">
+                <span className="max-w-28 truncate text-[10px] tracking-[0.15em]">
+                  {isLoggedIn ? (currentUser?.name) : 'ĐĂNG NHẬP'}
                 </span>
-              )}
-            </span>
-          </button>
+                {canShowLoyalty && (
+                  <span className="mt-1 flex items-center gap-1 text-[7px] font-black tracking-[0.12em] text-amber-200/80 group-hover:text-black/70">
+                    <Coins className="h-2.5 w-2.5" />
+                    {loyaltyPoints === null ? 'CINEPOINTS' : `${loyaltyPoints.toLocaleString('vi-VN')} CINEPOINTS`}
+                  </span>
+                )}
+              </span>
+            </button>
+          )}
 
           {/* Logout Button */}
           {isLoggedIn && (
@@ -427,92 +439,92 @@ export default function Header({
 
       </div>
 
-      {/* Row 2: Navigation */}
-      <div className="border-t border-white/5 bg-gradient-to-r from-indigo-950/40 via-black to-fuchsia-950/30">
-        <div className="mx-auto flex h-11 w-full max-w-5xl items-center justify-center px-4 sm:px-6 lg:px-8">
-          <nav className="flex min-w-0 max-w-full items-center justify-start gap-1 overflow-x-auto [scrollbar-width:none] md:justify-center [&::-webkit-scrollbar]:hidden" id="main-nav-bar">
-            <button
-              onClick={() => onTabChange('home')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'home'
-                ? 'text-white border-white font-bold'
-                : 'text-neutral-300 hover:text-white border-transparent'
-                }`}
-              id="nav-home"
-            >
-              <Home className="h-3.5 w-3.5" />
-              <span>TRANG CHỦ</span>
-            </button>
-
-            <button
-              onClick={() => onTabChange('explore')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'explore'
-                ? 'text-white border-white font-bold'
-                : 'text-neutral-300 hover:text-white border-transparent'
-                }`}
-              id="nav-explore"
-            >
-              <Compass className="h-3.5 w-3.5" />
-              <span>KHÁM PHÁ</span>
-            </button>
-
-            <button
-              onClick={() => onTabChange('showtimes')}
-              className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'showtimes'
-                ? 'text-white border-white font-bold'
-                : 'text-neutral-300 hover:text-white border-transparent'
-                }`}
-              id="nav-showtimes"
-            >
-              <Search className="h-3.5 w-3.5" />
-              <span>TÌM PHIM</span>
-            </button>
-
-            {!isAdminRole && (
+      {/* Row 2: Navigation (hidden for staff) */}
+      {!isStaffRole && (
+        <div className="border-t border-white/5 bg-gradient-to-r from-indigo-950/40 via-black to-fuchsia-950/30">
+          <div className="mx-auto flex h-11 w-full max-w-5xl items-center justify-center px-4 sm:px-6 lg:px-8">
+            <nav className="flex min-w-0 max-w-full items-center justify-start gap-1 overflow-x-auto [scrollbar-width:none] md:justify-center [&::-webkit-scrollbar]:hidden" id="main-nav-bar">
               <button
-                onClick={() => onTabChange('my-tickets')}
-                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
+                onClick={() => onTabChange('home')}
+                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'home'
                   ? 'text-white border-white font-bold'
                   : 'text-neutral-300 hover:text-white border-transparent'
                   }`}
-                id="nav-my-bookings"
+                id="nav-home"
               >
-                <Ticket className="h-3.5 w-3.5" />
-                <span>ĐƠN CỦA TÔI</span>
+                <Home className="h-3.5 w-3.5" />
+                <span>TRANG CHỦ</span>
               </button>
-            )}
 
-            {canUseWishlist && (
               <button
-                onClick={() => onTabChange('wishlist')}
-                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'wishlist'
+                onClick={() => onTabChange('explore')}
+                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'explore'
                   ? 'text-white border-white font-bold'
                   : 'text-neutral-300 hover:text-white border-transparent'
                   }`}
-                id="nav-wishlist"
+                id="nav-explore"
               >
-                <Heart className="h-3.5 w-3.5" />
-                <span>WATCHLIST</span>
+                <Compass className="h-3.5 w-3.5" />
+                <span>KHÁM PHÁ</span>
               </button>
-            )}
 
-
-
-            {isLoggedIn && (
               <button
-                onClick={() => onTabChange('profile')}
-                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'profile'
+                onClick={() => onTabChange('showtimes')}
+                className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'showtimes'
                   ? 'text-white border-white font-bold'
                   : 'text-neutral-300 hover:text-white border-transparent'
                   }`}
-                id="nav-profile-tab"
+                id="nav-showtimes"
               >
-                <User className="h-3.5 w-3.5" />
-                <span>CÁ NHÂN</span>
+                <Search className="h-3.5 w-3.5" />
+                <span>TÌM PHIM</span>
               </button>
-            )}
-          </nav>
+
+              {!isAdminRole && (
+                <button
+                  onClick={() => onTabChange('my-tickets')}
+                  className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'my-tickets'
+                    ? 'text-white border-white font-bold'
+                    : 'text-neutral-300 hover:text-white border-transparent'
+                    }`}
+                  id="nav-my-bookings"
+                >
+                  <Ticket className="h-3.5 w-3.5" />
+                  <span>ĐƠN CỦA TÔI</span>
+                </button>
+              )}
+
+              {canUseWishlist && (
+                <button
+                  onClick={() => onTabChange('wishlist')}
+                  className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'wishlist'
+                    ? 'text-white border-white font-bold'
+                    : 'text-neutral-300 hover:text-white border-transparent'
+                    }`}
+                  id="nav-wishlist"
+                >
+                  <Heart className="h-3.5 w-3.5" />
+                  <span>WATCHLIST</span>
+                </button>
+              )}
+
+              {isLoggedIn && (
+                <button
+                  onClick={() => onTabChange('profile')}
+                  className={`px-3.5 py-1.5 text-[10px] font-sans uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border-b-2 ${activeTab === 'profile'
+                    ? 'text-white border-white font-bold'
+                    : 'text-neutral-300 hover:text-white border-transparent'
+                    }`}
+                  id="nav-profile-tab"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  <span>CÁ NHÂN</span>
+                </button>
+              )}
+            </nav>
+          </div>
         </div>
-      </div>
+      )}
     </header >
   );
 }

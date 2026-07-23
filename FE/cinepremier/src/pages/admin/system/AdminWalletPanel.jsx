@@ -68,6 +68,7 @@ export default function AdminWalletPanel({ ctx }) {
   const [selectedWd, setSelectedWd] = useState(null);
   const [processNote, setProcessNote] = useState("");
   const [processMethod] = useState("BANK_TRANSFER");
+  const [txPage, setTxPage] = useState(0);
 
   const fetchDashboard = useCallback(async () => {
     const token = getAdminToken?.(false);
@@ -83,7 +84,7 @@ export default function AdminWalletPanel({ ctx }) {
     if (!token) return;
     setIsLoading(true);
     try {
-      const params = { page, size: 15 };
+      const params = { page, size: 10 };
       if (statusFilter) params.status = statusFilter;
       const data = await adminService.getAdminWithdrawals(token, params);
       const items = data?.content || data?.items || (Array.isArray(data) ? data : []);
@@ -419,61 +420,107 @@ export default function AdminWalletPanel({ ctx }) {
         )}
       </AnimatePresence>
 
-      {/* Recent Wallet Transactions */}
-      {dashboard?.recentTransactions?.length > 0 && (
-        <div style={{
-          background: "linear-gradient(160deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.008) 100%)",
-          border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "20px",
-        }}>
-          <div style={{ marginBottom: 16 }}>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: "#10b981", fontFamily: "Inter, sans-serif" }}>
-              Recent Activity
-            </span>
-            <h3 style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)", fontFamily: "Inter, sans-serif" }}>
-              Giao dịch ví gần đây
-            </h3>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {dashboard.recentTransactions.filter((tx) => tx.type !== "WITHDRAWAL_PAID" && Math.abs(Number(tx.amount || 0)) > 0).map((tx, i) => (
-              <div
-                key={tx.id || i}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "10px 14px", background: "rgba(255,255,255,0.02)",
-                  borderRadius: 8, border: "1px solid rgba(255,255,255,0.04)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
-                    background: tx.type === "REFUND_CREDIT" ? "rgba(16,185,129,0.12)" : "rgba(245,158,11,0.12)",
-                    border: `1px solid ${tx.type === "REFUND_CREDIT" ? "rgba(16,185,129,0.25)" : "rgba(245,158,11,0.25)"}`,
-                  }}>
-                    {tx.type === "REFUND_CREDIT"
-                      ? <ArrowDownCircle size={13} color="#10b981" />
-                      : <ArrowUpCircle size={13} color="#f59e0b" />
-                    }
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", fontFamily: "Inter, sans-serif", display: "block" }}>
-                      {tx.type === "REFUND_CREDIT" ? "Hoàn tiền" : tx.type === "WITHDRAWAL_HOLD" ? "Yêu cầu rút" : tx.type === "WITHDRAWAL_PAID" ? "Đã chuyển khoản" : tx.type === "WITHDRAWAL_REJECTED" ? "Hoàn lại (từ chối)" : tx.type}
-                    </span>
-                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "Inter, sans-serif" }}>
-                      {tx.referenceCode} · {fmtDate(tx.createdAt)}
-                    </span>
-                  </div>
-                </div>
-                <span style={{
-                  fontSize: 12, fontWeight: 800, fontFamily: "Inter, sans-serif",
-                  color: (tx.amount > 0 || tx.type === "REFUND_CREDIT") ? "#10b981" : "#f43f5e",
-                }}>
-                  {tx.amount > 0 ? "+" : ""}{fmtVND(Math.abs(tx.amount))}
+      {/* Recent Activity */}
+      {(() => {
+        const recentTxs = (dashboard?.recentTransactions || []).filter((tx) => tx.type !== "WITHDRAWAL_PAID" && Math.abs(Number(tx.amount || 0)) > 0);
+        if (recentTxs.length === 0) return null;
+        const txPageSize = 10;
+        const txTotalPages = Math.ceil(recentTxs.length / txPageSize) || 1;
+        const currentTxs = recentTxs.slice(txPage * txPageSize, (txPage + 1) * txPageSize);
+
+        return (
+          <div style={{
+            background: "linear-gradient(160deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.008) 100%)",
+            border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: 20,
+          }}>
+            <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: "#10b981", fontFamily: "Inter, sans-serif" }}>
+                  Recent Activity
                 </span>
+                <h3 style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)", fontFamily: "Inter, sans-serif" }}>
+                  Giao dịch ví gần đây
+                </h3>
               </div>
-            ))}
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "Inter, sans-serif" }}>
+                Trang {txPage + 1}/{txTotalPages} ({recentTxs.length} giao dịch)
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {currentTxs.map((tx, i) => (
+                <div
+                  key={tx.id || i}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 14px", background: "rgba(255,255,255,0.02)",
+                    borderRadius: 8, border: "1px solid rgba(255,255,255,0.04)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: tx.type === "REFUND_CREDIT" ? "rgba(16,185,129,0.12)" : "rgba(245,158,11,0.12)",
+                      border: `1px solid ${tx.type === "REFUND_CREDIT" ? "rgba(16,185,129,0.25)" : "rgba(245,158,11,0.25)"}`,
+                    }}>
+                      {tx.type === "REFUND_CREDIT"
+                        ? <ArrowDownCircle size={13} color="#10b981" />
+                        : <ArrowUpCircle size={13} color="#f59e0b" />
+                      }
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", fontFamily: "Inter, sans-serif", display: "block" }}>
+                        {tx.type === "REFUND_CREDIT" ? "Hoàn tiền" : tx.type === "WITHDRAWAL_HOLD" ? "Yêu cầu rút" : tx.type === "WITHDRAWAL_PAID" ? "Đã chuyển khoản" : tx.type === "WITHDRAWAL_REJECTED" ? "Hoàn lại (từ chối)" : tx.type}
+                      </span>
+                      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "Inter, sans-serif" }}>
+                        {tx.referenceCode} · {fmtDate(tx.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: 12, fontWeight: 800, fontFamily: "Inter, sans-serif",
+                    color: (tx.amount > 0 || tx.type === "REFUND_CREDIT") ? "#10b981" : "#f43f5e",
+                  }}>
+                    {tx.amount > 0 ? "+" : ""}{fmtVND(Math.abs(tx.amount))}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {txTotalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 16 }}>
+                <button
+                  disabled={txPage === 0}
+                  onClick={() => setTxPage((p) => Math.max(0, p - 1))}
+                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: txPage === 0 ? "rgba(255,255,255,0.2)" : "#fff", fontSize: 11, fontWeight: 700, cursor: txPage === 0 ? "not-allowed" : "pointer" }}
+                >
+                  Trước
+                </button>
+                {Array.from({ length: txTotalPages }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setTxPage(i)}
+                    style={{
+                      width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)",
+                      background: i === txPage ? "#10b981" : "rgba(255,255,255,0.04)",
+                      color: i === txPage ? "#fff" : "rgba(255,255,255,0.4)",
+                      fontSize: 11, fontWeight: 700, cursor: "pointer",
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  disabled={txPage >= txTotalPages - 1}
+                  onClick={() => setTxPage((p) => Math.min(txTotalPages - 1, p + 1))}
+                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: txPage >= txTotalPages - 1 ? "rgba(255,255,255,0.2)" : "#fff", fontSize: 11, fontWeight: 700, cursor: txPage >= txTotalPages - 1 ? "not-allowed" : "pointer" }}
+                >
+                  Sau
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </motion.div>
   );
 }

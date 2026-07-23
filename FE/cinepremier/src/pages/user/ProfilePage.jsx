@@ -463,7 +463,7 @@ export default function ProfileView() {
             </div>
           )}
 
-          {currentRole === 'staff' && (
+          {/* {currentRole === 'staff' && (
             <div className="border border-emerald-400/25 bg-[#050b08] p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -490,7 +490,7 @@ export default function ProfileView() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
@@ -800,8 +800,8 @@ export default function ProfileView() {
                           <p className="text-[10px] font-bold text-white">
                             {tx.type === 'REFUND_CREDIT' ? '+ Hoàn tiền'
                               : tx.type === 'WITHDRAWAL_HOLD' ? '- Yêu cầu rút'
-                                  : tx.type === 'WITHDRAWAL_REJECTED' ? '↩ Hoàn lại'
-                                    : tx.type}
+                                : tx.type === 'WITHDRAWAL_REJECTED' ? '↩ Hoàn lại'
+                                  : tx.type}
                           </p>
                           <p className="text-[9px] text-neutral-500">{tx.referenceCode}</p>
                         </div>

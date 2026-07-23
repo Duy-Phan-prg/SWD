@@ -2143,9 +2143,9 @@ export default function BookingView() {
                                                 : 'bg-neutral-950 text-neutral-800 cursor-not-allowed line-through'
                                               : matchingHoldingBooking
                                                 ? 'bg-rose-950/10 text-rose-900 cursor-not-allowed opacity-40'
-                                              : isSelected
-                                                ? 'bg-rose-500 text-white font-black'
-                                                : 'bg-rose-950/20 text-rose-400 hover:bg-rose-950/50 hover:text-rose-200'
+                                                : isSelected
+                                                  ? 'bg-rose-500 text-white font-black'
+                                                  : 'bg-rose-950/20 text-rose-400 hover:bg-rose-950/50 hover:text-rose-200'
                                               }`}
                                           >
                                             {renderSeatHoldCountdown(seat)}
@@ -2194,6 +2194,7 @@ export default function BookingView() {
                                         const ticketMeta = selectedSeat ? TICKET_TYPE_META[selectedSeat.ticketType] : null;
                                         const isVip = seat.type === 'vip';
                                         const isChild = selectedSeat?.ticketType === 'child';
+                                        const isStudent = selectedSeat?.ticketType === 'student';
                                         const isHeldOnActiveBooking = getSeatHoldSecondsLeft(seat) > 0;
                                         const displayPrice = isSelected ? getSeatLineTotal(selectedSeat) : (getShowtimeTicketPrice(selectedShowtime, 'adult', seat.type) ?? seat.price);
 
@@ -2211,13 +2212,15 @@ export default function BookingView() {
                                                 : 'bg-neutral-950 border-neutral-900 text-neutral-800 cursor-not-allowed line-through'
                                               : matchingHoldingBooking
                                                 ? 'border-white/5 bg-neutral-950 text-neutral-700 cursor-not-allowed opacity-40'
-                                              : isSelected && isChild
-                                                ? 'bg-amber-400 text-black border-amber-400 font-black scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
-                                                : isSelected
-                                                  ? 'bg-white text-black border-white font-black scale-110 shadow-[0_0_12px_rgba(255,255,255,0.6)]'
-                                                  : isVip
-                                                    ? 'border-yellow-500/40 bg-yellow-950/30 text-yellow-400 hover:border-yellow-300 hover:bg-yellow-950/50 hover:scale-105'
-                                                    : 'border-white/15 bg-[#121212] text-neutral-200 hover:border-white/50 hover:text-white hover:scale-105'
+                                                : isSelected && isChild
+                                                  ? 'bg-amber-400 text-black border-amber-400 font-black scale-110 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
+                                                  : isSelected && isStudent
+                                                    ? 'bg-sky-400 text-black border-sky-400 font-black scale-110 shadow-[0_0_12px_rgba(56,189,248,0.6)]'
+                                                    : isSelected
+                                                      ? 'bg-white text-black border-white font-black scale-110 shadow-[0_0_12px_rgba(255,255,255,0.6)]'
+                                                      : isVip
+                                                        ? 'border-yellow-500/40 bg-yellow-950/30 text-yellow-400 hover:border-yellow-300 hover:bg-yellow-950/50 hover:scale-105'
+                                                        : 'border-white/15 bg-[#121212] text-neutral-200 hover:border-white/50 hover:text-white hover:scale-105'
                                               }`}
                                           >
                                             {renderSeatHoldCountdown(seat)}
@@ -2560,8 +2563,8 @@ export default function BookingView() {
             </div>
 
             <div className="flex justify-between">
-              <span>Thì giờ:</span>
-              <span className="text-white font-mono font-bold text-right">{selectedShowtime ? new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''} • {selectedDate}</span>
+              <span>Thời gian:</span>
+              <span className="text-white font-mono font-bold text-right">{selectedShowtime ? new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''} • {selectedDate ? selectedDate.split(/[-/]/).reverse().join('/') : ''}</span>
             </div>
 
             <div className="flex justify-between items-start">
@@ -2579,10 +2582,10 @@ export default function BookingView() {
               <div className="space-y-2 pt-2 border-t border-white/5 text-[9px] lowercase tracking-wide text-neutral-400">
                 <span className="text-[11px] uppercase tracking-[0.15em] text-neutral-600 block font-sans">Dịch vụ đi kèm</span>
                 {receiptFoodRows.map(row => (
-                    <div key={row.id} className="flex justify-between uppercase">
-                      <span className="truncate max-w-[140px] font-sans">{row.name} <span className="text-white font-bold font-mono">x{row.quantity}</span></span>
-                      <span className="text-neutral-300 font-mono">{formatVnd(row.lineTotal)}</span>
-                    </div>
+                  <div key={row.id} className="flex justify-between uppercase">
+                    <span className="truncate max-w-[140px] font-sans">{row.name} <span className="text-white font-bold font-mono">x{row.quantity}</span></span>
+                    <span className="text-neutral-300 font-mono">{formatVnd(row.lineTotal)}</span>
+                  </div>
                 ))}
               </div>
             )}
