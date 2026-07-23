@@ -25,10 +25,11 @@ import AdminRoomsPanel from './cinema/AdminRoomsPanel';
 import AdminTicketsPanel from './cinema/AdminTicketsPanel';
 import AdminAuditPanel from './system/AdminAuditPanel';
 import AdminStatsPanel from './overview/AdminStatsPanel';
+import AdminFnbReportPanel from './overview/AdminFnbReportPanel';
 
 const getNavGroup = (section) => {
   if (['genres', 'actors', 'movies'].includes(section)) return 'movies';
-  if (section === 'foods') return 'fnb';
+  if (['foods', 'fnb-report'].includes(section)) return 'fnb';
   if (['rooms', 'showtimes', 'tickets', 'transactions'].includes(section)) return 'cinema';
   if (['statistics', 'audit'].includes(section)) return 'insights';
   if (['users', 'loyalty', 'reviews', 'cinewallet'].includes(section)) return 'system';
@@ -41,6 +42,7 @@ const ADMIN_SECTIONS = new Set([
   'actors',
   'movies',
   'foods',
+  'fnb-report',
   'rooms',
   'showtimes',
   'tickets',
@@ -1470,6 +1472,7 @@ export default function AdminDashboard({
     genres: AdminGenresPanel,
     actors: AdminActorsPanel,
     foods: AdminFoodsPanel,
+    'fnb-report': AdminFnbReportPanel,
     showtimes: AdminShowtimesPanel,
     tickets: AdminTicketsPanel,
     transactions: AdminTransactionsPanel,
@@ -1627,6 +1630,19 @@ export default function AdminDashboard({
                       <span className="whitespace-nowrap">QUẢN LÝ BẮP NƯỚC</span>
                     </span>
                     {activeTab === 'foods' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+                  </button>
+                  <button
+                    onClick={() => { playPulseSound(486, 'sine', 0.05); changeAdminSection('fnb-report'); }}
+                    className={`w-full flex items-center justify-between px-3 py-3 text-[10.5px] font-sans uppercase font-black tracking-wide transition-all duration-300 border ${activeTab === 'fnb-report'
+                      ? 'border-amber-500/35 bg-amber-500/10 text-amber-400 font-black'
+                      : 'border-white/5 bg-black/40 text-neutral-400 hover:text-white hover:border-neutral-850'
+                      }`}
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <BarChart2 className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span className="whitespace-nowrap">BÁO CÁO F&amp;B</span>
+                    </span>
+                    {activeTab === 'fnb-report' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
                   </button>
                 </motion.div>
               )}

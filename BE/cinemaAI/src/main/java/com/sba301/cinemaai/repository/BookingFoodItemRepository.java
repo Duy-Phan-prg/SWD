@@ -28,13 +28,48 @@ public interface BookingFoodItemRepository extends JpaRepository<BookingFoodItem
             LEFT JOIN f.foodCombo fc
             LEFT JOIN f.foodOrder fo
             WHERE (
-                (fo IS NULL AND b.status IN ('PAID','USED') AND b.paidAt BETWEEN :from AND :to)
-                OR (fo.status = 'PAID' AND fo.paidAt BETWEEN :from AND :to)
+                (fo IS NULL AND b.status IN ('PAID','USED') AND b.paidAt >= :from AND b.paidAt < :to)
+                OR (fo.status IN ('PAID', 'PICKED_UP') AND fo.paidAt >= :from AND fo.paidAt < :to)
               )
             GROUP BY COALESCE(fi.name, fc.name)
             ORDER BY SUM(f.quantity) DESC
             """)
     List<Object[]> concessionSales(
+            @org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
+            @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to);
+
+    /**
+     * One row per paid food transaction. Keeping the paid timestamp intact and grouping by
+     * transaction in JPQL lets the service aggregate by LocalDate without database-specific
+     * DATE()/date_trunc functions.
+     */
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT COALESCE(fo.paidAt, b.paidAt),
+                   CASE
+                       WHEN fo IS NULL THEN 'WITH_TICKET'
+                       WHEN fo.booking IS NULL THEN 'STANDALONE'
+                       ELSE 'ADD_ON'
+                   END,
+                   COALESCE(fo.id, b.id),
+                   SUM(f.quantity),
+                   SUM(f.quantity * f.unitPrice)
+            FROM BookingFoodItem f
+            LEFT JOIN f.booking b
+            LEFT JOIN f.foodOrder fo
+            WHERE (
+                (fo IS NULL AND b.status IN ('PAID','USED') AND b.paidAt >= :from AND b.paidAt < :to)
+                OR (fo.status IN ('PAID', 'PICKED_UP') AND fo.paidAt >= :from AND fo.paidAt < :to)
+              )
+            GROUP BY COALESCE(fo.paidAt, b.paidAt),
+                     CASE
+                         WHEN fo IS NULL THEN 'WITH_TICKET'
+                         WHEN fo.booking IS NULL THEN 'STANDALONE'
+                         ELSE 'ADD_ON'
+                     END,
+                     COALESCE(fo.id, b.id)
+            ORDER BY COALESCE(fo.paidAt, b.paidAt)
+            """)
+    List<Object[]> concessionTransactions(
             @org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
             @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to);
 }

@@ -16,9 +16,12 @@ import com.sba301.cinemaai.repository.BookingRepository;
 import com.sba301.cinemaai.repository.PaymentRepository;
 import com.sba301.cinemaai.service.ReportService;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -245,8 +248,17 @@ public class ReportServiceImpl implements ReportService {
     public ConcessionSalesResponse getConcessionSales(LocalDate from, LocalDate to) {
         LocalDate safeFrom = from != null ? from : LocalDate.now().withDayOfMonth(1);
         LocalDate safeTo = to != null ? to : LocalDate.now();
+        if (safeFrom.isAfter(safeTo)) {
+            throw new IllegalArgumentException("Ngày bắt đầu không được sau ngày kết thúc");
+        }
+        if (ChronoUnit.DAYS.between(safeFrom, safeTo) > 366) {
+            throw new IllegalArgumentException("Khoảng báo cáo F&B không được vượt quá 366 ngày");
+        }
+
+        LocalDateTime rangeFrom = safeFrom.atStartOfDay();
+        LocalDateTime rangeTo = safeTo.plusDays(1).atStartOfDay();
         List<ConcessionSalesResponse.Line> lines = bookingFoodItemRepository
-                .concessionSales(safeFrom.atStartOfDay(), safeTo.plusDays(1).atStartOfDay())
+                .concessionSales(rangeFrom, rangeTo)
                 .stream()
                 .map(row -> new ConcessionSalesResponse.Line(
                         (String) row[0],
@@ -258,7 +270,72 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal totalRevenue = lines.stream()
                 .map(ConcessionSalesResponse.Line::revenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new ConcessionSalesResponse(safeFrom, safeTo, totalItems, totalRevenue, lines);
+
+        Map<LocalDate, SalesAccumulator> daily = new LinkedHashMap<>();
+        for (LocalDate date = safeFrom; !date.isAfter(safeTo); date = date.plusDays(1)) {
+            daily.put(date, new SalesAccumulator());
+        }
+
+        Map<String, SalesAccumulator> sources = new LinkedHashMap<>();
+        sources.put("WITH_TICKET", new SalesAccumulator());
+        sources.put("ADD_ON", new SalesAccumulator());
+        sources.put("STANDALONE", new SalesAccumulator());
+
+        List<Object[]> transactions = bookingFoodItemRepository.concessionTransactions(rangeFrom, rangeTo);
+        transactions.forEach(row -> {
+            LocalDate date = ((LocalDateTime) row[0]).toLocalDate();
+            String source = String.valueOf(row[1]);
+            long quantity = ((Number) row[3]).longValue();
+            BigDecimal revenue = row[4] != null ? new BigDecimal(row[4].toString()) : BigDecimal.ZERO;
+            daily.computeIfAbsent(date, ignored -> new SalesAccumulator()).addOrder(quantity, revenue);
+            sources.computeIfAbsent(source, ignored -> new SalesAccumulator()).addOrder(quantity, revenue);
+        });
+
+        long totalOrders = transactions.size();
+        BigDecimal averageOrderValue = totalOrders > 0
+                ? totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        List<ConcessionSalesResponse.DailyLine> dailyLines = daily.entrySet().stream()
+                .map(entry -> new ConcessionSalesResponse.DailyLine(
+                        entry.getKey(),
+                        entry.getValue().orderCount,
+                        entry.getValue().quantity,
+                        entry.getValue().revenue
+                ))
+                .toList();
+        List<ConcessionSalesResponse.SourceLine> sourceLines = sources.entrySet().stream()
+                .map(entry -> new ConcessionSalesResponse.SourceLine(
+                        entry.getKey(),
+                        entry.getValue().orderCount,
+                        entry.getValue().quantity,
+                        entry.getValue().revenue
+                ))
+                .toList();
+
+        return new ConcessionSalesResponse(
+                safeFrom,
+                safeTo,
+                totalOrders,
+                totalItems,
+                totalRevenue,
+                averageOrderValue,
+                dailyLines,
+                lines,
+                sourceLines
+        );
+    }
+
+    private static final class SalesAccumulator {
+        private long orderCount;
+        private long quantity;
+        private BigDecimal revenue = BigDecimal.ZERO;
+
+        private void addOrder(long itemQuantity, BigDecimal orderRevenue) {
+            orderCount++;
+            quantity += itemQuantity;
+            revenue = revenue.add(orderRevenue);
+        }
     }
 
     /** User đặt vé nhưng hết hạn không thanh toán — để admin cân nhắc tặng điểm/khuyến mãi. */
