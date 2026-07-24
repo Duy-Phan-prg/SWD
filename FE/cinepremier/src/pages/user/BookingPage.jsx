@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check, ShieldCheck, CircleAlert } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ArrowLeft, Ticket, ShoppingBag, Plus, Minus, CheckCircle, XCircle, Loader2, Check, ShieldCheck, CircleAlert, Calendar, Clock, ArrowRight } from 'lucide-react';
 import { expireAuthSession, getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
 import { paymentService } from '../../services/paymentService';
@@ -939,7 +939,7 @@ export default function BookingView() {
               Ngày reset điểm: {loyaltyResetScheduleLabel}
             </p>
           )}
-          {loyaltyAdminResetAt && (
+          {loyaltyAdminResetAt && Number(loyaltyPoints || 0) === 0 && (
             <p className="mt-1 border-l border-amber-400/40 pl-2 text-[10px] font-bold leading-snug text-amber-300">
               Quản trị viên đã reset điểm lúc {loyaltyAdminResetAt}.
             </p>
@@ -1510,9 +1510,10 @@ export default function BookingView() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-[8px] text-zinc-600 uppercase tracking-widest font-sans mb-1">Giờ chiếu</p>
                   <p className="text-white font-bold font-mono text-sm">
-                    {selectedShowtime ? new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                    {selectedShowtime
+                      ? `${new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${selectedShowtimeEnd ? ` - ${selectedShowtimeEnd.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : ''}`
+                      : '—'}
                   </p>
                 </div>
                 <div>
@@ -1661,7 +1662,11 @@ export default function BookingView() {
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
                   <span className="text-white">Giờ chiếu:</span>
-                  <span className="text-white font-bold">{selectedShowtime ? new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                  <span className="text-white font-bold">
+                    {selectedShowtime
+                      ? `${new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}${selectedShowtimeEnd ? ` - ${selectedShowtimeEnd.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : ''}`
+                      : ''}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
                   <span className="text-white">Số ghế đã chọn ({selectedSeats.length}):</span>
@@ -2557,14 +2562,40 @@ export default function BookingView() {
           {/* Ticket Information specs list */}
           <div className="space-y-3 text-[11px] uppercase tracking-wider font-sans text-neutral-400 border-b border-white/5 pb-4">
 
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span>Phòng chiếu:</span>
-              <span className="text-white font-bold truncate max-w-[140px] text-right">{(selectedShowtime?.roomName || 'Chưa chọn') || 'IMAX VIP 03'}</span>
+              <span className="text-white font-bold truncate max-w-[150px] text-right">{(selectedShowtime?.roomName || 'Chưa chọn') || 'IMAX VIP 03'}</span>
             </div>
 
-            <div className="flex justify-between">
-              <span>Thời gian:</span>
-              <span className="text-white font-mono font-bold text-right">{selectedShowtime ? new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''} • {selectedDate ? selectedDate.split(/[-/]/).reverse().join('/') : ''}</span>
+            <div className="flex justify-between items-center">
+              <span className="flex items-center gap-1.5 text-neutral-300">
+                <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                Ngày chiếu:
+              </span>
+              <span className="text-white font-mono font-bold text-right">
+                {selectedDate ? selectedDate.split(/[-/]/).reverse().join('/') : '—'}
+              </span>
+            </div>
+
+            {/* Showtime Range Card with Icons */}
+            <div className="border border-white/10 bg-white/[0.03] p-3 space-y-1.5 my-1.5">
+              <div className="flex items-center justify-between text-[9px] text-neutral-400 font-mono tracking-wider">
+                <span className="flex items-center gap-1 font-bold text-neutral-300">
+                  <Clock className="w-3 h-3 text-amber-400 shrink-0" /> BẮT ĐẦU
+                </span>
+                <span className="flex items-center gap-1 font-bold text-neutral-300">
+                  <Clock className="w-3 h-3 text-amber-400 shrink-0" /> KẾT THÚC
+                </span>
+              </div>
+              <div className="flex items-center justify-between font-mono text-sm font-black">
+                <span className="text-white">
+                  {selectedShowtime ? new Date(selectedShowtime.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 text-neutral-500 shrink-0 mx-1" />
+                <span className="text-amber-400">
+                  {selectedShowtimeEnd ? selectedShowtimeEnd.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                </span>
+              </div>
             </div>
 
             <div className="flex justify-between items-start">

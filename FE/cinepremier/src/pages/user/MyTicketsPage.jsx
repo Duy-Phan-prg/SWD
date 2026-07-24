@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle, MessageSquare, Pencil, Trash2, Save, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Ticket, Calendar, MapPin, Star, CheckCircle, Clock, Loader2, MoreVertical, ScanLine, XCircle, MessageSquare, Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, EyeOff } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getStoredAuth } from '../../services/authService';
 import { bookingService } from '../../services/bookingService';
@@ -14,6 +14,7 @@ export default function MyTicketsView({ embedded = false }) {
   const [searchParams] = useSearchParams();
   const highlightBookingId = searchParams.get('highlightBookingId') || searchParams.get('bookingId');
   const [highlightedId, setHighlightedId] = useState(null);
+  const hasProcessedHighlightRef = useRef(null);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const showToast = useUiStore((state) => state.showToast);
   const setShowOTP = useUiStore((state) => state.setShowOTP);
@@ -259,6 +260,7 @@ export default function MyTicketsView({ embedded = false }) {
         foods,
         totalAmount: b.totalAmount,
         seatDetails: Array.isArray(b.seats) ? b.seats : [],
+        showtimeStart: b.showtimeStart || null,
         showtimeEnd: b.showtimeEnd || null,
         poster: b.posterUrl || b.moviePosterUrl || b.showtime?.posterUrl || b.showtime?.moviePosterUrl || findMovieForBooking(b)?.posterUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRb30EroFOo6S_-d49SOIyTINg8t7Vpmm_lpcJ1zZ2xNA&s=10',
         isReal: true
@@ -276,26 +278,32 @@ export default function MyTicketsView({ embedded = false }) {
 
   useEffect(() => {
     if (!highlightBookingId || activeTickets.length === 0) return;
+    if (hasProcessedHighlightRef.current === highlightBookingId) return;
+
     const targetIdx = activeTickets.findIndex(
       (t) => String(t.bookingId) === String(highlightBookingId)
         || String(t.id) === String(highlightBookingId)
         || String(t.code) === String(highlightBookingId)
     );
     if (targetIdx !== -1) {
+      hasProcessedHighlightRef.current = highlightBookingId;
       const targetPage = Math.floor(targetIdx / TICKET_PAGE_SIZE) + 1;
       setTicketPage(targetPage);
       const matchedTicket = activeTickets[targetIdx];
       const matchId = String(matchedTicket.bookingId || matchedTicket.id);
       setHighlightedId(matchId);
 
-      const timer = setTimeout(() => {
+      setTimeout(() => {
         const el = document.getElementById(`ticket-card-${matchId}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 400);
 
-      return () => clearTimeout(timer);
+      // Tự động tắt hẳn viền phát sáng (glow) sau đúng 5 giây
+      setTimeout(() => {
+        setHighlightedId(null);
+      }, 5000);
     }
   }, [highlightBookingId, activeTickets]);
 
@@ -331,7 +339,6 @@ export default function MyTicketsView({ embedded = false }) {
 
   const reviewedBookingIds = useMemo(() => new Set(
     reviewsList
-      .filter((review) => review.status !== 'DELETED')
       .map((review) => review.bookingId)
       .filter((bookingId) => bookingId !== null && bookingId !== undefined)
       .map(String)
@@ -339,7 +346,6 @@ export default function MyTicketsView({ embedded = false }) {
 
   const visibleReviews = useMemo(
     () => reviewsList
-      .filter((review) => review.status !== 'DELETED')
       .slice()
       .sort((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -557,6 +563,11 @@ export default function MyTicketsView({ embedded = false }) {
                   || String(t.code) === String(highlightedId)
                 );
                 const isEnded = Boolean(t.showtimeEnd && new Date(t.showtimeEnd).getTime() <= Date.now());
+                const isCheckedIn = t.status === 'USED' || t.status === 'COMPLETED' || (Array.isArray(t.seatDetails) && t.seatDetails.some((s) => s.status === 'CHECKED_IN'));
+                const hasShowtimePassed = isEnded || Boolean(t.showtimeStart && new Date(t.showtimeStart).getTime() <= Date.now());
+                const canReview = isCheckedIn && hasShowtimePassed;
+                const hasAlreadyReviewed = Boolean(t.bookingId && reviewedBookingIds.has(String(t.bookingId)));
+                const showReviewButton = canReview || hasAlreadyReviewed;
 
                 return (
                   <div
@@ -566,7 +577,7 @@ export default function MyTicketsView({ embedded = false }) {
                       isHighlighted
                         ? 'border-2 border-white ring-2 ring-white ring-offset-2 ring-offset-black shadow-[0_0_35px_rgba(255,255,255,0.9)] animate-pulse'
                         : isEnded
-                          ? 'border-neutral-900 opacity-60 grayscale-[35%] bg-neutral-950/90'
+                          ? 'border-neutral-850 bg-neutral-950/95 hover:border-neutral-700/80'
                           : 'border-neutral-800 hover:border-neutral-700/80'
                     }`}
                   >
@@ -728,15 +739,15 @@ export default function MyTicketsView({ embedded = false }) {
                             </button>
                           );
                         })()}
-                        {t.status === 'USED' && (
+                        {showReviewButton && (
                           <button
                             type="button"
                             onClick={() => handleGoToReviewFromTicket(t)}
-                            className="inline-flex items-center gap-1.5 border border-amber-500/30 bg-amber-950/20 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-500 hover:text-black"
-                            title={t.bookingId && reviewedBookingIds.has(String(t.bookingId)) ? 'Xem hoặc sửa đánh giá' : 'Đánh giá phim đã xem'}
+                            className="inline-flex items-center gap-1.5 border border-amber-400/80 bg-amber-500/20 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-amber-300 transition hover:bg-amber-400 hover:text-black shadow-[0_0_14px_rgba(251,191,36,0.35)] cursor-pointer rounded-sm"
+                            title={hasAlreadyReviewed ? 'Xem hoặc sửa đánh giá' : 'Đánh giá phim đã xem'}
                           >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            {t.bookingId && reviewedBookingIds.has(String(t.bookingId)) ? 'Xem đánh giá' : 'Đánh giá'}
+                            <MessageSquare className="h-3.5 w-3.5 text-amber-400" />
+                            {hasAlreadyReviewed ? 'Xem đánh giá' : 'Đánh giá'}
                           </button>
                         )}
                         <button
@@ -770,10 +781,16 @@ export default function MyTicketsView({ embedded = false }) {
                   </div>
 
                   {/* MỘT QR CHUNG CHO CẢ ĐƠN — bên trong chứa danh sách mã vé từng ghế */}
-                  <div className={`flex w-full shrink-0 flex-col items-center justify-center gap-3 border-t border-dashed border-neutral-800 bg-black/35 p-5 md:w-[220px] md:border-l md:border-t-0 ${
-                    isEnded ? 'opacity-35 grayscale pointer-events-none' : ''
-                  }`}>
-                    {t.qrCode && t.seatDetails.some((s) => s.ticketCode) ? (
+                  <div className="flex w-full shrink-0 flex-col items-center justify-center gap-3 border-t border-dashed border-neutral-800 bg-black/35 p-5 md:w-[220px] md:border-l md:border-t-0">
+                    {isEnded ? (
+                      <div className="flex flex-col items-center justify-center text-center p-3 space-y-2.5 opacity-80">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 border border-neutral-800 text-neutral-500">
+                          <ScanLine className="h-5 w-5" />
+                        </div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-neutral-400">Mã QR tạm thời không có</p>
+                        <p className="text-[8px] text-neutral-500 font-sans leading-relaxed">Suất chiếu đã kết thúc</p>
+                      </div>
+                    ) : t.qrCode && t.seatDetails.some((s) => s.ticketCode) ? (
                       <>
                         <div className="bg-white p-3 shadow-[0_0_28px_rgba(255,255,255,0.16)]">
                           <QRCodeSVG
@@ -786,8 +803,8 @@ export default function MyTicketsView({ embedded = false }) {
                             title={`QR vé ${t.code}`}
                           />
                         </div>
-                        <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${isEnded ? 'text-neutral-500' : 'text-emerald-400'}`}>
-                          {isEnded ? 'QR đã hết hạn' : `QR đặt chỗ · Bao gồm ${t.seatDetails.length} ghế.`}
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
+                          QR đặt chỗ · Bao gồm {t.seatDetails.length} ghế.
                         </p>
                         <div className="w-full space-y-1">
                           {t.seatDetails.map((seat) => (
@@ -798,9 +815,7 @@ export default function MyTicketsView({ embedded = false }) {
                                 {seat.ticketType === 'STUDENT' ? 'Sinh viên' : seat.ticketType === 'CHILD' ? 'Trẻ em' : 'Người lớn'}
                               </span>
                               <span className="ml-auto shrink-0">
-                                {isEnded ? (
-                                  <span className="text-[7px] font-black uppercase tracking-widest text-neutral-600">Đã kết thúc</span>
-                                ) : seat.status === 'CHECKED_IN' ? (
+                                {seat.status === 'CHECKED_IN' ? (
                                   <span className="border border-emerald-500/30 bg-emerald-950/30 px-1 py-0.5 text-[7px] font-black uppercase tracking-widest text-emerald-400">✓ Đã vào</span>
                                 ) : (
                                   <span className="text-[7px] font-black uppercase tracking-widest text-neutral-600">Chưa vào</span>
@@ -824,11 +839,11 @@ export default function MyTicketsView({ embedded = false }) {
                           />
                         </div>
                         <div className="text-center">
-                          <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${isEnded ? 'text-neutral-500' : 'text-emerald-400'}`}>
-                            {isEnded ? 'QR đã hết hạn' : 'QR Check-in'}
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
+                            QR Check-in
                           </p>
                           <p className="mt-1 text-[8px] leading-relaxed text-neutral-500">
-                            {isEnded ? 'Suất chiếu đã kết thúc' : 'Nhân viên quét mã để lấy thông tin vé'}
+                            Nhân viên quét mã để lấy thông tin vé
                           </p>
                         </div>
                       </>
@@ -1120,13 +1135,24 @@ export default function MyTicketsView({ embedded = false }) {
                 <div className="space-y-3">
                   {visibleReviews.map((rev) => {
                     const isEditing = editingReviewId === String(rev.id);
-                    const canChangeReview = rev.status === 'VISIBLE' && isReviewInEditWindow(rev);
+                    const isHiddenByAdmin = rev.status === 'HIDDEN' || rev.status === 'DELETED';
+                    const canChangeReview = (!rev.status || rev.status === 'VISIBLE') && isReviewInEditWindow(rev);
                     return (
-                      <div key={rev.id} className="border border-white/5 bg-[#0a0a0a] p-4 font-sans text-xs space-y-2">
+                      <div key={rev.id} className={`border p-4 font-sans text-xs space-y-2.5 ${
+                        isHiddenByAdmin ? 'border-rose-500/30 bg-rose-950/15' : 'border-white/5 bg-[#0a0a0a]'
+                      }`}>
                         <div className="flex justify-between items-center">
                           <span className="font-serif italic text-white font-bold">{rev.movieTitle || rev.movie || 'Phim'}</span>
                           <span className="text-neutral-500 font-mono text-[9px]">{rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('vi-VN') : rev.date}</span>
                         </div>
+
+                        {isHiddenByAdmin && (
+                          <div className="flex items-center gap-2 border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-rose-300">
+                            <EyeOff className="h-4 w-4 text-rose-400 shrink-0" />
+                            <span>Bình luận đã bị ẩn bởi Quản trị viên</span>
+                          </div>
+                        )}
+
                         {isEditing ? (
                           <div className="space-y-3">
                             <div className="flex space-x-1">
@@ -1178,7 +1204,11 @@ export default function MyTicketsView({ embedded = false }) {
                             <p className="text-neutral-400 font-light leading-relaxed">"{rev.comment || rev.content || ''}"</p>
                             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2">
                               <span className="text-[9px] uppercase tracking-widest text-neutral-500">
-                                {canChangeReview ? 'Có thể sửa/xóa trong 24 giờ sau khi gửi' : 'Đã hết hạn sửa/xóa sau 24 giờ'}
+                                {isHiddenByAdmin
+                                  ? 'Đã bị ẩn bởi Quản trị viên'
+                                  : canChangeReview
+                                    ? 'Có thể sửa/xóa trong 24 giờ sau khi gửi'
+                                    : 'Đã hết hạn sửa/xóa sau 24 giờ'}
                               </span>
                               {canChangeReview && (
                                 <div className="flex gap-2">

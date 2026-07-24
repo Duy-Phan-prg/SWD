@@ -129,10 +129,10 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             LocalDate date,
             int page, int size) {
 
-        LocalDateTime from = date == null ? LocalDate.now().atStartOfDay()              : date.atStartOfDay();
-        LocalDateTime to   = date == null ? LocalDate.now().plusYears(1).atStartOfDay() : date.plusDays(1).atStartOfDay();
+        LocalDateTime from = date == null ? LocalDateTime.of(2000, 1, 1, 0, 0) : date.atStartOfDay();
+        LocalDateTime to   = date == null ? LocalDateTime.of(2099, 12, 31, 23, 59) : date.plusDays(1).atStartOfDay();
 
-        Pageable pageable = pageable(page, size, Sort.by("startTime").ascending());
+        Pageable pageable = pageable(page, size, Sort.by("id").descending());
         return PageResponse.from(
                 showtimeRepository.searchAdmin(movieId, roomId, cinemaId, status, from, to, pageable)
                         .map(cinemaMapper::toShowtimeResponse)

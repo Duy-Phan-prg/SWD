@@ -609,14 +609,14 @@ export default function ProfileView() {
 
                     </div>
 
-                    {(loyaltyResetScheduleLabel || loyaltyAdminResetAt) && (
+                    {(loyaltyResetScheduleLabel || (loyaltyAdminResetAt && Number(loyaltyPoints || 0) === 0)) && (
                       <div className="max-w-sm mx-auto md:mx-0 border border-emerald-500/15 bg-emerald-950/10 px-4 py-3 text-left">
                         {loyaltyResetScheduleLabel && (
                           <p className="text-[12px] font-mono text-white/70">
                             Điểm sẽ được reset vào thời gian: {loyaltyResetScheduleLabel}
                           </p>
                         )}
-                        {loyaltyAdminResetAt && (
+                        {loyaltyAdminResetAt && Number(loyaltyPoints || 0) === 0 && (
                           <p className="mt-2 border-l border-amber-400/40 pl-2 text-[10px] font-bold leading-snug text-amber-300">
                             Quản trị viên đã reset điểm lúc {loyaltyAdminResetAt}.
                           </p>

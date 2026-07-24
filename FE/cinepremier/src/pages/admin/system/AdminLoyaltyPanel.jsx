@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import {
@@ -122,7 +122,7 @@ export default function AdminLoyaltyPanel({ ctx }) {
         totalItems: Number(nextTransactions?.totalItems || 0)
       });
     } catch (error) {
-      showToast?.(error.message || 'Không thể tải dữ liệu điểm.');
+      showToast?.(error.message || 'Không thể tải dữ liệu điểm.', 'error');
     } finally {
       setLoading(false);
     }
@@ -156,21 +156,21 @@ export default function AdminLoyaltyPanel({ ctx }) {
     const expiryTime = normalizeExpiryTime(config.expiryTime);
     const earningRatePercent = Number(config.earningRatePercent);
     if (!Number.isFinite(earningRatePercent) || earningRatePercent < 0 || earningRatePercent > 100) {
-      showToast?.('Tỷ lệ tích điểm phải nằm trong khoảng 0% đến 100%.');
+      showToast?.('Tỷ lệ tích điểm phải nằm trong khoảng 0% đến 100%.', 'error');
       return;
     }
     const redemptionPoints = Number(config.redemptionPoints);
     if (!Number.isInteger(redemptionPoints) || redemptionPoints < 1) {
-      showToast?.('Số điểm quy đổi phải là số nguyên lớn hơn hoặc bằng 1.');
+      showToast?.('Số điểm quy đổi phải là số nguyên lớn hơn hoặc bằng 1.', 'error');
       return;
     }
     const redemptionValueVnd = Number(config.redemptionValueVnd);
     if (!Number.isFinite(redemptionValueVnd) || redemptionValueVnd <= 0) {
-      showToast?.('Giá trị giảm phải lớn hơn 0 VND.');
+      showToast?.('Giá trị giảm phải lớn hơn 0 VND.', 'error');
       return;
     }
     if (isExpiryDateTimeTooSoon(expiryDate, expiryTime)) {
-      showToast?.('Ngày và giờ reset điểm phải sau thời điểm hiện tại ít nhất 15 phút.');
+      showToast?.('Ngày và giờ reset điểm phải sau thời điểm hiện tại ít nhất 15 phút.', 'error');
       return;
     }
     setSavingConfig(true);
@@ -187,9 +187,9 @@ export default function AdminLoyaltyPanel({ ctx }) {
       };
       const saved = await adminService.updateLoyaltyConfiguration(token, payload);
       setConfig({ ...DEFAULT_CONFIG, ...saved, expiryDate: getExpiryDateValue(saved) });
-      showToast?.('Đã lưu cấu hình điểm.');
+      showToast?.('Đã lưu cấu hình điểm.', 'success');
     } catch (error) {
-      showToast?.(error.message || 'Không thể lưu cấu hình điểm.');
+      showToast?.(error.message || 'Không thể lưu cấu hình điểm.', 'error');
     } finally {
       setSavingConfig(false);
     }
@@ -202,10 +202,10 @@ export default function AdminLoyaltyPanel({ ctx }) {
     setResettingPoints(true);
     try {
       const affected = await adminService.expireLoyaltyPointsNow(token);
-      showToast?.(`Đã reset điểm cho ${formatNumber(affected)} tài khoản.`);
+      showToast?.(`Đã reset điểm cho ${formatNumber(affected)} tài khoản.`, 'success');
       await loadAll(0);
     } catch (error) {
-      showToast?.(error.message || 'Không thể reset điểm.');
+      showToast?.(error.message || 'Không thể reset điểm.', 'error');
     } finally {
       setResettingPoints(false);
     }
@@ -296,7 +296,7 @@ export default function AdminLoyaltyPanel({ ctx }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <Field label="Tỷ lệ tích điểm (%)">
-              <input className={inputClass} type="number" min="0" max="100" step="0.01" value={config.earningRatePercent} onChange={(e) => updateConfig('earningRatePercent', e.target.value)} />
+              <input className={inputClass} type="number" min="0" max="100" maxLength={3} step="0.01" value={config.earningRatePercent} onChange={(e) => updateConfig('earningRatePercent', e.target.value)} />
             </Field>
             <Field label="Số điểm quy đổi">
               <input className={inputClass} type="number" min="1" step="1" value={config.redemptionPoints} onChange={(e) => updateConfig('redemptionPoints', e.target.value)} />

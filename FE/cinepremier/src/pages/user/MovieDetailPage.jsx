@@ -507,12 +507,12 @@ export default function DetailView() {
                 <Loader2 className="h-4 w-4 animate-spin" /> Đang tải đánh giá...
               </div>
             )}
-            {!isLoadingReviews && reviews.length === 0 && (
+            {!isLoadingReviews && reviews.filter((r) => !r.status || r.status === 'VISIBLE').length === 0 && (
               <div className="border border-dashed border-white/10 p-6 text-center text-xs text-neutral-600 uppercase tracking-widest">
                 Chưa có đánh giá công khai cho phim này.
               </div>
             )}
-            {!isLoadingReviews && reviews.map((rev) => (
+            {!isLoadingReviews && reviews.filter((r) => !r.status || r.status === 'VISIBLE').map((rev) => (
               <div key={rev.id} className="bg-white/4 hover:bg-white/6 transition p-4 border border-white/8 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

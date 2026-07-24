@@ -608,16 +608,22 @@ export default function ShowtimesPage() {
                     const endTime = getMovieEndTime(st, group.duration);
                     const startLabel = formatTime(st.startTime);
                     const endLabel = endTime ? formatTime(endTime) : '--:--';
+                    const roomName = st.roomName || st.room?.name || (st.roomId ? `Phòng ${st.roomId}` : 'Phòng chiếu');
 
                     return (
                       <button
                         type="button"
                         key={st.id}
                         onClick={() => navigate(`/movies/${group.routeId}/book?showtimeId=${st.id}`)}
-                        aria-label={`Chọn suất từ ${startLabel} đến ${endLabel}`}
+                        aria-label={`Chọn suất chiếu ${roomName} từ ${startLabel} đến ${endLabel}`}
                         className="group flex w-full min-w-0 cursor-pointer flex-col border border-white/15 bg-black px-3.5 py-3 text-left transition-colors hover:border-purple-400 hover:bg-purple-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-300 active:bg-purple-500/15"
-                        title={`Phim chiếu từ ${startLabel} đến ${endLabel}`}
+                        title={`${roomName} · Suất chiếu từ ${startLabel} đến ${endLabel}`}
                       >
+                        <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-1.5">
+                          <span className="truncate text-[9.5px] font-black uppercase tracking-[0.14em] text-purple-300 transition group-hover:text-purple-200">
+                            {roomName}
+                          </span>
+                        </div>
                         <span className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                           <span className="grid min-w-0 grid-cols-[12px_minmax(0,1fr)] items-start gap-1.5">
                             <Clock className="mt-0.5 h-3 w-3 shrink-0 text-neutral-500 transition group-hover:text-purple-300" />

@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Trash2, Edit3, Calendar, Clock, MapPin, Film,
@@ -490,6 +490,7 @@ export default function AdminShowtimesPanel({ ctx }) {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({ movieId: '', roomId: '', status: '', date: '' });
+  const dateFilterRef = useRef(null);
 
   const [mode, setMode] = useState('list'); // 'list' | 'create' | 'bulk' | 'edit' | 'refunds'
   const [form, setForm] = useState(EMPTY_FORM);
@@ -610,7 +611,12 @@ export default function AdminShowtimesPanel({ ctx }) {
       Object.keys(params).forEach(k => { if (!params[k]) delete params[k]; });
       const data = await adminService.getAdminShowtimes(token, params);
       const items = data?.content || data?.items || (Array.isArray(data) ? data : []);
-      setShowtimes(items);
+      const sortedItems = [...items].sort((a, b) => {
+        const idA = Number(a.id ?? a.showtimeId ?? 0);
+        const idB = Number(b.id ?? b.showtimeId ?? 0);
+        return idB - idA;
+      });
+      setShowtimes(sortedItems);
       setTotalPages(data?.totalPages || 1);
       setPage(p);
     } catch (e) {
@@ -1196,13 +1202,9 @@ export default function AdminShowtimesPanel({ ctx }) {
               className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500 hover:text-black transition cursor-pointer">
               <AlertCircle className="w-3 h-3" /> Báo cáo sự cố &amp; hoàn tiền
             </button>
-            <button onClick={() => { setMode('create'); setForm(EMPTY_FORM); setEditingId(null); setEditingStatus(''); setErrors({}); }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition cursor-pointer">
-              <Plus className="w-3 h-3" /> Tạo suất
-            </button>
             <button onClick={() => { setMode('bulk'); setBulkForm(EMPTY_BULK); setEditingBulkSlotIndex(0); setEditingId(null); setEditingStatus(''); setErrors({}); }}
               className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider hover:bg-amber-400 transition cursor-pointer">
-              <Zap className="w-3 h-3" /> Tạo hàng loạt
+              <Zap className="w-3 h-3" /> Tạo suất chiếu
             </button>
           </div>
         )}
@@ -1214,13 +1216,10 @@ export default function AdminShowtimesPanel({ ctx }) {
         )}
       </div>
 
-      {/* ── CREATE / EDIT FORM ── */}
-
-
-
+      {/* ── EDIT FORM ── */}
 
       <AnimatePresence mode="wait">
-        {(mode === 'create' || mode === 'edit') && (
+        {mode === 'edit' && (
           <motion.div key="form-single" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="border border-white/[0.08] bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-6">
             <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white mb-4 pb-2 border-b border-white/[0.06]">
@@ -1624,16 +1623,31 @@ export default function AdminShowtimesPanel({ ctx }) {
         <div className="flex flex-wrap gap-2 items-end">
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 block">Phim</label>
-            <select value={filters.movieId} onChange={e => setFilters({ ...filters, movieId: e.target.value })}
-              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400">
+            <select
+              value={filters.movieId}
+              onChange={e => {
+                const nextFilters = { ...filters, movieId: e.target.value };
+                setFilters(nextFilters);
+                fetchShowtimes(0, nextFilters);
+              }}
+              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400 cursor-pointer"
+            >
               <option value="">Tất cả phim</option>
               {(moviesList || []).map(m => <option key={m.id} value={m.backendId ?? m.id}>{m.title}</option>)}
             </select>
           </div>
+
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 block">Trạng thái</label>
-            <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
-              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400">
+            <select
+              value={filters.status}
+              onChange={e => {
+                const nextFilters = { ...filters, status: e.target.value };
+                setFilters(nextFilters);
+                fetchShowtimes(0, nextFilters);
+              }}
+              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400 cursor-pointer"
+            >
               <option value="">Tất cả</option>
               <option value="SCHEDULED">Đã lên lịch</option>
               <option value="OPEN">Đang mở bán</option>
@@ -1643,15 +1657,38 @@ export default function AdminShowtimesPanel({ ctx }) {
           </div>
           <div className="space-y-1">
             <label className="text-[10px] uppercase tracking-[0.18em] text-neutral-300 block">Ngày</label>
-            <input type="date" value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })}
-              className="bg-black border border-white/[0.08] text-xs text-neutral-200 px-2.5 py-2 focus:outline-none focus:border-amber-400 font-mono" />
+            <div
+              onClick={() => {
+                try {
+                  dateFilterRef.current?.showPicker?.();
+                } catch {
+                  dateFilterRef.current?.focus?.();
+                }
+              }}
+              className="relative flex items-center bg-black border border-white/[0.08] px-2.5 py-2 cursor-pointer text-xs text-neutral-200 hover:border-amber-400 focus-within:border-amber-400 transition min-w-[130px]"
+            >
+              <Calendar className="w-3.5 h-3.5 text-amber-400 mr-2 shrink-0 pointer-events-none" />
+              <span className="font-mono text-xs select-none">
+                {filters.date ? filters.date.split('-').reverse().join('/') : 'dd/mm/yyyy'}
+              </span>
+              <input
+                ref={dateFilterRef}
+                type="date"
+                value={filters.date}
+                onKeyDown={(e) => e.preventDefault()}
+                onChange={e => {
+                  const nextFilters = { ...filters, date: e.target.value };
+                  setFilters(nextFilters);
+                  fetchShowtimes(0, nextFilters);
+                }}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                aria-label="Chọn ngày chiếu"
+              />
+            </div>
           </div>
-          <button onClick={() => fetchShowtimes(0)}
-            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.10] text-neutral-200 text-[10px] font-bold uppercase hover:border-white/[0.20] transition">
-            <Search className="w-3 h-3" /> Lọc
-          </button>
-          <button onClick={() => { setFilters({ movieId: '', roomId: '', status: '', date: '' }); fetchShowtimes(0); }}
-            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.08] text-neutral-300 text-[10px] font-bold uppercase hover:border-white/[0.10] hover:text-neutral-200 transition">
+
+          <button onClick={() => { const emptyFilters = { movieId: '', roomId: '', status: '', date: '' }; setFilters(emptyFilters); fetchShowtimes(0, emptyFilters); }}
+            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.08] text-neutral-300 text-[10px] font-bold uppercase hover:border-white/[0.20] hover:text-white transition cursor-pointer">
             <RefreshCw className="w-3 h-3" /> Reset
           </button>
         </div>
